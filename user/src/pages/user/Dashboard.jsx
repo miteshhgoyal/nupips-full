@@ -13,8 +13,10 @@ import {
   AlertCircle,
 } from "lucide-react";
 import api from "../../services/api";
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [accountInfo, setAccountInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -299,7 +301,10 @@ const Dashboard = () => {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="p-4 border-2 border-dashed border-orange-300 rounded-lg hover:bg-orange-50 transition text-left group">
+          <button
+            onClick={() => navigate("/strategies")}
+            className="p-4 border-2 border-dashed border-orange-300 rounded-lg hover:bg-orange-50 transition text-left group"
+          >
             <p className="font-semibold text-slate-900 group-hover:text-orange-600 transition">
               Explore Strategies
             </p>
@@ -308,7 +313,10 @@ const Dashboard = () => {
             </p>
           </button>
 
-          <button className="p-4 border-2 border-dashed border-green-300 rounded-lg hover:bg-green-50 transition text-left group">
+          <button
+            onClick={() => navigate("/subscriptions")}
+            className="p-4 border-2 border-dashed border-green-300 rounded-lg hover:bg-green-50 transition text-left group"
+          >
             <p className="font-semibold text-slate-900 group-hover:text-green-600 transition">
               My Subscriptions
             </p>
@@ -317,7 +325,10 @@ const Dashboard = () => {
             </p>
           </button>
 
-          <button className="p-4 border-2 border-dashed border-purple-300 rounded-lg hover:bg-purple-50 transition text-left group">
+          <button
+            onClick={() => navigate("/profit-logs")}
+            className="p-4 border-2 border-dashed border-purple-300 rounded-lg hover:bg-purple-50 transition text-left group"
+          >
             <p className="font-semibold text-slate-900 group-hover:text-purple-600 transition">
               Profit Logs
             </p>
