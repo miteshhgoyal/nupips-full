@@ -9,7 +9,7 @@ const Login = () => {
   const navigate = useNavigate();
 
   const pageConfig = {
-    title: "Welcome to GTC CRM",
+    title: "Welcome to Nupips User Panel",
     submitButton: {
       loading: "Signing In...",
       default: "Continue",
