@@ -8,6 +8,8 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
+    StatusBar,
+    Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,6 +26,7 @@ import api from '@/services/api';
 const SignIn = () => {
     const router = useRouter();
     const { login, clearError, error: authError } = useAuth();
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
 
     const pageConfig = {
         title: 'Welcome to Nupips User Panel',
@@ -65,6 +68,22 @@ const SignIn = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [submitError, setSubmitError] = useState('');
+
+    React.useEffect(() => {
+        const keyboardDidShow = Keyboard.addListener(
+            'keyboardDidShow',
+            () => setKeyboardVisible(true)
+        );
+        const keyboardDidHide = Keyboard.addListener(
+            'keyboardDidHide',
+            () => setKeyboardVisible(false)
+        );
+
+        return () => {
+            keyboardDidShow.remove();
+            keyboardDidHide.remove();
+        };
+    }, []);
 
     const handleInputChange = (fieldName, value) => {
         setFormData((prev) => ({ ...prev, [fieldName]: value }));
@@ -166,19 +185,15 @@ const SignIn = () => {
 
         return (
             <View key={field.name} className="mb-5">
-                <Text className="text-xs font-semibold text-gray-700 mb-2">
+                <Text className="text-xs font-semibold text-gray-700 mb-2 uppercase">
                     {field.label}
                 </Text>
 
                 <View
-                    className={`flex-row items-center bg-white border rounded-lg px-3 py-1 ${hasError ? 'border-red-500' : 'border-gray-300'
+                    className={`flex-row items-center bg-white border rounded-lg px-3 ${hasError ? 'border-red-500' : 'border-gray-300'
                         }`}
                 >
-                    <Icon
-                        size={20}
-                        color="#ea580c"
-                        style={{ marginRight: 8 }}
-                    />
+                    <Icon size={20} color="#ea580c" />
                     <TextInput
                         value={formData[field.name]}
                         onChangeText={(value) => handleInputChange(field.name, value)}
@@ -189,7 +204,7 @@ const SignIn = () => {
                         autoCapitalize="none"
                         autoCorrect={false}
                         editable={!isLoading}
-                        className="flex-1 py-3 text-base text-gray-900"
+                        className="flex-1 py-3 px-3 text-base text-gray-900"
                     />
 
                     {field.hasToggle && (
@@ -197,6 +212,7 @@ const SignIn = () => {
                             onPress={() => togglePasswordVisibility(field.name)}
                             disabled={isLoading}
                             className="p-1"
+                            activeOpacity={0.7}
                         >
                             {showPassword ? (
                                 <Eye size={18} color="#9ca3af" />
@@ -217,62 +233,61 @@ const SignIn = () => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-orange-50" edges={['top']}>
+        <SafeAreaView className="flex-1 bg-orange-50">
+            <StatusBar barStyle="dark-content" backgroundColor="#fef3c7" />
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 className="flex-1"
             >
                 <ScrollView
                     contentContainerStyle={{
                         flexGrow: 1,
+                        paddingHorizontal: 16,
+                        paddingVertical: 24,
                     }}
-                    className="px-4 py-10"
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
+                    bounces={false}
                 >
-                    <View className="justify-center flex-1">
-                        <View className="text-center mb-8">
+                    <View className={`flex-1 justify-center ${keyboardVisible ? 'pb-72' : 'pb-0'}`}>
+                        {/* Header */}
+                        <View className="mb-8">
                             <Text className="text-2xl font-bold text-amber-900 text-center">
                                 {pageConfig.title}
                             </Text>
                         </View>
 
-                        <View className="bg-white rounded-lg p-6 shadow-md border border-orange-200">
+                        {/* Form Container */}
+                        <View className="bg-white rounded-lg p-6 border border-orange-200">
+                            {/* Submit Error */}
                             {submitError && (
                                 <View className="mb-4 flex-row items-start bg-red-50 border border-red-300 rounded-lg px-3 py-2.5">
-                                    <AlertCircle
-                                        size={18}
-                                        color="#dc2626"
-                                        style={{ marginTop: 2, marginRight: 8 }}
-                                    />
-                                    <Text className="flex-1 text-xs font-medium text-red-900">
+                                    <AlertCircle size={18} color="#dc2626" />
+                                    <Text className="flex-1 text-xs font-medium text-red-900 ml-2">
                                         {submitError}
                                     </Text>
                                 </View>
                             )}
 
+                            {/* Auth Error */}
                             {authError && (
                                 <View className="mb-4 flex-row items-start bg-red-50 border border-red-300 rounded-lg px-3 py-2.5">
-                                    <AlertCircle
-                                        size={18}
-                                        color="#dc2626"
-                                        style={{ marginTop: 2, marginRight: 8 }}
-                                    />
-                                    <Text className="flex-1 text-xs font-medium text-red-900">
+                                    <AlertCircle size={18} color="#dc2626" />
+                                    <Text className="flex-1 text-xs font-medium text-red-900 ml-2">
                                         {authError}
                                     </Text>
                                 </View>
                             )}
 
+                            {/* Form Fields */}
                             {fieldConfigs.map(renderFormField)}
 
+                            {/* Submit Button */}
                             <TouchableOpacity
                                 onPress={handleSubmit}
                                 disabled={isLoading}
                                 activeOpacity={0.8}
-                                className={`mt-2 py-3 px-4 rounded-lg items-center justify-center ${isLoading
-                                        ? 'bg-orange-400'
-                                        : 'bg-orange-600'
+                                className={`mt-6 py-3.5 px-4 rounded-lg items-center justify-center ${isLoading ? 'bg-orange-400' : 'bg-orange-600'
                                     }`}
                             >
                                 <View className="flex-row items-center">
@@ -283,7 +298,7 @@ const SignIn = () => {
                                             style={{ marginRight: 8 }}
                                         />
                                     )}
-                                    <Text className="text-white text-base font-semibold">
+                                    <Text className="text-white text-base font-bold">
                                         {isLoading
                                             ? pageConfig.submitButton.loading
                                             : pageConfig.submitButton.default}
