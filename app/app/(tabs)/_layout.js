@@ -1,6 +1,5 @@
-// app/(tabs)/_layout.js
-import React from 'react';
-import { View, TouchableOpacity, Text } from 'react-native';
+import React, { useState } from 'react';
+import { View, TouchableOpacity, Text, Dimensions } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/context/authContext';
 import { Menu, LogOut } from 'lucide-react-native';
@@ -11,48 +10,73 @@ import {
     Wallet,
     Users,
 } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const ACTIVE_TAB_COLOR = '#ea580c';
+const INACTIVE_TAB_COLOR = '#9ca3af';
+const BACKGROUND_COLOR = '#ffffff';
+const BORDER_COLOR = '#e5e7eb';
 
 export default function TabsLayout() {
     const { user, logout } = useAuth();
     const router = useRouter();
+    const screenWidth = Dimensions.get('window').width;
+
+    const handleLogout = () => {
+        logout();
+        router.push('/(auth)/signin');
+    };
 
     return (
-        <View className="flex-1">
-            {/* Header */}
-            <View className="flex-row items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-                <TouchableOpacity onPress={() => router.push('/(menu)')}>
-                    <Menu size={24} color="#374151" />
-                </TouchableOpacity>
-                <Text
-                    className="text-lg font-semibold text-slate-900"
-                    numberOfLines={1}
+        <SafeAreaView className="flex-1 bg-white">
+            {/* Header Section */}
+            <View className="flex-row items-center justify-between px-4 py-4 bg-gradient-to-r from-white to-gray-50 border-b border-gray-200">
+                <View className="flex-1">
+                    <Text className="text-xl font-bold text-slate-900">
+                        Nupips
+                    </Text>
+                    <Text className="text-xs text-gray-500 mt-1">
+                        Welcome back, {user?.nickname || 'User'}
+                    </Text>
+                </View>
+                <TouchableOpacity
+                    onPress={handleLogout}
+                    className="p-2 rounded-lg hover:bg-red-50"
+                    activeOpacity={0.7}
                 >
-                    {user?.email}
-                </Text>
-                <TouchableOpacity onPress={logout}>
-                    <LogOut size={24} color="#ef4444" />
+                    <LogOut size={24} color={ACTIVE_TAB_COLOR} />
                 </TouchableOpacity>
             </View>
 
-            {/* Tabs - Only 4 main tabs visible */}
+            {/* Main Content */}
             <Tabs
                 screenOptions={{
                     headerShown: false,
-                    tabBarActiveTintColor: '#ea580c',
-                    tabBarInactiveTintColor: '#9ca3af',
+                    tabBarActiveTintColor: ACTIVE_TAB_COLOR,
+                    tabBarInactiveTintColor: INACTIVE_TAB_COLOR,
                     tabBarStyle: {
-                        backgroundColor: '#ffffff',
+                        backgroundColor: BACKGROUND_COLOR,
                         borderTopWidth: 1,
-                        borderTopColor: '#e5e7eb',
-                        height: 70,
-                        paddingBottom: 12,
+                        borderTopColor: BORDER_COLOR,
+                        height: 75,
+                        paddingBottom: 8,
                         paddingTop: 8,
+                        elevation: 8,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: -2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
                     },
                     tabBarLabelStyle: {
                         fontSize: 11,
                         fontWeight: '600',
                         marginTop: 4,
+                        letterSpacing: 0.3,
                     },
+                    tabBarItemStyle: {
+                        paddingVertical: 6,
+                    },
+                    animation: 'fade',
                 }}
             >
                 {/* Dashboard Tab */}
@@ -60,8 +84,29 @@ export default function TabsLayout() {
                     name="dashboard"
                     options={{
                         title: 'Dashboard',
-                        tabBarIcon: ({ color }) => (
-                            <LayoutDashboard size={22} color={color} />
+                        tabBarIcon: ({ color, focused }) => (
+                            <View className="items-center justify-center">
+                                <LayoutDashboard
+                                    size={focused ? 26 : 22}
+                                    color={color}
+                                    strokeWidth={focused ? 2.5 : 2}
+                                />
+                                {focused && (
+                                    <View className="w-1 h-1 rounded-full mt-1"
+                                        style={{ backgroundColor: color }}
+                                    />
+                                )}
+                            </View>
+                        ),
+                        tabBarLabel: ({ focused, color }) => (
+                            <Text style={{
+                                fontSize: 11,
+                                fontWeight: focused ? '700' : '600',
+                                color: color,
+                                marginTop: 2,
+                            }}>
+                                Dashboard
+                            </Text>
                         ),
                     }}
                 />
@@ -71,70 +116,131 @@ export default function TabsLayout() {
                     name="strategies"
                     options={{
                         title: 'Strategies',
-                        tabBarIcon: ({ color }) => (
-                            <TrendingUp size={22} color={color} />
+                        tabBarIcon: ({ color, focused }) => (
+                            <View className="items-center justify-center">
+                                <TrendingUp
+                                    size={focused ? 26 : 22}
+                                    color={color}
+                                    strokeWidth={focused ? 2.5 : 2}
+                                />
+                                {focused && (
+                                    <View className="w-1 h-1 rounded-full mt-1"
+                                        style={{ backgroundColor: color }}
+                                    />
+                                )}
+                            </View>
+                        ),
+                        tabBarLabel: ({ focused, color }) => (
+                            <Text style={{
+                                fontSize: 11,
+                                fontWeight: focused ? '700' : '600',
+                                color: color,
+                                marginTop: 2,
+                            }}>
+                                Strategies
+                            </Text>
                         ),
                     }}
                 />
 
-                {/* Portfolio Tab (Main) - subscriptions, profit-logs, unsubscribe hidden */}
+                {/* Portfolio Tab */}
                 <Tabs.Screen
                     name="subscriptions"
                     options={{
                         title: 'Portfolio',
-                        tabBarIcon: ({ color }) => (
-                            <Wallet size={22} color={color} />
+                        tabBarIcon: ({ color, focused }) => (
+                            <View className="items-center justify-center">
+                                <Wallet
+                                    size={focused ? 26 : 22}
+                                    color={color}
+                                    strokeWidth={focused ? 2.5 : 2}
+                                />
+                                {focused && (
+                                    <View className="w-1 h-1 rounded-full mt-1"
+                                        style={{ backgroundColor: color }}
+                                    />
+                                )}
+                            </View>
+                        ),
+                        tabBarLabel: ({ focused, color }) => (
+                            <Text style={{
+                                fontSize: 11,
+                                fontWeight: focused ? '700' : '600',
+                                color: color,
+                                marginTop: 2,
+                            }}>
+                                Portfolio
+                            </Text>
                         ),
                     }}
                     listeners={({ navigation }) => ({
                         tabPress: (e) => {
-                            // Navigate to subscriptions main page
                             navigation.navigate('subscriptions');
                         },
                     })}
                 />
 
-                {/* Profit Logs - Hidden from tabs, access via subscriptions */}
+                {/* Profit Logs - Hidden */}
                 <Tabs.Screen
                     name="profit-logs"
                     options={{
-                        href: null, // Hide from tab bar
+                        href: null,
                     }}
                 />
 
-                {/* Unsubscribe - Hidden from tabs, access via subscriptions */}
+                {/* Unsubscribe - Hidden */}
                 <Tabs.Screen
                     name="unsubscribe"
                     options={{
-                        href: null, // Hide from tab bar
+                        href: null,
                     }}
                 />
 
-                {/* Agent Tab (Main) - members, commission hidden */}
+                {/* Agent Tab */}
                 <Tabs.Screen
                     name="members"
                     options={{
                         title: 'Agent',
-                        tabBarIcon: ({ color }) => (
-                            <Users size={22} color={color} />
+                        tabBarIcon: ({ color, focused }) => (
+                            <View className="items-center justify-center">
+                                <Users
+                                    size={focused ? 26 : 22}
+                                    color={color}
+                                    strokeWidth={focused ? 2.5 : 2}
+                                />
+                                {focused && (
+                                    <View className="w-1 h-1 rounded-full mt-1"
+                                        style={{ backgroundColor: color }}
+                                    />
+                                )}
+                            </View>
+                        ),
+                        tabBarLabel: ({ focused, color }) => (
+                            <Text style={{
+                                fontSize: 11,
+                                fontWeight: focused ? '700' : '600',
+                                color: color,
+                                marginTop: 2,
+                            }}>
+                                Agent
+                            </Text>
                         ),
                     }}
                     listeners={({ navigation }) => ({
                         tabPress: (e) => {
-                            // Navigate to members main page
                             navigation.navigate('members');
                         },
                     })}
                 />
 
-                {/* Commission - Hidden from tabs, access via members */}
+                {/* Commission - Hidden */}
                 <Tabs.Screen
                     name="commission"
                     options={{
-                        href: null, // Hide from tab bar
+                        href: null,
                     }}
                 />
             </Tabs>
-        </View>
+        </SafeAreaView>
     );
 }

@@ -1,20 +1,30 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '@/services/api';
+import { tokenService } from '@/services/tokenService';
 
 const AuthContext = createContext();
+
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth must be used within AuthProvider');
+    }
+    return context;
+};
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
     const router = useRouter();
     const segments = useSegments();
 
     useEffect(() => {
-        bootstrapAsync();
+        checkAuth();
     }, []);
 
     useEffect(() => {
@@ -29,131 +39,133 @@ export const AuthProvider = ({ children }) => {
         }
     }, [isAuthenticated, loading, segments]);
 
-    const bootstrapAsync = async () => {
+    const fetchUserInfo = async () => {
         try {
-            console.log('[Auth Bootstrap] Checking for stored token...');
-            const token = await AsyncStorage.getItem('accessToken');
-
-            if (token) {
-                console.log('[Auth Bootstrap] Token found, validating...');
-                await validateToken();
+            const response = await api.post('/account_info');
+            if (response.data.code === 200 && response.data.data) {
+                const userData = response.data.data;
+                const userInfo = {
+                    id: userData.id,
+                    nickname: userData.nickname,
+                    email: userData.email,
+                    phone: userData.phone,
+                    realname: userData.realname,
+                    avatar: userData.avatar,
+                    amount: userData.amount,
+                    userType: userData.userType,
+                    status: userData.status,
+                };
+                setUser(userInfo);
+                await AsyncStorage.setItem('user', JSON.stringify(userInfo));
+                return userInfo;
             } else {
-                console.log('[Auth Bootstrap] No token found');
-                setIsAuthenticated(false);
+                console.error('API response code is not 200 or data is missing');
             }
-        } catch (err) {
-            console.error('[Auth Bootstrap Error]', err);
+            return null;
+        } catch (error) {
+            console.error('Failed to fetch user info:', error);
+            if (error.response?.status === 401) {
+                // Token invalid, logout user
+                await logout();
+            }
+            return null;
+        }
+    };
+
+    const checkAuth = async () => {
+        try {
+            // Initialize tokens from AsyncStorage
+            await tokenService.initializeFromStorage();
+
+            const token = tokenService.getToken();
+            const refreshToken = tokenService.getRefreshToken();
+
+            if (token && refreshToken) {
+                setIsAuthenticated(true);
+
+                // Load user from AsyncStorage for faster UI update
+                const storedUser = await AsyncStorage.getItem('user');
+                if (storedUser) {
+                    try {
+                        const parsedUser = JSON.parse(storedUser);
+                        setUser(parsedUser);
+                    } catch (e) {
+                        console.error('Failed to parse stored user:', e);
+                    }
+                }
+
+                // Refresh user info from API
+                await fetchUserInfo();
+            } else {
+                setIsAuthenticated(false);
+                setUser(null);
+            }
+        } catch (error) {
+            console.error('Auth check failed:', error);
+            tokenService.clearTokens();
             setIsAuthenticated(false);
+            setUser(null);
         } finally {
             setLoading(false);
         }
     };
 
-    const validateToken = async () => {
+    const login = async (credentials) => {
         try {
-            const response = await api.post('/account_info', {});
-
-            if (response.data.code === 200) {
-                console.log('[Auth] ✓ Token validated, user logged in');
-                setUser(response.data.data);
-                setIsAuthenticated(true);
-            } else {
-                console.log('[Auth] Token invalid:', response.data.message);
-                await clearTokens();
-                setIsAuthenticated(false);
-            }
-        } catch (err) {
-            console.error('[Auth] Validation failed:', err.message);
-            await clearTokens();
-            setIsAuthenticated(false);
-        }
-    };
-
-    const login = async (account, password) => {
-        try {
-            console.log('[Auth] Login attempt for:', account);
             setError(null);
 
-            // STEP 1: Call login API
-            console.log('[Auth] Calling /login...');
-            const loginResponse = await api.post('/login', {
-                account,
-                password,
-            });
-
-            console.log('[Auth] Login response:', loginResponse.data.code);
-
-            if (loginResponse.data.code !== 200 || !loginResponse.data.data) {
-                const msg = loginResponse.data.message || 'Login failed';
-                console.error('[Auth] Login failed:', msg);
-                setError(msg);
-                return { success: false, message: msg };
+            // credentials should have { access_token, refresh_token, email }
+            if (!credentials.access_token || !credentials.refresh_token) {
+                throw new Error('Invalid credentials structure');
             }
 
-            const { access_token, refresh_token } = loginResponse.data.data;
+            // Set tokens immediately
+            tokenService.setToken(credentials.access_token);
+            tokenService.setRefreshToken(credentials.refresh_token);
 
-            // STEP 2: Store tokens (critical!)
-            console.log('[Auth] Storing tokens...');
-            await AsyncStorage.setItem('accessToken', access_token);
-            await AsyncStorage.setItem('refreshToken', refresh_token);
-            console.log('[Auth] ✓ Tokens stored');
+            setIsAuthenticated(true);
 
-            // STEP 3: Wait before next API call (very important!)
-            console.log('[Auth] Waiting 1 second before account_info call...');
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Fetch fresh user info
+            const userInfo = await fetchUserInfo();
 
-            // STEP 4: Fetch account info
-            console.log('[Auth] Calling /account_info...');
-            const accountResponse = await api.post('/account_info', {});
-
-            console.log('[Auth] Account response:', accountResponse.data.code);
-
-            if (accountResponse.data.code === 200 && accountResponse.data.data) {
-                console.log('[Auth] ✓ Login successful!');
-                setUser(accountResponse.data.data);
-                setIsAuthenticated(true);
-                return { success: true };
+            if (userInfo) {
+                return true;
             } else {
-                const msg = accountResponse.data.message || 'Failed to fetch account info';
-                console.error('[Auth] Account info failed:', msg);
-                await clearTokens();
-                setError(msg);
-                return { success: false, message: msg };
+                await logout();
+                return false;
             }
         } catch (err) {
-            console.error('[Auth] Login exception:', err.message);
-
-            let message = 'Login failed. Please try again.';
-
-            if (err.response?.status === 429) {
-                message = 'Too many requests. Please wait a moment and try again.';
-            } else if (err.response?.data?.message) {
-                message = err.response.data.message;
-            } else if (err.message.includes('Network')) {
-                message = 'Network error. Please check your connection.';
-            }
-
+            const message = err.message || 'Login failed. Please try again.';
             setError(message);
-            return { success: false, message };
+            console.error('[Auth] Login error:', err);
+            return false;
         }
-    };
-
-    const clearTokens = async () => {
-        console.log('[Auth] Clearing tokens');
-        await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
-        setUser(null);
-        setIsAuthenticated(false);
     };
 
     const logout = async () => {
         try {
-            await api.post('/logout', {});
-        } catch (err) {
-            console.error('[Auth] Logout error:', err);
+            const refreshToken = tokenService.getRefreshToken();
+            if (refreshToken) {
+                try {
+                    await api.post('/logout', { refresh_token: refreshToken });
+                } catch (err) {
+                    console.warn('Backend logout failed, proceeding with local logout');
+                }
+            }
+        } catch (error) {
+            console.error('Logout error:', error);
         } finally {
-            await clearTokens();
+            tokenService.clearTokens();
+            await AsyncStorage.multiRemove(['user']);
+            setUser(null);
+            setIsAuthenticated(false);
+            setError(null);
             router.replace('/(auth)/signin');
         }
+    };
+
+    const clearError = () => {
+        setError(null);
     };
 
     return (
@@ -165,18 +177,12 @@ export const AuthProvider = ({ children }) => {
                 error,
                 login,
                 logout,
-                validateToken,
+                checkAuth,
+                clearError,
+                refreshUserInfo: fetchUserInfo,
             }}
         >
             {children}
         </AuthContext.Provider>
     );
-};
-
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider');
-    }
-    return context;
 };

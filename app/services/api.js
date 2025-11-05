@@ -1,19 +1,20 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { tokenService } from './tokenService';
 
 const API_BASE_URL = 'https://test.gtctrader1203.top/api/v3';
 
 let isRefreshing = false;
 let requestQueue = [];
 let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 500; // 500ms minimum between requests
+const MIN_REQUEST_INTERVAL = 0; // 500ms minimum between requests
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 15000,
+    timeout: 30000,
 });
 
-// ADD LONG DELAY BETWEEN ALL REQUESTS
+// Request interceptor - add token
 api.interceptors.request.use(
     async (config) => {
         try {
@@ -23,7 +24,7 @@ api.interceptors.request.use(
 
             if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
                 const delayNeeded = MIN_REQUEST_INTERVAL - timeSinceLastRequest;
-                console.log(`[API] Delaying ${delayNeeded}ms to prevent rate limiting`);
+                
                 await new Promise((resolve) =>
                     setTimeout(resolve, delayNeeded)
                 );
@@ -31,14 +32,14 @@ api.interceptors.request.use(
 
             lastRequestTime = Date.now();
 
-            // GET TOKEN
-            const token = await AsyncStorage.getItem('accessToken');
+            // GET TOKEN FROM SERVICE (synchronous)
+            const token = tokenService.getToken();
 
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
-                console.log(`[API] ${config.method.toUpperCase()} ${config.url} - Token added ✓`);
+                
             } else {
-                console.log(`[API] ${config.method.toUpperCase()} ${config.url} - No token`);
+                
             }
 
             return config;
@@ -50,9 +51,10 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+// Response interceptor - handle token refresh and errors
 api.interceptors.response.use(
     (response) => {
-        console.log(`[API Response] ${response.status} - ${response.data.message || 'OK'}`);
+        
         return response;
     },
     async (error) => {
@@ -71,10 +73,11 @@ api.interceptors.response.use(
             originalRequest._retry = true;
 
             if (isRefreshing) {
+                // Token refresh in progress, queue this request
                 return new Promise((resolve, reject) => {
-                    requestQueue.push(() => {
-                        originalRequest.headers.Authorization = `Bearer ${error.config.headers.Authorization}`;
-                        resolve(api(originalRequest));
+                    requestQueue.push({
+                        resolve,
+                        reject,
                     });
                 });
             }
@@ -82,13 +85,13 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const refreshToken = await AsyncStorage.getItem('refreshToken');
+                const refreshToken = tokenService.getRefreshToken();
 
                 if (!refreshToken) {
-                    throw new Error('No refresh token');
+                    throw new Error('No refresh token available');
                 }
 
-                console.log('[API] Refreshing token...');
+                
 
                 const response = await axios.post(
                     `${API_BASE_URL}/refresh_token`,
@@ -96,23 +99,52 @@ api.interceptors.response.use(
                     { timeout: 10000 }
                 );
 
-                if (response.data.code === 200 && response.data.data) {
+                if (response.data.code === 200 && response.data.data?.access_token) {
                     const newToken = response.data.data.access_token;
-                    await AsyncStorage.setItem('accessToken', newToken);
-                    console.log('[API] ✓ Token refreshed');
 
+                    // Update token in service
+                    tokenService.setToken(newToken);
+
+                    
+
+                    // Update original request with new token
                     originalRequest.headers.Authorization = `Bearer ${newToken}`;
-                    requestQueue.forEach((cb) => cb());
+
+                    // Process queued requests
+                    requestQueue.forEach(({ resolve }) => {
+                        resolve(api(originalRequest));
+                    });
                     requestQueue = [];
 
                     return api(originalRequest);
+                } else {
+                    throw new Error('Invalid refresh response');
                 }
             } catch (err) {
-                console.error('[API] Refresh failed:', err.message);
-                await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+                console.error('[API] Token refresh failed:', err.message);
+
+                // Clear tokens and force logout
+                tokenService.clearTokens();
+                await AsyncStorage.multiRemove(['user']);
+
+                // Reject all queued requests
+                requestQueue.forEach(({ reject }) => {
+                    reject(new Error('Token refresh failed'));
+                });
+                requestQueue = [];
+
+                // Force navigation to login would happen in AuthContext
+                return Promise.reject(err);
             } finally {
                 isRefreshing = false;
             }
+        }
+
+        // HANDLE 401 without retry attempt - likely invalid token
+        if (error.response?.status === 401 && originalRequest._retry) {
+            console.error('[API] 401 after retry - forcing logout');
+            tokenService.clearTokens();
+            await AsyncStorage.multiRemove(['user']);
         }
 
         return Promise.reject(error);

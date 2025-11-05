@@ -1,4 +1,3 @@
-// app/(tabs)/profit-logs.js
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -10,17 +9,17 @@ import {
     RefreshControl,
     TextInput,
     Image,
+    StatusBar,
+    AlertCircle,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
-    AlertCircle,
     TrendingUp,
     TrendingDown,
     Calendar,
     ChevronLeft,
     ChevronRight,
     BarChart3,
-    Download,
 } from 'lucide-react-native';
 import api from '@/services/api';
 
@@ -71,11 +70,7 @@ const ProfitLogsPage = () => {
                 );
             }
 
-            console.log('Fetching profit logs:', payload);
-
             const response = await api.post('/share_profit_log', payload);
-
-            console.log('Profit logs response:', response.data);
 
             if (response.data.code === 200 && response.data.data) {
                 setProfitLogs(response.data.data.list || []);
@@ -84,10 +79,8 @@ const ProfitLogsPage = () => {
                 setError(response.data.message || 'Failed to fetch profit logs');
             }
         } catch (err) {
-            console.error('Fetch profit logs error:', err);
-            setError(
-                err.response?.data?.message || 'Network error. Please try again.'
-            );
+            console.error('Error:', err);
+            setError(err.response?.data?.message || 'Network error');
         } finally {
             setLoading(false);
         }
@@ -104,162 +97,143 @@ const ProfitLogsPage = () => {
         fetchProfitLogs();
     };
 
-    // Loading State
     if (loading && currentPage === 1) {
         return (
-            <SafeAreaView className="flex-1 bg-slate-50 items-center justify-center">
-                <View className="items-center">
+            <SafeAreaView className="flex-1 bg-orange-50">
+                <StatusBar barStyle="dark-content" backgroundColor="#fef3c7" />
+                <View className="flex-1 items-center justify-center">
                     <ActivityIndicator size="large" color="#ea580c" />
-                    <Text className="text-slate-600 font-medium mt-4">
-                        Loading profit logs...
-                    </Text>
+                    <Text className="text-slate-600 font-semibold mt-4">Loading...</Text>
                 </View>
             </SafeAreaView>
         );
     }
 
-    // Error State
     if (error && profitLogs.length === 0) {
         return (
-            <SafeAreaView className="flex-1 bg-slate-50 items-center justify-center p-6">
-                <View className="items-center">
+            <SafeAreaView className="flex-1 bg-orange-50 items-center justify-center p-6">
+                <StatusBar barStyle="dark-content" backgroundColor="#fef3c7" />
+                <View className="bg-red-100 rounded-full p-4 mb-4">
                     <AlertCircle size={48} color="#dc2626" />
-                    <Text className="text-red-600 font-medium mt-4 mb-6 text-center">
-                        {error}
-                    </Text>
-                    <TouchableOpacity
-                        onPress={() => {
-                            setCurrentPage(1);
-                            fetchProfitLogs();
-                        }}
-                        className="px-6 py-3 bg-orange-600 rounded-lg"
-                    >
-                        <Text className="text-white font-semibold">Retry</Text>
-                    </TouchableOpacity>
                 </View>
+                <Text className="text-lg font-bold text-slate-900 mb-2 text-center">Error</Text>
+                <Text className="text-red-600 text-center mb-6">{error}</Text>
+                <TouchableOpacity
+                    onPress={() => {
+                        setCurrentPage(1);
+                        fetchProfitLogs();
+                    }}
+                    activeOpacity={0.7}
+                    className="px-8 py-3 bg-orange-600 rounded-lg"
+                >
+                    <Text className="text-white font-bold">Retry</Text>
+                </TouchableOpacity>
             </SafeAreaView>
         );
     }
 
+    const SummaryCard = ({ label, value, color }) => (
+        <View className="flex-1 bg-white rounded-lg border border-slate-200 p-3">
+            <Text className="text-xs text-slate-600 font-semibold uppercase mb-1">
+                {label}
+            </Text>
+            <Text className={`text-base font-bold ${color === 'green' ? 'text-green-600' :
+                    color === 'red' ? 'text-red-600' :
+                        'text-slate-900'
+                }`}>
+                {value}
+            </Text>
+        </View>
+    );
+
     return (
-        <SafeAreaView className="flex-1 bg-slate-50">
+        <SafeAreaView className="flex-1 bg-orange-50">
+            <StatusBar barStyle="dark-content" backgroundColor="#fef3c7" />
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#ea580c" />
                 }
             >
                 <View className="px-4 py-5">
                     {/* Header */}
                     <View className="mb-6">
-                        <Text className="text-3xl font-bold text-orange-900">
-                            Profit Logs
-                        </Text>
-                        <Text className="text-slate-600 text-base mt-2">
-                            Track your earnings and fees from strategy subscriptions
-                        </Text>
+                        <Text className="text-xs text-slate-500 font-semibold uppercase mb-1">Earnings</Text>
+                        <Text className="text-2xl font-bold text-slate-900">Profit Logs</Text>
                     </View>
 
                     {/* Summary Cards */}
                     {summary && (
                         <View className="mb-6">
-                            <View className="flex-row justify-between gap-2 mb-3">
-                                <View className="flex-1 bg-white rounded-lg border border-orange-200 p-3">
-                                    <Text className="text-xs text-slate-600 font-medium">
-                                        Total P/L
-                                    </Text>
-                                    <Text
-                                        className={`text-lg font-bold mt-2 ${parseFloat(summary.copy_profit || 0) >= 0
-                                                ? 'text-green-600'
-                                                : 'text-red-600'
-                                            }`}
-                                    >
-                                        ${parseFloat(summary.copy_profit || 0).toFixed(4)}
-                                    </Text>
-                                </View>
-                                <View className="flex-1 bg-white rounded-lg border border-orange-200 p-3">
-                                    <Text className="text-xs text-slate-600 font-medium">
-                                        Total Earnings
-                                    </Text>
-                                    <Text
-                                        className={`text-lg font-bold mt-2 ${parseFloat(summary.copy_earn || 0) >= 0
-                                                ? 'text-green-600'
-                                                : 'text-red-600'
-                                            }`}
-                                    >
-                                        ${parseFloat(summary.copy_earn || 0).toFixed(4)}
-                                    </Text>
-                                </View>
+                            <Text className="text-xs text-slate-500 font-semibold uppercase mb-2">Summary</Text>
+                            <View className="mb-2">
+                                <SummaryCard
+                                    label="Total P/L"
+                                    value={`$${parseFloat(summary.copy_profit || 0).toFixed(4)}`}
+                                    color={parseFloat(summary.copy_profit || 0) >= 0 ? 'green' : 'red'}
+                                />
                             </View>
-
-                            <View className="flex-row justify-between gap-2">
-                                <View className="flex-1 bg-white rounded-lg border border-orange-200 p-3">
-                                    <Text className="text-xs text-slate-600 font-medium">
-                                        Mgmt Fees
-                                    </Text>
-                                    <Text className="text-lg font-bold text-red-600 mt-2">
-                                        ${parseFloat(summary.management_fee || 0).toFixed(4)}
-                                    </Text>
-                                </View>
-                                <View className="flex-1 bg-white rounded-lg border border-orange-200 p-3">
-                                    <Text className="text-xs text-slate-600 font-medium">
-                                        Perf Fees
-                                    </Text>
-                                    <Text className="text-lg font-bold text-red-600 mt-2">
-                                        ${parseFloat(summary.performace_fee || 0).toFixed(4)}
-                                    </Text>
-                                </View>
-                                <View className="flex-1 bg-white rounded-lg border border-orange-200 p-3">
-                                    <Text className="text-xs text-slate-600 font-medium">
-                                        Share Fees
-                                    </Text>
-                                    <Text className="text-lg font-bold text-red-600 mt-2">
-                                        ${parseFloat(summary.share_fee || 0).toFixed(4)}
-                                    </Text>
-                                </View>
+                            <View className="mb-2">
+                                <SummaryCard
+                                    label="Total Earnings"
+                                    value={`$${parseFloat(summary.copy_earn || 0).toFixed(4)}`}
+                                    color={parseFloat(summary.copy_earn || 0) >= 0 ? 'green' : 'red'}
+                                />
+                            </View>
+                            <View className="mb-2">
+                                <SummaryCard
+                                    label="Mgmt Fees"
+                                    value={`$${parseFloat(summary.management_fee || 0).toFixed(4)}`}
+                                    color="red"
+                                />
+                            </View>
+                            <View className="mb-2">
+                                <SummaryCard
+                                    label="Perf Fees"
+                                    value={`$${parseFloat(summary.performace_fee || 0).toFixed(4)}`}
+                                    color="red"
+                                />
+                            </View>
+                            <View>
+                                <SummaryCard
+                                    label="Share Fees"
+                                    value={`$${parseFloat(summary.share_fee || 0).toFixed(4)}`}
+                                    color="red"
+                                />
                             </View>
                         </View>
                     )}
 
                     {/* Filters */}
-                    <View className="bg-white rounded-lg border border-orange-200 p-4 mb-6">
-                        <View className="mb-4">
-                            <Text className="text-sm font-medium text-slate-700 mb-2">
-                                Start Date
-                            </Text>
+                    <View className="bg-white rounded-lg border border-slate-200 p-4 mb-6">
+                        <View className="mb-3">
+                            <Text className="text-xs font-semibold text-slate-900 mb-1 uppercase">Start Date</Text>
                             <TextInput
                                 value={filters.start_time}
-                                onChangeText={(value) =>
-                                    setFilters({ ...filters, start_time: value })
-                                }
+                                onChangeText={(value) => setFilters({ ...filters, start_time: value })}
                                 placeholder="YYYY-MM-DD"
-                                className="border border-slate-300 rounded-lg px-4 py-3 text-base text-slate-900"
+                                className="border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 bg-white"
                                 placeholderTextColor="#d1d5db"
                             />
                         </View>
 
-                        <View className="mb-4">
-                            <Text className="text-sm font-medium text-slate-700 mb-2">
-                                End Date
-                            </Text>
+                        <View className="mb-3">
+                            <Text className="text-xs font-semibold text-slate-900 mb-1 uppercase">End Date</Text>
                             <TextInput
                                 value={filters.end_time}
-                                onChangeText={(value) =>
-                                    setFilters({ ...filters, end_time: value })
-                                }
+                                onChangeText={(value) => setFilters({ ...filters, end_time: value })}
                                 placeholder="YYYY-MM-DD"
-                                className="border border-slate-300 rounded-lg px-4 py-3 text-base text-slate-900"
+                                className="border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-900 bg-white"
                                 placeholderTextColor="#d1d5db"
                             />
                         </View>
 
                         <TouchableOpacity
                             onPress={handleApplyFilters}
+                            activeOpacity={0.8}
                             className="bg-orange-600 rounded-lg px-4 py-3"
                         >
-                            <Text className="text-white font-semibold text-center">
-                                Apply Filters
-                            </Text>
+                            <Text className="text-white font-bold text-center">Apply Filters</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -273,130 +247,92 @@ const ProfitLogsPage = () => {
                                 return (
                                     <View
                                         key={index}
-                                        className="bg-white rounded-lg border border-orange-200 p-4 mb-3"
+                                        className="bg-white rounded-lg border border-slate-200 p-4 mb-3"
                                     >
-                                        {/* Strategy Header */}
+                                        {/* Header */}
                                         <View className="flex-row items-center mb-4">
                                             {log.strategy_profile_photo && (
                                                 <Image
-                                                    source={{
-                                                        uri: log.strategy_profile_photo,
-                                                    }}
+                                                    source={{ uri: log.strategy_profile_photo }}
                                                     className="w-12 h-12 rounded-lg mr-3"
                                                     resizeMode="cover"
                                                 />
                                             )}
                                             <View className="flex-1">
-                                                <Text className="text-lg font-semibold text-slate-900">
+                                                <Text className="text-base font-bold text-slate-900">
                                                     {log.strategy_name}
                                                 </Text>
-                                                <Text className="text-xs text-slate-500">
+                                                <Text className="text-xs text-slate-500 mt-0.5">
                                                     ID: {log.strategy_id}
                                                 </Text>
                                             </View>
                                         </View>
 
-                                        {/* Manager Info */}
+                                        {/* Manager */}
                                         <View className="bg-orange-50 rounded-lg p-3 mb-4 border border-orange-200">
-                                            <Text className="text-sm text-slate-600 font-medium">
-                                                Manager
-                                            </Text>
-                                            <Text className="text-base font-semibold text-slate-900 mt-1">
+                                            <Text className="text-xs text-slate-600 font-semibold uppercase mb-1">Manager</Text>
+                                            <Text className="text-base font-bold text-slate-900">
                                                 {log.strategy_member_nickname}
                                             </Text>
-                                            <Text className="text-xs text-slate-500">
+                                            <Text className="text-xs text-slate-500 mt-0.5">
                                                 {log.strategy_member_realname}
                                             </Text>
                                         </View>
 
-                                        {/* Financial Details Grid */}
-                                        <View className="mb-4">
-                                            <View className="flex-row justify-between mb-2">
-                                                <View className="flex-1 mr-2 bg-slate-50 rounded-lg p-3 border border-slate-200">
-                                                    <Text className="text-xs text-slate-600 font-medium">
-                                                        Investment
-                                                    </Text>
-                                                    <Text className="text-base font-bold text-slate-900 mt-1">
-                                                        ${parseFloat(log.copy_amount || 0).toFixed(2)}
-                                                    </Text>
-                                                </View>
-                                                <View className="flex-1 mr-2 bg-slate-50 rounded-lg p-3 border border-slate-200">
-                                                    <Text className="text-xs text-slate-600 font-medium">
-                                                        Profit/Loss
-                                                    </Text>
-                                                    <View className="flex-row items-center mt-1">
-                                                        {profit >= 0 ? (
-                                                            <TrendingUp
-                                                                size={16}
-                                                                color="#16a34a"
-                                                            />
-                                                        ) : (
-                                                            <TrendingDown
-                                                                size={16}
-                                                                color="#dc2626"
-                                                            />
-                                                        )}
-                                                        <Text
-                                                            className={`font-bold ml-1 ${profit >= 0
-                                                                    ? 'text-green-600'
-                                                                    : 'text-red-600'
-                                                                }`}
-                                                        >
-                                                            ${profit.toFixed(4)}
-                                                        </Text>
-                                                    </View>
-                                                </View>
-                                                <View className="flex-1 bg-slate-50 rounded-lg p-3 border border-slate-200">
-                                                    <Text className="text-xs text-slate-600 font-medium">
-                                                        Earned
-                                                    </Text>
-                                                    <Text
-                                                        className={`text-base font-bold mt-1 ${earned >= 0
-                                                                ? 'text-green-600'
-                                                                : 'text-red-600'
-                                                            }`}
-                                                    >
-                                                        ${earned.toFixed(4)}
+                                        {/* Financial Details */}
+                                        <View className="mb-3">
+                                            <View className="bg-slate-50 rounded-lg p-3 mb-2 border border-slate-200">
+                                                <Text className="text-xs text-slate-600 font-semibold uppercase mb-1">Investment</Text>
+                                                <Text className="text-base font-bold text-slate-900">
+                                                    ${parseFloat(log.copy_amount || 0).toFixed(2)}
+                                                </Text>
+                                            </View>
+                                            <View className="bg-slate-50 rounded-lg p-3 mb-2 border border-slate-200">
+                                                <Text className="text-xs text-slate-600 font-semibold uppercase mb-1">Profit/Loss</Text>
+                                                <View className="flex-row items-center">
+                                                    {profit >= 0 ? (
+                                                        <TrendingUp size={16} color="#16a34a" />
+                                                    ) : (
+                                                        <TrendingDown size={16} color="#dc2626" />
+                                                    )}
+                                                    <Text className={`font-bold ml-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        ${profit.toFixed(4)}
                                                     </Text>
                                                 </View>
                                             </View>
-
-                                            {/* Fees Breakdown */}
-                                            <View className="bg-orange-50 rounded-lg p-3 border border-orange-200">
-                                                <Text className="text-xs text-slate-600 font-medium mb-2">
-                                                    Fees
+                                            <View className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                                                <Text className="text-xs text-slate-600 font-semibold uppercase mb-1">Earned</Text>
+                                                <Text className={`text-base font-bold ${earned >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                    ${earned.toFixed(4)}
                                                 </Text>
-                                                <View className="flex-row justify-between mb-1">
-                                                    <Text className="text-xs text-slate-600">
-                                                        Management:
-                                                    </Text>
-                                                    <Text className="text-xs font-medium text-slate-900">
-                                                        ${parseFloat(log.management_fee || 0).toFixed(4)}
-                                                    </Text>
-                                                </View>
-                                                <View className="flex-row justify-between">
-                                                    <Text className="text-xs text-slate-600">
-                                                        Performance:
-                                                    </Text>
-                                                    <Text className="text-xs font-medium text-slate-900">
-                                                        ${parseFloat(log.performace_fee || 0).toFixed(4)}
-                                                    </Text>
-                                                </View>
+                                            </View>
+                                        </View>
+
+                                        {/* Fees */}
+                                        <View className="bg-orange-50 rounded-lg p-3 border border-orange-200 mb-3">
+                                            <Text className="text-xs text-slate-600 font-semibold uppercase mb-2">Fees</Text>
+                                            <View className="flex-row items-center justify-between pb-1.5 mb-1.5 border-b border-orange-200">
+                                                <Text className="text-xs text-slate-600">Management</Text>
+                                                <Text className="text-xs font-bold text-slate-900">
+                                                    ${parseFloat(log.management_fee || 0).toFixed(4)}
+                                                </Text>
+                                            </View>
+                                            <View className="flex-row items-center justify-between">
+                                                <Text className="text-xs text-slate-600">Performance</Text>
+                                                <Text className="text-xs font-bold text-slate-900">
+                                                    ${parseFloat(log.performace_fee || 0).toFixed(4)}
+                                                </Text>
                                             </View>
                                         </View>
 
                                         {/* Date */}
-                                        <View className="border-t border-slate-200 pt-3 flex-row items-center">
-                                            <Calendar size={16} color="#9ca3af" />
+                                        <View className="flex-row items-center pt-3 border-t border-slate-200">
+                                            <Calendar size={14} color="#9ca3af" />
                                             <Text className="text-xs text-slate-600 ml-2">
-                                                {new Date(
-                                                    log.calculate_time * 1000
-                                                ).toLocaleDateString()}
+                                                {new Date(log.calculate_time * 1000).toLocaleDateString()}
                                             </Text>
                                             <Text className="text-xs text-slate-500 ml-1">
-                                                {new Date(
-                                                    log.calculate_time * 1000
-                                                ).toLocaleTimeString()}
+                                                {new Date(log.calculate_time * 1000).toLocaleTimeString()}
                                             </Text>
                                         </View>
                                     </View>
@@ -404,12 +340,10 @@ const ProfitLogsPage = () => {
                             })}
                         </View>
                     ) : (
-                        <View className="bg-white rounded-lg border border-orange-200 p-12 items-center mb-6">
-                            <BarChart3 size={48} color="#d1d5db" />
-                            <Text className="text-slate-500 font-medium mt-4 text-center">
-                                No profit logs found
-                            </Text>
-                            <Text className="text-slate-400 text-sm mt-1 text-center">
+                        <View className="bg-white rounded-lg border border-slate-200 items-center py-8 mb-6">
+                            <BarChart3 size={40} color="#d1d5db" />
+                            <Text className="text-slate-500 font-bold mt-3 text-base">No Logs Found</Text>
+                            <Text className="text-slate-400 text-xs mt-1 text-center px-4">
                                 Start subscribing to strategies to see profit logs
                             </Text>
                         </View>
@@ -417,26 +351,25 @@ const ProfitLogsPage = () => {
 
                     {/* Pagination */}
                     {profitLogs.length > 0 && (
-                        <View className="flex-row items-center justify-center gap-3 mb-6">
+                        <View className="flex-row items-center justify-center mb-6">
                             <TouchableOpacity
-                                onPress={() =>
-                                    setCurrentPage(Math.max(1, currentPage - 1))
-                                }
+                                onPress={() => setCurrentPage(Math.max(1, currentPage - 1))}
                                 disabled={currentPage === 1}
-                                className="p-2 border border-orange-300 rounded-lg"
+                                activeOpacity={0.7}
+                                className={`p-2 border rounded ${currentPage === 1 ? 'border-slate-200 bg-slate-100' : 'border-orange-300'}`}
                             >
-                                <ChevronLeft size={20} color="#ea580c" />
+                                <ChevronLeft size={18} color={currentPage === 1 ? '#d1d5db' : '#ea580c'} />
                             </TouchableOpacity>
 
-                            <TextInput
-                                value={currentPage.toString()}
-                                onChangeText={(value) =>
-                                    setCurrentPage(parseInt(value) || 1)
-                                }
-                                keyboardType="number-pad"
-                                className="w-12 px-2 py-1 border border-orange-300 rounded text-center text-slate-900"
-                            />
-                            <Text className="text-slate-600 text-sm">Page</Text>
+                            <View className="flex-row items-center px-3 py-1 mx-2 bg-white rounded border border-slate-200">
+                                <TextInput
+                                    value={currentPage.toString()}
+                                    onChangeText={(value) => setCurrentPage(parseInt(value) || 1)}
+                                    keyboardType="number-pad"
+                                    className="w-8 text-center text-sm font-bold text-slate-900"
+                                />
+                                <Text className="text-xs text-slate-600 ml-1">Page</Text>
+                            </View>
 
                             <TouchableOpacity
                                 onPress={() => {
@@ -445,50 +378,42 @@ const ProfitLogsPage = () => {
                                     }
                                 }}
                                 disabled={profitLogs.length < ITEMS_PER_PAGE}
-                                className="p-2 border border-orange-300 rounded-lg"
+                                activeOpacity={0.7}
+                                className={`p-2 border rounded ${profitLogs.length < ITEMS_PER_PAGE ? 'border-slate-200 bg-slate-100' : 'border-orange-300'}`}
                             >
-                                <ChevronRight size={20} color="#ea580c" />
+                                <ChevronRight size={18} color={profitLogs.length < ITEMS_PER_PAGE ? '#d1d5db' : '#ea580c'} />
                             </TouchableOpacity>
                         </View>
                     )}
 
                     {/* Detailed Breakdowns */}
                     {summary && (
-                        <View className="mb-6">
+                        <View className="mb-4">
                             {/* Fee Breakdown */}
-                            <View className="bg-white rounded-lg border border-orange-200 p-4 mb-4">
-                                <Text className="text-lg font-semibold text-slate-900 mb-4">
-                                    Fee Breakdown
-                                </Text>
-                                <View className="bg-orange-50 rounded-lg p-3 mb-2 border border-orange-200 flex-row justify-between">
-                                    <Text className="text-slate-600 font-medium">
-                                        Management
-                                    </Text>
+                            <View className="bg-white rounded-lg border border-slate-200 p-4 mb-3">
+                                <Text className="text-base font-bold text-slate-900 mb-3">Fee Breakdown</Text>
+                                <View className="bg-orange-50 rounded-lg p-3 mb-2 border border-orange-200 flex-row items-center justify-between">
+                                    <Text className="text-slate-600 font-medium">Management</Text>
                                     <Text className="text-red-600 font-bold">
                                         ${parseFloat(summary.management_fee || 0).toFixed(4)}
                                     </Text>
                                 </View>
-                                <View className="bg-orange-50 rounded-lg p-3 mb-2 border border-orange-200 flex-row justify-between">
-                                    <Text className="text-slate-600 font-medium">
-                                        Performance
-                                    </Text>
+                                <View className="bg-orange-50 rounded-lg p-3 mb-2 border border-orange-200 flex-row items-center justify-between">
+                                    <Text className="text-slate-600 font-medium">Performance</Text>
                                     <Text className="text-red-600 font-bold">
                                         ${parseFloat(summary.performace_fee || 0).toFixed(4)}
                                     </Text>
                                 </View>
-                                <View className="bg-orange-50 rounded-lg p-3 mb-2 border border-orange-200 flex-row justify-between">
+                                <View className="bg-orange-50 rounded-lg p-3 mb-2 border border-orange-200 flex-row items-center justify-between">
                                     <Text className="text-slate-600 font-medium">Share</Text>
                                     <Text className="text-red-600 font-bold">
                                         ${parseFloat(summary.share_fee || 0).toFixed(4)}
                                     </Text>
                                 </View>
-                                <View className="bg-red-50 rounded-lg p-3 border border-red-200 flex-row justify-between">
-                                    <Text className="text-slate-900 font-bold">
-                                        Total Fees
-                                    </Text>
+                                <View className="bg-red-50 rounded-lg p-3 border border-red-200 flex-row items-center justify-between">
+                                    <Text className="text-slate-900 font-bold">Total Fees</Text>
                                     <Text className="text-red-600 font-bold">
-                                        $
-                                        {(
+                                        ${(
                                             parseFloat(summary.management_fee || 0) +
                                             parseFloat(summary.performace_fee || 0) +
                                             parseFloat(summary.share_fee || 0)
@@ -498,52 +423,51 @@ const ProfitLogsPage = () => {
                             </View>
 
                             {/* Earnings Summary */}
-                            <View className="bg-white rounded-lg border border-orange-200 p-4">
-                                <Text className="text-lg font-semibold text-slate-900 mb-4">
-                                    Earnings Summary
-                                </Text>
-                                <View className="bg-orange-50 rounded-lg p-3 mb-2 border border-orange-200 flex-row justify-between">
-                                    <Text className="text-slate-600 font-medium">
-                                        Copy Profit
-                                    </Text>
-                                    <Text
-                                        className={`font-bold ${parseFloat(summary.copy_profit || 0) >= 0
-                                                ? 'text-green-600'
-                                                : 'text-red-600'
-                                            }`}
-                                    >
+                            <View className="bg-white rounded-lg border border-slate-200 p-4">
+                                <Text className="text-base font-bold text-slate-900 mb-3">Earnings Summary</Text>
+                                <View className="bg-orange-50 rounded-lg p-3 mb-2 border border-orange-200 flex-row items-center justify-between">
+                                    <Text className="text-slate-600 font-medium">Copy Profit</Text>
+                                    <Text className={`font-bold ${parseFloat(summary.copy_profit || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                         ${parseFloat(summary.copy_profit || 0).toFixed(4)}
                                     </Text>
                                 </View>
-                                <View className="bg-orange-50 rounded-lg p-3 mb-2 border border-orange-200 flex-row justify-between">
-                                    <Text className="text-slate-600 font-medium">
-                                        Total Earnings
-                                    </Text>
-                                    <Text
-                                        className={`font-bold ${parseFloat(summary.copy_earn || 0) >= 0
-                                                ? 'text-green-600'
-                                                : 'text-red-600'
-                                            }`}
-                                    >
+                                <View className="bg-orange-50 rounded-lg p-3 mb-2 border border-orange-200 flex-row items-center justify-between">
+                                    <Text className="text-slate-600 font-medium">Total Earnings</Text>
+                                    <Text className={`font-bold ${parseFloat(summary.copy_earn || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                         ${parseFloat(summary.copy_earn || 0).toFixed(4)}
                                     </Text>
                                 </View>
-                                <View className="bg-green-50 rounded-lg p-3 border border-green-200 flex-row justify-between">
-                                    <Text className="text-slate-900 font-bold">
-                                        Net Result
-                                    </Text>
-                                    <Text
-                                        className={`font-bold text-lg ${parseFloat(summary.copy_earn || 0) >= 0
-                                                ? 'text-green-600'
-                                                : 'text-red-600'
-                                            }`}
-                                    >
+                                <View className="bg-green-50 rounded-lg p-3 border border-green-200 flex-row items-center justify-between">
+                                    <Text className="text-slate-900 font-bold">Net Result</Text>
+                                    <Text className={`font-bold text-base ${parseFloat(summary.copy_earn || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                         ${parseFloat(summary.copy_earn || 0).toFixed(4)}
                                     </Text>
                                 </View>
                             </View>
                         </View>
                     )}
+
+                    {/* Quick Nav */}
+                    <View className="flex-row mb-4">
+                        <TouchableOpacity
+                            onPress={() => router.push('/(tabs)/dashboard')}
+                            className="flex-1 bg-white rounded-lg border border-slate-200 p-3 mr-2"
+                        >
+                            <Text className="text-slate-900 font-semibold text-center text-xs">Dashboard</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => router.push('/(tabs)/subscriptions')}
+                            className="flex-1 bg-white rounded-lg border border-slate-200 p-3 mr-2"
+                        >
+                            <Text className="text-slate-900 font-semibold text-center text-xs">Portfolio</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => router.push('/(tabs)/strategies')}
+                            className="flex-1 bg-white rounded-lg border border-slate-200 p-3"
+                        >
+                            <Text className="text-slate-900 font-semibold text-center text-xs">Strategies</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </ScrollView>
         </SafeAreaView>

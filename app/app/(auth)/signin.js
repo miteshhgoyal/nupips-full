@@ -1,4 +1,3 @@
-// app/(auth)/signin.js
 import React, { useState } from 'react';
 import {
     View,
@@ -9,7 +8,6 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
-    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,7 +18,6 @@ import {
     Lock,
     Mail,
     AlertCircle,
-    CheckCircle,
 } from 'lucide-react-native';
 import api from '@/services/api';
 
@@ -124,30 +121,28 @@ const SignIn = () => {
             if (response.data.code === 200 && response.data.data) {
                 const { access_token, refresh_token, email } = response.data.data;
 
-                const loginSuccess = login({
+                const success = await login({
                     access_token,
                     refresh_token,
                     email: email || formData.account,
                 });
 
-                if (loginSuccess) {
+                if (success) {
                     router.replace('/(tabs)/dashboard');
                 } else {
-                    setSubmitError('Failed to complete login. Please try again.');
+                    setSubmitError('Failed to process login. Please try again.');
                 }
             } else {
                 setSubmitError(
-                    response.data.message ||
-                    'Login failed. Please check your credentials.'
+                    response.data.message || 'Login failed. Please check your credentials.'
                 );
             }
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('[SignIn] Login error:', error);
 
             if (error.response?.data?.code === -1) {
                 setSubmitError(
-                    error.response.data.message ||
-                    'User does not exist or password is incorrect'
+                    error.response.data.message || 'User does not exist or password is incorrect'
                 );
             } else if (error.response?.data?.message) {
                 setSubmitError(error.response.data.message);
@@ -170,24 +165,14 @@ const SignIn = () => {
         const hasError = !!errors[field.name];
 
         return (
-            <View key={field.name} style={{ marginBottom: 20 }}>
-                {/* Label */}
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 }}>
+            <View key={field.name} className="mb-5">
+                <Text className="text-xs font-semibold text-gray-700 mb-2">
                     {field.label}
                 </Text>
 
-                {/* Input Container */}
                 <View
-                    style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: '#ffffff',
-                        borderWidth: 1,
-                        borderColor: hasError ? '#ef4444' : '#d1d5db',
-                        borderRadius: 8,
-                        paddingHorizontal: 12,
-                        paddingVertical: 2,
-                    }}
+                    className={`flex-row items-center bg-white border rounded-lg px-3 py-1 ${hasError ? 'border-red-500' : 'border-gray-300'
+                        }`}
                 >
                     <Icon
                         size={20}
@@ -204,20 +189,14 @@ const SignIn = () => {
                         autoCapitalize="none"
                         autoCorrect={false}
                         editable={!isLoading}
-                        style={{
-                            flex: 1,
-                            paddingVertical: 12,
-                            fontSize: 16,
-                            color: '#111827',
-                        }}
+                        className="flex-1 py-3 text-base text-gray-900"
                     />
 
-                    {/* Password Toggle */}
                     {field.hasToggle && (
                         <TouchableOpacity
                             onPress={() => togglePasswordVisibility(field.name)}
                             disabled={isLoading}
-                            style={{ padding: 4 }}
+                            className="p-1"
                         >
                             {showPassword ? (
                                 <Eye size={18} color="#9ca3af" />
@@ -228,9 +207,8 @@ const SignIn = () => {
                     )}
                 </View>
 
-                {/* Error Message */}
                 {errors[field.name] && (
-                    <Text style={{ marginTop: 6, fontSize: 13, color: '#dc2626' }}>
+                    <Text className="text-xs text-red-600 mt-1.5">
                         {errors[field.name]}
                     </Text>
                 )}
@@ -239,143 +217,80 @@ const SignIn = () => {
     };
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#faf5f0' }} edges={['top']}>
+        <SafeAreaView className="flex-1 bg-orange-50" edges={['top']}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={{ flex: 1 }}
+                className="flex-1"
             >
                 <ScrollView
                     contentContainerStyle={{
                         flexGrow: 1,
-                        paddingHorizontal: 16,
-                        paddingTop: 40,
-                        paddingBottom: 40,
-                        justifyContent: 'center',
                     }}
+                    className="px-4 py-10"
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    {/* Title */}
-                    <View style={{ textAlign: 'center', marginBottom: 32 }}>
-                        <Text
-                            style={{
-                                fontSize: 24,
-                                fontWeight: '700',
-                                color: '#92400e',
-                                textAlign: 'center',
-                            }}
-                        >
-                            {pageConfig.title}
-                        </Text>
-                    </View>
-
-                    {/* Card Container */}
-                    <View
-                        style={{
-                            backgroundColor: '#ffffff',
-                            borderRadius: 8,
-                            padding: 24,
-                            shadowColor: '#000',
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.1,
-                            shadowRadius: 8,
-                            elevation: 3,
-                            borderWidth: 1,
-                            borderColor: '#fed7aa',
-                        }}
-                    >
-                        {/* Submit Error */}
-                        {submitError && (
-                            <View
-                                style={{
-                                    marginBottom: 16,
-                                    flexDirection: 'row',
-                                    alignItems: 'flex-start',
-                                    backgroundColor: '#fef2f2',
-                                    borderWidth: 1,
-                                    borderColor: '#fecaca',
-                                    borderRadius: 6,
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 10,
-                                }}
-                            >
-                                <AlertCircle size={18} color="#dc2626" style={{ marginTop: 2, marginRight: 8 }} />
-                                <Text
-                                    style={{
-                                        flex: 1,
-                                        fontSize: 13,
-                                        fontWeight: '500',
-                                        color: '#b91c1c',
-                                    }}
-                                >
-                                    {submitError}
-                                </Text>
-                            </View>
-                        )}
-
-                        {/* Auth Error */}
-                        {authError && (
-                            <View
-                                style={{
-                                    marginBottom: 16,
-                                    flexDirection: 'row',
-                                    alignItems: 'flex-start',
-                                    backgroundColor: '#fef2f2',
-                                    borderWidth: 1,
-                                    borderColor: '#fecaca',
-                                    borderRadius: 6,
-                                    paddingHorizontal: 12,
-                                    paddingVertical: 10,
-                                }}
-                            >
-                                <AlertCircle size={18} color="#dc2626" style={{ marginTop: 2, marginRight: 8 }} />
-                                <Text
-                                    style={{
-                                        flex: 1,
-                                        fontSize: 13,
-                                        fontWeight: '500',
-                                        color: '#b91c1c',
-                                    }}
-                                >
-                                    {authError}
-                                </Text>
-                            </View>
-                        )}
-
-                        {/* Form Fields */}
-                        {fieldConfigs.map(renderFormField)}
-
-                        {/* Submit Button */}
-                        <TouchableOpacity
-                            onPress={handleSubmit}
-                            disabled={isLoading}
-                            activeOpacity={0.8}
-                            style={{
-                                marginTop: 8,
-                                paddingVertical: 12,
-                                paddingHorizontal: 16,
-                                backgroundColor: isLoading ? '#d97706' : '#ea580c',
-                                borderRadius: 6,
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                            }}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator size="small" color="#ffffff" />
-                            ) : null}
-                            <Text
-                                style={{
-                                    color: '#ffffff',
-                                    fontSize: 16,
-                                    fontWeight: '600',
-                                    marginLeft: isLoading ? 8 : 0,
-                                }}
-                            >
-                                {isLoading
-                                    ? pageConfig.submitButton.loading
-                                    : pageConfig.submitButton.default}
+                    <View className="justify-center flex-1">
+                        <View className="text-center mb-8">
+                            <Text className="text-2xl font-bold text-amber-900 text-center">
+                                {pageConfig.title}
                             </Text>
-                        </TouchableOpacity>
+                        </View>
+
+                        <View className="bg-white rounded-lg p-6 shadow-md border border-orange-200">
+                            {submitError && (
+                                <View className="mb-4 flex-row items-start bg-red-50 border border-red-300 rounded-lg px-3 py-2.5">
+                                    <AlertCircle
+                                        size={18}
+                                        color="#dc2626"
+                                        style={{ marginTop: 2, marginRight: 8 }}
+                                    />
+                                    <Text className="flex-1 text-xs font-medium text-red-900">
+                                        {submitError}
+                                    </Text>
+                                </View>
+                            )}
+
+                            {authError && (
+                                <View className="mb-4 flex-row items-start bg-red-50 border border-red-300 rounded-lg px-3 py-2.5">
+                                    <AlertCircle
+                                        size={18}
+                                        color="#dc2626"
+                                        style={{ marginTop: 2, marginRight: 8 }}
+                                    />
+                                    <Text className="flex-1 text-xs font-medium text-red-900">
+                                        {authError}
+                                    </Text>
+                                </View>
+                            )}
+
+                            {fieldConfigs.map(renderFormField)}
+
+                            <TouchableOpacity
+                                onPress={handleSubmit}
+                                disabled={isLoading}
+                                activeOpacity={0.8}
+                                className={`mt-2 py-3 px-4 rounded-lg items-center justify-center ${isLoading
+                                        ? 'bg-orange-400'
+                                        : 'bg-orange-600'
+                                    }`}
+                            >
+                                <View className="flex-row items-center">
+                                    {isLoading && (
+                                        <ActivityIndicator
+                                            size="small"
+                                            color="#ffffff"
+                                            style={{ marginRight: 8 }}
+                                        />
+                                    )}
+                                    <Text className="text-white text-base font-semibold">
+                                        {isLoading
+                                            ? pageConfig.submitButton.loading
+                                            : pageConfig.submitButton.default}
+                                    </Text>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>

@@ -1,4 +1,3 @@
-// app/_layout.js
 import React, { useEffect } from 'react';
 import { Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar, View, ActivityIndicator } from 'react-native';
@@ -13,7 +12,7 @@ function MainLayout() {
     useEffect(() => {
         if (loading) return;
 
-        const isAuthGroup = segments[0] === 'auth';
+        const isAuthGroup = segments[0] === '(auth)';
 
         if (!isAuthenticated && !isAuthGroup) {
             router.replace('/(auth)/signin');

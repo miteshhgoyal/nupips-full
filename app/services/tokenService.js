@@ -1,45 +1,54 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const tokenService = {
-    getToken: async () => {
-        try {
-            return await AsyncStorage.getItem('accessToken');
-        } catch (error) {
-            console.error('Error getting access token:', error);
-            return null;
-        }
+    // SYNCHRONOUS - store tokens in memory for immediate access
+    _accessToken: null,
+    _refreshToken: null,
+
+    getToken: () => {
+        return tokenService._accessToken;
     },
 
-    setToken: async (token) => {
-        try {
-            await AsyncStorage.setItem('accessToken', token);
-        } catch (error) {
-            console.error('Error setting access token:', error);
-        }
+    setToken: (token) => {
+        tokenService._accessToken = token;
+        // Also persist to AsyncStorage asynchronously
+        AsyncStorage.setItem('accessToken', token).catch(err =>
+            console.error('Error persisting access token:', err)
+        );
     },
 
-    getRefreshToken: async () => {
-        try {
-            return await AsyncStorage.getItem('refreshToken');
-        } catch (error) {
-            console.error('Error getting refresh token:', error);
-            return null;
-        }
+    getRefreshToken: () => {
+        return tokenService._refreshToken;
     },
 
-    setRefreshToken: async (token) => {
-        try {
-            await AsyncStorage.setItem('refreshToken', token);
-        } catch (error) {
-            console.error('Error setting refresh token:', error);
-        }
+    setRefreshToken: (token) => {
+        tokenService._refreshToken = token;
+        // Also persist to AsyncStorage asynchronously
+        AsyncStorage.setItem('refreshToken', token).catch(err =>
+            console.error('Error persisting refresh token:', err)
+        );
     },
 
-    clearTokens: async () => {
-        try {
-            await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user']);
-        } catch (error) {
-            console.error('Error clearing tokens:', error);
-        }
+    clearTokens: () => {
+        tokenService._accessToken = null;
+        tokenService._refreshToken = null;
+        // Also clear from AsyncStorage asynchronously
+        AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user']).catch(err =>
+            console.error('Error clearing tokens:', err)
+        );
     },
+
+    // Initialize from AsyncStorage on app start
+    initializeFromStorage: async () => {
+        try {
+            const [accessToken, refreshToken] = await AsyncStorage.multiGet([
+                'accessToken',
+                'refreshToken'
+            ]);
+            if (accessToken[1]) tokenService._accessToken = accessToken[1];
+            if (refreshToken[1]) tokenService._refreshToken = refreshToken[1];
+        } catch (error) {
+            console.error('[TokenService] Failed to initialize:', error);
+        }
+    }
 };
