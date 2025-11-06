@@ -21,56 +21,72 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const initializeAuth = async () => {
+
             try {
-                // Wait for tokens to load from AsyncStorage
                 await tokenService.initializeFromStorage();
 
                 const token = tokenService.getToken();
                 const refreshToken = tokenService.getRefreshToken();
 
                 if (token && refreshToken) {
-                    // Check if token is expired (client-side only)
+
+
                     if (isTokenExpired(token)) {
 
                         await clearAuthState();
+                        setLoading(false);
+                        return;
+                    }
+
+                    // Load cached user for fast UI
+                    const storedUser = await AsyncStorage.getItem('user');
+                    if (storedUser) {
+                        try {
+                            const parsedUser = JSON.parse(storedUser);
+
+                            setUser(parsedUser);
+                            setIsAuthenticated(true);
+
+                            // CRITICAL: Set loading to false IMMEDIATELY
+                            setLoading(false);
+
+                            // Validate token in background
+                            fetchUserInfo().catch(err => {
+                                console.error('[Auth] Background validation failed:', err);
+                                clearAuthState();
+                            });
+
+                        } catch (e) {
+                            console.error('[Auth] Failed to parse stored user:', e);
+                            await clearAuthState();
+                            setLoading(false);
+                        }
                     } else {
-                        // Load cached user first for fast UI
-                        const storedUser = await AsyncStorage.getItem('user');
-                        if (storedUser) {
-                            try {
-                                const parsedUser = JSON.parse(storedUser);
-                                setUser(parsedUser);
+
+                        try {
+                            const userInfo = await fetchUserInfo();
+                            if (userInfo) {
                                 setIsAuthenticated(true);
 
-                            } catch (e) {
-                                console.error('Failed to parse stored user:', e);
-                                await clearAuthState();
-                            }
-                        } else {
-                            // Token exists but no user data - try to fetch
-                            try {
-                                const userInfo = await fetchUserInfo();
-                                if (userInfo) {
-                                    setIsAuthenticated(true);
+                            } else {
 
-                                } else {
-                                    await clearAuthState();
-                                }
-                            } catch (err) {
-                                console.error('Failed to fetch user info:', err);
                                 await clearAuthState();
                             }
+                        } catch (err) {
+                            console.error('[Auth] Failed to fetch user info:', err);
+                            await clearAuthState();
                         }
+                        setLoading(false);
                     }
                 } else {
 
                     setIsAuthenticated(false);
                     setUser(null);
+                    setLoading(false);
                 }
             } catch (error) {
-                console.error('Auth initialization error:', error);
+                console.error('[Auth] Initialization error:', error);
                 await clearAuthState();
-            } finally {
                 setLoading(false);
             }
         };
@@ -78,7 +94,6 @@ export const AuthProvider = ({ children }) => {
         initializeAuth();
     }, []);
 
-    // Helper: Decode JWT and check expiration (client-side only)
     const isTokenExpired = (token) => {
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
@@ -89,14 +104,13 @@ export const AuthProvider = ({ children }) => {
             }
             return expired;
         } catch (err) {
-            console.error('Error decoding token:', err);
+            console.error('[Auth] Error decoding token:', err);
             return true;
         }
     };
 
     const clearAuthState = async () => {
 
-        // AWAIT tokenService.clearTokens()
         await tokenService.clearTokens();
         await AsyncStorage.multiRemove(['user']);
         setUser(null);
@@ -124,15 +138,15 @@ export const AuthProvider = ({ children }) => {
 
                 return userInfo;
             } else {
-                console.error('API response code is not 200 or data is missing');
+                console.error('[Auth] API response invalid');
             }
             return null;
         } catch (error) {
-            console.error('Failed to fetch user info:', error);
+            console.error('[Auth] Failed to fetch user info:', error);
             if (error.response?.status === 401) {
                 await clearAuthState();
             }
-            return null;
+            throw error;
         }
     };
 
@@ -146,13 +160,11 @@ export const AuthProvider = ({ children }) => {
 
 
 
-            // AWAIT both token setters - CRITICAL
             await tokenService.setToken(credentials.access_token);
             await tokenService.setRefreshToken(credentials.refresh_token);
 
 
 
-            // Fetch fresh user info
             const userInfo = await fetchUserInfo();
 
             if (userInfo) {
@@ -174,18 +186,18 @@ export const AuthProvider = ({ children }) => {
 
     const logout = async () => {
         try {
+
             const refreshToken = tokenService.getRefreshToken();
             if (refreshToken) {
                 try {
                     await api.post('/logout', { refresh_token: refreshToken });
                 } catch (err) {
-                    console.warn('Backend logout failed, proceeding with local logout');
+                    console.warn('[Auth] Backend logout failed, proceeding with local logout');
                 }
             }
         } catch (error) {
-            console.error('Logout error:', error);
+            console.error('[Auth] Logout error:', error);
         } finally {
-            // AWAIT clearAuthState
             await clearAuthState();
             setError(null);
 

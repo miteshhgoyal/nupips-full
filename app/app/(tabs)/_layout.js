@@ -20,10 +20,9 @@ const BORDER_COLOR = '#e5e7eb';
 export default function TabsLayout() {
     const { user, logout } = useAuth();
     const router = useRouter();
-    const screenWidth = Dimensions.get('window').width;
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         router.push('/(auth)/signin');
     };
 

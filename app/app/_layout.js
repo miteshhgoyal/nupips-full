@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Stack, useSegments, useRouter } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar, View, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuth } from '@/context/authContext';
 import './globals.css';
@@ -8,27 +8,32 @@ function MainLayout() {
     const { isAuthenticated, loading } = useAuth();
     const segments = useSegments();
     const router = useRouter();
-    const lastRoute = useRef(null);
 
     useEffect(() => {
-        if (loading) return;
+        if (loading) {
+
+            return;
+        }
+
+        const currentPath = segments.join('/');
+
 
         const inAuthGroup = segments[0] === '(auth)';
+        const inTabsGroup = segments[0] === '(tabs)';
+        const isOnIndex = segments.length === 0 || segments[0] === 'index';
 
-        // Determine target route
-        let targetRoute = null;
-        if (isAuthenticated && inAuthGroup) {
-            targetRoute = '/(tabs)/dashboard';
-        } else if (!isAuthenticated && !inAuthGroup) {
-            targetRoute = '/(auth)/signin';
-        }
+        if (isAuthenticated) {
+            if (inAuthGroup || isOnIndex) {
 
-        // Only navigate if route actually needs to change
-        if (targetRoute && lastRoute.current !== targetRoute) {
-            lastRoute.current = targetRoute;
-            router.replace(targetRoute);
+                router.replace('/(tabs)/dashboard');
+            }
+        } else {
+            if (!inAuthGroup) {
+
+                router.replace('/(auth)/signin');
+            }
         }
-    }, [isAuthenticated, loading]); // REMOVED segments
+    }, [isAuthenticated, loading, segments]);
 
     if (loading) {
         return (
@@ -42,6 +47,13 @@ function MainLayout() {
         <>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
             <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen
+                    name="index"
+                    options={{
+                        headerShown: false,
+                        animationEnabled: false,
+                    }}
+                />
                 <Stack.Screen
                     name="(auth)"
                     options={{

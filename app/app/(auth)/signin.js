@@ -140,18 +140,14 @@ const SignIn = () => {
             if (response.data.code === 200 && response.data.data) {
                 const { access_token, refresh_token, email } = response.data.data;
 
-                const success = await login({
+                await login({
                     access_token,
                     refresh_token,
                     email: email || formData.account,
                 });
 
-                if (success) {
-                    // DON'T redirect here - MainLayout will handle it automatically
-                    router.replace('/(tabs)/dashboard');
-                } else {
-                    setSubmitError('Failed to process login. Please try again.');
-                }
+                // REMOVED: router.replace('/(tabs)/dashboard');
+                // MainLayout will handle navigation automatically
             } else {
                 setSubmitError(
                     response.data.message || 'Login failed. Please check your credentials.'
