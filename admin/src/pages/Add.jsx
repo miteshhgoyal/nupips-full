@@ -82,7 +82,6 @@ const Add = ({ token }) => {
 
       if (response.data.success) {
         toast.success("Product added successfully!");
-        // Reset form
         setFormData({
           name: "",
           description: "",
@@ -104,11 +103,11 @@ const Add = ({ token }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-orange-50 p-6">
       <div className="max-w-5xl mx-auto">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-orange-200 overflow-hidden">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-orange-200 bg-gradient-to-r from-orange-50 to-white">
             <h1 className="text-2xl font-semibold text-gray-900">
               Add New Product
             </h1>
@@ -122,12 +121,12 @@ const Add = ({ token }) => {
             {/* Image Upload Section */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-3">
-                Product Images <span className="text-red-500">*</span>
+                Product Images <span className="text-orange-600">*</span>
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {images.map((image, index) => (
                   <div key={index} className="relative">
-                    <div className="aspect-square border-2 border-dashed border-gray-300 rounded-lg overflow-hidden hover:border-red-500 transition-colors">
+                    <div className="aspect-square border-2 border-dashed border-orange-300 rounded-lg overflow-hidden hover:border-orange-500 transition-colors">
                       {image ? (
                         <div className="relative h-full">
                           <img
@@ -138,15 +137,15 @@ const Add = ({ token }) => {
                           <button
                             type="button"
                             onClick={() => removeImage(index)}
-                            className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                            className="absolute top-2 right-2 bg-orange-500 text-white p-1 rounded-full hover:bg-orange-600"
                           >
                             <X className="w-4 h-4" />
                           </button>
                         </div>
                       ) : (
                         <label className="flex flex-col items-center justify-center h-full cursor-pointer">
-                          <Upload className="w-8 h-8 text-gray-400" />
-                          <span className="text-sm text-gray-500 mt-2">
+                          <Upload className="w-8 h-8 text-orange-400" />
+                          <span className="text-sm text-gray-600 mt-2">
                             Upload Image
                           </span>
                           <input
@@ -164,38 +163,40 @@ const Add = ({ token }) => {
                 ))}
               </div>
               {errors.images && (
-                <p className="text-red-500 text-sm mt-1">{errors.images}</p>
+                <p className="text-orange-600 text-sm mt-1">{errors.images}</p>
               )}
             </div>
 
             {/* Basic Information */}
             <div className="space-y-6">
-              <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
+              <h3 className="text-lg font-medium text-gray-900 border-b border-orange-200 pb-2">
                 Basic Information
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Product Name <span className="text-red-500">*</span>
+                    Product Name <span className="text-orange-600">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                      errors.name ? "border-red-500" : "border-gray-300"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      errors.name ? "border-orange-500" : "border-orange-300"
                     }`}
                     placeholder="Enter product name"
                   />
                   {errors.name && (
-                    <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+                    <p className="text-orange-600 text-sm mt-1">
+                      {errors.name}
+                    </p>
                   )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Category <span className="text-red-500">*</span>
+                    Category <span className="text-orange-600">*</span>
                   </label>
                   <input
                     type="text"
@@ -203,13 +204,15 @@ const Add = ({ token }) => {
                     onChange={(e) =>
                       handleInputChange("category", e.target.value)
                     }
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                      errors.category ? "border-red-500" : "border-gray-300"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                      errors.category
+                        ? "border-orange-500"
+                        : "border-orange-300"
                     }`}
                     placeholder="e.g., Clothing, Electronics, Accessories"
                   />
                   {errors.category && (
-                    <p className="text-red-500 text-sm mt-1">
+                    <p className="text-orange-600 text-sm mt-1">
                       {errors.category}
                     </p>
                   )}
@@ -218,7 +221,7 @@ const Add = ({ token }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Description <span className="text-red-500">*</span>
+                  Description <span className="text-orange-600">*</span>
                 </label>
                 <textarea
                   value={formData.description}
@@ -226,13 +229,15 @@ const Add = ({ token }) => {
                     handleInputChange("description", e.target.value)
                   }
                   rows={4}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                    errors.description ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                    errors.description
+                      ? "border-orange-500"
+                      : "border-orange-300"
                   }`}
                   placeholder="Enter detailed product description"
                 />
                 {errors.description && (
-                  <p className="text-red-500 text-sm mt-1">
+                  <p className="text-orange-600 text-sm mt-1">
                     {errors.description}
                   </p>
                 )}
@@ -240,26 +245,26 @@ const Add = ({ token }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">
-                  Price (₹) <span className="text-red-500">*</span>
+                  Price (₹) <span className="text-orange-600">*</span>
                 </label>
                 <input
                   type="number"
                   value={formData.price}
                   onChange={(e) => handleInputChange("price", e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                    errors.price ? "border-red-500" : "border-gray-300"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                    errors.price ? "border-orange-500" : "border-orange-300"
                   }`}
                   placeholder="299"
                   min="1"
                 />
                 {errors.price && (
-                  <p className="text-red-500 text-sm mt-1">{errors.price}</p>
+                  <p className="text-orange-600 text-sm mt-1">{errors.price}</p>
                 )}
               </div>
             </div>
 
             {/* Bestseller Toggle */}
-            <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center space-x-3 p-4 bg-orange-50 rounded-lg border border-orange-200">
               <input
                 type="checkbox"
                 id="bestseller"
@@ -267,7 +272,7 @@ const Add = ({ token }) => {
                 onChange={(e) =>
                   handleInputChange("bestseller", e.target.checked)
                 }
-                className="w-4 h-4 text-red-600 rounded focus:ring-red-500"
+                className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
               />
               <label
                 htmlFor="bestseller"
@@ -278,11 +283,11 @@ const Add = ({ token }) => {
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-end pt-6 border-t border-gray-200">
+            <div className="flex justify-end pt-6 border-t border-orange-200">
               <button
                 type="submit"
                 disabled={loading}
-                className="flex items-center space-x-2 bg-red-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center space-x-2 bg-orange-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>

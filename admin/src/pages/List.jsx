@@ -12,9 +12,9 @@ import {
   Star,
   X,
   Save,
-  Plus,
-  Upload,
   Loader2,
+  Upload,
+  Plus,
 } from "lucide-react";
 
 const List = ({ token }) => {
@@ -24,9 +24,7 @@ const List = ({ token }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [sortBy, setSortBy] = useState("newest");
-
-  // Loading states for individual operations
-  const [deletingProducts, setDeletingProducts] = useState(new Set()); // Track which products are being deleted
+  const [deletingProducts, setDeletingProducts] = useState(new Set());
 
   // Modal states
   const [viewModal, setViewModal] = useState(false);
@@ -37,87 +35,15 @@ const List = ({ token }) => {
   // Edit form data
   const [editFormData, setEditFormData] = useState({});
   const [editImages, setEditImages] = useState([]);
-  const [editCompatibility, setEditCompatibility] = useState([]);
-  const [editSpecifications, setEditSpecifications] = useState([]);
+  const [imagesToDelete, setImagesToDelete] = useState([]);
 
-  const categories = {
-    "Mobile Accessories": [
-      "Phone Cases",
-      "Screen Protectors",
-      "Phone Holders",
-      "Pop Sockets",
-      "Camera Lens Protectors",
-    ],
-    Audio: [
-      "Wireless Earbuds",
-      "Wired Earphones",
-      "Bluetooth Speakers",
-      "Gaming Headsets",
-    ],
-    Power: [
-      "Power Banks",
-      "Wireless Chargers",
-      "Fast Chargers",
-      "Car Chargers",
-      "Charging Cables",
-    ],
-    Protection: [
-      "Tempered Glass",
-      "Privacy Screens",
-      "Waterproof Cases",
-      "Shock Proof Cases",
-    ],
-    Connectivity: [
-      "USB Cables",
-      "HDMI Adapters",
-      "OTG Adapters",
-      "Bluetooth Adapters",
-    ],
-    Storage: ["Memory Cards", "Card Readers", "USB Drives", "External Storage"],
-  };
-
-  const compatibilityOptions = [
-    "iPhone 15",
-    "iPhone 14",
-    "Samsung Galaxy S24",
-    "OnePlus 12",
-    "Google Pixel 8",
-    "Xiaomi 14",
-    "Universal",
-    "Android",
-    "iOS",
+  const categories = [
+    "Electronics",
+    "Clothing",
+    "Books",
+    "Home & Garden",
+    "Sports",
   ];
-
-  const specificationOptions = {
-    "Mobile Accessories": [
-      "Wireless",
-      "Magnetic",
-      "Adjustable",
-      "Foldable",
-      "Waterproof",
-    ],
-    Audio: [
-      "Noise Cancelling",
-      "Bluetooth 5.3",
-      "Fast Charging",
-      "Voice Assistant",
-    ],
-    Power: [
-      "Fast Charging",
-      "Wireless",
-      "Multiple Ports",
-      "LED Display",
-      "Quick Charge 3.0",
-    ],
-    Protection: [
-      "9H Hardness",
-      "Anti-Blue Light",
-      "Fingerprint Resistant",
-      "Case Friendly",
-    ],
-    Connectivity: ["USB-C", "Lightning", "USB 3.0", "High Speed"],
-    Storage: ["High Speed", "Waterproof", "Shockproof", "Encrypted"],
-  };
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -140,7 +66,6 @@ const List = ({ token }) => {
   const removeProduct = async (id, name) => {
     if (!window.confirm(`Are you sure you want to delete "${name}"?`)) return;
 
-    // Add product ID to deleting set to show loading state
     setDeletingProducts((prev) => new Set([...prev, id]));
 
     try {
@@ -160,7 +85,6 @@ const List = ({ token }) => {
       console.log(error);
       toast.error("Failed to delete product");
     } finally {
-      // Remove product ID from deleting set
       setDeletingProducts((prev) => {
         const newSet = new Set(prev);
         newSet.delete(id);
@@ -170,15 +94,12 @@ const List = ({ token }) => {
   };
 
   const handleView = (product) => {
-    // Prevent opening modal if any operation is in progress
     if (deletingProducts.size > 0 || editLoading) return;
-
     setSelectedProduct(product);
     setViewModal(true);
   };
 
   const handleEdit = (product) => {
-    // Prevent opening modal if any operation is in progress
     if (deletingProducts.size > 0 || editLoading) return;
 
     setSelectedProduct(product);
@@ -187,16 +108,20 @@ const List = ({ token }) => {
       description: product.description,
       price: product.price,
       category: product.category,
-      subCategory: product.subCategory,
-      brand: product.brand || "",
-      color: product.color || "",
-      material: product.material || "",
-      warranty: product.warranty || "6 months",
       bestseller: product.bestseller || false,
     });
-    setEditImages(product.image || []);
-    setEditCompatibility(product.compatibility || []);
-    setEditSpecifications(product.specifications || []);
+
+    // Initialize edit images with existing images and empty slots
+    const existingImages = product.image || [];
+    const allImages = [
+      ...existingImages.map((img) => ({ url: img, isNew: false, id: img })),
+      // Add empty slots for new images (up to 4 total)
+      ...Array(Math.max(0, 4 - existingImages.length))
+        .fill(null)
+        .map(() => ({ url: null, isNew: false, id: null })),
+    ];
+    setEditImages(allImages);
+    setImagesToDelete([]);
     setEditModal(true);
   };
 
@@ -207,19 +132,21 @@ const List = ({ token }) => {
     try {
       const updateData = new FormData();
 
-      // Add form data
       Object.keys(editFormData).forEach((key) => {
         updateData.append(key, editFormData[key]);
       });
 
       updateData.append("productId", selectedProduct._id);
-      updateData.append("compatibility", JSON.stringify(editCompatibility));
-      updateData.append("specifications", JSON.stringify(editSpecifications));
 
-      // Add new images if any
+      // Add images to delete (their URLs)
+      imagesToDelete.forEach((imageUrl, index) => {
+        updateData.append(`deleteImage${index + 1}`, imageUrl);
+      });
+
+      // Add new images
       editImages.forEach((image, index) => {
-        if (image instanceof File) {
-          updateData.append(`newImage${index + 1}`, image);
+        if (image.isNew && image.file instanceof File) {
+          updateData.append(`newImage${index + 1}`, image.file);
         }
       });
 
@@ -244,16 +171,41 @@ const List = ({ token }) => {
     }
   };
 
-  const toggleSelection = (item, list, setList) => {
-    setList((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
-    );
+  const handleImageUpload = (index, file) => {
+    const newImages = [...editImages];
+    newImages[index] = {
+      url: URL.createObjectURL(file),
+      file,
+      isNew: true,
+      id: `new-${index}-${Date.now()}`,
+    };
+    setEditImages(newImages);
   };
 
-  // Check if any operation is in progress
+  const handleImageRemove = (index) => {
+    const newImages = [...editImages];
+    const imageToRemove = editImages[index];
+
+    // If it's an existing image (not new), add to delete list
+    if (!imageToRemove.isNew && imageToRemove.url) {
+      setImagesToDelete((prev) => [...prev, imageToRemove.url]);
+    }
+
+    // Clear the slot
+    newImages[index] = { url: null, isNew: false, id: null };
+    setEditImages(newImages);
+  };
+
+  const handleAddImageSlot = () => {
+    if (editImages.length < 4) {
+      setEditImages([...editImages, { url: null, isNew: false, id: null }]);
+    } else {
+      toast.warning("Maximum 4 images allowed");
+    }
+  };
+
   const isAnyOperationInProgress = deletingProducts.size > 0 || editLoading;
 
-  // Filter and sort products
   useEffect(() => {
     let filtered = [...products];
 
@@ -261,7 +213,6 @@ const List = ({ token }) => {
       filtered = filtered.filter(
         (product) =>
           product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           product.category.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -297,9 +248,9 @@ const List = ({ token }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
           <p className="text-gray-600 mt-4">Loading products...</p>
         </div>
       </div>
@@ -308,7 +259,7 @@ const List = ({ token }) => {
 
   return (
     <div
-      className={`min-h-screen bg-gray-50 p-6 ${
+      className={`min-h-screen bg-orange-50 p-6 ${
         isAnyOperationInProgress ? "pointer-events-none" : ""
       }`}
     >
@@ -317,7 +268,7 @@ const List = ({ token }) => {
         {isAnyOperationInProgress && (
           <div className="fixed inset-0 bg-black bg-opacity-20 z-40 flex items-center justify-center pointer-events-auto">
             <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-3">
-              <Loader2 className="w-6 h-6 animate-spin text-red-600" />
+              <Loader2 className="w-6 h-6 animate-spin text-orange-600" />
               <span className="text-gray-700">
                 {deletingProducts.size > 0
                   ? "Deleting product..."
@@ -328,8 +279,8 @@ const List = ({ token }) => {
         )}
 
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm border border-orange-200 mb-6 overflow-hidden">
+          <div className="px-6 py-4 border-b border-orange-200 bg-gradient-to-r from-orange-50 to-white">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-semibold text-gray-900">
@@ -341,7 +292,7 @@ const List = ({ token }) => {
                 </p>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                <span className="bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm font-medium">
                   {products.length} Total Products
                 </span>
               </div>
@@ -352,14 +303,14 @@ const List = ({ token }) => {
           <div className="px-6 py-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-orange-400 w-4 h-4" />
                 <input
                   type="text"
-                  placeholder="Search products, brands, categories..."
+                  placeholder="Search products or categories..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   disabled={isAnyOperationInProgress}
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="pl-10 pr-4 py-2 w-full border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -367,10 +318,10 @@ const List = ({ token }) => {
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 disabled={isAnyOperationInProgress}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="">All Categories</option>
-                {Object.keys(categories).map((category) => (
+                {categories.map((category) => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -381,7 +332,7 @@ const List = ({ token }) => {
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 disabled={isAnyOperationInProgress}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="newest">Newest First</option>
                 <option value="name">Name A-Z</option>
@@ -393,10 +344,10 @@ const List = ({ token }) => {
         </div>
 
         {/* Products Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm border border-orange-200 overflow-hidden">
           {filteredProducts.length === 0 ? (
             <div className="text-center py-12">
-              <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <Package className="w-12 h-12 text-orange-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No products found
               </h3>
@@ -407,33 +358,30 @@ const List = ({ token }) => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-orange-50 border-b border-orange-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Product
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Category
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Brand
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Price
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-orange-200">
                   {filteredProducts.map((product) => (
                     <tr
                       key={product._id}
-                      className={`hover:bg-gray-50 ${
+                      className={`hover:bg-orange-50 transition-colors ${
                         deletingProducts.has(product._id) ? "opacity-50" : ""
                       }`}
                     >
@@ -442,7 +390,7 @@ const List = ({ token }) => {
                           <img
                             src={product.image[0]}
                             alt={product.name}
-                            className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                            className="w-12 h-12 rounded-lg object-cover border border-orange-200"
                           />
                           <div className="ml-4">
                             <div className="flex items-center">
@@ -453,30 +401,22 @@ const List = ({ token }) => {
                                 <Star className="w-4 h-4 text-yellow-400 fill-current ml-2" />
                               )}
                             </div>
-                            <p className="text-sm text-gray-500">
-                              {product.subCategory}
+                            <p className="text-sm text-gray-500 truncate max-w-md">
+                              {product.description}
                             </p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                           {product.category}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {product.brand || "N/A"}
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
                           {currency}
                           {product.price}
                         </div>
-                        {product.warranty && (
-                          <div className="text-xs text-gray-500">
-                            {product.warranty} warranty
-                          </div>
-                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -488,7 +428,7 @@ const List = ({ token }) => {
                           <button
                             onClick={() => handleView(product)}
                             disabled={isAnyOperationInProgress}
-                            className="p-1 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="p-1 text-gray-400 hover:text-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             title="View Product"
                           >
                             <Eye className="w-4 h-4" />
@@ -532,8 +472,8 @@ const List = ({ token }) => {
       {/* View Modal */}
       {viewModal && selectedProduct && !isAnyOperationInProgress && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-orange-200">
               <h2 className="text-xl font-semibold text-gray-900">
                 Product Details
               </h2>
@@ -557,133 +497,53 @@ const List = ({ token }) => {
                       key={index}
                       src={img}
                       alt={`Product ${index + 1}`}
-                      className="w-full aspect-square object-cover rounded-lg border border-gray-200"
+                      className="w-full aspect-square object-cover rounded-lg border border-orange-200"
                     />
                   ))}
                 </div>
               </div>
 
               {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">
-                    Basic Information
-                  </h3>
-                  <dl className="space-y-2">
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Name:</dt>
-                      <dd className="text-sm font-medium text-gray-900">
-                        {selectedProduct.name}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Brand:</dt>
-                      <dd className="text-sm font-medium text-gray-900">
-                        {selectedProduct.brand || "N/A"}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Category:</dt>
-                      <dd className="text-sm font-medium text-gray-900">
-                        {selectedProduct.category}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Sub Category:</dt>
-                      <dd className="text-sm font-medium text-gray-900">
-                        {selectedProduct.subCategory}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Price:</dt>
-                      <dd className="text-sm font-medium text-gray-900">
-                        {currency}
-                        {selectedProduct.price}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">
-                    Product Details
-                  </h3>
-                  <dl className="space-y-2">
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Color:</dt>
-                      <dd className="text-sm font-medium text-gray-900">
-                        {selectedProduct.color || "N/A"}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Material:</dt>
-                      <dd className="text-sm font-medium text-gray-900">
-                        {selectedProduct.material || "N/A"}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Warranty:</dt>
-                      <dd className="text-sm font-medium text-gray-900">
-                        {selectedProduct.warranty || "N/A"}
-                      </dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-sm text-gray-600">Bestseller:</dt>
-                      <dd className="text-sm font-medium text-gray-900">
-                        {selectedProduct.bestseller ? "Yes" : "No"}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-3 border-b border-orange-200 pb-2">
+                  Basic Information
+                </h3>
+                <dl className="space-y-3">
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-gray-600">Name:</dt>
+                    <dd className="text-sm font-medium text-gray-900">
+                      {selectedProduct.name}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-gray-600">Category:</dt>
+                    <dd className="text-sm font-medium text-gray-900">
+                      {selectedProduct.category}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-gray-600">Price:</dt>
+                    <dd className="text-sm font-medium text-gray-900">
+                      {currency}
+                      {selectedProduct.price}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-gray-600">Bestseller:</dt>
+                    <dd className="text-sm font-medium text-gray-900">
+                      {selectedProduct.bestseller ? "Yes" : "No"}
+                    </dd>
+                  </div>
+                </dl>
               </div>
 
               {/* Description */}
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-3 border-b border-orange-200 pb-2">
                   Description
                 </h3>
                 <p className="text-gray-700">{selectedProduct.description}</p>
               </div>
-
-              {/* Compatibility */}
-              {selectedProduct.compatibility &&
-                selectedProduct.compatibility.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-3">
-                      Device Compatibility
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProduct.compatibility.map((device, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm"
-                        >
-                          {device}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              {/* Specifications */}
-              {selectedProduct.specifications &&
-                selectedProduct.specifications.length > 0 && (
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-3">
-                      Specifications
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProduct.specifications.map((spec, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"
-                        >
-                          {spec}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
             </div>
           </div>
         </div>
@@ -692,8 +552,8 @@ const List = ({ token }) => {
       {/* Edit Modal */}
       {editModal && selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-orange-200 bg-gradient-to-r from-orange-50 to-white">
               <h2 className="text-xl font-semibold text-gray-900">
                 Edit Product
               </h2>
@@ -707,10 +567,91 @@ const List = ({ token }) => {
             </div>
 
             <form onSubmit={handleEditSubmit} className="p-6 space-y-6">
+              {/* Images Section */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-gray-900">
+                    Product Images ({editImages.filter((img) => img.url).length}
+                    /4)
+                  </label>
+                  {editImages.length < 4 && (
+                    <button
+                      type="button"
+                      onClick={handleAddImageSlot}
+                      disabled={editLoading}
+                      className="flex items-center space-x-1 text-sm bg-orange-50 text-orange-600 px-3 py-1 rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Image</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {editImages.map((image, index) => (
+                    <div key={image.id || index} className="relative">
+                      <div className="aspect-square border-2 border-dashed border-orange-300 rounded-lg overflow-hidden bg-orange-50">
+                        {image.url ? (
+                          <div className="relative h-full">
+                            <img
+                              src={image.url}
+                              alt={`Product ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all flex items-center justify-center opacity-0 hover:opacity-100">
+                              <button
+                                type="button"
+                                onClick={() => handleImageRemove(index)}
+                                disabled={editLoading}
+                                className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                            {!image.isNew && (
+                              <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                                Existing
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center justify-center h-full cursor-pointer hover:bg-orange-100 transition-colors">
+                            <Upload className="w-8 h-8 text-orange-400" />
+                            <span className="text-xs text-gray-600 mt-2 text-center px-2">
+                              Click to upload
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                if (e.target.files[0]) {
+                                  handleImageUpload(index, e.target.files[0]);
+                                }
+                              }}
+                              disabled={editLoading}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Images to Delete Info */}
+                {imagesToDelete.length > 0 && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-700">
+                      {imagesToDelete.length} image(s) will be deleted
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Basic Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Product Name
                   </label>
                   <input
@@ -720,52 +661,13 @@ const List = ({ token }) => {
                       setEditFormData({ ...editFormData, name: e.target.value })
                     }
                     disabled={editLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Brand
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.brand}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        brand: e.target.value,
-                      })
-                    }
-                    disabled={editLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={editFormData.description}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      description: e.target.value,
-                    })
-                  }
-                  rows={4}
-                  disabled={editLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Category
                   </label>
                   <select
@@ -774,13 +676,12 @@ const List = ({ token }) => {
                       setEditFormData({
                         ...editFormData,
                         category: e.target.value,
-                        subCategory: categories[e.target.value][0],
                       })
                     }
                     disabled={editLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {Object.keys(categories).map((cat) => (
+                    {categories.map((cat) => (
                       <option key={cat} value={cat}>
                         {cat}
                       </option>
@@ -789,30 +690,7 @@ const List = ({ token }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sub Category
-                  </label>
-                  <select
-                    value={editFormData.subCategory}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        subCategory: e.target.value,
-                      })
-                    }
-                    disabled={editLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {categories[editFormData.category]?.map((sub) => (
-                      <option key={sub} value={sub}>
-                        {sub}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
                     Price (₹)
                   </label>
                   <input
@@ -825,137 +703,34 @@ const List = ({ token }) => {
                       })
                     }
                     disabled={editLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     min="1"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Warranty
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Description
                   </label>
-                  <select
-                    value={editFormData.warranty}
+                  <textarea
+                    value={editFormData.description}
                     onChange={(e) =>
                       setEditFormData({
                         ...editFormData,
-                        warranty: e.target.value,
+                        description: e.target.value,
                       })
                     }
+                    rows={4}
                     disabled={editLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="No warranty">No Warranty</option>
-                    <option value="6 months">6 Months</option>
-                    <option value="1 year">1 Year</option>
-                    <option value="2 years">2 Years</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Color
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.color}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        color: e.target.value,
-                      })
-                    }
-                    disabled={editLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    required
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Material
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.material}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        material: e.target.value,
-                      })
-                    }
-                    disabled={editLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              {/* Compatibility */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Device Compatibility
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {compatibilityOptions.map((device) => (
-                    <button
-                      key={device}
-                      type="button"
-                      onClick={() =>
-                        !editLoading &&
-                        toggleSelection(
-                          device,
-                          editCompatibility,
-                          setEditCompatibility
-                        )
-                      }
-                      disabled={editLoading}
-                      className={`px-3 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                        editCompatibility.includes(device)
-                          ? "bg-red-500 text-white border-red-500"
-                          : "bg-gray-50 text-gray-700 border-gray-300 hover:border-red-300"
-                      }`}
-                    >
-                      {device}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Specifications */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Product Features
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {specificationOptions[editFormData.category]?.map((spec) => (
-                    <button
-                      key={spec}
-                      type="button"
-                      onClick={() =>
-                        !editLoading &&
-                        toggleSelection(
-                          spec,
-                          editSpecifications,
-                          setEditSpecifications
-                        )
-                      }
-                      disabled={editLoading}
-                      className={`px-3 py-2 text-sm rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                        editSpecifications.includes(spec)
-                          ? "bg-green-500 text-white border-green-500"
-                          : "bg-gray-50 text-gray-700 border-gray-300 hover:border-green-300"
-                      }`}
-                    >
-                      {spec}
-                    </button>
-                  ))}
                 </div>
               </div>
 
               {/* Bestseller */}
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 p-4 bg-orange-50 rounded-lg border border-orange-200">
                 <input
                   type="checkbox"
                   id="editBestseller"
@@ -968,30 +743,30 @@ const List = ({ token }) => {
                     })
                   }
                   disabled={editLoading}
-                  className="w-4 h-4 text-red-600 rounded focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <label
                   htmlFor="editBestseller"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-900"
                 >
                   Mark as Bestseller Product
                 </label>
               </div>
 
               {/* Submit Button */}
-              <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+              <div className="flex justify-end space-x-3 pt-6 border-t border-orange-200">
                 <button
                   type="button"
                   onClick={() => setEditModal(false)}
                   disabled={editLoading}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 border border-orange-300 text-gray-700 rounded-lg hover:bg-orange-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={editLoading}
-                  className="flex items-center space-x-2 bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center space-x-2 bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {editLoading ? (
                     <>

@@ -48,7 +48,7 @@ const Orders = ({ token }) => {
 
   const statusColors = {
     "Order Placed": "bg-yellow-100 text-yellow-800 border-yellow-200",
-    Packing: "bg-red-100 text-red-800 border-red-200",
+    Packing: "bg-orange-100 text-orange-800 border-orange-200",
     Shipped: "bg-orange-100 text-orange-800 border-orange-200",
     "Out for delivery": "bg-orange-100 text-orange-800 border-orange-200",
     Delivered: "bg-green-100 text-green-800 border-green-200",
@@ -201,12 +201,12 @@ const Orders = ({ token }) => {
           onClick={() => setShowMobileFilters(false)}
         />
         <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[80vh] overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-4 border-b border-orange-200">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
               <button
                 onClick={() => setShowMobileFilters(false)}
-                className="p-2 hover:bg-gray-100 rounded-full"
+                className="p-2 hover:bg-orange-50 rounded-full"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -219,13 +219,13 @@ const Orders = ({ token }) => {
                 Search Orders
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-orange-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search orders..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-3 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="pl-10 pr-4 py-3 w-full border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
             </div>
@@ -237,7 +237,7 @@ const Orders = ({ token }) => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-4 py-3 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">All Status</option>
                 {statusOptions.map((status) => (
@@ -255,7 +255,7 @@ const Orders = ({ token }) => {
               <select
                 value={paymentFilter}
                 onChange={(e) => setPaymentFilter(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-4 py-3 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">All Payments</option>
                 <option value="paid">Paid</option>
@@ -264,10 +264,10 @@ const Orders = ({ token }) => {
             </div>
           </div>
 
-          <div className="p-4 border-t border-gray-200 bg-gray-50">
+          <div className="p-4 border-t border-orange-200 bg-orange-50">
             <button
               onClick={() => setShowMobileFilters(false)}
-              className="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-medium"
+              className="w-full bg-orange-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-orange-700"
             >
               Apply Filters ({filteredOrders.length} results)
             </button>
@@ -279,9 +279,9 @@ const Orders = ({ token }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
           <p className="text-gray-600 mt-4">Loading orders...</p>
         </div>
       </div>
@@ -289,9 +289,9 @@ const Orders = ({ token }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-orange-50">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-white border-b border-gray-200 z-40">
+      <div className="lg:hidden bg-white border-b border-orange-200 z-40">
         <div className="px-4 py-4">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -303,20 +303,20 @@ const Orders = ({ token }) => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => setShowMobileFilters(true)}
-                className="flex items-center space-x-2 bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium"
+                className="flex items-center space-x-2 bg-orange-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-orange-700"
               >
                 <Filter className="w-4 h-4" />
                 <span>Filter</span>
               </button>
-              <button className="p-2 border border-gray-300 rounded-lg">
-                <Download className="w-4 h-4 text-gray-600" />
+              <button className="p-2 border border-orange-300 rounded-lg hover:bg-orange-50">
+                <Download className="w-4 h-4 text-orange-600" />
               </button>
             </div>
           </div>
 
           {/* Mobile Stats Row */}
           <div className="grid grid-cols-4 gap-2 mb-4">
-            <div className="bg-gray-50 p-3 rounded-lg text-center">
+            <div className="bg-orange-50 p-3 rounded-lg text-center">
               <p className="text-lg font-bold text-gray-900">{stats.total}</p>
               <p className="text-xs text-gray-600">Total</p>
             </div>
@@ -332,7 +332,7 @@ const Orders = ({ token }) => {
               </p>
               <p className="text-xs text-yellow-600">Pending</p>
             </div>
-            <div className="bg-orange-50 p-3 rounded-lg text-center">
+            <div className="bg-orange-100 p-3 rounded-lg text-center">
               <p className="text-lg font-bold text-orange-700">
                 ₹{Math.floor(stats.totalRevenue / 1000)}k
               </p>
@@ -341,7 +341,7 @@ const Orders = ({ token }) => {
           </div>
 
           {/* Mobile Tab Navigation */}
-          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+          <div className="flex space-x-1 bg-orange-100 p-1 rounded-lg">
             {[
               { key: "all", label: "All" },
               { key: "pending", label: "Pending" },
@@ -353,7 +353,7 @@ const Orders = ({ token }) => {
                 onClick={() => setActiveTab(key)}
                 className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors ${
                   activeTab === key
-                    ? "bg-white text-red-600 shadow-sm"
+                    ? "bg-white text-orange-600 shadow-sm"
                     : "text-gray-600"
                 }`}
               >
@@ -366,8 +366,8 @@ const Orders = ({ token }) => {
 
       {/* Desktop Header */}
       <div className="hidden lg:block">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mx-6 mt-6">
-          <div className="px-6 py-4 border-b border-gray-200">
+        <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-orange-200 mx-6 mt-6">
+          <div className="px-6 py-4 border-b border-orange-200 bg-gradient-to-r from-orange-50 to-white">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-semibold text-gray-900">
@@ -381,19 +381,19 @@ const Orders = ({ token }) => {
           </div>
 
           {/* Desktop Stats Cards */}
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-orange-200">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
                 <div className="flex items-center space-x-2">
-                  <ShoppingBag className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm text-gray-600">Total Orders</span>
+                  <ShoppingBag className="w-5 h-5 text-orange-600" />
+                  <span className="text-sm text-orange-600">Total Orders</span>
                 </div>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
                   {stats.total}
                 </p>
               </div>
 
-              <div className="bg-green-50 p-4 rounded-lg">
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-5 h-5 text-green-600" />
                   <span className="text-sm text-green-600">Delivered</span>
@@ -403,7 +403,7 @@ const Orders = ({ token }) => {
                 </p>
               </div>
 
-              <div className="bg-yellow-50 p-4 rounded-lg">
+              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                 <div className="flex items-center space-x-2">
                   <Clock className="w-5 h-5 text-yellow-600" />
                   <span className="text-sm text-yellow-600">Pending</span>
@@ -413,22 +413,22 @@ const Orders = ({ token }) => {
                 </p>
               </div>
 
-              <div className="bg-red-50 p-4 rounded-lg">
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
                 <div className="flex items-center space-x-2">
-                  <CreditCard className="w-5 h-5 text-red-600" />
-                  <span className="text-sm text-red-600">Paid</span>
+                  <CreditCard className="w-5 h-5 text-orange-600" />
+                  <span className="text-sm text-orange-600">Paid Orders</span>
                 </div>
-                <p className="text-2xl font-bold text-red-700 mt-1">
+                <p className="text-2xl font-bold text-orange-700 mt-1">
                   {stats.paid}
                 </p>
               </div>
 
-              <div className="bg-orange-50 p-4 rounded-lg col-span-2 md:col-span-1">
+              <div className="bg-orange-100 p-4 rounded-lg col-span-2 md:col-span-1 border border-orange-300">
                 <div className="flex items-center space-x-2">
-                  <TrendingUp className="w-5 h-5 text-orange-600" />
-                  <span className="text-sm text-orange-600">Revenue</span>
+                  <TrendingUp className="w-5 h-5 text-orange-700" />
+                  <span className="text-sm text-orange-700">Revenue</span>
                 </div>
-                <p className="text-2xl font-bold text-orange-700 mt-1">
+                <p className="text-2xl font-bold text-orange-800 mt-1">
                   {currency}
                   {stats.totalRevenue.toLocaleString()}
                 </p>
@@ -440,20 +440,20 @@ const Orders = ({ token }) => {
           <div className="px-6 py-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-orange-400 w-4 h-4" />
                 <input
                   type="text"
                   placeholder="Search by customer, phone, order ID, or product name..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="pl-10 pr-4 py-2 w-full border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
 
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="px-4 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">All Status</option>
                 {statusOptions.map((status) => (
@@ -466,7 +466,7 @@ const Orders = ({ token }) => {
               <select
                 value={paymentFilter}
                 onChange={(e) => setPaymentFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="px-4 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">All Payments</option>
                 <option value="paid">Paid</option>
@@ -480,8 +480,8 @@ const Orders = ({ token }) => {
       {/* Orders List */}
       <div className="px-4 lg:px-6 py-6 space-y-4">
         {filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 text-center py-12">
-            <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <div className="bg-white rounded-lg shadow-sm border border-orange-200 text-center py-12">
+            <Package className="w-12 h-12 text-orange-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               No orders found
             </h3>
@@ -497,11 +497,11 @@ const Orders = ({ token }) => {
             return (
               <div
                 key={order._id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                className="bg-white rounded-lg shadow-sm border border-orange-200 overflow-hidden"
               >
                 {/* Mobile Order Card Header */}
                 <div className="lg:hidden">
-                  <div className="p-4 border-b border-gray-100">
+                  <div className="p-4 border-b border-orange-100">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
                         <h3 className="text-base font-semibold text-gray-900 mb-1">
@@ -561,7 +561,7 @@ const Orders = ({ token }) => {
                           />
                         ))}
                         {order.items.length > 3 && (
-                          <div className="w-8 h-8 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-xs font-medium text-gray-600">
+                          <div className="w-8 h-8 rounded-full bg-orange-100 border-2 border-white flex items-center justify-center text-xs font-medium text-orange-600">
                             +{order.items.length - 3}
                           </div>
                         )}
@@ -577,7 +577,7 @@ const Orders = ({ token }) => {
                         <select
                           onChange={(event) => statusHandler(event, order._id)}
                           value={order.status}
-                          className="text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-red-500"
+                          className="text-xs px-2 py-1 border border-orange-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
                         >
                           {statusOptions.map((status) => (
                             <option key={status} value={status}>
@@ -589,7 +589,7 @@ const Orders = ({ token }) => {
 
                       <button
                         onClick={() => toggleOrderExpansion(order._id)}
-                        className="flex items-center space-x-1 text-red-600 text-sm font-medium"
+                        className="flex items-center space-x-1 text-orange-600 text-sm font-medium hover:text-orange-700"
                       >
                         <span>{isExpanded ? "Less" : "More"}</span>
                         {isExpanded ? (
@@ -604,7 +604,7 @@ const Orders = ({ token }) => {
 
                 {/* Desktop Order Header */}
                 <div className="hidden lg:block">
-                  <div className="p-6 border-b border-gray-100">
+                  <div className="p-6 border-b border-orange-100">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <div>
@@ -659,12 +659,12 @@ const Orders = ({ token }) => {
 
                         <button
                           onClick={() => toggleOrderExpansion(order._id)}
-                          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                          className="p-2 hover:bg-orange-50 rounded-lg transition-colors"
                         >
                           {isExpanded ? (
-                            <ChevronUp className="w-5 h-5 text-gray-400" />
+                            <ChevronUp className="w-5 h-5 text-orange-400" />
                           ) : (
-                            <ChevronDown className="w-5 h-5 text-gray-400" />
+                            <ChevronDown className="w-5 h-5 text-orange-400" />
                           )}
                         </button>
                       </div>
@@ -674,7 +674,7 @@ const Orders = ({ token }) => {
 
                 {/* Expanded Content */}
                 {isExpanded && (
-                  <div className="p-4 lg:p-6 bg-gray-50">
+                  <div className="p-4 lg:p-6 bg-orange-50">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
                       {/* Products with Images */}
                       <div className="lg:col-span-2">
@@ -686,7 +686,7 @@ const Orders = ({ token }) => {
                           {order.items.map((item, index) => (
                             <div
                               key={index}
-                              className="flex items-center space-x-3 p-3 lg:p-4 bg-white rounded-lg border border-gray-200"
+                              className="flex items-center space-x-3 p-3 lg:p-4 bg-white rounded-lg border border-orange-200"
                             >
                               {/* Product Image */}
                               <div className="flex-shrink-0">
@@ -697,7 +697,7 @@ const Orders = ({ token }) => {
                                       "/api/placeholder/60/60"
                                     }
                                     alt={item.name}
-                                    className="w-full h-full object-cover rounded-lg border border-gray-200"
+                                    className="w-full h-full object-cover rounded-lg border border-orange-200"
                                     onError={(e) => {
                                       e.target.src = "/api/placeholder/60/60";
                                     }}
@@ -722,7 +722,7 @@ const Orders = ({ token }) => {
                                       <span className="hidden lg:inline">
                                         •
                                       </span>
-                                      <span className="text-red-600 text-xs bg-red-50 px-2 py-1 rounded w-fit mt-1 lg:mt-0">
+                                      <span className="text-orange-600 text-xs bg-orange-50 px-2 py-1 rounded w-fit mt-1 lg:mt-0">
                                         {item.category}
                                       </span>
                                     </>
@@ -749,25 +749,25 @@ const Orders = ({ token }) => {
                         {/* Customer & Shipping Info */}
                         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
                           {/* Customer Info */}
-                          <div className="bg-white p-4 rounded-lg border border-gray-200">
+                          <div className="bg-white p-4 rounded-lg border border-orange-200">
                             <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
-                              <User className="w-4 h-4 mr-2" />
+                              <User className="w-4 h-4 mr-2 text-orange-600" />
                               Customer Details
                             </h5>
                             <div className="space-y-2 text-sm">
                               <div className="flex items-center space-x-2">
-                                <User className="w-4 h-4 text-gray-400" />
+                                <User className="w-4 h-4 text-orange-400" />
                                 <span>
                                   {order.address.firstName}{" "}
                                   {order.address.lastName}
                                 </span>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <Phone className="w-4 h-4 text-gray-400" />
+                                <Phone className="w-4 h-4 text-orange-400" />
                                 <span>{order.address.phone}</span>
                               </div>
                               <div className="flex items-center space-x-2">
-                                <CreditCard className="w-4 h-4 text-gray-400" />
+                                <CreditCard className="w-4 h-4 text-orange-400" />
                                 <span className="truncate">
                                   {order.address.email}
                                 </span>
@@ -776,9 +776,9 @@ const Orders = ({ token }) => {
                           </div>
 
                           {/* Shipping Address */}
-                          <div className="bg-white p-4 rounded-lg border border-gray-200">
+                          <div className="bg-white p-4 rounded-lg border border-orange-200">
                             <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
-                              <MapPin className="w-4 h-4 mr-2" />
+                              <MapPin className="w-4 h-4 mr-2 text-orange-600" />
                               Shipping Address
                             </h5>
                             <div className="text-sm text-gray-700 leading-relaxed">
@@ -798,7 +798,7 @@ const Orders = ({ token }) => {
                       {/* Order Actions & Details */}
                       <div className="space-y-4 lg:space-y-6">
                         {/* Order Summary */}
-                        <div className="bg-white p-4 rounded-lg border border-gray-200">
+                        <div className="bg-white p-4 rounded-lg border border-orange-200">
                           <h5 className="font-semibold text-gray-900 mb-3">
                             Order Summary
                           </h5>
@@ -823,10 +823,10 @@ const Orders = ({ token }) => {
                                 )}
                               </span>
                             </div>
-                            <hr className="my-2" />
+                            <hr className="my-2 border-orange-200" />
                             <div className="flex justify-between font-semibold">
                               <span>Total Amount:</span>
-                              <span className="text-lg">
+                              <span className="text-lg text-orange-600">
                                 {currency}
                                 {order.amount}
                               </span>
@@ -835,7 +835,7 @@ const Orders = ({ token }) => {
                         </div>
 
                         {/* Status Update */}
-                        <div className="bg-white p-4 rounded-lg border border-gray-200">
+                        <div className="bg-white p-4 rounded-lg border border-orange-200">
                           <label className="block text-sm font-semibold text-gray-900 mb-3">
                             Update Order Status
                           </label>
@@ -844,7 +844,7 @@ const Orders = ({ token }) => {
                               statusHandler(event, order._id)
                             }
                             value={order.status}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                            className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
                           >
                             {statusOptions.map((status) => (
                               <option key={status} value={status}>
