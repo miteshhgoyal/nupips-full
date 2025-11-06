@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter, useSegments } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '@/services/api';
 import { tokenService } from '@/services/tokenService';
@@ -20,24 +19,89 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const router = useRouter();
-    const segments = useSegments();
-
     useEffect(() => {
-        checkAuth();
+        const initializeAuth = async () => {
+            try {
+                // Wait for tokens to load from AsyncStorage
+                await tokenService.initializeFromStorage();
+
+                const token = tokenService.getToken();
+                const refreshToken = tokenService.getRefreshToken();
+
+                if (token && refreshToken) {
+                    // Check if token is expired (client-side only)
+                    if (isTokenExpired(token)) {
+
+                        await clearAuthState();
+                    } else {
+                        // Load cached user first for fast UI
+                        const storedUser = await AsyncStorage.getItem('user');
+                        if (storedUser) {
+                            try {
+                                const parsedUser = JSON.parse(storedUser);
+                                setUser(parsedUser);
+                                setIsAuthenticated(true);
+
+                            } catch (e) {
+                                console.error('Failed to parse stored user:', e);
+                                await clearAuthState();
+                            }
+                        } else {
+                            // Token exists but no user data - try to fetch
+                            try {
+                                const userInfo = await fetchUserInfo();
+                                if (userInfo) {
+                                    setIsAuthenticated(true);
+
+                                } else {
+                                    await clearAuthState();
+                                }
+                            } catch (err) {
+                                console.error('Failed to fetch user info:', err);
+                                await clearAuthState();
+                            }
+                        }
+                    }
+                } else {
+
+                    setIsAuthenticated(false);
+                    setUser(null);
+                }
+            } catch (error) {
+                console.error('Auth initialization error:', error);
+                await clearAuthState();
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        initializeAuth();
     }, []);
 
-    useEffect(() => {
-        if (loading) return;
+    // Helper: Decode JWT and check expiration (client-side only)
+    const isTokenExpired = (token) => {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const expirationTime = payload.exp * 1000;
+            const expired = Date.now() >= expirationTime;
+            if (expired) {
 
-        const inAuthGroup = segments[0] === '(auth)';
-
-        if (isAuthenticated && inAuthGroup) {
-            router.replace('/(tabs)/dashboard');
-        } else if (!isAuthenticated && !inAuthGroup) {
-            router.replace('/(auth)/signin');
+            }
+            return expired;
+        } catch (err) {
+            console.error('Error decoding token:', err);
+            return true;
         }
-    }, [isAuthenticated, loading, segments]);
+    };
+
+    const clearAuthState = async () => {
+
+        // AWAIT tokenService.clearTokens()
+        await tokenService.clearTokens();
+        await AsyncStorage.multiRemove(['user']);
+        setUser(null);
+        setIsAuthenticated(false);
+    };
 
     const fetchUserInfo = async () => {
         try {
@@ -57,6 +121,7 @@ export const AuthProvider = ({ children }) => {
                 };
                 setUser(userInfo);
                 await AsyncStorage.setItem('user', JSON.stringify(userInfo));
+
                 return userInfo;
             } else {
                 console.error('API response code is not 200 or data is missing');
@@ -65,48 +130,9 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             console.error('Failed to fetch user info:', error);
             if (error.response?.status === 401) {
-                // Token invalid, logout user
-                await logout();
+                await clearAuthState();
             }
             return null;
-        }
-    };
-
-    const checkAuth = async () => {
-        try {
-            // Initialize tokens from AsyncStorage
-            await tokenService.initializeFromStorage();
-
-            const token = tokenService.getToken();
-            const refreshToken = tokenService.getRefreshToken();
-
-            if (token && refreshToken) {
-                setIsAuthenticated(true);
-
-                // Load user from AsyncStorage for faster UI update
-                const storedUser = await AsyncStorage.getItem('user');
-                if (storedUser) {
-                    try {
-                        const parsedUser = JSON.parse(storedUser);
-                        setUser(parsedUser);
-                    } catch (e) {
-                        console.error('Failed to parse stored user:', e);
-                    }
-                }
-
-                // Refresh user info from API
-                await fetchUserInfo();
-            } else {
-                setIsAuthenticated(false);
-                setUser(null);
-            }
-        } catch (error) {
-            console.error('Auth check failed:', error);
-            tokenService.clearTokens();
-            setIsAuthenticated(false);
-            setUser(null);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -114,24 +140,28 @@ export const AuthProvider = ({ children }) => {
         try {
             setError(null);
 
-            // credentials should have { access_token, refresh_token, email }
             if (!credentials.access_token || !credentials.refresh_token) {
                 throw new Error('Invalid credentials structure');
             }
 
-            // Set tokens immediately
-            tokenService.setToken(credentials.access_token);
-            tokenService.setRefreshToken(credentials.refresh_token);
 
-            setIsAuthenticated(true);
+
+            // AWAIT both token setters - CRITICAL
+            await tokenService.setToken(credentials.access_token);
+            await tokenService.setRefreshToken(credentials.refresh_token);
+
+
 
             // Fetch fresh user info
             const userInfo = await fetchUserInfo();
 
             if (userInfo) {
+                setIsAuthenticated(true);
+
                 return true;
             } else {
-                await logout();
+                await clearAuthState();
+
                 return false;
             }
         } catch (err) {
@@ -155,12 +185,10 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             console.error('Logout error:', error);
         } finally {
-            tokenService.clearTokens();
-            await AsyncStorage.multiRemove(['user']);
-            setUser(null);
-            setIsAuthenticated(false);
+            // AWAIT clearAuthState
+            await clearAuthState();
             setError(null);
-            router.replace('/(auth)/signin');
+
         }
     };
 
@@ -177,7 +205,6 @@ export const AuthProvider = ({ children }) => {
                 error,
                 login,
                 logout,
-                checkAuth,
                 clearError,
                 refreshUserInfo: fetchUserInfo,
             }}

@@ -147,6 +147,7 @@ const SignIn = () => {
                 });
 
                 if (success) {
+                    // DON'T redirect here - MainLayout will handle it automatically
                     router.replace('/(tabs)/dashboard');
                 } else {
                     setSubmitError('Failed to process login. Please try again.');

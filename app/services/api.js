@@ -7,7 +7,7 @@ const API_BASE_URL = 'https://test.gtctrader1203.top/api/v3';
 let isRefreshing = false;
 let requestQueue = [];
 let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 0; // 500ms minimum between requests
+const MIN_REQUEST_INTERVAL = 0;
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -18,13 +18,11 @@ const api = axios.create({
 api.interceptors.request.use(
     async (config) => {
         try {
-            // ENFORCE 500ms delay between ALL requests
             const now = Date.now();
             const timeSinceLastRequest = now - lastRequestTime;
 
             if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
                 const delayNeeded = MIN_REQUEST_INTERVAL - timeSinceLastRequest;
-                
                 await new Promise((resolve) =>
                     setTimeout(resolve, delayNeeded)
                 );
@@ -32,14 +30,10 @@ api.interceptors.request.use(
 
             lastRequestTime = Date.now();
 
-            // GET TOKEN FROM SERVICE (synchronous)
             const token = tokenService.getToken();
 
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
-                
-            } else {
-                
             }
 
             return config;
@@ -51,12 +45,9 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle token refresh and errors
+// Response interceptor
 api.interceptors.response.use(
-    (response) => {
-        
-        return response;
-    },
+    (response) => response,
     async (error) => {
         const originalRequest = error.config;
 
@@ -64,7 +55,7 @@ api.interceptors.response.use(
         if (error.response?.status === 429) {
             console.warn('[API] 429 Rate Limited - waiting 3 seconds');
             await new Promise((resolve) => setTimeout(resolve, 3000));
-            lastRequestTime = 0; // Reset timer
+            lastRequestTime = 0;
             return api(originalRequest);
         }
 
@@ -91,7 +82,7 @@ api.interceptors.response.use(
                     throw new Error('No refresh token available');
                 }
 
-                
+
 
                 const response = await axios.post(
                     `${API_BASE_URL}/refresh_token`,
@@ -102,10 +93,10 @@ api.interceptors.response.use(
                 if (response.data.code === 200 && response.data.data?.access_token) {
                     const newToken = response.data.data.access_token;
 
-                    // Update token in service
-                    tokenService.setToken(newToken);
+                    // AWAIT setToken - CRITICAL
 
-                    
+                    await tokenService.setToken(newToken);
+
 
                     // Update original request with new token
                     originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -123,8 +114,8 @@ api.interceptors.response.use(
             } catch (err) {
                 console.error('[API] Token refresh failed:', err.message);
 
-                // Clear tokens and force logout
-                tokenService.clearTokens();
+                // AWAIT clearTokens
+                await tokenService.clearTokens();
                 await AsyncStorage.multiRemove(['user']);
 
                 // Reject all queued requests
@@ -133,17 +124,16 @@ api.interceptors.response.use(
                 });
                 requestQueue = [];
 
-                // Force navigation to login would happen in AuthContext
                 return Promise.reject(err);
             } finally {
                 isRefreshing = false;
             }
         }
 
-        // HANDLE 401 without retry attempt - likely invalid token
+        // HANDLE 401 without retry attempt
         if (error.response?.status === 401 && originalRequest._retry) {
             console.error('[API] 401 after retry - forcing logout');
-            tokenService.clearTokens();
+            await tokenService.clearTokens();
             await AsyncStorage.multiRemove(['user']);
         }
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Stack, useSegments, useRouter } from 'expo-router';
 import { StatusBar, View, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuth } from '@/context/authContext';
@@ -8,18 +8,27 @@ function MainLayout() {
     const { isAuthenticated, loading } = useAuth();
     const segments = useSegments();
     const router = useRouter();
+    const lastRoute = useRef(null);
 
     useEffect(() => {
         if (loading) return;
 
-        const isAuthGroup = segments[0] === '(auth)';
+        const inAuthGroup = segments[0] === '(auth)';
 
-        if (!isAuthenticated && !isAuthGroup) {
-            router.replace('/(auth)/signin');
-        } else if (isAuthenticated && isAuthGroup) {
-            router.replace('/(tabs)/dashboard');
+        // Determine target route
+        let targetRoute = null;
+        if (isAuthenticated && inAuthGroup) {
+            targetRoute = '/(tabs)/dashboard';
+        } else if (!isAuthenticated && !inAuthGroup) {
+            targetRoute = '/(auth)/signin';
         }
-    }, [isAuthenticated, loading, segments]);
+
+        // Only navigate if route actually needs to change
+        if (targetRoute && lastRoute.current !== targetRoute) {
+            lastRoute.current = targetRoute;
+            router.replace(targetRoute);
+        }
+    }, [isAuthenticated, loading]); // REMOVED segments
 
     if (loading) {
         return (
