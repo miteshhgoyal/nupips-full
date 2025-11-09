@@ -1,3 +1,4 @@
+// components/ProtectedRoute.jsx
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -9,10 +10,10 @@ const ProtectedRoute = ({ children, requireAuth = true }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-500 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 text-yellow-400 animate-spin mx-auto mb-4" />
-          <p className="text-white">Loading...</p>
+          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-700 text-lg font-medium">Loading...</p>
         </div>
       </div>
     );
@@ -25,7 +26,7 @@ const ProtectedRoute = ({ children, requireAuth = true }) => {
 
   if (!requireAuth && isAuthenticated) {
     // Redirect authenticated users away from auth pages
-    return <Navigate to="/user/dashboard" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
