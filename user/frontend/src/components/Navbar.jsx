@@ -5,20 +5,24 @@ import {
   LogOut,
   Menu,
   X,
-  Bell,
   ChevronDown,
   UserCheck,
   Loader2,
+  CheckCircle,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import { useGTCFxAuth } from "../contexts/GTCFxAuthContext";
 import { authAPI } from "../services/api";
 import { Link } from "react-router-dom";
 
 const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
   const { user, logout, isAuthenticated } = useAuth();
+  const { gtcAuthenticated, gtcUser, gtcLoading } = useGTCFxAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false); // TODO: Implement subscription check
   const profileDropdownRef = useRef(null);
 
   // Close dropdown when clicking outside
@@ -74,7 +78,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
           <div className="relative px-4 lg:px-4">
             <div className="flex items-center justify-between h-16">
               {/* Logo Section */}
-              <div className="flex items-center space-x-4 transition-all duration-300">
+              <div className="flex items-center space-x-3 transition-all duration-300">
                 {/* Mobile Sidebar Toggle */}
                 <button
                   onClick={toggleSidebar}
@@ -82,22 +86,62 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                 >
                   <Menu className="w-5 h-5 transition-all duration-300 group-hover:scale-110" />
                 </button>
-                <div className="flex-shrink-0 flex items-center">
-                  {/* Logo */}
+
+                {/* Logo and System Name */}
+                <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all duration-300 hover:shadow-orange-500/50 hover:shadow-xl hover:scale-105">
                     <UserCheck className="w-6 h-6 text-white transition-transform duration-300" />
                   </div>
-                  <div className="ml-3 hidden sm:block transition-all duration-300">
+                  <div className="hidden sm:block transition-all duration-300">
                     <h1 className="font-bold text-base md:text-lg text-gray-800">
                       {config.systemName || "System"}
                     </h1>
                   </div>
                 </div>
+
+                {/* Subscribe Button - Shows based on GTC auth status */}
+                {gtcLoading ? (
+                  <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-200 rounded-full">
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                    <span className="text-sm font-medium text-gray-400">
+                      Loading...
+                    </span>
+                  </div>
+                ) : !gtcAuthenticated ? (
+                  // Not logged in to GTC - Show blurred/disabled button
+                  <Link
+                    to="/gtcfx/auth"
+                    className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-200 rounded-full hover:bg-gray-200 transition-all duration-300 group relative"
+                  >
+                    <Lock className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                    <span className="text-sm font-medium text-gray-400 group-hover:text-gray-600 transition-colors">
+                      Login to Subscribe
+                    </span>
+                  </Link>
+                ) : isSubscribed ? (
+                  // Subscribed - Show green check
+                  <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-green-100 border border-green-200 rounded-full">
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-semibold text-green-600">
+                      Subscribed
+                    </span>
+                  </div>
+                ) : (
+                  // Logged in but not subscribed - Show green subscribe button
+                  <Link
+                    to="/gtcfx/strategies"
+                    className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border border-green-400 rounded-full shadow-md hover:shadow-lg transition-all duration-300 group"
+                  >
+                    <CheckCircle className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
+                    <span className="text-sm font-semibold text-white">
+                      Subscribe Now
+                    </span>
+                  </Link>
+                )}
               </div>
 
               {/* Right Section */}
               <div className="flex items-center space-x-3">
-
                 {user.balance && (
                   <div className="hidden sm:block bg-orange-50 px-3 md:px-4 py-2 rounded-full border border-orange-200 shadow-md transition-all duration-300 hover:bg-orange-100 hover:shadow-lg">
                     <p className="text-orange-600 font-semibold text-xs md:text-sm">
@@ -178,6 +222,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                                 key={item.name}
                                 to={item.href}
                                 className="flex items-center px-5 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-all duration-200 ease-out group"
+                                onClick={() => setIsProfileDropdownOpen(false)}
                               >
                                 <Icon className="w-4 h-4 mr-3 transition-all duration-200 group-hover:text-orange-600 group-hover:scale-110" />
                                 <span className="transition-all duration-200">
@@ -233,6 +278,47 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
           <div className="bg-white/95 backdrop-blur-xl rounded-none md:rounded-2xl shadow-2xl border border-gray-100 overflow-hidden max-h-[calc(100vh-4rem)] overflow-y-auto">
             <div className="relative">
               <div className="px-4 pt-4 pb-3 space-y-2">
+                {/* Subscribe Button - Mobile */}
+                <div className="px-4 py-3 mb-3">
+                  {gtcLoading ? (
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl">
+                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                      <span className="text-sm font-medium text-gray-400">
+                        Loading GTC...
+                      </span>
+                    </div>
+                  ) : !gtcAuthenticated ? (
+                    <Link
+                      to="/gtcfx/auth"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl hover:bg-gray-200 transition-all duration-300"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <Lock className="w-5 h-5 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-600">
+                        Login GTC to Subscribe
+                      </span>
+                    </Link>
+                  ) : isSubscribed ? (
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 bg-green-100 border border-green-200 rounded-xl">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <span className="text-sm font-semibold text-green-600">
+                        Subscribed
+                      </span>
+                    </div>
+                  ) : (
+                    <Link
+                      to="/gtcfx/subscribe"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border border-green-400 rounded-xl shadow-md transition-all duration-300"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <CheckCircle className="w-5 h-5 text-white" />
+                      <span className="text-sm font-semibold text-white">
+                        Subscribe Now
+                      </span>
+                    </Link>
+                  )}
+                </div>
+
                 {/* User Info - Mobile */}
                 <div className="px-4 py-4 border-b border-gray-100 mb-3 bg-orange-50 rounded-xl">
                   <div className="flex items-center space-x-4">
