@@ -173,8 +173,8 @@ const GTCFxAuthRequired = () => {
         {/* Action Buttons */}
         <div className="space-y-3">
           <Link
-            to="/gtcfx/login"
-            className="block w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+            to="/gtcfx/auth"
+            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
           >
             <LogIn className="w-5 h-5" />
             Login to GTC FX
