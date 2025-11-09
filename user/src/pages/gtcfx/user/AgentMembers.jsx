@@ -14,7 +14,7 @@ import {
   Download,
   Search,
 } from "lucide-react";
-import api from "../../services/api";
+import api from "../../../services/api";
 
 const AgentMembers = () => {
   const [members, setMembers] = useState([]);

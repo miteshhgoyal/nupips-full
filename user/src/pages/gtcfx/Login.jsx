@@ -1,15 +1,15 @@
 import React, { useState } from "react";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import api from "../services/api";
+import { useAuth } from "../../contexts/AuthContext";
+import api from "../../services/api";
 
 const Login = () => {
   const { login, clearError, error: authError } = useAuth();
   const navigate = useNavigate();
 
   const pageConfig = {
-    title: "Welcome to Nupips User Panel",
+    title: "Login to your GTC FX Account",
     submitButton: {
       loading: "Signing In...",
       default: "Continue",

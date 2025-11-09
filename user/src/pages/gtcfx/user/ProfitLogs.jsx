@@ -13,7 +13,7 @@ import {
   Download,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import api from "../../services/api";
+import api from "../../../services/api";
 
 const ProfitLogs = () => {
   const [searchParams] = useSearchParams();

@@ -12,7 +12,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import api from "../../services/api";
+import api from "../../../services/api";
 
 const UnsubscribePage = () => {
   const [searchParams] = useSearchParams();

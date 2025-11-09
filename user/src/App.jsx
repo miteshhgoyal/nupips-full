@@ -41,7 +41,7 @@ const DefaultRoute = () => {
     );
   }
 
-  return <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />;
+  return <Navigate to={isAuthenticated ? "/gtcfx/dashboard" : "/gtcfx/login"} replace />;
 };
 
 const ProtectedRoute = ({ requireAuth = true, children }) => {
@@ -59,11 +59,11 @@ const ProtectedRoute = ({ requireAuth = true, children }) => {
   }
 
   if (requireAuth && !isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/gtcfx/login" replace />;
   }
 
   if (!requireAuth && isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/gtcfx/dashboard" replace />;
   }
 
   return children;
