@@ -64,10 +64,10 @@ const sidebarLinks = [
     subItems: [
       { name: "Authentication", href: "/gtcfx/auth" },
       { name: "Dashboard", href: "/gtcfx/dashboard" },
-      { name: "Strategies", href: "/gtcfx/strategies" },
-      { name: "My Subscriptions", href: "/gtcfx/subscriptions" },
+    //   { name: "Strategies", href: "/gtcfx/strategies" },
+    //   { name: "My Subscriptions", href: "/gtcfx/subscriptions" },
       { name: "Profit Logs", href: "/gtcfx/profit-logs" },
-      { name: "Unsubscribe", href: "/gtcfx/unsubscribe" },
+    //   { name: "Unsubscribe", href: "/gtcfx/unsubscribe" },
       { name: "Agent Members", href: "/gtcfx/agent/members" },
       { name: "Commission Report", href: "/gtcfx/agent/commission" },
     ],
@@ -274,7 +274,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
+              {/* <Route
                 path="/gtcfx/strategies"
                 element={
                   <ProtectedRoute>
@@ -303,7 +303,7 @@ function App() {
                     </GTCFxProtectedRoute>
                   </ProtectedRoute>
                 }
-              />
+              /> */}
               <Route
                 path="/gtcfx/profit-logs"
                 element={
@@ -314,7 +314,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
+              {/* <Route
                 path="/gtcfx/unsubscribe"
                 element={
                   <ProtectedRoute>
@@ -323,7 +323,7 @@ function App() {
                     </GTCFxProtectedRoute>
                   </ProtectedRoute>
                 }
-              />
+              /> */}
               <Route
                 path="/gtcfx/agent/members"
                 element={
