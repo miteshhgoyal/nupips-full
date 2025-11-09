@@ -11,21 +11,21 @@ import { Helmet } from "react-helmet";
 import "./App.css";
 
 // Auth Pages
-import Login from "./pages/Login";
+import Login from "./pages/gtcfx/Login";
 
 // Layout Components
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 
 // User Pages
-import Dashboard from "./pages/user/Dashboard";
-import Strategies from "./pages/user/Strategies";
-import StrategyDetail from "./pages/user/StrategyDetail";
-import MySubscriptions from "./pages/user/MySubscriptions";
-import ProfitLogs from "./pages/user/ProfitLogs";
-import Redeem from "./pages/user/Redeem";
-import CommissionReport from "./pages/user/CommissionReport";
-import AgentMembers from "./pages/user/AgentMembers";
+import Dashboard from "./pages/gtcfx/user/Dashboard";
+import Strategies from "./pages/gtcfx/user/Strategies";
+import StrategyDetail from "./pages/gtcfx/user/StrategyDetail";
+import MySubscriptions from "./pages/gtcfx/user/MySubscriptions";
+import ProfitLogs from "./pages/gtcfx/user/ProfitLogs";
+import Redeem from "./pages/gtcfx/user/Redeem";
+import CommissionReport from "./pages/gtcfx/user/CommissionReport";
+import AgentMembers from "./pages/gtcfx/user/AgentMembers";
 
 const DefaultRoute = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -141,7 +141,7 @@ function App() {
           <Routes>
             {/* Public Routes */}
             <Route
-              path="/login"
+              path="/gtcfx/login"
               element={
                 <ProtectedRoute requireAuth={false}>
                   <Login />
@@ -152,18 +152,18 @@ function App() {
             {/* Protected User Routes */}
             <Route element={<ProtectedDashboardLayout />}>
               {/* Dashboard & Main Pages */}
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/strategies" element={<Strategies />} />
-              <Route path="/strategies/:uuid" element={<StrategyDetail />} />
+              <Route path="/gtcfx/dashboard" element={<Dashboard />} />
+              <Route path="/gtcfx/strategies" element={<Strategies />} />
+              <Route path="/gtcfx/strategies/:uuid" element={<StrategyDetail />} />
 
               {/* Portfolio Routes */}
-              <Route path="/subscriptions" element={<MySubscriptions />} />
-              <Route path="/profit-logs" element={<ProfitLogs />} />
-              <Route path="/unsubscribe" element={<Redeem />} />
+              <Route path="/gtcfx/subscriptions" element={<MySubscriptions />} />
+              <Route path="/gtcfx/profit-logs" element={<ProfitLogs />} />
+              <Route path="/gtcfx/unsubscribe" element={<Redeem />} />
 
               {/* Agent Routes */}
-              <Route path="/agent/commission" element={<CommissionReport />} />
-              <Route path="/agent/members" element={<AgentMembers />} />
+              <Route path="/gtcfx/agent/commission" element={<CommissionReport />} />
+              <Route path="/gtcfx/agent/members" element={<AgentMembers />} />
             </Route>
 
             {/* Default Redirects */}

@@ -24,29 +24,29 @@ const Sidebar = ({ isOpen, onToggle, isCollapsed, toggleCollapsed }) => {
   const navigationLinks = [
     {
       name: "Dashboard",
-      href: "/dashboard",
+      href: "/gtcfx/dashboard",
       icon: LayoutDashboard,
     },
     {
       name: "Strategies",
-      href: "/strategies",
+      href: "/gtcfx/strategies",
       icon: TrendingUp,
     },
     {
       name: "Portfolio",
       icon: Wallet,
       subItems: [
-        { name: "My Subscriptions", href: "/subscriptions" },
-        { name: "Profit Logs", href: "/profit-logs" },
-        { name: "Unsubscribe", href: "/unsubscribe" },
+        { name: "My Subscriptions", href: "/gtcfx/subscriptions" },
+        { name: "Profit Logs", href: "/gtcfx/profit-logs" },
+        { name: "Unsubscribe", href: "/gtcfx/unsubscribe" },
       ],
     },
     {
       name: "Agent",
       icon: Users,
       subItems: [
-        { name: "Members", href: "/agent/members" },
-        { name: "Commission Report", href: "/agent/commission" },
+        { name: "Members", href: "/gtcfx/agent/members" },
+        { name: "Commission Report", href: "/gtcfx/agent/commission" },
       ],
     },
   ];
