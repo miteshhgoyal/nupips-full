@@ -26,7 +26,7 @@ const seedAdminUser = async () => {
     try {
         const adminUserId = process.env.ADMIN_USER_ID || 'superadmin';
         const adminPassword = process.env.ADMIN_PASSWORD;
-        const adminEmail = process.env.ADMIN_EMAIL || 'admin@app.com';
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@nupips.com';
         const adminMobile = process.env.ADMIN_MOBILE || '0000000000';
 
         if (!adminPassword) {
