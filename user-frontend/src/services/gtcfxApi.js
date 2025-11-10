@@ -59,7 +59,7 @@ api.interceptors.response.use(
 
             // If refresh failed or no refresh token, clear and redirect
             gtcfxTokenService.clearTokens();
-            window.location.href = '/gtcfx/login';
+            window.location.href = '/gtcfx/auth';
         }
 
         return Promise.reject(error);

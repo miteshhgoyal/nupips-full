@@ -1,6 +1,8 @@
+// contexts/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { authAPI } from "../services/api";
 import { tokenService } from "../services/tokenService";
+import { gtcfxTokenService } from "../services/gtcfxTokenService";
 
 const AuthContext = createContext();
 
@@ -31,6 +33,8 @@ export const AuthProvider = ({ children }) => {
 
       if (!token || tokenService.isTokenExpired(token)) {
         tokenService.removeToken();
+        // Also clear GTC FX data if main auth fails
+        gtcfxTokenService.clearTokens();
         setLoading(false);
         return;
       }
@@ -42,10 +46,12 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
       } else {
         tokenService.removeToken();
+        gtcfxTokenService.clearTokens();
       }
     } catch (error) {
       console.error("Auth check failed:", error);
       tokenService.removeToken();
+      gtcfxTokenService.clearTokens();
     } finally {
       setLoading(false);
     }
@@ -59,12 +65,18 @@ export const AuthProvider = ({ children }) => {
     // Set user data
     setUser(user);
     setIsAuthenticated(true);
+
+    // Clear any previous GTC FX session when logging in with new account
+    gtcfxTokenService.clearTokens();
   };
 
   const logout = () => {
     tokenService.removeToken();
     setUser(null);
     setIsAuthenticated(false);
+
+    // CRITICAL: Clear GTC FX tokens and user data when logging out
+    gtcfxTokenService.clearTokens();
   };
 
   const value = {

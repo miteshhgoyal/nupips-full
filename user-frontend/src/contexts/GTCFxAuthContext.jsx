@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import api from "../services/gtcfxApi";
 import { gtcfxTokenService } from "../services/gtcfxTokenService";
+import { useAuth } from "./AuthContext";
 
 const GTCFxAuthContext = createContext();
 
@@ -14,6 +15,7 @@ export const useGTCFxAuth = () => {
 };
 
 export const GTCFxAuthProvider = ({ children }) => {
+  const { isAuthenticated } = useAuth(); // Get main auth state
   const [gtcUser, setGtcUser] = useState(null);
   const [gtcLoading, setGtcLoading] = useState(true);
   const [gtcAuthenticated, setGtcAuthenticated] = useState(false);
@@ -22,6 +24,17 @@ export const GTCFxAuthProvider = ({ children }) => {
   useEffect(() => {
     checkGTCAuth();
   }, []);
+
+  // Clear GTC FX data when main auth changes to false
+  useEffect(() => {
+    if (!isAuthenticated) {
+      // Main user logged out, clear GTC FX data
+      gtcfxTokenService.clearTokens();
+      setGtcUser(null);
+      setGtcAuthenticated(false);
+      setGtcError(null);
+    }
+  }, [isAuthenticated]);
 
   // Fetch GTC FX user account info from API
   const fetchGTCUserInfo = async () => {
@@ -41,6 +54,7 @@ export const GTCFxAuthProvider = ({ children }) => {
           amount: userData.amount,
           userType: userData.userType,
           status: userData.status,
+          create_time: userData.create_time,
         };
 
         setGtcUser(userInfo);
@@ -53,8 +67,6 @@ export const GTCFxAuthProvider = ({ children }) => {
       return null;
     } catch (error) {
       console.error("Failed to fetch GTC FX user info:", error);
-      console.error("Error response:", error.response?.data);
-      console.error("Error status:", error.response?.status);
       return null;
     }
   };
@@ -78,7 +90,7 @@ export const GTCFxAuthProvider = ({ children }) => {
           }
         }
 
-        // Fetch fresh user data from API (this will update the user state)
+        // Fetch fresh user data from API
         await fetchGTCUserInfo();
       } else {
         setGtcAuthenticated(false);
@@ -139,12 +151,11 @@ export const GTCFxAuthProvider = ({ children }) => {
       console.error("GTC FX logout error:", error);
     } finally {
       gtcfxTokenService.clearTokens();
-      localStorage.removeItem("gtcfx_user");
       setGtcUser(null);
       setGtcAuthenticated(false);
       setGtcError(null);
 
-      window.location.href = "/gtcfx/login";
+      window.location.href = "/gtcfx/auth";
     }
   };
 
