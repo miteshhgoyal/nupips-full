@@ -22,7 +22,6 @@ import { CONFIG } from "./constants";
 import "./App.css";
 
 // Import your pages
-import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ComingSoon from "./pages/others/ComingSoon";
 
@@ -34,16 +33,6 @@ const sidebarLinks = [
     name: "Dashboard",
     href: "/dashboard",
     icon: Home,
-  },
-  {
-    name: "Shop",
-    href: "/shop",
-    icon: ShoppingBag,
-  },
-  {
-    name: "Learn",
-    href: "/learn",
-    icon: Book,
   },
 ];
 
@@ -173,15 +162,6 @@ function App() {
       <AuthProvider>
         <LayoutWrapper>
           <Routes>
-            {/* Public routes - no authentication required */}
-            <Route
-              path="/register"
-              element={
-                <ProtectedRoute requireAuth={false}>
-                  <Register />
-                </ProtectedRoute>
-              }
-            />
             <Route
               path="/login"
               element={
@@ -194,22 +174,6 @@ function App() {
             {/* Main App Protected routes */}
             <Route
               path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <ComingSoon />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/shop"
-              element={
-                <ProtectedRoute>
-                  <ComingSoon />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/learn"
               element={
                 <ProtectedRoute>
                   <ComingSoon />

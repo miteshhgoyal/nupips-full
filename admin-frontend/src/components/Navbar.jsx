@@ -12,13 +12,11 @@ import {
   Lock,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { useGTCFxAuth } from "../contexts/GTCFxAuthContext";
 import { authAPI } from "../services/api";
 import { Link } from "react-router-dom";
 
 const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
   const { user, logout, isAuthenticated } = useAuth();
-  const { gtcAuthenticated, gtcUser, gtcLoading } = useGTCFxAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -98,46 +96,6 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                     </h1>
                   </div>
                 </div>
-
-                {/* Subscribe Button - Shows based on GTC auth status */}
-                {gtcLoading ? (
-                  <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-200 rounded-full">
-                    <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                    <span className="text-sm font-medium text-gray-400">
-                      Loading...
-                    </span>
-                  </div>
-                ) : !gtcAuthenticated ? (
-                  // Not logged in to GTC - Show blurred/disabled button
-                  <Link
-                    to="/gtcfx/auth"
-                    className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-200 rounded-full hover:bg-gray-200 transition-all duration-300 group relative"
-                  >
-                    <Lock className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
-                    <span className="text-sm font-medium text-gray-400 group-hover:text-gray-600 transition-colors">
-                      Login to Subscribe
-                    </span>
-                  </Link>
-                ) : isSubscribed ? (
-                  // Subscribed - Show green check
-                  <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-green-100 border border-green-200 rounded-full">
-                    <CheckCircle className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-semibold text-green-600">
-                      Subscribed
-                    </span>
-                  </div>
-                ) : (
-                  // Logged in but not subscribed - Show green subscribe button
-                  <Link
-                    to="/gtcfx/strategies"
-                    className="hidden lg:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border border-green-400 rounded-full shadow-md hover:shadow-lg transition-all duration-300 group"
-                  >
-                    <CheckCircle className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
-                    <span className="text-sm font-semibold text-white">
-                      Subscribe Now
-                    </span>
-                  </Link>
-                )}
               </div>
 
               {/* Right Section */}
@@ -278,47 +236,6 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
           <div className="bg-white/95 backdrop-blur-xl rounded-none md:rounded-2xl shadow-2xl border border-gray-100 overflow-hidden max-h-[calc(100vh-4rem)] overflow-y-auto">
             <div className="relative">
               <div className="px-4 pt-4 pb-3 space-y-2">
-                {/* Subscribe Button - Mobile */}
-                <div className="px-4 py-3 mb-3">
-                  {gtcLoading ? (
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl">
-                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-                      <span className="text-sm font-medium text-gray-400">
-                        Loading GTC...
-                      </span>
-                    </div>
-                  ) : !gtcAuthenticated ? (
-                    <Link
-                      to="/gtcfx/auth"
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl hover:bg-gray-200 transition-all duration-300"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <Lock className="w-5 h-5 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-600">
-                        Login GTC to Subscribe
-                      </span>
-                    </Link>
-                  ) : isSubscribed ? (
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 bg-green-100 border border-green-200 rounded-xl">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <span className="text-sm font-semibold text-green-600">
-                        Subscribed
-                      </span>
-                    </div>
-                  ) : (
-                    <Link
-                      to="/gtcfx/subscribe"
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 border border-green-400 rounded-xl shadow-md transition-all duration-300"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <CheckCircle className="w-5 h-5 text-white" />
-                      <span className="text-sm font-semibold text-white">
-                        Subscribe Now
-                      </span>
-                    </Link>
-                  )}
-                </div>
-
                 {/* User Info - Mobile */}
                 <div className="px-4 py-4 border-b border-gray-100 mb-3 bg-orange-50 rounded-xl">
                   <div className="flex items-center space-x-4">
