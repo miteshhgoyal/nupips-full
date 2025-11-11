@@ -36,6 +36,26 @@ function generateTransactionId() {
     return 'DEP-' + Date.now() + '-' + crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
+// Helper to get readable network name
+function getNetworkName(cryptoIdentifier) {
+    const networkMap = {
+        'bep20/usdt': 'BEP20 (BSC)',
+        'trc20/usdt': 'TRC20 (TRON)',
+        'erc20/usdt': 'ERC20 (Ethereum)',
+        'btc': 'Bitcoin Network',
+        'eth': 'Ethereum Network',
+    };
+    return networkMap[cryptoIdentifier.toLowerCase()] || cryptoIdentifier.toUpperCase();
+}
+
+// Helper to get cryptocurrency name
+function getCryptoName(cryptoIdentifier) {
+    if (cryptoIdentifier.toLowerCase().includes('usdt')) return 'USDT';
+    if (cryptoIdentifier.toLowerCase() === 'btc') return 'BTC';
+    if (cryptoIdentifier.toLowerCase() === 'eth') return 'ETH';
+    return cryptoIdentifier.toUpperCase();
+}
+
 // Create Deposit
 router.post('/create', authenticateToken, async (req, res) => {
     try {
@@ -61,17 +81,16 @@ router.post('/create', authenticateToken, async (req, res) => {
         const transactionId = generateTransactionId();
         const uuid = crypto.randomBytes(16).toString('hex');
 
-        // Determine BlockBee ticker
-        let ticker = cryptoCoin;
-        if (cryptoCoin === 'bep20/usdt') ticker = 'bep20/usdt';
-        else if (cryptoCoin === 'trc20/usdt') ticker = 'trc20/usdt';
-        else if (cryptoCoin === 'erc20/usdt') ticker = 'erc20/usdt';
+        // Use crypto identifier as-is for BlockBee API (lowercase)
+        const ticker = cryptoCoin.toLowerCase();
 
-        // Create callback URL
-        const callbackUrl = `${CALLBACK_URL}/deposit/webhook/${uuid}`;
+        // Create callback URL - FIXED: Add /api prefix
+        const callbackUrl = `${CALLBACK_URL}/api/deposit/webhook/${uuid}`;
 
         // Call BlockBee API to generate payment address
         const blockbeeUrl = `${BLOCKBEE_API_URL}/${ticker}/create/?callback=${encodeURIComponent(callbackUrl)}&apikey=${BLOCKBEE_API_KEY}`;
+
+        console.log('BlockBee API Request:', { ticker, callbackUrl, blockbeeUrl });
 
         let blockbeeResponse;
         try {
@@ -80,21 +99,24 @@ router.post('/create', authenticateToken, async (req, res) => {
             console.error('BlockBee API error:', error);
             return res.status(500).json({
                 success: false,
-                message: 'Failed to generate payment address'
+                message: 'Failed to generate payment address',
+                error: error.message
             });
         }
 
         if (!blockbeeResponse.address_in) {
+            console.error('BlockBee response:', blockbeeResponse);
             return res.status(500).json({
                 success: false,
-                message: 'BlockBee API did not return a payment address'
+                message: 'BlockBee API did not return a payment address',
+                details: blockbeeResponse
             });
         }
 
         // Generate QR code URL
         const qrCodeUrl = `${BLOCKBEE_API_URL}/${ticker}/qrcode/?value=${amount}&address=${blockbeeResponse.address_in}&size=512`;
 
-        // Create deposit record
+        // Create deposit record with proper field mapping
         const deposit = new Deposit({
             userId,
             transactionId,
@@ -102,13 +124,13 @@ router.post('/create', authenticateToken, async (req, res) => {
             currency: currency || 'USD',
             paymentMethod,
             paymentDetails: {
-                cryptocurrency: cryptoCoin.split('/')[1]?.toUpperCase() || cryptoCoin.toUpperCase(),
-                network: cryptoCoin.toUpperCase()
+                cryptocurrency: getCryptoName(cryptoCoin),
+                network: getNetworkName(cryptoCoin)
             },
             blockBee: {
                 uuid,
                 coin: cryptoCoin,
-                ticker,
+                ticker: ticker,
                 address: blockbeeResponse.address_in,
                 qrCodeUrl,
                 callbackUrl,
@@ -121,6 +143,12 @@ router.post('/create', authenticateToken, async (req, res) => {
 
         await deposit.save();
 
+        console.log('Deposit created:', {
+            transactionId,
+            uuid,
+            address: blockbeeResponse.address_in
+        });
+
         res.json({
             success: true,
             message: 'Deposit created successfully',
@@ -130,6 +158,7 @@ router.post('/create', authenticateToken, async (req, res) => {
                 qrCodeUrl,
                 amount,
                 crypto: cryptoCoin,
+                network: getNetworkName(cryptoCoin),
                 status: 'pending',
                 expiresIn: '24 hours'
             }
@@ -139,7 +168,8 @@ router.post('/create', authenticateToken, async (req, res) => {
         console.error('Create deposit error:', error);
         res.status(500).json({
             success: false,
-            message: 'Server error creating deposit'
+            message: 'Server error creating deposit',
+            error: error.message
         });
     }
 });
@@ -231,7 +261,12 @@ router.post('/webhook/:uuid', async (req, res) => {
         const { uuid } = req.params;
         const webhookData = req.body;
 
-        console.log('BlockBee webhook received:', { uuid, webhookData });
+        console.log('BlockBee webhook received:', {
+            uuid,
+            webhookData,
+            confirmations: webhookData.confirmations,
+            value: webhookData.value_coin
+        });
 
         // Log webhook
         const webhookLog = new WebhookLog({
@@ -248,7 +283,9 @@ router.post('/webhook/:uuid', async (req, res) => {
 
         if (!deposit) {
             console.error('Deposit not found for UUID:', uuid);
-            return res.status(404).send('*ok*'); // BlockBee expects *ok*
+            webhookLog.error = 'Deposit not found';
+            await webhookLog.save();
+            return res.send('*ok*'); // Still respond with *ok*
         }
 
         // Update deposit with webhook data
@@ -259,27 +296,22 @@ router.post('/webhook/:uuid', async (req, res) => {
         deposit.blockBee.valuePaid = parseFloat(webhookData.value_forwarded_coin) || 0;
 
         // Update status based on confirmations
-        if (webhookData.confirmations >= 1) {
+        if (webhookData.confirmations >= 1 && deposit.status === 'pending') {
             deposit.blockBee.blockBeeStatus = 'confirmed';
             deposit.status = 'processing';
+            console.log(`Deposit ${deposit.transactionId} status updated to processing`);
         }
 
-        // If fully confirmed (depends on your business logic)
-        if (webhookData.confirmations >= 3) {
+        // If fully confirmed (3+ confirmations) and not already processed
+        if (webhookData.confirmations >= 3 && !deposit.blockBee.isProcessed) {
             deposit.blockBee.blockBeeStatus = 'completed';
             deposit.status = 'completed';
             deposit.completedAt = new Date();
             deposit.blockBee.isProcessed = true;
 
-            // Update user wallet balance
-            const user = await User.findById(deposit.userId);
-            if (user) {
-                user.walletBalance = (user.walletBalance || 0) + deposit.amount;
-                await user.save();
+            console.log(`Deposit ${deposit.transactionId} completed, updating user wallet`);
 
-                // Update user financials
-                await user.updateFinancials();
-            }
+            // The post-save hook will handle wallet balance update
         }
 
         await deposit.save();
@@ -287,7 +319,10 @@ router.post('/webhook/:uuid', async (req, res) => {
         // Mark webhook as processed
         webhookLog.processed = true;
         webhookLog.processedAt = new Date();
+        webhookLog.depositId = deposit._id;
         await webhookLog.save();
+
+        console.log(`Webhook processed successfully for deposit ${deposit.transactionId}`);
 
         res.send('*ok*');
 

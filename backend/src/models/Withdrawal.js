@@ -43,15 +43,9 @@ const withdrawalSchema = new mongoose.Schema({
         required: true
     },
     withdrawalDetails: {
-        cryptocurrency: {
-            type: String,
-            enum: ['BTC', 'ETH', 'USDT', 'BEP20 (USDT)', 'TRC20 (USDT)', 'ERC20 (USDT)', null]
-        },
+        cryptocurrency: String, // No enum restriction
         walletAddress: String,
-        network: {
-            type: String,
-            enum: ['BTC', 'ETH', 'ERC20', 'BEP20', 'TRC20', 'BSC', 'TRON', null]
-        },
+        network: String, // No enum restriction
         txHash: String,
         bankName: String,
         accountNumber: String,
@@ -65,14 +59,8 @@ const withdrawalSchema = new mongoose.Schema({
     blockBee: {
         payoutId: String,
         payoutRequestId: String,
-        coin: {
-            type: String,
-            enum: ['BTC', 'ETH', 'BEP20 (USDT)', 'TRC20 (USDT)', 'ERC20 (USDT)', null]
-        },
-        ticker: {
-            type: String,
-            enum: ['btc', 'eth', 'bep20/usdt', 'trc20/usdt', 'erc20/usdt', null]
-        },
+        coin: String, // Store full identifier
+        ticker: String, // Store ticker
         blockBeeStatus: {
             type: String,
             enum: ['created', 'pending', 'processing', 'done', 'completed', 'error', 'failed'],
@@ -130,31 +118,37 @@ withdrawalSchema.pre('save', function (next) {
 });
 
 // Post-save hook: Update user financials and deduct from wallet
-withdrawalSchema.post('save', async function (doc) {
+withdrawalSchema.post('save', async function (doc, next) {
     try {
-        const User = mongoose.model('User');
-        const user = await User.findById(doc.userId);
+        const wasModified = doc.isModified('status');
 
-        if (!user) return;
+        if (wasModified) {
+            const User = mongoose.model('User');
+            const user = await User.findById(doc.userId);
 
-        // Update financials for any status change
-        if (doc.isModified('status')) {
-            await user.updateFinancials();
+            if (!user) return next();
+
+            const wasNew = doc.$isNew || doc.$wasNew;
 
             // Deduct from wallet when processing starts (to reserve funds)
-            if (doc.status === 'processing' && this.wasNew) {
+            if (doc.status === 'processing' && wasNew) {
                 user.walletBalance = Math.max(0, (user.walletBalance || 0) - doc.amount);
                 await user.save();
             }
 
             // Refund if rejected or cancelled (if already deducted)
-            if (['rejected', 'cancelled'].includes(doc.status) && !this.wasNew) {
+            if (['rejected', 'cancelled'].includes(doc.status) && !wasNew) {
                 user.walletBalance = (user.walletBalance || 0) + doc.amount;
                 await user.save();
             }
+
+            // Update financial stats
+            await user.updateFinancials();
         }
+        next();
     } catch (error) {
         console.error('Error in withdrawal post-save hook:', error);
+        next(error);
     }
 });
 

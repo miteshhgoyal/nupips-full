@@ -35,15 +35,9 @@ const depositSchema = new mongoose.Schema({
         required: true
     },
     paymentDetails: {
-        cryptocurrency: {
-            type: String,
-            enum: ['BTC', 'ETH', 'USDT', 'BEP20 (USDT)', 'TRC20 (USDT)', 'ERC20 (USDT)', null]
-        },
+        cryptocurrency: String, // Store as string without enum restriction
         walletAddress: String,
-        network: {
-            type: String,
-            enum: ['BTC', 'ETH', 'ERC20', 'BEP20', 'TRC20', 'BSC', 'TRON', null]
-        },
+        network: String, // Store as string without enum restriction
         txHash: String,
         confirmations: Number,
         bankName: String,
@@ -63,11 +57,8 @@ const depositSchema = new mongoose.Schema({
             type: String,
             index: true
         },
-        coin: String,
-        ticker: {
-            type: String,
-            enum: ['btc', 'eth', 'bep20/usdt', 'trc20/usdt', 'erc20/usdt', null]
-        },
+        coin: String, // Store the full crypto identifier (e.g., "bep20/usdt")
+        ticker: String, // Store the ticker (same as coin for BlockBee)
         address: {
             type: String,
             index: true
@@ -150,25 +141,30 @@ depositSchema.pre('save', function (next) {
 });
 
 // Post-save hook: Update user financials when deposit is completed
-depositSchema.post('save', async function (doc) {
+depositSchema.post('save', async function (doc, next) {
     try {
-        // Only update if status changed to completed or cancelled
-        if (doc.isModified('status') && ['completed', 'cancelled', 'failed'].includes(doc.status)) {
+        const wasModified = doc.isModified('status');
+
+        // Only update if status changed to completed, cancelled, or failed
+        if (wasModified && ['completed', 'cancelled', 'failed'].includes(doc.status)) {
             const User = mongoose.model('User');
             const user = await User.findById(doc.userId);
 
             if (user) {
-                await user.updateFinancials();
-
                 // If completed, add amount to wallet
                 if (doc.status === 'completed') {
                     user.walletBalance = (user.walletBalance || 0) + doc.amount;
                     await user.save();
                 }
+
+                // Update financial stats
+                await user.updateFinancials();
             }
         }
+        next();
     } catch (error) {
         console.error('Error in deposit post-save hook:', error);
+        next(error);
     }
 });
 

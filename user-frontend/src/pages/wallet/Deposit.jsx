@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   RefreshCw,
   Clock,
+  ExternalLink,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -20,7 +21,7 @@ import api from "../../services/api";
 
 const Deposit = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, checkAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -30,11 +31,13 @@ const Deposit = () => {
   const [selectedCrypto, setSelectedCrypto] = useState("bep20/usdt");
 
   // Payment state
-  const [step, setStep] = useState(1); // 1: amount, 2: payment details, 3: success
+  const [step, setStep] = useState(1);
   const [paymentAddress, setPaymentAddress] = useState(null);
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
   const [transactionId, setTransactionId] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [qrLoaded, setQrLoaded] = useState(false);
+  const [qrError, setQrError] = useState(false);
 
   // Checking payment status
   const [checkingPayment, setCheckingPayment] = useState(false);
@@ -111,13 +114,19 @@ const Deposit = () => {
         setQrCodeUrl(response.data.data.qrCodeUrl);
         setTransactionId(response.data.data.transactionId);
         setDepositDetails(response.data.data);
+        setQrLoaded(false);
+        setQrError(false);
         setStep(2);
       } else {
         setError(response.data.message || "Failed to create deposit");
       }
     } catch (err) {
       console.error("Create deposit error:", err);
-      setError(err.response?.data?.message || "Failed to create deposit");
+      setError(
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to create deposit"
+      );
     } finally {
       setLoading(false);
     }
@@ -137,12 +146,23 @@ const Deposit = () => {
         setDepositDetails(deposit);
 
         if (deposit.status === "completed") {
+          // Refresh user data to get updated balance
+          await checkAuth();
           setStep(3);
         } else if (
           deposit.status === "failed" ||
           deposit.status === "cancelled"
         ) {
           setError(`Deposit ${deposit.status}. Please try again.`);
+        } else {
+          // Show current status
+          const statusMessage =
+            deposit.blockBeeStatus === "pending_payment"
+              ? "Waiting for payment..."
+              : deposit.blockBeeStatus === "pending_confirmation"
+              ? "Payment detected, waiting for confirmations..."
+              : `Status: ${deposit.status}`;
+          setError(statusMessage);
         }
       }
     } catch (err) {
@@ -350,14 +370,48 @@ const Deposit = () => {
                 </p>
               </div>
 
-              {/* QR Code */}
+              {/* QR Code with better error handling */}
               {qrCodeUrl && (
                 <div className="flex justify-center mb-6">
                   <div className="p-4 bg-white border-2 border-gray-200 rounded-xl">
+                    {!qrLoaded && !qrError && (
+                      <div className="w-48 h-48 flex items-center justify-center">
+                        <Loader className="w-8 h-8 text-gray-400 animate-spin" />
+                      </div>
+                    )}
+
+                    {qrError && (
+                      <div className="w-48 h-48 flex flex-col items-center justify-center gap-2 text-center">
+                        <AlertCircle className="w-8 h-8 text-gray-400" />
+                        <p className="text-xs text-gray-600">
+                          QR code unavailable
+                        </p>
+                        <a
+                          href={qrCodeUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-orange-600 hover:text-orange-700 flex items-center gap-1"
+                        >
+                          Open in new tab
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+
                     <img
                       src={qrCodeUrl}
                       alt="Payment QR Code"
-                      className="w-48 h-48"
+                      className={`w-48 h-48 ${!qrLoaded ? "hidden" : ""}`}
+                      onLoad={() => {
+                        setQrLoaded(true);
+                        setQrError(false);
+                      }}
+                      onError={() => {
+                        setQrLoaded(false);
+                        setQrError(true);
+                        console.error("QR Code failed to load:", qrCodeUrl);
+                      }}
+                      crossOrigin="anonymous"
                     />
                   </div>
                 </div>
@@ -373,11 +427,11 @@ const Deposit = () => {
                     type="text"
                     value={paymentAddress}
                     readOnly
-                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-mono"
+                    className="flex-1 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-sm font-mono break-all"
                   />
                   <button
                     onClick={() => copyToClipboard(paymentAddress)}
-                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                    className="px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors flex-shrink-0"
                   >
                     {copied ? (
                       <Check className="w-5 h-5 text-green-600" />
@@ -391,7 +445,7 @@ const Deposit = () => {
               {/* Transaction ID */}
               <div className="mb-6 p-4 bg-gray-50 rounded-xl">
                 <p className="text-sm text-gray-600 mb-1">Transaction ID</p>
-                <p className="font-mono text-sm text-gray-900">
+                <p className="font-mono text-sm text-gray-900 break-all">
                   {transactionId}
                 </p>
               </div>
@@ -438,13 +492,12 @@ const Deposit = () => {
                   <p>
                     Status:{" "}
                     <span className="font-semibold capitalize">
-                      {depositDetails.blockBee?.blockBeeStatus ||
-                        depositDetails.status}
+                      {depositDetails.blockBeeStatus || depositDetails.status}
                     </span>
                   </p>
-                  {depositDetails.blockBee?.confirmations > 0 && (
+                  {depositDetails.confirmations > 0 && (
                     <p className="mt-1">
-                      Confirmations: {depositDetails.blockBee.confirmations}
+                      Confirmations: {depositDetails.confirmations}/3
                     </p>
                   )}
                 </div>
@@ -482,15 +535,14 @@ const Deposit = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Transaction ID:</span>
-                    <span className="font-mono text-xs">{transactionId}</span>
+                    <span className="font-mono text-xs break-all">
+                      {transactionId}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">New Balance:</span>
                     <span className="font-semibold text-green-600">
-                      $
-                      {parseFloat(
-                        (user?.walletBalance || 0) + parseFloat(amount)
-                      ).toFixed(2)}
+                      ${parseFloat(user?.walletBalance || 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -511,6 +563,8 @@ const Deposit = () => {
                     setQrCodeUrl(null);
                     setTransactionId(null);
                     setDepositDetails(null);
+                    setQrLoaded(false);
+                    setQrError(false);
                   }}
                   className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
                 >
