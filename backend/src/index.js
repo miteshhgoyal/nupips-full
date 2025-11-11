@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
+import profileRoutes from "./routes/profile.routes.js";
 import gtcfxRoutes from "./routes/gtcfx.routes.js";
 import depositRoutes from "./routes/deposit.routes.js";
 import withdrawalRoutes from "./routes/withdrawal.routes.js";
@@ -25,6 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/auth", authRoutes);
+app.use("/profile", profileRoutes);
 app.use("/gtcfx", gtcfxRoutes);
 app.use("/deposit", depositRoutes);
 app.use("/withdrawal", withdrawalRoutes);
