@@ -13,6 +13,10 @@ import {
   ArrowRight,
   DollarSign,
   Activity,
+  Award,
+  Target,
+  Users,
+  BarChart3,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGTCFxAuth } from "../../../contexts/GTCFxAuthContext";
@@ -22,29 +26,67 @@ const GTCFxDashboard = () => {
   const navigate = useNavigate();
   const { gtcUser, refreshGTCUserInfo } = useGTCFxAuth();
   const [accountInfo, setAccountInfo] = useState(null);
+  const [commissionSummary, setCommissionSummary] = useState(null);
+  const [topSymbols, setTopSymbols] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchAccountInfo();
+    fetchDashboardData();
   }, []);
 
-  const fetchAccountInfo = async () => {
+  const fetchDashboardData = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await api.post("/account_info", {});
+      // Fetch account info
+      const accountResponse = await api.post("/account_info", {});
 
-      if (response.data.code === 200) {
-        setAccountInfo(response.data.data);
-        // Also refresh the global GTC user state
+      if (accountResponse.data.code === 200) {
+        setAccountInfo(accountResponse.data.data);
         await refreshGTCUserInfo();
-      } else {
-        setError(response.data.message || "Failed to fetch account info");
+      }
+
+      // Fetch commission report summary (first page only for dashboard)
+      try {
+        const commissionResponse = await api.post("/agent/commission_report", {
+          page: 1,
+          page_size: 100, // Get more for better stats
+        });
+
+        if (commissionResponse.data.code === 200) {
+          const data = commissionResponse.data.data;
+          setCommissionSummary({
+            total: data.total,
+            commission: parseFloat(data.commission || 0),
+            volume: parseFloat(data.volume || 0),
+          });
+
+          // Calculate top symbols
+          if (data.list && data.list.length > 0) {
+            const symbolStats = data.list.reduce((acc, comm) => {
+              if (!acc[comm.symbol]) {
+                acc[comm.symbol] = 0;
+              }
+              acc[comm.symbol] += parseFloat(comm.amount);
+              return acc;
+            }, {});
+
+            const topFive = Object.entries(symbolStats)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 5)
+              .map(([symbol, amount]) => ({ symbol, amount }));
+
+            setTopSymbols(topFive);
+          }
+        }
+      } catch (commError) {
+        console.warn("Failed to fetch commission data:", commError);
+        // Don't set error, just skip commission section
       }
     } catch (err) {
-      console.error("Fetch account info error:", err);
+      console.error("Fetch dashboard data error:", err);
       setError(
         err.response?.data?.message || "Network error. Please try again."
       );
@@ -76,7 +118,7 @@ const GTCFxDashboard = () => {
           </h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
-            onClick={fetchAccountInfo}
+            onClick={fetchDashboardData}
             className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
           >
             Try Again
@@ -189,6 +231,98 @@ const GTCFxDashboard = () => {
             </p>
           </div>
         </div>
+
+        {/* Commission Summary Section */}
+        {commissionSummary && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Award className="w-7 h-7 text-orange-600" />
+                Commission Overview
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {/* Total Commissions */}
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                    <DollarSign className="w-6 h-6 text-orange-600" />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 font-medium mb-1">
+                  Total Commissions
+                </p>
+                <p className="text-3xl font-bold text-gray-900">
+                  ${commissionSummary.commission.toFixed(5)}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  From {commissionSummary.total} transactions
+                </p>
+              </div>
+
+              {/* Total Volume */}
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-green-600" />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 font-medium mb-1">
+                  Total Volume
+                </p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {commissionSummary.volume.toFixed(2)}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">Lots traded</p>
+              </div>
+
+              {/* Avg Commission/Lot */}
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <Target className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 font-medium mb-1">
+                  Avg Commission/Lot
+                </p>
+                <p className="text-3xl font-bold text-gray-900">
+                  $
+                  {(commissionSummary.volume > 0
+                    ? commissionSummary.commission / commissionSummary.volume
+                    : 0
+                  ).toFixed(4)}
+                </p>
+              </div>
+            </div>
+
+            {/* Top Trading Symbols */}
+            {topSymbols.length > 0 && (
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-6 h-6 text-orange-600" />
+                  Top Trading Symbols
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                  {topSymbols.map(({ symbol, amount }) => (
+                    <div
+                      key={symbol}
+                      className="p-4 bg-orange-50 rounded-xl border border-orange-100 hover:shadow-md transition-shadow"
+                    >
+                      <p className="text-xs text-gray-600 font-medium mb-1">
+                        {symbol}
+                      </p>
+                      <p className="text-xl font-bold text-orange-600">
+                        ${parseFloat(amount).toFixed(5)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Account Details Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

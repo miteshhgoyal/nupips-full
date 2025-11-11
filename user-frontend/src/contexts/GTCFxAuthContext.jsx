@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import api from "../services/gtcfxApi";
 import { gtcfxTokenService } from "../services/gtcfxTokenService";
+import { gtcfxBackendAPI } from "../services/gtcfxBackendApi";
 import { useAuth } from "./AuthContext";
 
 const GTCFxAuthContext = createContext();
@@ -15,20 +16,22 @@ export const useGTCFxAuth = () => {
 };
 
 export const GTCFxAuthProvider = ({ children }) => {
-  const { isAuthenticated } = useAuth(); // Get main auth state
+  const { isAuthenticated } = useAuth();
   const [gtcUser, setGtcUser] = useState(null);
   const [gtcLoading, setGtcLoading] = useState(true);
   const [gtcAuthenticated, setGtcAuthenticated] = useState(false);
   const [gtcError, setGtcError] = useState(null);
 
   useEffect(() => {
-    checkGTCAuth();
-  }, []);
+    if (isAuthenticated) {
+      checkGTCAuth();
+    } else {
+      setGtcLoading(false);
+    }
+  }, [isAuthenticated]);
 
-  // Clear GTC FX data when main auth changes to false
   useEffect(() => {
     if (!isAuthenticated) {
-      // Main user logged out, clear GTC FX data
       gtcfxTokenService.clearTokens();
       setGtcUser(null);
       setGtcAuthenticated(false);
@@ -36,7 +39,6 @@ export const GTCFxAuthProvider = ({ children }) => {
     }
   }, [isAuthenticated]);
 
-  // Fetch GTC FX user account info from API
   const fetchGTCUserInfo = async () => {
     try {
       const response = await api.post("/account_info");
@@ -58,11 +60,14 @@ export const GTCFxAuthProvider = ({ children }) => {
         };
 
         setGtcUser(userInfo);
-        localStorage.setItem("gtcfx_user", JSON.stringify(userInfo));
+        gtcfxTokenService.setUser(userInfo);
+
+        // Update in backend
+        await gtcfxBackendAPI
+          .syncUser()
+          .catch((err) => console.warn("Failed to sync user to backend:", err));
 
         return userInfo;
-      } else {
-        console.error("GTC FX API response code is not 200 or data is missing");
       }
       return null;
     } catch (error) {
@@ -72,25 +77,30 @@ export const GTCFxAuthProvider = ({ children }) => {
   };
 
   const checkGTCAuth = async () => {
+    if (!isAuthenticated) {
+      setGtcLoading(false);
+      return;
+    }
+
     try {
-      const token = gtcfxTokenService.getToken();
-      const refreshToken = gtcfxTokenService.getRefreshToken();
+      // Fetch session from backend database
+      const response = await gtcfxBackendAPI.getSession();
 
-      if (token && refreshToken) {
-        setGtcAuthenticated(true);
+      if (response.data.authenticated && response.data.data) {
+        const { access_token, refresh_token, user } = response.data.data;
 
-        // Try to get user from localStorage first for immediate display
-        const storedUser = localStorage.getItem("gtcfx_user");
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            setGtcUser(parsedUser);
-          } catch (e) {
-            console.error("Failed to parse stored GTC FX user:", e);
-          }
+        // Load tokens into memory
+        gtcfxTokenService.setToken(access_token);
+        gtcfxTokenService.setRefreshToken(refresh_token);
+
+        if (user) {
+          setGtcUser(user);
+          gtcfxTokenService.setUser(user);
         }
 
-        // Fetch fresh user data from API
+        setGtcAuthenticated(true);
+
+        // Fetch fresh user data
         await fetchGTCUserInfo();
       } else {
         setGtcAuthenticated(false);
@@ -108,19 +118,25 @@ export const GTCFxAuthProvider = ({ children }) => {
 
   const gtcLogin = async (userData) => {
     try {
-      const { access_token, refresh_token } = userData;
+      const { access_token, refresh_token, user } = userData;
 
       if (!access_token || !refresh_token) {
         throw new Error("Missing GTC FX tokens in response");
       }
 
+      // Store in memory
       gtcfxTokenService.setToken(access_token);
       gtcfxTokenService.setRefreshToken(refresh_token);
 
       setGtcAuthenticated(true);
       setGtcError(null);
 
-      // Fetch complete user info from API
+      if (user) {
+        setGtcUser(user);
+        gtcfxTokenService.setUser(user);
+      }
+
+      // Fetch complete user info
       await fetchGTCUserInfo();
 
       return true;
@@ -135,18 +151,8 @@ export const GTCFxAuthProvider = ({ children }) => {
 
   const gtcLogout = async () => {
     try {
-      const refreshToken = gtcfxTokenService.getRefreshToken();
-      if (refreshToken) {
-        try {
-          await api.post("/logout", {
-            refresh_token: refreshToken,
-          });
-        } catch (err) {
-          console.warn(
-            "GTC FX backend logout failed, proceeding with local logout"
-          );
-        }
-      }
+      // Call backend to clear tokens from database
+      await gtcfxBackendAPI.logout();
     } catch (error) {
       console.error("GTC FX logout error:", error);
     } finally {

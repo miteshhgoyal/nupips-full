@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useGTCFxAuth } from "../../contexts/GTCFxAuthContext";
-import api from "../../services/gtcfxApi";
+import { gtcfxBackendAPI } from "../../services/gtcfxBackendApi";
 
 const GTCFxAuth = () => {
   const {
@@ -79,21 +79,22 @@ const GTCFxAuth = () => {
     setSubmitError("");
 
     try {
-      const response = await api.post("/login", {
+      // Call YOUR backend API instead of GTC FX directly
+      const response = await gtcfxBackendAPI.login({
         account: formData.account,
         password: formData.password,
       });
 
-      if (response.data.code === 200 && response.data.data) {
-        const { access_token, refresh_token } = response.data.data;
+      if (response.data && response.data.data) {
+        const { access_token, refresh_token, user } = response.data.data;
 
         const loginSuccess = await gtcLogin({
           access_token,
           refresh_token,
+          user,
         });
 
         if (loginSuccess) {
-          // Success - component will re-render to show authenticated state
           setFormData({ account: "", password: "" });
         } else {
           setSubmitError("Failed to complete login. Please try again.");
@@ -107,12 +108,7 @@ const GTCFxAuth = () => {
     } catch (error) {
       console.error("GTC FX login error:", error);
 
-      if (error.response?.data?.code === -1) {
-        setSubmitError(
-          error.response.data.message ||
-            "User does not exist or password is incorrect"
-        );
-      } else if (error.response?.data?.message) {
+      if (error.response?.data?.message) {
         setSubmitError(error.response.data.message);
       } else if (error.message === "Network Error") {
         setSubmitError(

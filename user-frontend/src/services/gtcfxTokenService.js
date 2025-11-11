@@ -2,27 +2,39 @@
 import { jwtDecode } from 'jwt-decode';
 
 export const gtcfxTokenService = {
-    // Use different key names to avoid conflicts with main app
+    // In-memory storage for current session
+    _accessToken: null,
+    _refreshToken: null,
+    _user: null,
+
     setToken: (token) => {
-        localStorage.setItem('gtcfx_accessToken', token);
+        gtcfxTokenService._accessToken = token;
     },
 
     getToken: () => {
-        return localStorage.getItem('gtcfx_accessToken');
+        return gtcfxTokenService._accessToken;
     },
 
     setRefreshToken: (token) => {
-        localStorage.setItem('gtcfx_refreshToken', token);
+        gtcfxTokenService._refreshToken = token;
     },
 
     getRefreshToken: () => {
-        return localStorage.getItem('gtcfx_refreshToken');
+        return gtcfxTokenService._refreshToken;
+    },
+
+    setUser: (user) => {
+        gtcfxTokenService._user = user;
+    },
+
+    getUser: () => {
+        return gtcfxTokenService._user;
     },
 
     clearTokens: () => {
-        localStorage.removeItem('gtcfx_accessToken');
-        localStorage.removeItem('gtcfx_refreshToken');
-        localStorage.removeItem('gtcfx_user');
+        gtcfxTokenService._accessToken = null;
+        gtcfxTokenService._refreshToken = null;
+        gtcfxTokenService._user = null;
     },
 
     verifyToken: (token) => {
@@ -40,7 +52,6 @@ export const gtcfxTokenService = {
         try {
             const decoded = jwtDecode(token);
             const expirationTime = decoded.exp * 1000;
-            // Consider token expired 30 seconds before actual expiry
             return Date.now() >= (expirationTime - 30000);
         } catch (error) {
             console.error('Error checking GTC FX token expiration:', error);

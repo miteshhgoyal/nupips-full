@@ -19,6 +19,7 @@ import {
   Book,
   ShoppingBag,
   TrendingUp,
+  Wallet,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
@@ -27,6 +28,10 @@ import "./App.css";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ComingSoon from "./pages/others/ComingSoon";
+
+import Deposit from "./pages/wallet/Deposit";
+import Withdrawal from "./pages/wallet/Withdrawal";
+import TransactionHistory from "./pages/wallet/TransactionHistory";
 
 // Import GTC FX Pages
 import GTCFxAuth from "./pages/gtcfx/Auth";
@@ -37,7 +42,7 @@ import GTCFxSubscriptions from "./pages/gtcfx/user/MySubscriptions";
 import GTCFxProfitLogs from "./pages/gtcfx/user/ProfitLogs";
 import GTCFxUnsubscribe from "./pages/gtcfx/user/Unsubscribe";
 import GTCFxAgentMembers from "./pages/gtcfx/user/AgentMembers";
-import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
+// import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
@@ -64,12 +69,21 @@ const sidebarLinks = [
     subItems: [
       { name: "Authentication", href: "/gtcfx/auth" },
       { name: "Dashboard", href: "/gtcfx/dashboard" },
-    //   { name: "Strategies", href: "/gtcfx/strategies" },
-    //   { name: "My Subscriptions", href: "/gtcfx/subscriptions" },
+      //   { name: "Strategies", href: "/gtcfx/strategies" },
+      //   { name: "My Subscriptions", href: "/gtcfx/subscriptions" },
       { name: "Profit Logs", href: "/gtcfx/profit-logs" },
-    //   { name: "Unsubscribe", href: "/gtcfx/unsubscribe" },
+      //   { name: "Unsubscribe", href: "/gtcfx/unsubscribe" },
       { name: "Agent Members", href: "/gtcfx/agent/members" },
-      { name: "Commission Report", href: "/gtcfx/agent/commission" },
+      //   { name: "Commission Report", href: "/gtcfx/agent/commission" },
+    ],
+  },
+  {
+    name: "Wallet",
+    icon: Wallet,
+    subItems: [
+      { name: "Deposit", href: "/deposit" },
+      { name: "Withdrawal", href: "/withdrawal" },
+      { name: "Transaction History", href: "/transaction-history" },
     ],
   },
 ];
@@ -253,6 +267,31 @@ function App() {
                 }
               />
 
+              <Route
+                path="/deposit"
+                element={
+                  <ProtectedRoute>
+                    <Deposit />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/withdrawal"
+                element={
+                  <ProtectedRoute>
+                    <Withdrawal />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/transaction-history"
+                element={
+                  <ProtectedRoute>
+                    <TransactionHistory />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* GTC FX Login - Only requires main auth */}
               <Route
                 path="/gtcfx/auth"
@@ -334,7 +373,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
+              {/* <Route
                 path="/gtcfx/agent/commission"
                 element={
                   <ProtectedRoute>
@@ -343,7 +382,7 @@ function App() {
                     </GTCFxProtectedRoute>
                   </ProtectedRoute>
                 }
-              />
+              /> */}
 
               {/* Default redirect */}
               <Route path="/" element={<DefaultRoute />} />
