@@ -43,6 +43,7 @@ import GTCFxProfitLogs from "./pages/gtcfx/user/ProfitLogs";
 import GTCFxUnsubscribe from "./pages/gtcfx/user/Unsubscribe";
 import GTCFxAgentMembers from "./pages/gtcfx/user/AgentMembers";
 import Profile from "./pages/user/Profile";
+import Dashboard from "./pages/user/Dashboard";
 // import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
 
 // Navigation configuration
@@ -239,7 +240,7 @@ function App() {
                 path="/dashboard"
                 element={
                   <ProtectedRoute>
-                    <ComingSoon />
+                    <Dashboard />
                   </ProtectedRoute>
                 }
               />
