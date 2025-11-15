@@ -9,7 +9,7 @@ const router = express.Router();
 // Register Route
 router.post('/register', async (req, res) => {
     try {
-        const { name, username, email, phone, password } = req.body;
+        const { name, username, email, phone, password, referredBy } = req.body;
 
         // Validate required fields
         if (!name || !username || !email || !phone || !password) {
@@ -36,6 +36,19 @@ router.post('/register', async (req, res) => {
             }
         }
 
+        // Handle referral code
+        let sponsorId = null;
+        if (referredBy) {
+            const sponsor = await User.findOne({ username: referredBy.trim() });
+            if (sponsor) {
+                sponsorId = sponsor._id;
+            } else {
+                return res.status(400).json({
+                    message: 'Invalid referral code. Sponsor not found.'
+                });
+            }
+        }
+
         // Hash password
         const salt = await bcrypt.genSalt(10);
         const hashedpass = await bcrypt.hash(password, salt);
@@ -46,10 +59,19 @@ router.post('/register', async (req, res) => {
             username,
             email,
             phone,
-            password: hashedpass
+            password: hashedpass,
+            referralDetails: {
+                referredBy: sponsorId, // Set sponsor ObjectId
+                referralTree: [],
+                totalDirectReferrals: 0,
+                totalDownlineUsers: 0
+            }
         });
 
         await newUser.save();
+
+        // Update sponsor's downline stats (handled by post-save hook in User model)
+        // The UserSchema.post('save') hook will automatically call notifyReferrer()
 
         // Generate JWT token
         const token = jwt.sign(
@@ -67,7 +89,8 @@ router.post('/register', async (req, res) => {
                 username: newUser.username,
                 email: newUser.email,
                 phone: newUser.phone,
-                walletBalance: newUser.walletBalance
+                walletBalance: newUser.walletBalance,
+                referredBy: sponsorId ? referredBy : null
             }
         });
 
@@ -147,7 +170,6 @@ router.get('/verify', authenticateToken, async (req, res) => {
                 valid: true,
                 user
             });
-
         else
             res.status(400).json({
                 valid: false,

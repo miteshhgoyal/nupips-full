@@ -1,5 +1,5 @@
 // Register.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   User,
   Mail,
@@ -10,8 +10,9 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  Users,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { authAPI } from "../services/api";
 
@@ -23,6 +24,7 @@ import { CONFIG } from "../constants";
 const Register = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [formData, setFormData] = useState({
     username: "",
@@ -31,6 +33,7 @@ const Register = () => {
     phone: "",
     password: "",
     confirmPassword: "",
+    referredBy: "", // Add this field
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -39,6 +42,14 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Extract referral code from URL on mount
+  useEffect(() => {
+    const refCode = searchParams.get("ref");
+    if (refCode) {
+      setFormData((prev) => ({ ...prev, referredBy: refCode }));
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -110,6 +121,7 @@ const Register = () => {
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
+        referredBy: formData.referredBy || null, // Send referral code
       });
 
       setSuccessMessage("Registration successful! Redirecting...");
@@ -134,6 +146,7 @@ const Register = () => {
   };
 
   const resetForm = () => {
+    const refCode = searchParams.get("ref");
     setFormData({
       username: "",
       name: "",
@@ -141,6 +154,7 @@ const Register = () => {
       phone: "",
       password: "",
       confirmPassword: "",
+      referredBy: refCode || "", // Preserve referral code
     });
     setAcceptTerms(false);
     setErrors({});
@@ -162,6 +176,22 @@ const Register = () => {
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow-xl border border-orange-100">
+          {/* Referral Badge (if referred) */}
+          {formData.referredBy && (
+            <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center gap-2">
+              <Users className="w-5 h-5 text-purple-600 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-semibold text-purple-900">
+                  Referred by:{" "}
+                  <span className="font-mono">{formData.referredBy}</span>
+                </p>
+                <p className="text-xs text-purple-600 mt-0.5">
+                  You'll be linked to this sponsor after registration
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Messages */}
           {successMessage && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700">
@@ -258,6 +288,19 @@ const Register = () => {
                 theme="white"
               />
             </div>
+
+            {/* Referral Code Input (Optional, manual entry) */}
+            {!formData.referredBy && (
+              <FormInput
+                icon={Users}
+                name="referredBy"
+                value={formData.referredBy}
+                onChange={handleInputChange}
+                placeholder="Referral Code (Optional)"
+                error={errors.referredBy}
+                theme="white"
+              />
+            )}
 
             {/* Terms and Conditions */}
             <CustomCheckbox
