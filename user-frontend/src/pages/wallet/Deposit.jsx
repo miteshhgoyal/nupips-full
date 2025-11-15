@@ -51,7 +51,7 @@ const Deposit = () => {
       fee: "0%",
       minDeposit: "$10",
       processingTime: "5-15 minutes",
-      recommended: true,
+      //   recommended: true,
     },
     {
       value: "trc20/usdt",
@@ -60,7 +60,7 @@ const Deposit = () => {
       fee: "0%",
       minDeposit: "$10",
       processingTime: "5-10 minutes",
-      recommended: true,
+      //   recommended: true,
     },
   ];
 

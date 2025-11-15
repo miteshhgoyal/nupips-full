@@ -261,13 +261,6 @@ router.post('/webhook/:uuid', async (req, res) => {
         const { uuid } = req.params;
         const webhookData = req.body;
 
-        console.log('BlockBee webhook received:', {
-            uuid,
-            webhookData,
-            confirmations: webhookData.confirmations,
-            value: webhookData.value_coin
-        });
-
         // Log webhook
         const webhookLog = new WebhookLog({
             uuid,

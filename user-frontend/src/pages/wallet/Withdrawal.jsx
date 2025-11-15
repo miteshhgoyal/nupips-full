@@ -16,6 +16,14 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 
+// ============================================
+// FEATURE FLAGS - Toggle features here
+// ============================================
+const FEATURES = {
+  BANK_TRANSFER_ENABLED: false, // Set to true to enable bank transfer
+};
+// ============================================
+
 const Withdrawal = () => {
   const navigate = useNavigate();
   const { user, checkAuth } = useAuth();
@@ -32,7 +40,7 @@ const Withdrawal = () => {
   const [walletAddress, setWalletAddress] = useState("");
   const [walletNetwork, setWalletNetwork] = useState("");
 
-  // Bank details
+  // Bank details (only used when BANK_TRANSFER_ENABLED is true)
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
@@ -48,7 +56,7 @@ const Withdrawal = () => {
       label: "USDT (BEP20)",
       network: "Binance Smart Chain",
       fee: "0.5%",
-      minWithdrawal: "$20",
+      minWithdrawal: "$10",
       processingTime: "1-24 hours",
     },
     {
@@ -56,17 +64,17 @@ const Withdrawal = () => {
       label: "USDT (TRC20)",
       network: "TRON",
       fee: "0.5%",
-      minWithdrawal: "$20",
+      minWithdrawal: "$10",
       processingTime: "1-24 hours",
     },
-    {
-      value: "erc20/usdt",
-      label: "USDT (ERC20)",
-      network: "Ethereum",
-      fee: "1%",
-      minWithdrawal: "$100",
-      processingTime: "1-24 hours",
-    },
+    // {
+    //   value: "erc20/usdt",
+    //   label: "USDT (ERC20)",
+    //   network: "Ethereum",
+    //   fee: "1%",
+    //   minWithdrawal: "$100",
+    //   processingTime: "1-24 hours",
+    // },
   ];
 
   const selectedOption = cryptoOptions.find(
@@ -138,8 +146,11 @@ const Withdrawal = () => {
       }
     }
 
-    // Validate bank details
-    if (withdrawalMethod === "bank_transfer") {
+    // Validate bank details (only if feature enabled)
+    if (
+      FEATURES.BANK_TRANSFER_ENABLED &&
+      withdrawalMethod === "bank_transfer"
+    ) {
       if (!bankName.trim() || !accountNumber.trim() || !accountHolder.trim()) {
         setError("Please fill in all bank details");
         return;
@@ -161,7 +172,7 @@ const Withdrawal = () => {
         payload.crypto = selectedCrypto;
         payload.walletAddress = walletAddress;
         payload.network = walletNetwork;
-      } else {
+      } else if (FEATURES.BANK_TRANSFER_ENABLED) {
         payload.bankDetails = {
           bankName,
           accountNumber,
@@ -345,7 +356,11 @@ const Withdrawal = () => {
               Withdrawal Method
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              className={`grid grid-cols-1 ${
+                FEATURES.BANK_TRANSFER_ENABLED ? "md:grid-cols-2" : ""
+              } gap-4`}
+            >
               <button
                 type="button"
                 onClick={() => setWithdrawalMethod("crypto")}
@@ -364,23 +379,26 @@ const Withdrawal = () => {
                 </p>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setWithdrawalMethod("bank_transfer")}
-                className={`p-6 border-2 rounded-xl text-left transition-all ${
-                  withdrawalMethod === "bank_transfer"
-                    ? "border-orange-500 bg-orange-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                <Building2 className="w-8 h-8 text-blue-600 mb-3" />
-                <h3 className="font-semibold text-gray-900 mb-1">
-                  Bank Transfer
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Direct bank account transfer
-                </p>
-              </button>
+              {/* Bank Transfer Option - Only shown if feature enabled */}
+              {FEATURES.BANK_TRANSFER_ENABLED && (
+                <button
+                  type="button"
+                  onClick={() => setWithdrawalMethod("bank_transfer")}
+                  className={`p-6 border-2 rounded-xl text-left transition-all ${
+                    withdrawalMethod === "bank_transfer"
+                      ? "border-orange-500 bg-orange-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <Building2 className="w-8 h-8 text-blue-600 mb-3" />
+                  <h3 className="font-semibold text-gray-900 mb-1">
+                    Bank Transfer
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Direct bank account transfer
+                  </p>
+                </button>
+              )}
             </div>
           </div>
 
@@ -455,7 +473,7 @@ const Withdrawal = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Cryptocurrency
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {cryptoOptions.map((option) => (
                     <button
                       key={option.value}
@@ -511,68 +529,69 @@ const Withdrawal = () => {
             </div>
           )}
 
-          {/* Bank Details */}
-          {withdrawalMethod === "bank_transfer" && (
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-              <h2 className="text-xl font-bold text-gray-900 mb-6">
-                Bank Account Details
-              </h2>
+          {/* Bank Details - Only shown if feature enabled */}
+          {FEATURES.BANK_TRANSFER_ENABLED &&
+            withdrawalMethod === "bank_transfer" && (
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">
+                  Bank Account Details
+                </h2>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Bank Name
-                  </label>
-                  <input
-                    type="text"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    placeholder="Enter bank name"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  />
-                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Bank Name
+                    </label>
+                    <input
+                      type="text"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      placeholder="Enter bank name"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Account Number
-                  </label>
-                  <input
-                    type="text"
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    placeholder="Enter account number"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Account Number
+                    </label>
+                    <input
+                      type="text"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      placeholder="Enter account number"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Account Holder Name
-                  </label>
-                  <input
-                    type="text"
-                    value={accountHolder}
-                    onChange={(e) => setAccountHolder(e.target.value)}
-                    placeholder="Enter account holder name"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Account Holder Name
+                    </label>
+                    <input
+                      type="text"
+                      value={accountHolder}
+                      onChange={(e) => setAccountHolder(e.target.value)}
+                      placeholder="Enter account holder name"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    IFSC Code (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={ifscCode}
-                    onChange={(e) => setIfscCode(e.target.value)}
-                    placeholder="Enter IFSC code"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      IFSC Code (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={ifscCode}
+                      onChange={(e) => setIfscCode(e.target.value)}
+                      placeholder="Enter IFSC code"
+                      className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Submit Button */}
           <button
