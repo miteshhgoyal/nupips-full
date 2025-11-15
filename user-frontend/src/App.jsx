@@ -20,6 +20,7 @@ import {
   ShoppingBag,
   TrendingUp,
   Wallet,
+  Users,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
@@ -55,6 +56,15 @@ const sidebarLinks = [
     name: "Dashboard",
     href: "/dashboard",
     icon: Home,
+  },
+  {
+    name: "Nupips Team",
+    icon: Users,
+    subItems: [
+      { name: "Direct Team", href: "/deposit" },
+      { name: "Total Downline", href: "/withdrawal" },
+      { name: "Tree Structure", href: "/transfer" },
+    ],
   },
   {
     name: "Shop",
