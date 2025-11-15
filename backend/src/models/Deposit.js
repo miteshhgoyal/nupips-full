@@ -35,9 +35,9 @@ const depositSchema = new mongoose.Schema({
         required: true
     },
     paymentDetails: {
-        cryptocurrency: String, // Store as string without enum restriction
+        cryptocurrency: String,
         walletAddress: String,
-        network: String, // Store as string without enum restriction
+        network: String,
         txHash: String,
         confirmations: Number,
         bankName: String,
@@ -57,8 +57,8 @@ const depositSchema = new mongoose.Schema({
             type: String,
             index: true
         },
-        coin: String, // Store the full crypto identifier (e.g., "bep20/usdt")
-        ticker: String, // Store the ticker (same as coin for BlockBee)
+        coin: String,
+        ticker: String,
         address: {
             type: String,
             index: true
@@ -119,12 +119,18 @@ const depositSchema = new mongoose.Schema({
         ref: 'User'
     },
     processedAt: Date,
-    completedAt: Date
+    completedAt: Date,
+
+    // TTL field for auto-deletion
+    expiresAt: {
+        type: Date,
+        index: true
+    }
 }, {
     timestamps: true
 });
 
-// Indexes
+// Existing indexes
 depositSchema.index({ userId: 1, status: 1, createdAt: -1 });
 depositSchema.index({ 'blockBee.paymentId': 1 });
 depositSchema.index({ 'blockBee.uuid': 1 });
@@ -132,11 +138,35 @@ depositSchema.index({ 'blockBee.address': 1 });
 depositSchema.index({ 'blockBee.txHash': 1 });
 depositSchema.index({ 'blockBee.blockBeeStatus': 1 });
 
-// Pre-save hook: Set completedAt when status changes to completed
+// TTL Index - Auto-delete pending deposits after 20 minutes (1200 seconds)
+// Only deletes documents where status is 'pending' and expiresAt is set
+depositSchema.index(
+    { expiresAt: 1 },
+    {
+        expireAfterSeconds: 0,
+        partialFilterExpression: {
+            status: 'pending'
+        }
+    }
+);
+
+// Pre-save hook: Set expiresAt for pending deposits
 depositSchema.pre('save', function (next) {
+    // Set completedAt when status changes to completed
     if (this.isModified('status') && this.status === 'completed' && !this.completedAt) {
         this.completedAt = new Date();
     }
+
+    // Set expiresAt for new pending deposits (20 minutes from now)
+    if (this.isNew && this.status === 'pending') {
+        this.expiresAt = new Date(Date.now() + 20 * 60 * 1000); // 20 minutes
+    }
+
+    // Remove expiresAt if status changes from pending
+    if (this.isModified('status') && this.status !== 'pending' && this.expiresAt) {
+        this.expiresAt = undefined;
+    }
+
     next();
 });
 
@@ -145,19 +175,16 @@ depositSchema.post('save', async function (doc, next) {
     try {
         const wasModified = doc.isModified('status');
 
-        // Only update if status changed to completed, cancelled, or failed
         if (wasModified && ['completed', 'cancelled', 'failed'].includes(doc.status)) {
             const User = mongoose.model('User');
             const user = await User.findById(doc.userId);
 
             if (user) {
-                // If completed, add amount to wallet
                 if (doc.status === 'completed') {
                     user.walletBalance = (user.walletBalance || 0) + doc.amount;
                     await user.save();
                 }
 
-                // Update financial stats
                 await user.updateFinancials();
             }
         }
