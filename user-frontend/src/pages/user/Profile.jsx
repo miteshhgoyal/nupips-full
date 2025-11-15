@@ -18,41 +18,23 @@ import {
   Wallet,
   Users,
   TrendingUp,
+  TrendingDown,
   Calendar,
   Info,
+  Link2,
+  Copy,
+  Check,
+  ArrowLeft,
+  CheckCircle,
+  Send,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { profileAPI } from "../../services/api";
-
-const Section = ({ title, subtitle, right, children }) => (
-  <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-    <div className="flex items-start sm:items-center justify-between gap-3 mb-4">
-      <div>
-        <h2 className="text-base font-bold text-gray-900">{title}</h2>
-        {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
-      </div>
-      {right}
-    </div>
-    {children}
-  </div>
-);
-
-const ReadonlyItem = ({ icon, label, value }) => (
-  <div className="flex items-center gap-3 py-2">
-    <div className="w-8 h-8 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center">
-      {icon}
-    </div>
-    <div className="min-w-0">
-      <p className="text-[11px] text-gray-500">{label}</p>
-      <p className="text-sm font-semibold text-gray-900 break-all">
-        {value ?? "—"}
-      </p>
-    </div>
-  </div>
-);
+import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
   const { updateUser } = useAuth();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,6 +47,9 @@ const Profile = () => {
   // Basic editable
   const [editing, setEditing] = useState(false);
   const [basic, setBasic] = useState({ name: "", username: "" });
+
+  // Referral copy
+  const [copiedReferral, setCopiedReferral] = useState(false);
 
   // Password form
   const [pwd, setPwd] = useState({
@@ -166,12 +151,20 @@ const Profile = () => {
     }
   };
 
+  const copyReferralLink = () => {
+    const baseUrl = window.location.origin;
+    const referralLink = `${baseUrl}/register?ref=${data.username}`;
+    navigator.clipboard.writeText(referralLink);
+    setCopiedReferral(true);
+    setTimeout(() => setCopiedReferral(false), 2000);
+  };
+
   if (loading || !data) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader className="w-10 h-10 text-orange-600 animate-spin" />
-          <p className="text-gray-600 text-sm">Loading profile...</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <Loader className="w-12 h-12 text-orange-600 animate-spin" />
+          <p className="text-gray-600 font-medium">Loading profile...</p>
         </div>
       </div>
     );
@@ -180,99 +173,127 @@ const Profile = () => {
   return (
     <>
       <Helmet>
-        <title>My Profile</title>
+        <title>My Profile - Wallet</title>
       </Helmet>
 
       <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
-        {/* Title */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <User className="w-6 h-6 text-orange-600" />
-            My Profile
-          </h1>
-          <p className="text-xs text-gray-600 mt-1">
-            Email and phone are verification‑locked. You can edit your name and
-            username.
-          </p>
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <User className="w-8 h-8 text-orange-600" />
+              My Profile
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Manage your account settings, security, and referral link
+            </p>
+          </div>
         </div>
 
-        {/* Alerts */}
-        {(err || ok) && (
-          <div className="mb-4">
-            {err && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                <AlertCircle className="w-4 h-4 mt-0.5" />
-                <span>{err}</span>
-              </div>
-            )}
-            {ok && (
-              <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700 mt-2">
-                <ShieldCheck className="w-4 h-4 mt-0.5" />
-                <span>{ok}</span>
-              </div>
-            )}
+        {/* Error & Success Alerts */}
+        {err && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{err}</p>
+          </div>
+        )}
+        {ok && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-green-700">{ok}</p>
           </div>
         )}
 
-        {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mb-2">
-              <Wallet className="w-4 h-4 text-orange-600" />
+        {/* Financial Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-sm font-medium text-orange-900">
+                Wallet Balance
+              </p>
             </div>
-            <p className="text-[11px] text-gray-500">Wallet Balance</p>
-            <p className="text-xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-orange-900">
               ${Number(data.walletBalance || 0).toFixed(2)}
             </p>
+            <p className="text-xs text-orange-700 mt-1">Current balance</p>
           </div>
 
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mb-2">
-              <TrendingUp className="w-4 h-4 text-green-600" />
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-sm font-medium text-green-900">
+                Total Deposits
+              </p>
             </div>
-            <p className="text-[11px] text-gray-500">Total Deposits</p>
-            <p className="text-xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-green-900">
               ${Number(data.financials?.totalDeposits || 0).toFixed(2)}
             </p>
+            <p className="text-xs text-green-700 mt-1">All time</p>
           </div>
 
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
-              <TrendingUp className="w-4 h-4 text-blue-600" />
+          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-sm font-medium text-red-900">
+                Total Withdrawals
+              </p>
             </div>
-            <p className="text-[11px] text-gray-500">Total Withdrawals</p>
-            <p className="text-xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-red-900">
               ${Number(data.financials?.totalWithdrawals || 0).toFixed(2)}
             </p>
+            <p className="text-xs text-red-700 mt-1">All time</p>
           </div>
 
-          <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mb-2">
-              <TrendingUp className="w-4 h-4 text-purple-600" />
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                <Send className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-sm font-medium text-blue-900">Net Balance</p>
             </div>
-            <p className="text-[11px] text-gray-500">Net Balance</p>
             <p
-              className={`text-xl font-bold ${
+              className={`text-2xl font-bold ${
                 Number(data.financials?.netBalance || 0) >= 0
-                  ? "text-green-600"
+                  ? "text-blue-900"
                   : "text-red-600"
               }`}
             >
               ${Number(data.financials?.netBalance || 0).toFixed(2)}
             </p>
+            <p className="text-xs text-blue-700 mt-1">Deposits - Withdrawals</p>
           </div>
         </div>
 
-        {/* Grid */}
+        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column */}
+          {/* Left Column - Editable Info */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Basic */}
-            <Section
-              title="Basic Information"
-              subtitle="Only name and username are editable"
-              right={
-                editing ? (
+            {/* Basic Information Section */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Basic Information
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Update your name and username
+                  </p>
+                </div>
+                {editing ? (
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
@@ -282,47 +303,43 @@ const Profile = () => {
                           username: data.username || "",
                         });
                       }}
-                      className="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50"
+                      className="px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2"
                     >
-                      <span className="inline-flex items-center gap-1">
-                        <X className="w-3.5 h-3.5" /> Cancel
-                      </span>
+                      <X className="w-4 h-4" />
+                      Cancel
                     </button>
                     <button
                       onClick={saveBasic}
                       disabled={saving}
-                      className="px-3 py-1.5 text-xs rounded-lg bg-orange-600 text-white hover:bg-orange-700 disabled:opacity-50"
+                      className="px-4 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700 disabled:opacity-50 transition-all flex items-center gap-2"
                     >
-                      <span className="inline-flex items-center gap-1">
-                        {saving ? (
-                          <Loader className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Save className="w-3.5 h-3.5" />
-                        )}
-                        Save
-                      </span>
+                      {saving ? (
+                        <Loader className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      Save
                     </button>
                   </div>
                 ) : (
                   <button
                     onClick={() => setEditing(true)}
-                    className="px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50"
+                    className="px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-2"
                   >
-                    <span className="inline-flex items-center gap-1">
-                      <Edit3 className="w-3.5 h-3.5" /> Edit
-                    </span>
+                    <Edit3 className="w-4 h-4" />
+                    Edit
                   </button>
-                )
-              }
-            >
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Name */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
-                    Name
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name
                   </label>
                   <div className="relative">
-                    <User className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <User className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={editing ? basic.name : data.name}
@@ -330,18 +347,18 @@ const Profile = () => {
                         setBasic((p) => ({ ...p, name: e.target.value }))
                       }
                       disabled={!editing}
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 disabled:bg-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 disabled:bg-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                     />
                   </div>
                 </div>
 
                 {/* Username */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Username
                   </label>
                   <div className="relative">
-                    <Users className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Users className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
                       value={editing ? basic.username : data.username}
@@ -349,40 +366,50 @@ const Profile = () => {
                         setBasic((p) => ({ ...p, username: e.target.value }))
                       }
                       disabled={!editing}
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 disabled:bg-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 disabled:bg-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                     />
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-1">
-                    Must be unique and at least 3 characters.
+                  <p className="text-xs text-gray-500 mt-1">
+                    Must be unique and at least 3 characters
                   </p>
                 </div>
               </div>
-            </Section>
+            </div>
 
-            {/* Security */}
-            <Section title="Security" subtitle="Change your password securely">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Current */}
+            {/* Security Section */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              <div className="mb-6">
+                <h2 className="text-lg font-bold text-gray-900">
+                  Security Settings
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Change your password to keep your account secure
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                {/* Current Password */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Current Password
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type={pwd.showCurrent ? "text" : "password"}
                       value={pwd.current}
                       onChange={(e) =>
                         setPwd((p) => ({ ...p, current: e.target.value }))
                       }
-                      className="w-full pl-9 pr-9 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                     />
                     <button
                       type="button"
                       onClick={() =>
                         setPwd((p) => ({ ...p, showCurrent: !p.showCurrent }))
                       }
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-600 transition-colors"
                     >
                       {pwd.showCurrent ? (
                         <EyeOff className="w-4 h-4" />
@@ -393,27 +420,28 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* New */}
+                {/* New Password */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     New Password
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type={pwd.showNext ? "text" : "password"}
                       value={pwd.next}
                       onChange={(e) =>
                         setPwd((p) => ({ ...p, next: e.target.value }))
                       }
-                      className="w-full pl-9 pr-9 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                     />
                     <button
                       type="button"
                       onClick={() =>
                         setPwd((p) => ({ ...p, showNext: !p.showNext }))
                       }
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-600 transition-colors"
                     >
                       {pwd.showNext ? (
                         <EyeOff className="w-4 h-4" />
@@ -422,32 +450,33 @@ const Profile = () => {
                       )}
                     </button>
                   </div>
-                  <p className="text-[11px] text-gray-500 mt-1">
-                    Minimum 8 characters.
+                  <p className="text-xs text-gray-500 mt-1">
+                    Minimum 8 characters
                   </p>
                 </div>
 
-                {/* Confirm */}
+                {/* Confirm Password */}
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Confirm New Password
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type={pwd.showConfirm ? "text" : "password"}
                       value={pwd.confirm}
                       onChange={(e) =>
                         setPwd((p) => ({ ...p, confirm: e.target.value }))
                       }
-                      className="w-full pl-9 pr-9 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                     />
                     <button
                       type="button"
                       onClick={() =>
                         setPwd((p) => ({ ...p, showConfirm: !p.showConfirm }))
                       }
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-600 transition-colors"
                     >
                       {pwd.showConfirm ? (
                         <EyeOff className="w-4 h-4" />
@@ -462,103 +491,213 @@ const Profile = () => {
               <button
                 onClick={changePassword}
                 disabled={changingPassword}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50"
               >
                 {changingPassword ? (
                   <>
-                    <Loader className="w-4 h-4 animate-spin" />
-                    Updating...
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Updating Password...
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="w-4 h-4" />
+                    <RefreshCw className="w-5 h-5" />
                     Update Password
                   </>
                 )}
               </button>
-            </Section>
+            </div>
           </div>
 
-          {/* Right column */}
+          {/* Right Column - Read-only Info */}
           <div className="space-y-6">
-            {/* Contact (read-only) */}
-            <Section
-              title="Contact"
-              subtitle="Verification‑locked"
-              right={
-                <div className="inline-flex items-center gap-1 text-[11px] text-gray-500">
-                  <Info className="w-3.5 h-3.5" />
-                  Email/Phone cannot be changed
-                </div>
-              }
-            >
-              <ReadonlyItem
-                icon={<Mail className="w-4 h-4 text-gray-400" />}
-                label="Email"
-                value={data.email}
-              />
-              <ReadonlyItem
-                icon={<Phone className="w-4 h-4 text-gray-400" />}
-                label="Phone"
-                value={data.phone}
-              />
-            </Section>
+            {/* Referral Section */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <Link2 className="w-5 h-5 text-orange-600" />
+                <h2 className="text-lg font-bold text-gray-900">
+                  Referral Link
+                </h2>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                Share your unique link and earn rewards
+              </p>
 
-            {/* Account meta */}
-            <Section title="Account">
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Type</span>
-                  <span className="font-semibold capitalize">
-                    {data.userType}
+              {/* Referral Code Display */}
+              <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200 mb-3">
+                <p className="text-xs text-orange-700 mb-1">
+                  Your Referral Code
+                </p>
+                <p className="text-xl font-bold font-mono text-orange-900">
+                  {data.username}
+                </p>
+              </div>
+
+              {/* Referral Link with Copy Button */}
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <p className="text-xs text-gray-500 mb-2">Full Link</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-mono text-gray-900 truncate">
+                      {window.location.origin}/register?ref={data.username}
+                    </p>
+                  </div>
+                  <button
+                    onClick={copyReferralLink}
+                    className="flex-shrink-0 p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-all"
+                    title="Copy Link"
+                  >
+                    {copiedReferral ? (
+                      <Check className="w-5 h-5" />
+                    ) : (
+                      <Copy className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-900">
+                  Contact Details
+                </h2>
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <Info className="w-4 h-4" />
+                  Read-only
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* Email */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-gray-500">Email Address</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {data.email || "—"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center">
+                    <Phone className="w-5 h-5 text-gray-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-gray-500">Phone Number</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">
+                      {data.phone || "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Account Information */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <ShieldCheck className="w-5 h-5 text-orange-600" />
+                <h2 className="text-lg font-bold text-gray-900">
+                  Account Info
+                </h2>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm text-gray-600">Account Type</span>
+                  <span className="text-sm font-semibold text-gray-900 capitalize">
+                    {data.userType || "—"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Status</span>
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm text-gray-600">Status</span>
                   <span
-                    className={`font-semibold ${
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
                       data.status === "active"
-                        ? "text-green-600"
+                        ? "bg-green-100 text-green-800"
                         : data.status === "suspended"
-                        ? "text-red-600"
-                        : "text-gray-700"
+                        ? "bg-red-100 text-red-800"
+                        : "bg-gray-100 text-gray-800"
                     }`}
                   >
-                    {data.status}
+                    {data.status === "active" && (
+                      <CheckCircle className="w-3 h-3" />
+                    )}
+                    {data.status === "suspended" && (
+                      <AlertCircle className="w-3 h-3" />
+                    )}
+                    {data.status?.charAt(0).toUpperCase() +
+                      data.status?.slice(1)}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 inline-flex items-center gap-1">
-                    <Calendar className="w-4 h-4" /> Joined
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-gray-600 flex items-center gap-1">
+                    <Calendar className="w-4 h-4" />
+                    Member Since
                   </span>
-                  <span className="font-semibold">
+                  <span className="text-sm font-semibold text-gray-900">
                     {data.createdAt
-                      ? new Date(data.createdAt).toLocaleDateString()
+                      ? new Date(data.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })
                       : "—"}
                   </span>
                 </div>
               </div>
-            </Section>
+            </div>
 
-            {/* GTC FX snapshot */}
-            <Section title="GTC FX Link" subtitle="Connection snapshot">
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Linked</span>
-                  <span className="font-semibold">
-                    {data.gtcfx?.user ? "Yes" : "No"}
+            {/* GTC FX Integration */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              <div className="mb-4">
+                <h2 className="text-lg font-bold text-gray-900">
+                  GTC FX Integration
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">
+                  External platform connection
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2 border-b border-gray-100">
+                  <span className="text-sm text-gray-600">Connection</span>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold ${
+                      data.gtcfx?.user
+                        ? "bg-green-100 text-green-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {data.gtcfx?.user ? (
+                      <>
+                        <CheckCircle className="w-3 h-3" />
+                        Linked
+                      </>
+                    ) : (
+                      "Not Linked"
+                    )}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Last Sync</span>
-                  <span className="font-semibold">
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-gray-600">Last Sync</span>
+                  <span className="text-xs font-semibold text-gray-900">
                     {data.gtcfx?.lastSync
-                      ? new Date(data.gtcfx.lastSync).toLocaleString()
-                      : "—"}
+                      ? new Date(data.gtcfx.lastSync).toLocaleString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })
+                      : "Never"}
                   </span>
                 </div>
               </div>
-            </Section>
+            </div>
           </div>
         </div>
       </div>
