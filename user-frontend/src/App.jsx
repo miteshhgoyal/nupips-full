@@ -44,6 +44,7 @@ import GTCFxUnsubscribe from "./pages/gtcfx/user/Unsubscribe";
 import GTCFxAgentMembers from "./pages/gtcfx/user/AgentMembers";
 import Profile from "./pages/user/Profile";
 import Dashboard from "./pages/user/Dashboard";
+import Transfer from "./pages/wallet/Transfer";
 // import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
 
 // Navigation configuration
@@ -85,6 +86,7 @@ const sidebarLinks = [
     subItems: [
       { name: "Deposit", href: "/deposit" },
       { name: "Withdrawal", href: "/withdrawal" },
+      { name: "Internal Transfer", href: "/transfer" },
       { name: "Transaction History", href: "/transaction-history" },
     ],
   },
@@ -290,6 +292,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <TransactionHistory />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/transfer"
+                element={
+                  <ProtectedRoute>
+                    <Transfer />
                   </ProtectedRoute>
                 }
               />
