@@ -27,9 +27,12 @@ import {
   ArrowLeft,
   CheckCircle,
   Send,
+  UserCheck,
+  Award,
+  Activity,
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
-import { profileAPI } from "../../services/api";
+import api from "../../services/api";
 import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
@@ -39,10 +42,12 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [loadingSponsor, setLoadingSponsor] = useState(false);
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
 
   const [data, setData] = useState(null);
+  const [sponsorData, setSponsorData] = useState(null);
 
   // Basic editable
   const [editing, setEditing] = useState(false);
@@ -70,16 +75,35 @@ const Profile = () => {
     resetAlerts();
     setLoading(true);
     try {
-      const res = await profileAPI.getProfile();
+      const res = await api.get("/profile");
       setData(res.data);
       setBasic({
         name: res.data.name || "",
         username: res.data.username || "",
       });
+
+      // Load sponsor info if user has referrer
+      if (res.data.referralDetails?.referredBy) {
+        loadSponsor();
+      }
     } catch (e) {
       setErr(e.response?.data?.message || "Failed to load profile");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSponsor = async () => {
+    setLoadingSponsor(true);
+    try {
+      const res = await api.get("/profile/sponsor");
+      if (res.data.hasSponsor) {
+        setSponsorData(res.data.sponsor);
+      }
+    } catch (e) {
+      console.error("Failed to load sponsor:", e);
+    } finally {
+      setLoadingSponsor(false);
     }
   };
 
@@ -102,7 +126,7 @@ const Profile = () => {
     if (v) return setErr(v);
     setSaving(true);
     try {
-      const res = await profileAPI.updateProfile({
+      const res = await api.put("/profile/update", {
         name: basic.name.trim(),
         username: basic.username.trim(),
       });
@@ -129,7 +153,7 @@ const Profile = () => {
 
     setChangingPassword(true);
     try {
-      const res = await profileAPI.updateProfile({
+      const res = await api.put("/profile/update", {
         changePassword: {
           currentPassword: pwd.current,
           newPassword: pwd.next,
@@ -506,6 +530,181 @@ const Profile = () => {
                 )}
               </button>
             </div>
+
+            {/* Sponsor/Upline Information Section */}
+            {sponsorData && (
+              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-200 shadow-sm">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+                    <Award className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-purple-900">
+                      Your Sponsor
+                    </h2>
+                    <p className="text-xs text-purple-700">
+                      Referred you to the platform
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left: Basic Info */}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-100 border-2 border-purple-300 rounded-full flex items-center justify-center">
+                        <UserCheck className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-purple-700">Full Name</p>
+                        <p className="text-sm font-bold text-purple-900">
+                          {sponsorData.name}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-100 border-2 border-purple-300 rounded-full flex items-center justify-center">
+                        <Users className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-purple-700">Username</p>
+                        <p className="text-sm font-bold font-mono text-purple-900">
+                          {sponsorData.username}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-100 border-2 border-purple-300 rounded-full flex items-center justify-center">
+                        <Mail className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-purple-700">Email</p>
+                        <p className="text-sm font-semibold text-purple-900 truncate">
+                          {sponsorData.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-purple-100 border-2 border-purple-300 rounded-full flex items-center justify-center">
+                        <Phone className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-purple-700">Phone</p>
+                        <p className="text-sm font-semibold text-purple-900">
+                          {sponsorData.phone}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Stats */}
+                  <div className="space-y-3">
+                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="w-5 h-5 text-purple-600" />
+                          <span className="text-xs text-gray-600">
+                            Wallet Balance
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-purple-900">
+                          ${Number(sponsorData.walletBalance || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5 text-green-600" />
+                          <span className="text-xs text-gray-600">
+                            Total Deposits
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-green-700">
+                          ${Number(sponsorData.totalDeposits || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <TrendingDown className="w-5 h-5 text-red-600" />
+                          <span className="text-xs text-gray-600">
+                            Total Withdrawals
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-red-700">
+                          $
+                          {Number(sponsorData.totalWithdrawals || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Activity className="w-5 h-5 text-blue-600" />
+                          <span className="text-xs text-gray-600">
+                            Downline Count
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-blue-700">
+                          {sponsorData.downlineCount || 0}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-5 h-5 text-orange-600" />
+                          <span className="text-xs text-gray-600">
+                            Member Since
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">
+                          {new Date(sponsorData.memberSince).toLocaleDateString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "short",
+                            }
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-5 h-5 text-purple-600" />
+                          <span className="text-xs text-gray-600">
+                            User Type
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-purple-900 capitalize">
+                          {sponsorData.userType}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {loadingSponsor && (
+              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm flex items-center justify-center">
+                <Loader className="w-6 h-6 text-purple-600 animate-spin" />
+                <span className="ml-3 text-gray-600">
+                  Loading sponsor info...
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Right Column - Read-only Info */}

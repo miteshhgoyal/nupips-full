@@ -243,6 +243,50 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
     }
 });
 
+// Get sponsor/upline information
+router.get("/sponsor", authenticateToken, async (req, res) => {
+    try {
+        const me = await User.findById(req.user.userId).select("-password");
+        if (!me) return res.status(404).json({ message: "User not found" });
+
+        // Check if user has a referrer
+        if (!me.referralDetails?.referredBy) {
+            return res.json({ hasSponsor: false, sponsor: null });
+        }
+
+        // Fetch sponsor details
+        const sponsor = await User.findById(me.referralDetails.referredBy)
+            .select("name username email phone userType status createdAt walletBalance financials downlineStats")
+            .lean();
+
+        if (!sponsor) {
+            return res.json({ hasSponsor: false, sponsor: null });
+        }
+
+        // Return safe sponsor data
+        res.json({
+            hasSponsor: true,
+            sponsor: {
+                id: sponsor._id,
+                name: sponsor.name,
+                username: sponsor.username,
+                email: sponsor.email,
+                phone: sponsor.phone,
+                userType: sponsor.userType,
+                status: sponsor.status,
+                memberSince: sponsor.createdAt,
+                walletBalance: sponsor.walletBalance || 0,
+                totalDeposits: sponsor.financials?.totalDeposits || 0,
+                totalWithdrawals: sponsor.financials?.totalWithdrawals || 0,
+                downlineCount: sponsor.downlineStats?.totalTraders + sponsor.downlineStats?.totalAgents || 0,
+            }
+        });
+    } catch (e) {
+        console.error("Get sponsor error:", e);
+        res.status(500).json({ message: "Failed to fetch sponsor information" });
+    }
+});
+
 // ==================== HELPER FUNCTIONS ====================
 
 // Get relative time string (e.g., "2 hours ago", "3 days ago")
