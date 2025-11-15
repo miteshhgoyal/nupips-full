@@ -602,7 +602,7 @@ const Profile = () => {
 
                   {/* Right: Stats */}
                   <div className="space-y-3">
-                    <div className="bg-white rounded-lg p-4 border border-purple-200">
+                    {/* <div className="bg-white rounded-lg p-4 border border-purple-200">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Wallet className="w-5 h-5 text-purple-600" />
@@ -657,7 +657,7 @@ const Profile = () => {
                           {sponsorData.downlineCount || 0}
                         </span>
                       </div>
-                    </div>
+                    </div> */}
 
                     <div className="bg-white rounded-lg p-4 border border-purple-200">
                       <div className="flex items-center justify-between">
