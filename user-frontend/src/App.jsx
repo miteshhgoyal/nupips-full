@@ -59,12 +59,8 @@ const sidebarLinks = [
   },
   {
     name: "Nupips Team",
+    href: "/nupips-team",
     icon: Users,
-    subItems: [
-      { name: "Direct Team", href: "/deposit" },
-      { name: "Total Downline", href: "/withdrawal" },
-      { name: "Tree Structure", href: "/transfer" },
-    ],
   },
   {
     name: "Shop",
