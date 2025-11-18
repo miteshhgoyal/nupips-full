@@ -46,6 +46,7 @@ import GTCFxAgentMembers from "./pages/gtcfx/user/AgentMembers";
 import Profile from "./pages/user/Profile";
 import Dashboard from "./pages/user/Dashboard";
 import Transfer from "./pages/wallet/Transfer";
+import NupipsTeam from "./pages/user/NupipsTeam";
 // import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
 
 // Navigation configuration
@@ -249,6 +250,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/nupips-team"
+                element={
+                  <ProtectedRoute>
+                    <NupipsTeam />
                   </ProtectedRoute>
                 }
               />

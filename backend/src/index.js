@@ -10,6 +10,7 @@ import gtcfxRoutes from "./routes/gtcfx.routes.js";
 import depositRoutes from "./routes/deposit.routes.js";
 import withdrawalRoutes from "./routes/withdrawal.routes.js";
 import transferRoutes from "./routes/transfer.routes.js";
+import teamRoutes from "./routes/team.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -32,6 +33,7 @@ app.use("/gtcfx", gtcfxRoutes);
 app.use("/deposit", depositRoutes);
 app.use("/withdrawal", withdrawalRoutes);
 app.use("/transfer", transferRoutes);
+app.use("/team", teamRoutes);
 
 app.get('/', (req, res) => {
     res.json({
