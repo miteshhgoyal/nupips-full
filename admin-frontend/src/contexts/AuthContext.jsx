@@ -38,7 +38,10 @@ export const AuthProvider = ({ children }) => {
 
       // Verify token with backend
       const response = await authAPI.verifyToken();
-      if (response.data.valid && response.data.user.email.includes("admin@nupips.com")) {
+      if (
+        response.data.valid &&
+        response.data.user.email.includes("admin@nupips.com")
+      ) {
         setUser(response.data.user);
         setIsAuthenticated(true);
       } else {
@@ -55,7 +58,8 @@ export const AuthProvider = ({ children }) => {
   const login = (userData) => {
     const { token, user, rememberMe } = userData;
 
-    if (rememberMe) tokenService.setToken(token);
+    // if (rememberMe) tokenService.setToken(token);
+    tokenService.setToken(token);
 
     // Set user data
     setUser(user);
