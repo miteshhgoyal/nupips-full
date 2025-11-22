@@ -8,11 +8,9 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  CheckCircle,
   Clock,
   List,
   X,
-  Video,
   Award,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -79,10 +77,10 @@ const LessonView = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-4">
           <Loader className="w-12 h-12 text-orange-600 animate-spin" />
-          <p className="text-white font-medium">Loading lesson...</p>
+          <p className="text-gray-600 font-medium">Loading lesson...</p>
         </div>
       </div>
     );
@@ -90,20 +88,17 @@ const LessonView = () => {
 
   if (!course || !currentLesson) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-red-500/20 rounded-full mb-6 border border-red-500/30">
-            <AlertCircle className="w-10 h-10 text-red-500" />
+      <div className="min-h-screen flex items-center justify-center bg-white p-4">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
             Lesson Not Found
           </h2>
-          <p className="text-gray-400 mb-6">
-            {error || "The lesson you're looking for doesn't exist"}
-          </p>
           <button
             onClick={() => navigate(`/learn/course/${courseId}`)}
-            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
+            className="mt-4 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
           >
             Back to Course
           </button>
@@ -116,41 +111,39 @@ const LessonView = () => {
     <>
       <Helmet>
         <title>
-          {currentLesson.title} - {course.name} | Learn
+          {currentLesson.title} - {course.name}
         </title>
       </Helmet>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        {/* Top Navigation Bar */}
-        <div className="bg-gray-900/95 backdrop-blur-md border-b border-gray-800 sticky top-0 z-50 shadow-lg">
+      <div className="min-h-screen bg-white">
+        {/* Top Nav */}
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 py-3">
             <div className="flex items-center justify-between gap-4">
               <button
                 onClick={() => navigate(`/learn/course/${courseId}`)}
-                className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors group"
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                <span className="hidden sm:inline font-medium">
-                  Back to Course
-                </span>
+                <ArrowLeft className="w-5 h-5" />
+                <span className="hidden sm:inline">Back to Course</span>
               </button>
 
-              <div className="flex-1 px-4 text-center max-w-xl">
-                <h1 className="text-white font-bold truncate text-sm sm:text-base mb-1">
+              <div className="flex-1 text-center max-w-xl">
+                <h1 className="text-white font-bold truncate text-sm mb-1">
                   {course.name}
                 </h1>
                 <div className="flex items-center justify-center gap-3">
-                  <p className="text-gray-400 text-xs">
+                  <p className="text-gray-600 text-xs">
                     Lesson {currentLesson.order} of {sortedLessons.length}
                   </p>
                   <div className="hidden sm:flex items-center gap-2">
-                    <div className="w-24 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                    <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all"
                         style={{ width: `${progressPercentage}%` }}
                       />
                     </div>
-                    <span className="text-xs text-orange-500 font-bold">
+                    <span className="text-xs text-orange-600 font-bold">
                       {progressPercentage}%
                     </span>
                   </div>
@@ -159,20 +152,19 @@ const LessonView = () => {
 
               <button
                 onClick={() => setShowLessonList(!showLessonList)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl transition-all shadow-md hover:shadow-lg border border-gray-700"
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 rounded-xl transition-all"
               >
                 <List className="w-5 h-5" />
-                <span className="hidden sm:inline font-medium">Lessons</span>
+                <span className="hidden sm:inline">Lessons</span>
               </button>
             </div>
           </div>
         </div>
 
         <div className="flex flex-col lg:flex-row max-w-7xl mx-auto">
-          {/* Main Video Area */}
+          {/* Video Area */}
           <div className="flex-1">
-            {/* Video Player */}
-            <div className="aspect-video bg-black relative group">
+            <div className="aspect-video bg-black">
               <video
                 key={currentLesson._id}
                 src={currentLesson.videoUrl}
@@ -185,63 +177,55 @@ const LessonView = () => {
               </video>
             </div>
 
-            {/* Lesson Info Section */}
-            <div className="bg-gray-900 border-b border-gray-800">
+            {/* Lesson Info */}
+            <div className="border-b border-gray-200 bg-white">
               <div className="p-6">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3 flex-wrap">
-                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md">
-                        Lesson {currentLesson.order}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 text-sm text-gray-400 bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
-                        <Clock className="w-4 h-4" />
-                        {formatDuration(currentLesson.duration)}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5 text-sm text-gray-400 bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-700">
-                        <Video className="w-4 h-4" />
-                        HD Quality
-                      </span>
-                    </div>
-                    <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-                      {currentLesson.title}
-                    </h2>
-                    {currentLesson.description && (
-                      <p className="text-gray-300 leading-relaxed">
-                        {currentLesson.description}
-                      </p>
-                    )}
-                  </div>
+                <div className="flex items-center gap-3 mb-3 flex-wrap">
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md">
+                    Lesson {currentLesson.order}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg">
+                    <Clock className="w-4 h-4" />
+                    {formatDuration(currentLesson.duration)}
+                  </span>
                 </div>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                  {currentLesson.title}
+                </h2>
+                {currentLesson.description && (
+                  <p className="text-gray-600 leading-relaxed">
+                    {currentLesson.description}
+                  </p>
+                )}
 
-                {/* Progress Indicator */}
-                <div className="bg-gray-800 rounded-xl p-4 mb-4 border border-gray-700">
+                {/* Progress */}
+                <div className="bg-white rounded-xl p-4 mb-4 border border-gray-200 mt-6">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-300">
+                    <span className="text-sm font-medium text-gray-600">
                       Course Progress
                     </span>
-                    <span className="text-sm font-bold text-orange-500">
+                    <span className="text-sm font-bold text-orange-600">
                       {progressPercentage}% Complete
                     </span>
                   </div>
-                  <div className="w-full h-2.5 bg-gray-700 rounded-full overflow-hidden">
+                  <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all duration-500"
+                      className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all"
                       style={{ width: `${progressPercentage}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">
+                  <p className="text-xs text-gray-500 mt-2">
                     {currentIndex + 1} of {sortedLessons.length} lessons
                     completed
                   </p>
                 </div>
 
-                {/* Navigation Buttons */}
+                {/* Navigation */}
                 <div className="flex items-center gap-3">
                   {previousLesson ? (
                     <button
                       onClick={() => goToLesson(previousLesson)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-semibold transition-all border border-gray-700 hover:border-gray-600 shadow-md hover:shadow-lg"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 hover:bg-gray-50 rounded-xl font-semibold transition-all"
                     >
                       <ChevronLeft className="w-5 h-5" />
                       Previous
@@ -272,51 +256,42 @@ const LessonView = () => {
             </div>
           </div>
 
-          {/* Lesson Sidebar (Desktop) / Modal (Mobile) */}
+          {/* Sidebar */}
           <div
-            className={`lg:w-96 bg-gray-900 border-l border-gray-800 ${
+            className={`lg:w-96 bg-white border-l border-gray-200 ${
               showLessonList ? "block" : "hidden lg:block"
-            } ${
-              showLessonList
-                ? "fixed inset-0 z-50 lg:relative animate-in fade-in slide-in-from-right duration-300"
-                : ""
-            }`}
+            } ${showLessonList ? "fixed inset-0 z-50 lg:relative" : ""}`}
           >
-            <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900/95 backdrop-blur-sm sticky top-0 z-10">
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <List className="w-5 h-5 text-orange-500" />
-                  Course Lessons
-                </h3>
-                <p className="text-xs text-gray-400 mt-1">
-                  {sortedLessons.length} total lessons
-                </p>
-              </div>
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between sticky top-0 z-10 bg-white">
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <List className="w-5 h-5 text-orange-600" />
+                Course Lessons
+              </h3>
               <button
                 onClick={() => setShowLessonList(false)}
-                className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+                className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="overflow-y-auto max-h-[calc(100vh-140px)] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
-              {sortedLessons.map((lesson, index) => (
+            <div className="overflow-y-auto max-h-[calc(100vh-140px)]">
+              {sortedLessons.map((lesson) => (
                 <button
                   key={lesson._id}
                   onClick={() => goToLesson(lesson)}
-                  className={`w-full p-4 text-left border-b border-gray-800 transition-all group ${
+                  className={`w-full p-4 text-left border-b border-gray-200 transition-all ${
                     lesson._id === lessonId
-                      ? "bg-gradient-to-r from-orange-500/20 to-transparent border-l-4 border-l-orange-500"
-                      : "hover:bg-gray-800/50"
+                      ? "bg-orange-50 border-l-4 border-l-orange-600"
+                      : "hover:bg-gray-50"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div
                       className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
                         lesson._id === lessonId
-                          ? "bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg"
-                          : "bg-gray-800 text-gray-400 group-hover:bg-gray-700"
+                          ? "bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-md"
+                          : "bg-gray-100 text-gray-600"
                       }`}
                     >
                       <span className="text-sm font-bold">{lesson.order}</span>
@@ -324,21 +299,21 @@ const LessonView = () => {
 
                     <div className="flex-1 min-w-0">
                       <h4
-                        className={`font-semibold mb-1.5 line-clamp-2 leading-snug ${
+                        className={`font-semibold mb-1.5 line-clamp-2 ${
                           lesson._id === lessonId
-                            ? "text-orange-400"
-                            : "text-white group-hover:text-orange-400"
-                        } transition-colors`}
+                            ? "text-orange-600"
+                            : "text-gray-900"
+                        }`}
                       >
                         {lesson.title}
                       </h4>
                       <div className="flex items-center gap-3">
-                        <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-500">
                           <Clock className="w-3 h-3" />
                           {formatDuration(lesson.duration)}
                         </span>
                         {lesson._id === lessonId && (
-                          <span className="inline-flex items-center gap-1 text-xs text-orange-500 font-semibold">
+                          <span className="inline-flex items-center gap-1 text-xs text-orange-600 font-semibold">
                             <PlayCircle className="w-3 h-3" />
                             Playing
                           </span>
@@ -347,29 +322,25 @@ const LessonView = () => {
                     </div>
 
                     {lesson._id === lessonId && (
-                      <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-orange-500/20 rounded-lg flex items-center justify-center">
-                          <PlayCircle className="w-5 h-5 text-orange-500" />
-                        </div>
-                      </div>
+                      <PlayCircle className="w-5 h-5 text-orange-600 flex-shrink-0" />
                     )}
                   </div>
                 </button>
               ))}
             </div>
 
-            {/* Sidebar Footer Stats */}
-            <div className="p-4 bg-gray-800 border-t border-gray-700">
+            {/* Footer Stats */}
+            <div className="p-4 bg-gray-50 border-t border-gray-200">
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-900 rounded-lg p-3 border border-gray-700">
-                  <p className="text-xs text-gray-400 mb-1">Completed</p>
-                  <p className="text-lg font-bold text-white">
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-xs text-gray-600 mb-1">Completed</p>
+                  <p className="text-lg font-bold text-gray-900">
                     {currentIndex + 1}/{sortedLessons.length}
                   </p>
                 </div>
-                <div className="bg-gray-900 rounded-lg p-3 border border-gray-700">
-                  <p className="text-xs text-gray-400 mb-1">Progress</p>
-                  <p className="text-lg font-bold text-orange-500">
+                <div className="bg-white rounded-lg p-3 border border-gray-200">
+                  <p className="text-xs text-gray-600 mb-1">Progress</p>
+                  <p className="text-lg font-bold text-orange-600">
                     {progressPercentage}%
                   </p>
                 </div>
