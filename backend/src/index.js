@@ -13,6 +13,7 @@ import withdrawalRoutes from "./routes/withdrawal.routes.js";
 import transferRoutes from "./routes/transfer.routes.js";
 import teamRoutes from "./routes/team.routes.js";
 import productRoutes from "./routes/product.routes.js";
+import learnRoutes from "./routes/learn.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -37,6 +38,7 @@ app.use("/withdrawal", withdrawalRoutes);
 app.use("/transfer", transferRoutes);
 app.use("/team", teamRoutes);
 app.use("/product", productRoutes);
+app.use("/learn", learnRoutes);
 
 app.get('/', (req, res) => {
     res.json({

@@ -43,6 +43,8 @@ import GTCFxSubscriptions from "./pages/gtcfx/user/MySubscriptions";
 import GTCFxProfitLogs from "./pages/gtcfx/user/ProfitLogs";
 import GTCFxUnsubscribe from "./pages/gtcfx/user/Unsubscribe";
 import GTCFxAgentMembers from "./pages/gtcfx/user/AgentMembers";
+// import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
+
 import Profile from "./pages/user/Profile";
 import Dashboard from "./pages/user/Dashboard";
 import Transfer from "./pages/wallet/Transfer";
@@ -51,7 +53,10 @@ import Shop from "./pages/others/Shop";
 import Orders from "./pages/user/Orders";
 import ProductItem from "./pages/others/ProductItem";
 import PlaceOrder from "./pages/others/PlaceOrder";
-// import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
+
+import Learn from "./pages/others/Learn";
+import CourseView from "./pages/others/CourseView";
+import LessonView from "./pages/others/LessonView";
 
 // Navigation configuration
 const navbarLinks = [
@@ -304,7 +309,23 @@ function App() {
                 path="/learn"
                 element={
                   <ProtectedRoute>
-                    <ComingSoon />
+                    <Learn />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/learn/course/:id"
+                element={
+                  <ProtectedRoute>
+                    <CourseView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/learn/course/:courseId/lesson/:lessonId"
+                element={
+                  <ProtectedRoute>
+                    <LessonView />
                   </ProtectedRoute>
                 }
               />
