@@ -30,29 +30,80 @@ const seedAdminUser = async () => {
         const adminMobile = process.env.ADMIN_MOBILE || '0000000000';
 
         if (!adminPassword) {
-            console.warn('ADMIN_PASSWORD not set in environment variables');
+            console.warn('ADMIN_PASSWORD not set');
             return;
         }
 
-        // Check if admin user already exists
         const existingAdmin = await User.findOne({ username: adminUserId });
-
         if (existingAdmin) {
             console.log('Admin user already exists');
             return;
         }
 
-        // Hash password
         const saltRounds = 12;
         const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
 
-        // Create admin user
+        // Build all fields from schema
         const admin = new User({
             username: adminUserId,
             name: 'Admin Account',
             email: adminEmail,
             phone: adminMobile,
             password: hashedPassword,
+            walletBalance: 0,
+            addresses: [
+                {
+                    firstName: 'Admin',
+                    lastName: 'Account',
+                    email: adminEmail,
+                    street: 'Test Street',
+                    city: 'Test City',
+                    state: 'Test State',
+                    zipcode: '000000',
+                    country: 'India',
+                    phone: adminMobile,
+                    isDefault: true,
+                    label: 'Home'
+                }
+            ],
+            referralDetails: {
+                referredBy: null,
+                referralTree: [],
+                totalDirectReferrals: 0,
+                totalDownlineUsers: 0
+            },
+            userType: 'admin',
+            financials: {
+                totalDeposits: 0,
+                totalWithdrawals: 0,
+                pendingDeposits: 0,
+                pendingWithdrawals: 0,
+                totalRebateIncome: 0,
+                totalAffiliateIncome: 0,
+                netBalance: 0,
+                lastDepositAt: null,
+                lastWithdrawalAt: null
+            },
+            tradingStats: {
+                totalVolumeLots: 0,
+                totalTrades: 0,
+                totalProfit: 0,
+                totalLoss: 0,
+                winRate: 0
+            },
+            downlineStats: {
+                totalAgents: 0,
+                totalTraders: 0,
+                cumulativeBalance: 0,
+                totalDownlineVolume: 0
+            },
+            gtcfx: {
+                accessToken: null,
+                refreshToken: null,
+                user: null,
+                lastSync: null
+            },
+            status: 'active'
         });
 
         await admin.save();
