@@ -1,6 +1,21 @@
 // models/User.js
 import mongoose from 'mongoose';
 
+// Address Subdocument Schema
+const addressSchema = new mongoose.Schema({
+    firstName: { type: String, required: true },
+    lastName: { type: String, required: true },
+    email: { type: String, required: true },
+    street: { type: String, required: true },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    zipcode: { type: String, required: true },
+    country: { type: String, default: "India" },
+    phone: { type: String, required: true },
+    isDefault: { type: Boolean, default: false },
+    label: { type: String, default: "Home" }
+});
+
 const UserSchema = new mongoose.Schema({
     // Basic Information
     name: {
@@ -34,6 +49,9 @@ const UserSchema = new mongoose.Schema({
         default: 0,
         index: true
     },
+
+    // Addresses Array (NEW)
+    addresses: [addressSchema],
 
     // Referral System
     referralDetails: {
@@ -185,7 +203,6 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Indexes
-UserSchema.index({ 'referralDetails.referredBy': 1 });
 UserSchema.index({ email: 1, status: 1 });
 UserSchema.index({ userType: 1, status: 1 });
 

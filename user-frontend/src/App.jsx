@@ -47,10 +47,17 @@ import Profile from "./pages/user/Profile";
 import Dashboard from "./pages/user/Dashboard";
 import Transfer from "./pages/wallet/Transfer";
 import NupipsTeam from "./pages/user/NupipsTeam";
+import Shop from "./pages/others/Shop";
+import Orders from "./pages/user/Orders";
+import ProductItem from "./pages/others/ProductItem";
+import PlaceOrder from "./pages/others/PlaceOrder";
 // import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
 
 // Navigation configuration
-const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
+const navbarLinks = [
+  { name: "My Profile", href: "/profile", icon: NavUser },
+  { name: "My Orders", href: "/orders", icon: ShoppingBag },
+];
 
 const sidebarLinks = [
   {
@@ -265,7 +272,31 @@ function App() {
                 path="/shop"
                 element={
                   <ProtectedRoute>
-                    <ComingSoon />
+                    <Shop />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/orders"
+                element={
+                  <ProtectedRoute>
+                    <Orders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/product/:id"
+                element={
+                  <ProtectedRoute>
+                    <ProductItem />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/place-order"
+                element={
+                  <ProtectedRoute>
+                    <PlaceOrder />
                   </ProtectedRoute>
                 }
               />

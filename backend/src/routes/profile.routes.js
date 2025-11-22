@@ -321,4 +321,214 @@ function getLast7Days() {
     return days;
 }
 
+// ==================== ADDRESS MANAGEMENT ====================
+
+// Add new address
+router.post('/address/add', authenticateToken, async (req, res) => {
+    try {
+        const { firstName, lastName, email, street, city, state, zipcode, country, phone, isDefault, label } = req.body;
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Validate required fields
+        if (!firstName || !lastName || !email || !street || !city || !state || !zipcode || !phone) {
+            return res.status(400).json({ message: 'All address fields are required' });
+        }
+
+        // If this is set as default, unset other defaults
+        if (isDefault) {
+            user.addresses.forEach(addr => {
+                addr.isDefault = false;
+            });
+        }
+
+        // If this is the first address, make it default
+        const makeDefault = user.addresses.length === 0 || isDefault;
+
+        // Add new address
+        user.addresses.push({
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: email.trim(),
+            street: street.trim(),
+            city: city.trim(),
+            state: state.trim(),
+            zipcode: zipcode.trim(),
+            country: country || 'India',
+            phone: phone.trim(),
+            isDefault: makeDefault,
+            label: label || 'Home'
+        });
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Address added successfully',
+            user: await User.findById(user._id).select('-password')
+        });
+    } catch (error) {
+        console.error('Add address error:', error);
+        res.status(500).json({ message: 'Failed to add address', error: error.message });
+    }
+});
+
+// Remove address
+router.post('/address/remove', authenticateToken, async (req, res) => {
+    try {
+        const { addressId } = req.body;
+
+        if (!addressId) {
+            return res.status(400).json({ message: 'Address ID is required' });
+        }
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Find address
+        const addressIndex = user.addresses.findIndex(
+            addr => addr._id.toString() === addressId
+        );
+
+        if (addressIndex === -1) {
+            return res.status(404).json({ message: 'Address not found' });
+        }
+
+        const wasDefault = user.addresses[addressIndex].isDefault;
+
+        // Remove address
+        user.addresses.splice(addressIndex, 1);
+
+        // If removed address was default and there are other addresses, set first as default
+        if (wasDefault && user.addresses.length > 0) {
+            user.addresses[0].isDefault = true;
+        }
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Address removed successfully',
+            user: await User.findById(user._id).select('-password')
+        });
+    } catch (error) {
+        console.error('Remove address error:', error);
+        res.status(500).json({ message: 'Failed to remove address', error: error.message });
+    }
+});
+
+// Update address
+router.put('/address/update/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { firstName, lastName, email, street, city, state, zipcode, country, phone, isDefault, label } = req.body;
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Find address
+        const address = user.addresses.id(id);
+        if (!address) {
+            return res.status(404).json({ message: 'Address not found' });
+        }
+
+        // If setting as default, unset others
+        if (isDefault && !address.isDefault) {
+            user.addresses.forEach(addr => {
+                addr.isDefault = false;
+            });
+        }
+
+        // Update fields
+        if (firstName) address.firstName = firstName.trim();
+        if (lastName) address.lastName = lastName.trim();
+        if (email) address.email = email.trim();
+        if (street) address.street = street.trim();
+        if (city) address.city = city.trim();
+        if (state) address.state = state.trim();
+        if (zipcode) address.zipcode = zipcode.trim();
+        if (country) address.country = country.trim();
+        if (phone) address.phone = phone.trim();
+        if (typeof isDefault === 'boolean') address.isDefault = isDefault;
+        if (label) address.label = label.trim();
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Address updated successfully',
+            user: await User.findById(user._id).select('-password')
+        });
+    } catch (error) {
+        console.error('Update address error:', error);
+        res.status(500).json({ message: 'Failed to update address', error: error.message });
+    }
+});
+
+// Set default address
+router.post('/address/set-default', authenticateToken, async (req, res) => {
+    try {
+        const { addressId } = req.body;
+
+        if (!addressId) {
+            return res.status(400).json({ message: 'Address ID is required' });
+        }
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Find address
+        const address = user.addresses.id(addressId);
+        if (!address) {
+            return res.status(404).json({ message: 'Address not found' });
+        }
+
+        // Unset all defaults
+        user.addresses.forEach(addr => {
+            addr.isDefault = false;
+        });
+
+        // Set new default
+        address.isDefault = true;
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Default address updated',
+            user: await User.findById(user._id).select('-password')
+        });
+    } catch (error) {
+        console.error('Set default address error:', error);
+        res.status(500).json({ message: 'Failed to set default address', error: error.message });
+    }
+});
+
+// Get all addresses
+router.get('/addresses', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId).select('addresses');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json({
+            success: true,
+            addresses: user.addresses || []
+        });
+    } catch (error) {
+        console.error('Get addresses error:', error);
+        res.status(500).json({ message: 'Failed to fetch addresses', error: error.message });
+    }
+});
+
 export default router;

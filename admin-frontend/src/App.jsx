@@ -17,6 +17,7 @@ import {
   Book,
   ShoppingBag,
   TrendingUp,
+  ShoppingBagIcon,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
@@ -24,6 +25,8 @@ import "./App.css";
 // Import your pages
 import Login from "./pages/Login";
 import ComingSoon from "./pages/others/ComingSoon";
+import Orders from "./pages/Orders";
+import Products from "./pages/Products";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
@@ -33,6 +36,16 @@ const sidebarLinks = [
     name: "Dashboard",
     href: "/dashboard",
     icon: Home,
+  },
+  {
+    name: "Products",
+    href: "/products",
+    icon: ShoppingBagIcon,
+  },
+  {
+    name: "Orders",
+    href: "/orders",
+    icon: ShoppingBagIcon,
   },
 ];
 
@@ -185,6 +198,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ComingSoon />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products"
+              element={
+                <ProtectedRoute>
+                  <Products />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <Orders />
                 </ProtectedRoute>
               }
             />
