@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useGTCFxAuth } from "../../contexts/GTCFxAuthContext";
-import { gtcfxBackendAPI } from "../../services/gtcfxBackendApi";
+import api from "../../services/gtcfxApi";
 
 const GTCFxAuth = () => {
   const {
@@ -80,7 +80,7 @@ const GTCFxAuth = () => {
 
     try {
       // Call YOUR backend API instead of GTC FX directly
-      const response = await gtcfxBackendAPI.login({
+      const response = await api.post("/gtcfx/login", {
         account: formData.account,
         password: formData.password,
       });

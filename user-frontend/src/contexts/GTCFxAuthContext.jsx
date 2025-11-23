@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import api from "../services/gtcfxApi";
 import { gtcfxTokenService } from "../services/gtcfxTokenService";
-import { gtcfxBackendAPI } from "../services/gtcfxBackendApi";
+import gtcfxBackendAPI from "../services/gtcfxApi";
 import { useAuth } from "./AuthContext";
 
 const GTCFxAuthContext = createContext();
@@ -64,7 +64,7 @@ export const GTCFxAuthProvider = ({ children }) => {
 
         // Update in backend
         await gtcfxBackendAPI
-          .syncUser()
+          .post("/gtcfx/sync-user")
           .catch((err) => console.warn("Failed to sync user to backend:", err));
 
         return userInfo;
@@ -84,7 +84,7 @@ export const GTCFxAuthProvider = ({ children }) => {
 
     try {
       // Fetch session from backend database
-      const response = await gtcfxBackendAPI.getSession();
+      const response = await gtcfxBackendAPI.get("/gtcfx/session");
 
       if (response.data.authenticated && response.data.data) {
         const { access_token, refresh_token, user } = response.data.data;
@@ -152,7 +152,7 @@ export const GTCFxAuthProvider = ({ children }) => {
   const gtcLogout = async () => {
     try {
       // Call backend to clear tokens from database
-      await gtcfxBackendAPI.logout();
+      await gtcfxBackendAPI.post("/gtcfx/logout");
     } catch (error) {
       console.error("GTC FX logout error:", error);
     } finally {
