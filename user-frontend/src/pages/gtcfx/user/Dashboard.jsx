@@ -17,6 +17,8 @@ import {
   Target,
   Users,
   BarChart3,
+  ArrowDownLeft,
+  ArrowUpRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGTCFxAuth } from "../../../contexts/GTCFxAuthContext";
@@ -26,7 +28,8 @@ const GTCFxDashboard = () => {
   const navigate = useNavigate();
   const { gtcUser, refreshGTCUserInfo } = useGTCFxAuth();
   const [accountInfo, setAccountInfo] = useState(null);
-  const [commissionSummary, setCommissionSummary] = useState(null);
+  const [commissionReceived, setCommissionReceived] = useState(null);
+  const [commissionGiven, setCommissionGiven] = useState(null);
   const [topSymbols, setTopSymbols] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -48,42 +51,95 @@ const GTCFxDashboard = () => {
         await refreshGTCUserInfo();
       }
 
-      // Fetch commission report summary (first page only for dashboard)
+      const userEmail = accountResponse.data.data?.email || gtcUser?.email;
+
+      if (!userEmail) {
+        console.warn("User email not available for commission filtering");
+        setLoading(false);
+        return;
+      }
+
+      // Fetch ALL commissions to properly filter them
       try {
-        const commissionResponse = await api.post("/agent/commission_report", {
-          page: 1,
-          page_size: 100, // Get more for better stats
-        });
+        const allCommissionsResponse = await api.post(
+          "/agent/commission_report",
+          {
+            page: 1,
+            page_size: 100,
+          }
+        );
 
-        if (commissionResponse.data.code === 200) {
-          const data = commissionResponse.data.data;
-          setCommissionSummary({
-            total: data.total,
-            commission: parseFloat(data.commission || 0),
-            volume: parseFloat(data.volume || 0),
-          });
+        if (allCommissionsResponse.data.code === 200) {
+          const data = allCommissionsResponse.data.data;
 
-          // Calculate top symbols
           if (data.list && data.list.length > 0) {
-            const symbolStats = data.list.reduce((acc, comm) => {
-              if (!acc[comm.symbol]) {
-                acc[comm.symbol] = 0;
-              }
-              acc[comm.symbol] += parseFloat(comm.amount);
-              return acc;
-            }, {});
+            // Filter commissions RECEIVED (to_email matches AND from_email doesn't match)
+            const receivedCommissions = data.list.filter(
+              (comm) =>
+                comm.to_email === userEmail && comm.from_email !== userEmail
+            );
 
-            const topFive = Object.entries(symbolStats)
-              .sort(([, a], [, b]) => b - a)
-              .slice(0, 5)
-              .map(([symbol, amount]) => ({ symbol, amount }));
+            // Filter commissions GIVEN (from_email matches AND to_email doesn't match)
+            const givenCommissions = data.list.filter(
+              (comm) =>
+                comm.from_email === userEmail && comm.to_email !== userEmail
+            );
 
-            setTopSymbols(topFive);
+            // Calculate received commission stats
+            if (receivedCommissions.length > 0) {
+              const receivedTotal = receivedCommissions.reduce(
+                (sum, comm) => sum + parseFloat(comm.amount || 0),
+                0
+              );
+              const receivedVolume = receivedCommissions.reduce(
+                (sum, comm) => sum + parseFloat(comm.volume || 0),
+                0
+              );
+
+              setCommissionReceived({
+                total: receivedCommissions.length,
+                commission: receivedTotal,
+                volume: receivedVolume,
+              });
+
+              // Calculate top symbols from received commissions
+              const symbolStats = receivedCommissions.reduce((acc, comm) => {
+                if (!acc[comm.symbol]) {
+                  acc[comm.symbol] = 0;
+                }
+                acc[comm.symbol] += parseFloat(comm.amount);
+                return acc;
+              }, {});
+
+              const topFive = Object.entries(symbolStats)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 5)
+                .map(([symbol, amount]) => ({ symbol, amount }));
+
+              setTopSymbols(topFive);
+            }
+
+            // Calculate given commission stats
+            if (givenCommissions.length > 0) {
+              const givenTotal = givenCommissions.reduce(
+                (sum, comm) => sum + parseFloat(comm.amount || 0),
+                0
+              );
+              const givenVolume = givenCommissions.reduce(
+                (sum, comm) => sum + parseFloat(comm.volume || 0),
+                0
+              );
+
+              setCommissionGiven({
+                total: givenCommissions.length,
+                commission: givenTotal,
+                volume: givenVolume,
+              });
+            }
           }
         }
       } catch (commError) {
         console.warn("Failed to fetch commission data:", commError);
-        // Don't set error, just skip commission section
       }
     } catch (err) {
       console.error("Fetch dashboard data error:", err);
@@ -233,7 +289,7 @@ const GTCFxDashboard = () => {
         </div>
 
         {/* Commission Summary Section */}
-        {commissionSummary && (
+        {(commissionReceived || commissionGiven) && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
@@ -242,59 +298,131 @@ const GTCFxDashboard = () => {
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {/* Total Commissions */}
-              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                    <DollarSign className="w-6 h-6 text-orange-600" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {/* Commissions RECEIVED Card */}
+              {commissionReceived && (
+                <div className="bg-white rounded-xl p-6 border-2 border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                      <ArrowDownLeft className="w-6 h-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Commissions Received
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        Earned from your referrals
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <p className="text-sm text-gray-600 font-medium mb-1">
-                  Total Commissions
-                </p>
-                <p className="text-3xl font-bold text-gray-900">
-                  ${commissionSummary.commission.toFixed(5)}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  From {commissionSummary.total} transactions
-                </p>
-              </div>
 
-              {/* Total Volume */}
-              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
-                <p className="text-sm text-gray-600 font-medium mb-1">
-                  Total Volume
-                </p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {commissionSummary.volume.toFixed(2)}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">Lots traded</p>
-              </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <p className="text-xs text-gray-600 font-medium mb-1">
+                        Total Commission
+                      </p>
+                      <p className="text-xl font-bold text-green-600">
+                        ${commissionReceived.commission.toFixed(5)}
+                      </p>
+                    </div>
 
-              {/* Avg Commission/Lot */}
-              <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <Target className="w-6 h-6 text-blue-600" />
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <p className="text-xs text-gray-600 font-medium mb-1">
+                        Total Volume
+                      </p>
+                      <p className="text-xl font-bold text-green-600">
+                        {commissionReceived.volume.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-500">Lots</p>
+                    </div>
+
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <p className="text-xs text-gray-600 font-medium mb-1">
+                        Transactions
+                      </p>
+                      <p className="text-xl font-bold text-green-600">
+                        {commissionReceived.total}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-green-100">
+                    <p className="text-sm text-gray-600">
+                      Avg per lot:{" "}
+                      <span className="font-bold text-green-600">
+                        $
+                        {(commissionReceived.volume > 0
+                          ? commissionReceived.commission /
+                            commissionReceived.volume
+                          : 0
+                        ).toFixed(4)}
+                      </span>
+                    </p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 font-medium mb-1">
-                  Avg Commission/Lot
-                </p>
-                <p className="text-3xl font-bold text-gray-900">
-                  $
-                  {(commissionSummary.volume > 0
-                    ? commissionSummary.commission / commissionSummary.volume
-                    : 0
-                  ).toFixed(4)}
-                </p>
-              </div>
+              )}
+
+              {/* Commissions GIVEN Card */}
+              {commissionGiven && (
+                <div className="bg-white rounded-xl p-6 border-2 border-orange-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                      <ArrowUpRight className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Commissions Given
+                      </h3>
+                      <p className="text-xs text-gray-600">
+                        Paid to your upline
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-3 bg-orange-50 rounded-lg">
+                      <p className="text-xs text-gray-600 font-medium mb-1">
+                        Total Commission
+                      </p>
+                      <p className="text-xl font-bold text-orange-600">
+                        ${commissionGiven.commission.toFixed(5)}
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-orange-50 rounded-lg">
+                      <p className="text-xs text-gray-600 font-medium mb-1">
+                        Total Volume
+                      </p>
+                      <p className="text-xl font-bold text-orange-600">
+                        {commissionGiven.volume.toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-500">Lots</p>
+                    </div>
+
+                    <div className="p-3 bg-orange-50 rounded-lg">
+                      <p className="text-xs text-gray-600 font-medium mb-1">
+                        Transactions
+                      </p>
+                      <p className="text-xl font-bold text-orange-600">
+                        {commissionGiven.total}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-orange-100">
+                    <p className="text-sm text-gray-600">
+                      Avg per lot:{" "}
+                      <span className="font-bold text-orange-600">
+                        $
+                        {(commissionGiven.volume > 0
+                          ? commissionGiven.commission / commissionGiven.volume
+                          : 0
+                        ).toFixed(4)}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Top Trading Symbols */}
@@ -302,7 +430,7 @@ const GTCFxDashboard = () => {
               <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                 <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <BarChart3 className="w-6 h-6 text-orange-600" />
-                  Top Trading Symbols
+                  Top Trading Symbols (Received Commissions)
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                   {topSymbols.map(({ symbol, amount }) => (
