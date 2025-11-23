@@ -322,7 +322,7 @@ const GTCFxDashboard = () => {
                         Total Commission
                       </p>
                       <p className="text-xl font-bold text-green-600">
-                        ${commissionReceived.commission.toFixed(5)}
+                        ${commissionReceived.commission.toFixed(2)}
                       </p>
                     </div>
 
@@ -355,7 +355,7 @@ const GTCFxDashboard = () => {
                           ? commissionReceived.commission /
                             commissionReceived.volume
                           : 0
-                        ).toFixed(4)}
+                        ).toFixed(2)}
                       </span>
                     </p>
                   </div>
@@ -385,7 +385,7 @@ const GTCFxDashboard = () => {
                         Total Commission
                       </p>
                       <p className="text-xl font-bold text-orange-600">
-                        ${commissionGiven.commission.toFixed(5)}
+                        ${commissionGiven.commission.toFixed(2)}
                       </p>
                     </div>
 
@@ -417,7 +417,7 @@ const GTCFxDashboard = () => {
                         {(commissionGiven.volume > 0
                           ? commissionGiven.commission / commissionGiven.volume
                           : 0
-                        ).toFixed(4)}
+                        ).toFixed(2)}
                       </span>
                     </p>
                   </div>
@@ -442,7 +442,7 @@ const GTCFxDashboard = () => {
                         {symbol}
                       </p>
                       <p className="text-xl font-bold text-orange-600">
-                        ${parseFloat(amount).toFixed(5)}
+                        ${parseFloat(amount).toFixed(2)}
                       </p>
                     </div>
                   ))}
