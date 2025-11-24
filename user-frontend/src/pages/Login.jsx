@@ -85,7 +85,9 @@ const Login = () => {
       setSuccessMessage("Login successful! Redirecting...");
 
       // Login user and redirect
-      if (response.data.token) login(response.data);
+      if (response.data.token) {
+        login(response.data);
+      }
 
       setTimeout(() => {
         navigate(from, { replace: true });

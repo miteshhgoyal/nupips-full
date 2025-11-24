@@ -173,23 +173,17 @@ const UserSchema = new mongoose.Schema({
 
     // GTC FX Authentication
     gtcfx: {
-        accessToken: {
-            type: String,
-            default: null
-        },
-        refreshToken: {
-            type: String,
-            default: null
-        },
-        user: {
-            type: Object,
-            default: null
-        },
-        lastSync: {
-            type: Date,
-            default: null
-        }
+        accessToken: { type: String, default: null },
+        refreshToken: { type: String, default: null },
+        user: { type: Object, default: null },
+        lastSync: { type: Date, default: null },
+        lastPerformanceFeesFetch: { type: Date, default: null } 
     },
+
+    incomeExpenseHistory: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "IncomeExpense"
+    }],
 
     // Account Status
     status: {

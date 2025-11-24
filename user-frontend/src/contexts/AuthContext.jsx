@@ -1,6 +1,6 @@
 // contexts/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { authAPI } from "../services/api";
+import api, { authAPI } from "../services/api";
 import { tokenService } from "../services/tokenService";
 import { gtcfxTokenService } from "../services/gtcfxTokenService";
 
@@ -33,7 +33,6 @@ export const AuthProvider = ({ children }) => {
 
       if (!token || tokenService.isTokenExpired(token)) {
         tokenService.removeToken();
-        // Also clear GTC FX data if main auth fails
         gtcfxTokenService.clearTokens();
         setLoading(false);
         return;
@@ -44,6 +43,8 @@ export const AuthProvider = ({ children }) => {
       if (response.data.valid) {
         setUser(response.data.user);
         setIsAuthenticated(true);
+
+        await autoFetchPerformanceFees();
       } else {
         tokenService.removeToken();
         gtcfxTokenService.clearTokens();
@@ -54,6 +55,57 @@ export const AuthProvider = ({ children }) => {
       gtcfxTokenService.clearTokens();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const autoFetchPerformanceFees = async () => {
+    try {
+      // 1. Check GTC FX session (fast)
+      const sessionRes = await api.get("/gtcfx/session");
+      if (!sessionRes.data.authenticated) {
+        console.log("✅ No GTC FX account - skipping fees sync");
+        return;
+      }
+
+      // 2. Get user's last fetch timestamp FIRST
+      const userData = await authAPI.verifyToken(); // Already has user data
+      const lastFetch = userData.data.user?.gtcfx?.lastPerformanceFeesFetch;
+
+      if (lastFetch) {
+        const daysSinceLastFetch = Math.floor(
+          (new Date() - new Date(lastFetch)) / (1000 * 60 * 60 * 24)
+        );
+
+        // Skip if fetched today or yesterday
+        if (daysSinceLastFetch <= 1) {
+          console.log(
+            `✅ Fees already synced ${daysSinceLastFetch}d ago - skipping`
+          );
+          return;
+        }
+      }
+
+      // 3. Fetch last 7 days only (not 30) for login - faster + less overlap
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const response = await api.post("/gtcfx/fetch-performance-fees", {
+        startDate: sevenDaysAgo.toISOString().split("T")[0],
+        endDate: new Date().toISOString().split("T")[0],
+      });
+
+      if (response.data.wasSkipped) {
+        console.log("✅ Already claimed - skipped duplicate");
+      } else if (response.data.totalPerformanceFee > 0) {
+        console.log(`✅ $${response.data.totalPerformanceFee} AUTO-ADDED!`);
+      } else {
+        console.log("✅ No new fees found");
+      }
+    } catch (error) {
+      console.warn(
+        "Auto-fetch skipped:",
+        error.response?.data?.message || error.message
+      );
     }
   };
 
@@ -88,6 +140,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     checkAuth,
     updateUser,
+    autoFetchPerformanceFees,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
