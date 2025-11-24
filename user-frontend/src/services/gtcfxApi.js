@@ -1,7 +1,7 @@
 // services/gtcfxApi.js
 import axios from 'axios';
 import { gtcfxTokenService } from './gtcfxTokenService';
-import { gtcfxBackendAPI } from './gtcfxBackendApi';
+import localApi from './api';
 
 const api = axios.create({
     baseURL: '/api/v3',
@@ -50,7 +50,7 @@ api.interceptors.response.use(
 
                         // Update tokens in backend database
                         try {
-                            await gtcfxBackendAPI.refreshTokens({
+                            await localApi.post('/gtcfx/refresh-tokens', {
                                 access_token: newAccessToken,
                                 refresh_token: newRefreshToken
                             });

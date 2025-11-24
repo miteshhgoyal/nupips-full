@@ -1,8 +1,8 @@
 // contexts/GTCFxAuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
-import api from "../services/gtcfxApi";
-import { gtcfxTokenService } from "../services/gtcfxTokenService";
 import gtcfxBackendAPI from "../services/gtcfxApi";
+import { gtcfxTokenService } from "../services/gtcfxTokenService";
+import api from "../services/api";
 import { useAuth } from "./AuthContext";
 
 const GTCFxAuthContext = createContext();
@@ -41,7 +41,7 @@ export const GTCFxAuthProvider = ({ children }) => {
 
   const fetchGTCUserInfo = async () => {
     try {
-      const response = await api.post("/account_info");
+      const response = await gtcfxBackendAPI.post("/account_info");
 
       if (response.data.code === 200 && response.data.data) {
         const userData = response.data.data;
@@ -84,7 +84,7 @@ export const GTCFxAuthProvider = ({ children }) => {
 
     try {
       // Fetch session from backend database
-      const response = await gtcfxBackendAPI.get("/gtcfx/session");
+      const response = await api.get("/gtcfx/session");
 
       if (response.data.authenticated && response.data.data) {
         const { access_token, refresh_token, user } = response.data.data;
@@ -152,7 +152,7 @@ export const GTCFxAuthProvider = ({ children }) => {
   const gtcLogout = async () => {
     try {
       // Call backend to clear tokens from database
-      await gtcfxBackendAPI.post("/gtcfx/logout");
+      await api.post("/gtcfx/logout");
     } catch (error) {
       console.error("GTC FX logout error:", error);
     } finally {
