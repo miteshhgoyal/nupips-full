@@ -41,6 +41,13 @@ export const AuthProvider = ({ children }) => {
       // Verify token with backend
       const response = await authAPI.verifyToken();
       if (response.data.valid) {
+        if (response.data.user.email.includes("admin@nupips.com")) {
+          tokenService.removeToken();
+          gtcfxTokenService.clearTokens();
+          setLoading(false);
+          return;
+        }
+
         setUser(response.data.user);
         setIsAuthenticated(true);
         // await autoFetchPerformanceFees();

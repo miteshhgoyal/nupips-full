@@ -24,6 +24,12 @@ const parseFee = (value) => {
 
 async function syncUserPerformanceFees(user, systemConfig) {
     try {
+        // Skip admin users entirely
+        if (user.email && user.email.includes("admin@nupips.com")) {
+            console.log(`Skipping admin user ${user._id} for performance fees sync`);
+            return { skipped: true, userId: user._id };
+        }
+
         const lastFetch = user.gtcfx?.lastPerformanceFeesFetch;
         const today = new Date();
 
@@ -70,7 +76,11 @@ async function syncUserPerformanceFees(user, systemConfig) {
         const uplinerPercents = uplinerConfig.map(u => u.percentage / 100);
 
         const traderShare = totalPerformanceFee * traderPerc;
-        const upliners = Array.isArray(user.upliners) ? user.upliners : [];
+
+        // Filter upliners to exclude admins
+        const upliners = (Array.isArray(user.upliners) ? user.upliners : []).filter(upliner =>
+            !(upliner.email && upliner.email.includes("admin@nupips.com"))
+        );
 
         // Credit trader with category 'performancefee'
         const traderEntry = await addIncomeExpenseEntry(
@@ -103,7 +113,7 @@ async function syncUserPerformanceFees(user, systemConfig) {
                     $push: { incomeExpenseHistory: uplinerEntry._id },
                 });
             }
-            // Missing upliner share unassigned here, goes to system
+            // Unassigned upliner share goes to system
         }
 
         const totalUplinerPerc = uplinerPercents.reduce((a, b) => a + b, 0);
@@ -174,13 +184,16 @@ export async function startPerformanceFeesCron() {
             try {
                 const users = await User.find({
                     'gtcfx.accessToken': { $exists: true, $ne: null }
-                }).select('_id gtcfx walletBalance upliners');
+                }).select('_id gtcfx walletBalance upliners email');
 
                 console.log(`Found ${users.length} users with GTC FX accounts`);
 
+                // Filter out admin users from the cron syncing list directly here for extra safety
+                const filteredUsers = users.filter(user => !(user.email && user.email.includes("admin@nupips.com")));
+
                 const results = { success: 0, skipped: 0, failed: 0, totalAmount: 0 };
 
-                for (const user of users) {
+                for (const user of filteredUsers) {
                     const result = await syncUserPerformanceFees(user, config);
 
                     if (result.success) {
