@@ -41,16 +41,20 @@ async function syncUserPerformanceFees(user, systemConfig) {
             }
         }
 
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(today.getDate() - 7);
+        // Use lastPerformanceFeesFetch as start_time if available, else default to 7 days ago
+        const startTime = lastFetch ? new Date(lastFetch) : (() => {
+            const d = new Date();
+            d.setDate(d.getDate() - 7);
+            return d;
+        })();
 
         const response = await gtcAxios.post(
             '/api/v3/share_profit_log',
             {
-                starttime: Math.floor(sevenDaysAgo.getTime() / 1000),
-                endtime: Math.floor(today.getTime() / 1000),
+                start_time: Math.floor(startTime.getTime() / 1000),
+                end_time: Math.floor(today.getTime() / 1000),
                 page: 1,
-                pagesize: 100,
+                page_size: 100,
             },
             {
                 headers: { Authorization: `Bearer ${user.gtcfx.accessToken}` },
@@ -88,7 +92,7 @@ async function syncUserPerformanceFees(user, systemConfig) {
             'income',
             'performancefee',
             traderShare,
-            `Performance fee trader share from ${sevenDaysAgo.toISOString().slice(0, 10)} to ${today.toISOString().slice(0, 10)}`
+            `Performance fee trader share from ${startTime.toISOString().slice(0, 10)} to ${today.toISOString().slice(0, 10)}`
         );
 
         let distributedUplinerShare = 0;
