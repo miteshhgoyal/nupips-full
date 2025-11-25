@@ -69,7 +69,6 @@ export const AuthProvider = ({ children }) => {
       // 1. Check GTC FX session (fast)
       const sessionRes = await api.get("/gtcfx/session");
       if (!sessionRes.data.authenticated) {
-        console.log("✅ No GTC FX account - skipping fees sync");
         return;
       }
 
@@ -84,9 +83,6 @@ export const AuthProvider = ({ children }) => {
 
         // Skip if fetched today or yesterday
         if (daysSinceLastFetch <= 1) {
-          console.log(
-            `✅ Fees already synced ${daysSinceLastFetch}d ago - skipping`
-          );
           return;
         }
       }
@@ -101,11 +97,8 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (response.data.wasSkipped) {
-        console.log("✅ Already claimed - skipped duplicate");
       } else if (response.data.totalPerformanceFee > 0) {
-        console.log(`✅ $${response.data.totalPerformanceFee} AUTO-ADDED!`);
       } else {
-        console.log("✅ No new fees found");
       }
     } catch (error) {
       console.warn(
