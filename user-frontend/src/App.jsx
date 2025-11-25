@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Wallet,
   Users,
+  Coins,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
@@ -57,6 +58,7 @@ import PlaceOrder from "./pages/others/PlaceOrder";
 import Learn from "./pages/others/Learn";
 import CourseView from "./pages/others/CourseView";
 import LessonView from "./pages/others/LessonView";
+import NupipsIncomes from "./pages/user/NupipsIncomes";
 
 // Navigation configuration
 const navbarLinks = [
@@ -74,6 +76,11 @@ const sidebarLinks = [
     name: "Nupips Team",
     href: "/nupips-team",
     icon: Users,
+  },
+  {
+    name: "Nupips Incomes",
+    href: "/nupips-incomes",
+    icon: Coins,
   },
   {
     name: "Shop",
@@ -270,6 +277,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <NupipsTeam />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/nupips-incomes"
+                element={
+                  <ProtectedRoute>
+                    <NupipsIncomes />
                   </ProtectedRoute>
                 }
               />
