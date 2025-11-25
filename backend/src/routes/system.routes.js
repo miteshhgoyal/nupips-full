@@ -26,7 +26,15 @@ const requireAdmin = async (req, res, next) => {
 };
 
 const validateConfigUpdate = (req, res, next) => {
-    const { systemPercentage, traderPercentage, maxUplineLevels, uplineDistribution } = req.body;
+    const {
+        systemPercentage,
+        traderPercentage,
+        maxUplineLevels,
+        uplineDistribution,
+        performanceFeeFrequency,
+        performanceFeeDates,
+        performanceFeeTime
+    } = req.body;
 
     if (systemPercentage === undefined || systemPercentage < 0 || systemPercentage > 100) {
         return res.status(400).json({
@@ -83,25 +91,63 @@ const validateConfigUpdate = (req, res, next) => {
         });
     }
 
-    req.validatedData = { systemPercentage, traderPercentage, maxUplineLevels, uplineDistribution };
+    // Validate new simplified frequency field
+    const validFrequencies = ['daily', 'monthly'];
+    if (!performanceFeeFrequency || !validFrequencies.includes(performanceFeeFrequency)) {
+        return res.status(400).json({
+            success: false,
+            message: `performanceFeeFrequency must be one of ${validFrequencies.join(', ')}`
+        });
+    }
+
+    // Validate time format HH:MM 24-hour
+    if (
+        !performanceFeeTime ||
+        typeof performanceFeeTime !== 'string' ||
+        !/^([01]\d|2[0-3]):([0-5]\d)$/.test(performanceFeeTime)
+    ) {
+        return res.status(400).json({
+            success: false,
+            message: 'performanceFeeTime must be a string in HH:MM 24-hour format'
+        });
+    }
+
+    // If monthly, validate dates array
+    if (performanceFeeFrequency === 'monthly') {
+        if (
+            !Array.isArray(performanceFeeDates) ||
+            performanceFeeDates.length === 0 ||
+            performanceFeeDates.some(d => typeof d !== 'number' || d < 1 || d > 31)
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: 'performanceFeeDates must be an array of numbers between 1 and 31 for monthly frequency'
+            });
+        }
+    }
+
+    req.validatedData = {
+        systemPercentage,
+        traderPercentage,
+        maxUplineLevels,
+        uplineDistribution,
+        performanceFeeFrequency,
+        performanceFeeDates: performanceFeeFrequency === 'monthly' ? performanceFeeDates : [],
+        performanceFeeTime
+    };
     next();
 };
 
 router.get('/config', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const config = await SystemConfig.getOrCreateConfig();
-
         if (!config) {
             return res.status(404).json({
                 success: false,
                 message: 'Configuration not found'
             });
         }
-
-        res.json({
-            success: true,
-            data: config
-        });
+        res.json({ success: true, data: config });
     } catch (error) {
         console.error('Config fetch error:', error);
         res.status(500).json({
@@ -118,7 +164,15 @@ router.put('/config',
     validateConfigUpdate,
     async (req, res) => {
         try {
-            const { systemPercentage, traderPercentage, maxUplineLevels, uplineDistribution } = req.validatedData;
+            const {
+                systemPercentage,
+                traderPercentage,
+                maxUplineLevels,
+                uplineDistribution,
+                performanceFeeFrequency,
+                performanceFeeDates,
+                performanceFeeTime
+            } = req.validatedData;
 
             let config = await SystemConfig.getOrCreateConfig();
 
@@ -126,6 +180,9 @@ router.put('/config',
             config.traderPercentage = traderPercentage;
             config.maxUplineLevels = maxUplineLevels;
             config.uplineDistribution = uplineDistribution.sort((a, b) => a.level - b.level);
+            config.performanceFeeFrequency = performanceFeeFrequency;
+            config.performanceFeeDates = performanceFeeDates;
+            config.performanceFeeTime = performanceFeeTime;
             config.updatedAt = new Date();
 
             await config.save();

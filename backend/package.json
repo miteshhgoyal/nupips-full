@@ -11,6 +11,7 @@
         "libphonenumber-js": "^1.12.26",
         "mongoose": "^8.16.1",
         "multer": "^2.0.2",
+        "node-cron": "^4.2.1",
         "nodemon": "^3.1.10",
         "react-phone-input-2": "^2.15.1"
     },

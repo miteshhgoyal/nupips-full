@@ -23,10 +23,37 @@ const SystemSchema = new mongoose.Schema({
         min: 1,
         max: 20
     },
+
+    performanceFeeFrequency: {
+        type: String,
+        enum: ["monthly", "daily"],
+        default: "daily"
+    },
+    performanceFeeDates: [{
+        type: Number,
+        // For monthly: 1-31; for daily frequency, this can be empty
+        min: 1,
+        max: 31
+    }],
+    performanceFeeTime: {
+        type: String,
+        default: "00:00",
+        validate: {
+            validator: function (v) {
+                return /^([01]\d|2[0-3]):([0-5]\d)$/.test(v);
+            },
+            message: 'Performance fee time must be in HH:MM 24-hour format'
+        }
+    },
     updatedAt: {
         type: Date,
         default: Date.now
-    }
+    },
+
+    incomeExpenseHistory: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "IncomeExpense"
+    }],
 }, {
     timestamps: true,
     collection: 'systemconfigs'
@@ -44,7 +71,10 @@ SystemSchema.statics.getOrCreateConfig = async function () {
                     { level: 2, percentage: 10 },
                     { level: 3, percentage: 5 }
                 ],
-                maxUplineLevels: 10
+                maxUplineLevels: 10,
+                performanceFeeFrequency: "monthly",
+                performanceFeeDates: [1], // default: 1st of month
+                performanceFeeTime: "00:00"
             });
         }
         return config;
@@ -56,13 +86,11 @@ SystemSchema.statics.getOrCreateConfig = async function () {
 
 SystemSchema.pre('save', function (next) {
     let total = this.systemPercentage + this.traderPercentage;
-
     if (this.uplineDistribution && Array.isArray(this.uplineDistribution)) {
         this.uplineDistribution.forEach(item => {
             total += item.percentage;
         });
     }
-
     if (total > 100) {
         return next(new Error(`Total percentage (${total}%) exceeds 100%`));
     }

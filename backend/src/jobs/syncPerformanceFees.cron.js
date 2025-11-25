@@ -1,6 +1,6 @@
-// jobs/syncPerformanceFees.cron.js
 import cron from 'node-cron';
 import User from '../models/User.js';
+import SystemConfig from '../models/SystemConfig.js';
 import axios from 'axios';
 import https from 'https';
 import { addIncomeExpenseEntry } from '../utils/walletUtils.js';
@@ -17,13 +17,16 @@ const gtcAxios = axios.create({
     }),
 });
 
-// Process performance fees for a single user
-async function syncUserPerformanceFees(user) {
+const parseFee = (value) => {
+    const f = parseFloat(value);
+    return isNaN(f) ? 0 : f;
+};
+
+async function syncUserPerformanceFees(user, systemConfig) {
     try {
         const lastFetch = user.gtcfx?.lastPerformanceFeesFetch;
         const today = new Date();
 
-        // Skip if already synced today
         if (lastFetch) {
             const daysSince = Math.floor((today - new Date(lastFetch)) / (1000 * 60 * 60 * 24));
             if (daysSince < 1) {
@@ -32,106 +35,170 @@ async function syncUserPerformanceFees(user) {
             }
         }
 
-        // Fetch last 7 days
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(today.getDate() - 7);
 
-        const response = await gtcAxios.post('/api/v3/share_profit_log', {
-            starttime: Math.floor(sevenDaysAgo.getTime() / 1000),
-            endtime: Math.floor(today.getTime() / 1000),
-            page: 1,
-            pagesize: 100
-        }, {
-            headers: { Authorization: `Bearer ${user.gtcfx.accessToken}` }
-        });
+        const response = await gtcAxios.post(
+            '/api/v3/share_profit_log',
+            {
+                starttime: Math.floor(sevenDaysAgo.getTime() / 1000),
+                endtime: Math.floor(today.getTime() / 1000),
+                page: 1,
+                pagesize: 100,
+            },
+            {
+                headers: { Authorization: `Bearer ${user.gtcfx.accessToken}` },
+            }
+        );
 
         if (response.data.code !== 200) {
             throw new Error(`GTC API error: ${response.data.message}`);
         }
 
-        const profitLogs = response.data.data.list;
-        const totalPerformanceFee = profitLogs.reduce((sum, log) =>
-            sum + parseFloat(log.performace_fee || 0), 0);
+        const profitLogs = response.data.data.list || [];
+        const totalPerformanceFee = profitLogs.reduce((sum, log) => sum + parseFee(log.performace_fee), 0);
 
-        if (totalPerformanceFee > 0) {
-            const incomeEntry = await addIncomeExpenseEntry(
-                user._id,
-                'income',
-                'performancefee',
-                totalPerformanceFee,
-                `Auto-synced performance fees (${sevenDaysAgo.toISOString().split('T')[0]} to ${today.toISOString().split('T')[0]})`
-            );
-
-            await User.findByIdAndUpdate(user._id, {
-                $push: { incomeExpenseHistory: incomeEntry._id },
-                $inc: { walletBalance: totalPerformanceFee },
-                $set: { 'gtcfx.lastPerformanceFeesFetch': today }
-            });
-
-            console.log(`User ${user._id}: Added $${totalPerformanceFee.toFixed(4)}`);
-            return { success: true, userId: user._id, amount: totalPerformanceFee };
+        if (totalPerformanceFee <= 0) {
+            await User.findByIdAndUpdate(user._id, { $set: { 'gtcfx.lastPerformanceFeesFetch': today } });
+            console.log(`User ${user._id}: No new fees`);
+            return { success: true, userId: user._id, amount: 0 };
         }
 
-        // Update timestamp even if no fees
-        await User.findByIdAndUpdate(user._id, {
-            $set: { 'gtcfx.lastPerformanceFeesFetch': today }
+        const systemPerc = systemConfig.systemPercentage / 100;
+        const traderPerc = systemConfig.traderPercentage / 100;
+        const uplinerConfig = [...systemConfig.uplineDistribution].sort((a, b) => a.level - b.level);
+        const uplinerPercents = uplinerConfig.map(u => u.percentage / 100);
+
+        const traderShare = totalPerformanceFee * traderPerc;
+        const upliners = Array.isArray(user.upliners) ? user.upliners : [];
+
+        // Credit trader with category 'performancefee'
+        const traderEntry = await addIncomeExpenseEntry(
+            user._id,
+            'income',
+            'performancefee',
+            traderShare,
+            `Performance fee trader share from ${sevenDaysAgo.toISOString().slice(0, 10)} to ${today.toISOString().slice(0, 10)}`
+        );
+
+        let distributedUplinerShare = 0;
+
+        // Credit upliners with category 'downlineincome'
+        for (let i = 0; i < uplinerPercents.length; i++) {
+            const uplinerPercent = uplinerPercents[i];
+            const uplinerUser = upliners[i];
+            if (uplinerUser && uplinerUser._id) {
+                const uplinerShare = totalPerformanceFee * uplinerPercent;
+                distributedUplinerShare += uplinerShare;
+
+                const uplinerEntry = await addIncomeExpenseEntry(
+                    uplinerUser._id,
+                    'income',
+                    'downlineincome',
+                    uplinerShare,
+                    `Upliner level ${i + 1} income from user ${user._id}`
+                );
+
+                // Push incomeExpenseHistory id to upliner (optional cache)
+                await User.findByIdAndUpdate(uplinerUser._id, {
+                    $push: { incomeExpenseHistory: uplinerEntry._id },
+                });
+            }
+            // Missing upliner share unassigned here, goes to system
+        }
+
+        // Calculate system share (systemPerc + unallocated upliner share)
+        const totalUplinerPerc = uplinerPercents.reduce((a, b) => a + b, 0);
+        const unallocatedUplinerPerc = Math.max(0, 1 - traderPerc - totalUplinerPerc);
+        const systemShare = totalPerformanceFee * (systemPerc + unallocatedUplinerPerc);
+
+        // Credit system with category 'commission'
+        const systemEntry = await addIncomeExpenseEntry(
+            systemConfig._id,
+            'income',
+            'commission',
+            systemShare,
+            `System commission from performance fees of user ${user._id}`
+        );
+
+        // Push to system config incomeExpenseHistory
+        await SystemConfig.findByIdAndUpdate(systemConfig._id, {
+            $push: { incomeExpenseHistory: systemEntry._id }
         });
 
-        console.log(`User ${user._id}: No new fees`);
-        return { success: true, userId: user._id, amount: 0 };
+        // Update user's lastPerformanceFeesFetch timestamp
+        await User.findByIdAndUpdate(user._id, { $set: { 'gtcfx.lastPerformanceFeesFetch': today } });
 
-    } catch (error) {
-        console.error(`Failed to sync user ${user._id}:`, error.message);
-        return { error: true, userId: user._id, message: error.message };
+        console.log(`User ${user._id}: Fees ${totalPerformanceFee.toFixed(4)}, trader ${traderShare.toFixed(4)}, upliners ${distributedUplinerShare.toFixed(4)}, system ${systemShare.toFixed(4)}`);
+
+        return { success: true, userId: user._id, amount: totalPerformanceFee };
+    } catch (err) {
+        console.error(`Failed to sync user ${user._id}:`, err.message);
+        return { error: true, userId: user._id, message: err.message };
     }
 }
 
-// Main cron job - runs daily at 3 AM IST
-export function startPerformanceFeesCron() {
-    cron.schedule('0 3 * * *', async () => {
-        console.log('Starting daily performance fees sync...');
+function toCronTime(timeStr) {
+    const [hourStr, minuteStr] = timeStr.split(':');
+    return { hour: parseInt(hourStr, 10), minute: parseInt(minuteStr, 10) };
+}
 
-        try {
-            // Find all users with active GTC FX connections
-            const users = await User.find({
-                'gtcfx.accessToken': { $exists: true, $ne: null }
-            }).select('_id gtcfx walletBalance');
+export async function startPerformanceFeesCron() {
+    const config = await SystemConfig.getOrCreateConfig();
+    const frequency = config.performanceFeeFrequency || 'monthly';
+    const dates = config.performanceFeeDates || [1];
+    const timeStr = config.performanceFeeTime || '00:00';
+    const { hour, minute } = toCronTime(timeStr);
 
-            console.log(`Found ${users.length} users with GTC FX accounts`);
+    console.log(`Scheduling performance fees sync: freq=${frequency}, time=${timeStr}, dates=${dates}`);
 
-            const results = {
-                success: 0,
-                skipped: 0,
-                failed: 0,
-                totalAmount: 0
-            };
+    let cronExpression;
+    if (frequency === 'daily') {
+        cronExpression = `${minute} ${hour} * * *`;
+    } else if (frequency === 'monthly') {
+        cronExpression = `${minute} ${hour} ${dates.join(',')} * *`;
+    } else {
+        console.error('Unsupported frequency:', frequency);
+        return;
+    }
 
-            // Process users sequentially to avoid API rate limits
-            for (const user of users) {
-                const result = await syncUserPerformanceFees(user);
+    cron.schedule(
+        cronExpression,
+        async () => {
+            console.log(`Running performance fee sync job at ${new Date().toISOString()}`);
 
-                if (result.success) {
-                    results.success++;
-                    results.totalAmount += result.amount || 0;
-                } else if (result.skipped) {
-                    results.skipped++;
-                } else if (result.error) {
-                    results.failed++;
+            try {
+                const users = await User.find({
+                    'gtcfx.accessToken': { $exists: true, $ne: null }
+                }).select('_id gtcfx walletBalance upliners');
+
+                console.log(`Found ${users.length} users with GTC FX accounts`);
+
+                const results = { success: 0, skipped: 0, failed: 0, totalAmount: 0 };
+
+                for (const user of users) {
+                    const result = await syncUserPerformanceFees(user, config);
+
+                    if (result.success) {
+                        results.success++;
+                        results.totalAmount += result.amount || 0;
+                    } else if (result.skipped) {
+                        results.skipped++;
+                    } else if (result.error) {
+                        results.failed++;
+                    }
+
+                    // 2 seconds delay to avoid API rate limits
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
 
-                // Add delay to respect rate limits (adjust as needed)
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                console.log('Sync complete:', results);
+            } catch (error) {
+                console.error('Cron job failed:', error);
             }
+        },
+        { scheduled: true, timezone: 'Asia/Kolkata' }
+    );
 
-            console.log('Sync complete:', results);
-
-        } catch (error) {
-            console.error('Cron job failed:', error);
-        }
-    }, {
-        scheduled: true,
-        timezone: "Asia/Kolkata"
-    });
-
-    console.log('Performance fees cron job scheduled (Daily at 3 AM IST)');
+    console.log(`Performance fees cron scheduled with expression "${cronExpression}" (IST)`);
 }

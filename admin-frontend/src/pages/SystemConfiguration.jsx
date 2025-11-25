@@ -25,6 +25,7 @@ const SystemConfiguration = () => {
   const [success, setSuccess] = useState("");
   const [config, setConfig] = useState(null);
   const [editing, setEditing] = useState(false);
+
   const [formData, setFormData] = useState({
     systemPercentage: 40,
     traderPercentage: 25,
@@ -34,6 +35,9 @@ const SystemConfiguration = () => {
       { level: 2, percentage: 10 },
       { level: 3, percentage: 5 },
     ],
+    performanceFeeFrequency: "monthly", // "monthly" or "daily"
+    performanceFeeDates: [1], // For monthly frequency
+    performanceFeeTime: "00:00", // Time of day e.g. "14:30"
   });
 
   const loadConfig = async () => {
@@ -45,11 +49,15 @@ const SystemConfiguration = () => {
         const data = res.data.data;
         setConfig(data);
         setFormData({
+          ...formData,
           systemPercentage: data.systemPercentage || 40,
           traderPercentage: data.traderPercentage || 25,
           maxUplineLevels: data.maxUplineLevels || 10,
           uplineDistribution:
             data.uplineDistribution?.sort((a, b) => a.level - b.level) || [],
+          performanceFeeFrequency: data.performanceFeeFrequency || "monthly",
+          performanceFeeDates: data.performanceFeeDates || [1],
+          performanceFeeTime: data.performanceFeeTime || "00:00",
         });
       }
     } catch (e) {
@@ -65,6 +73,9 @@ const SystemConfiguration = () => {
       traderPercentage,
       uplineDistribution,
       maxUplineLevels,
+      performanceFeeFrequency,
+      performanceFeeDates,
+      performanceFeeTime,
     } = formData;
 
     if (systemPercentage < 0 || systemPercentage > 100) {
@@ -78,7 +89,7 @@ const SystemConfiguration = () => {
     }
 
     const levels = new Set();
-    let total = systemPercentage + traderPercentage; // ❌ Changed from const to let
+    let total = systemPercentage + traderPercentage;
 
     for (const item of uplineDistribution) {
       if (item.percentage < 0 || item.percentage > 100) {
@@ -88,11 +99,30 @@ const SystemConfiguration = () => {
         return "Upline levels must be unique positive integers";
       }
       levels.add(item.level);
-      total += item.percentage; // ✅ Now works with let
+      total += item.percentage;
     }
 
     if (total > 100) {
       return `Total exceeds 100% by ${(total - 100).toFixed(1)}%`;
+    }
+
+    if (!["monthly", "daily"].includes(performanceFeeFrequency)) {
+      return "Performance fee frequency must be monthly or daily";
+    }
+
+    // Time format validation (HH:MM 24-hour)
+    if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(performanceFeeTime)) {
+      return "Performance fee time must be in HH:MM 24-hour format";
+    }
+
+    if (performanceFeeFrequency === "monthly") {
+      if (
+        !Array.isArray(performanceFeeDates) ||
+        performanceFeeDates.length === 0 ||
+        performanceFeeDates.some((d) => d < 1 || d > 31)
+      ) {
+        return "For monthly frequency, performance fee dates must be array of 1-31";
+      }
     }
 
     return "";
@@ -122,6 +152,21 @@ const SystemConfiguration = () => {
     }
   };
 
+  const updateField = (field, value) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const updateUplinePercentage = (level, value) => {
+    setFormData({
+      ...formData,
+      uplineDistribution: formData.uplineDistribution.map((item) =>
+        item.level === level
+          ? { ...item, percentage: Number(value) || 0 }
+          : item
+      ),
+    });
+  };
+
   const addUplineLevel = () => {
     const nextLevel =
       Math.max(...formData.uplineDistribution.map((item) => item.level), 0) + 1;
@@ -138,21 +183,6 @@ const SystemConfiguration = () => {
     });
   };
 
-  const updateField = (field, value) => {
-    setFormData({ ...formData, [field]: Number(value) || 0 });
-  };
-
-  const updateUplinePercentage = (level, value) => {
-    setFormData({
-      ...formData,
-      uplineDistribution: formData.uplineDistribution.map((item) =>
-        item.level === level
-          ? { ...item, percentage: Number(value) || 0 }
-          : item
-      ),
-    });
-  };
-
   const removeUplineLevel = (level) => {
     if (formData.uplineDistribution.length <= 1) {
       setError("At least one upline level required");
@@ -164,6 +194,32 @@ const SystemConfiguration = () => {
         (item) => item.level !== level
       ),
     });
+  };
+
+  const updatePerformanceFeeDates = (index, value) => {
+    const dates = [...formData.performanceFeeDates];
+    dates[index] = Number(value) || 1;
+    setFormData({ ...formData, performanceFeeDates: dates });
+  };
+
+  const addPerformanceFeeDate = () => {
+    if (formData.performanceFeeDates.length >= 5) {
+      setError("Maximum 5 dates allowed");
+      return;
+    }
+    setFormData({
+      ...formData,
+      performanceFeeDates: [...formData.performanceFeeDates, 1],
+    });
+  };
+
+  const removePerformanceFeeDate = (index) => {
+    const dates = formData.performanceFeeDates.filter((_, i) => i !== index);
+    if (dates.length === 0) {
+      setError("At least one date required");
+      return;
+    }
+    setFormData({ ...formData, performanceFeeDates: dates });
   };
 
   const totalPercentage = () => {
@@ -300,7 +356,7 @@ const SystemConfiguration = () => {
                   step="0.1"
                   value={formData.systemPercentage}
                   onChange={(e) =>
-                    updateField("systemPercentage", e.target.value)
+                    updateField("systemPercentage", Number(e.target.value) || 0)
                   }
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
@@ -330,7 +386,7 @@ const SystemConfiguration = () => {
                   step="0.1"
                   value={formData.traderPercentage}
                   onChange={(e) =>
-                    updateField("traderPercentage", e.target.value)
+                    updateField("traderPercentage", Number(e.target.value) || 0)
                   }
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
@@ -358,7 +414,7 @@ const SystemConfiguration = () => {
           </div>
 
           {/* Upline Distribution */}
-          <div className="space-y-4">
+          <div className="space-y-4 mb-8">
             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
               Upline Distribution
               {editing && (
@@ -438,11 +494,146 @@ const SystemConfiguration = () => {
                   max="20"
                   value={formData.maxUplineLevels}
                   onChange={(e) =>
-                    updateField("maxUplineLevels", e.target.value)
+                    updateField("maxUplineLevels", Number(e.target.value) || 0)
                   }
                   className="mx-2 w-20 px-2 py-1 border border-blue-200 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white"
                 />
               </p>
+            )}
+          </div>
+
+          {/* Performance Fee Schedule Section */}
+          <div className="space-y-4 mb-8 p-6 bg-yellow-50 rounded-xl border border-yellow-200">
+            <h3 className="text-lg font-bold text-gray-900">
+              Performance Fee Schedule
+            </h3>
+
+            <div className="mb-4">
+              <label
+                htmlFor="performanceFeeFrequency"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Frequency
+              </label>
+              {editing ? (
+                <select
+                  id="performanceFeeFrequency"
+                  value={formData.performanceFeeFrequency}
+                  onChange={(e) =>
+                    updateField("performanceFeeFrequency", e.target.value)
+                  }
+                  className="w-full rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500 p-2"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              ) : (
+                <p className="text-gray-900 font-semibold capitalize">
+                  {formData.performanceFeeFrequency}
+                </p>
+              )}
+            </div>
+
+            {/* Conditionally show fields based on frequency */}
+            {formData.performanceFeeFrequency === "monthly" && (
+              <>
+                <div>
+                  <label
+                    htmlFor="performanceFeeDates"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Dates (1-31)
+                  </label>
+                  {editing ? (
+                    <>
+                      {formData.performanceFeeDates.map((date, idx) => (
+                        <div key={idx} className="flex items-center gap-2 mb-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="31"
+                            value={date}
+                            onChange={(e) =>
+                              updatePerformanceFeeDates(idx, e.target.value)
+                            }
+                            className="w-20 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 text-right"
+                          />
+                          <button
+                            onClick={() => removePerformanceFeeDate(idx)}
+                            className="p-1 rounded-full bg-red-100 hover:bg-red-200 transition-colors"
+                            title="Remove date"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        onClick={addPerformanceFeeDate}
+                        className="mt-2 px-3 py-1 bg-orange-100 text-orange-700 rounded-xl hover:bg-orange-200 transition-colors inline-flex items-center gap-1"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Date
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-gray-900">
+                      {formData.performanceFeeDates.join(", ")}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-4">
+                  <label
+                    htmlFor="performanceFeeTime"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Time of Day (24-hr, e.g. 14:30 IST)
+                  </label>
+                  {editing ? (
+                    <input
+                      type="time"
+                      id="performanceFeeTime"
+                      value={formData.performanceFeeTime}
+                      onChange={(e) =>
+                        updateField("performanceFeeTime", e.target.value)
+                      }
+                      className="w-32 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+                      step="60"
+                    />
+                  ) : (
+                    <p className="text-gray-900 font-semibold">
+                      {formData.performanceFeeTime}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {formData.performanceFeeFrequency === "daily" && (
+              <div className="mt-4">
+                <label
+                  htmlFor="performanceFeeTime"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Time of Day (24-hr, e.g. 14:30 IST)
+                </label>
+                {editing ? (
+                  <input
+                    type="time"
+                    id="performanceFeeTime"
+                    value={formData.performanceFeeTime}
+                    onChange={(e) =>
+                      updateField("performanceFeeTime", e.target.value)
+                    }
+                    className="w-32 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+                    step="60"
+                  />
+                ) : (
+                  <p className="text-gray-900 font-semibold">
+                    {formData.performanceFeeTime}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
