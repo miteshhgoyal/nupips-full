@@ -15,6 +15,7 @@ import teamRoutes from "./routes/team.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import learnRoutes from "./routes/learn.routes.js";
 import systemRoutes from "./routes/system.routes.js";
+import { startPerformanceFeesCron } from './jobs/syncPerformanceFees.cron.js';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -50,7 +51,7 @@ app.get('/', (req, res) => {
     });
 });
 
-// 404 handler - FIXED
+// 404 handler
 app.use('*path', (req, res) => {
     res.status(404).json({ message: 'Route not found' });
 });
@@ -68,12 +69,15 @@ app.use((err, req, res, next) => {
 connectDB()
     .then(() => {
         app.listen(PORT, () => {
-            console.log(`🚀 Server running on port ${PORT}`);
-            console.log(`🔗 API URL: http://localhost:${PORT}`);
+            console.log(`Server running on port ${PORT}`);
+            console.log(`API URL: http://localhost:${PORT}`);
+
+            // Start cron jobs after DB connection
+            startPerformanceFeesCron();
         });
     })
     .catch(err => {
-        console.error("❌ DB connection failed:", err);
+        console.error("DB connection failed:", err);
         process.exit(1);
     });
 

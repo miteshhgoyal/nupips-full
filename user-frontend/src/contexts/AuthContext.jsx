@@ -43,8 +43,7 @@ export const AuthProvider = ({ children }) => {
       if (response.data.valid) {
         setUser(response.data.user);
         setIsAuthenticated(true);
-
-        await autoFetchPerformanceFees();
+        // await autoFetchPerformanceFees();
       } else {
         tokenService.removeToken();
         gtcfxTokenService.clearTokens();
