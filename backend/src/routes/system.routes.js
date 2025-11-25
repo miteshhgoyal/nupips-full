@@ -2,6 +2,7 @@ import express from 'express';
 import SystemConfig from '../models/SystemConfig.js';
 import User from '../models/User.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
+import { startPerformanceFeesCron } from '../jobs/syncPerformanceFees.cron.js';
 
 const router = express.Router();
 
@@ -186,6 +187,9 @@ router.put('/config',
             config.updatedAt = new Date();
 
             await config.save();
+
+            // Restart the cron job scheduling with updated config
+            await startPerformanceFeesCron();
 
             res.json({
                 success: true,

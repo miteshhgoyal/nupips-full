@@ -99,7 +99,6 @@ async function syncUserPerformanceFees(user, systemConfig) {
                     `Upliner level ${i + 1} income from user ${user._id}`
                 );
 
-                // Push incomeExpenseHistory id to upliner (optional cache)
                 await User.findByIdAndUpdate(uplinerUser._id, {
                     $push: { incomeExpenseHistory: uplinerEntry._id },
                 });
@@ -107,7 +106,6 @@ async function syncUserPerformanceFees(user, systemConfig) {
             // Missing upliner share unassigned here, goes to system
         }
 
-        // Calculate system share (systemPerc + unallocated upliner share)
         const totalUplinerPerc = uplinerPercents.reduce((a, b) => a + b, 0);
         const unallocatedUplinerPerc = Math.max(0, 1 - traderPerc - totalUplinerPerc);
         const systemShare = totalPerformanceFee * (systemPerc + unallocatedUplinerPerc);
@@ -121,12 +119,11 @@ async function syncUserPerformanceFees(user, systemConfig) {
             `System commission from performance fees of user ${user._id}`
         );
 
-        // Push to system config incomeExpenseHistory
         await SystemConfig.findByIdAndUpdate(systemConfig._id, {
             $push: { incomeExpenseHistory: systemEntry._id }
         });
 
-        // Update user's lastPerformanceFeesFetch timestamp
+        // Update user lastPerformanceFeesFetch timestamp
         await User.findByIdAndUpdate(user._id, { $set: { 'gtcfx.lastPerformanceFeesFetch': today } });
 
         console.log(`User ${user._id}: Fees ${totalPerformanceFee.toFixed(4)}, trader ${traderShare.toFixed(4)}, upliners ${distributedUplinerShare.toFixed(4)}, system ${systemShare.toFixed(4)}`);
@@ -143,7 +140,14 @@ function toCronTime(timeStr) {
     return { hour: parseInt(hourStr, 10), minute: parseInt(minuteStr, 10) };
 }
 
+let currentCronJob = null;
+
 export async function startPerformanceFeesCron() {
+    if (currentCronJob) {
+        currentCronJob.stop();
+        console.log('Stopped previous performance fees cron job');
+    }
+
     const config = await SystemConfig.getOrCreateConfig();
     const frequency = config.performanceFeeFrequency || 'monthly';
     const dates = config.performanceFeeDates || [1];
@@ -162,7 +166,7 @@ export async function startPerformanceFeesCron() {
         return;
     }
 
-    cron.schedule(
+    currentCronJob = cron.schedule(
         cronExpression,
         async () => {
             console.log(`Running performance fee sync job at ${new Date().toISOString()}`);
@@ -188,8 +192,7 @@ export async function startPerformanceFeesCron() {
                         results.failed++;
                     }
 
-                    // 2 seconds delay to avoid API rate limits
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Rate limit delay
                 }
 
                 console.log('Sync complete:', results);
