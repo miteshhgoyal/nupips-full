@@ -14,6 +14,7 @@ import transferRoutes from "./routes/transfer.routes.js";
 import teamRoutes from "./routes/team.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import learnRoutes from "./routes/learn.routes.js";
+import systemRoutes from "./routes/system.routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -39,6 +40,7 @@ app.use("/transfer", transferRoutes);
 app.use("/team", teamRoutes);
 app.use("/product", productRoutes);
 app.use("/learn", learnRoutes);
+app.use("/system", systemRoutes);
 
 app.get('/', (req, res) => {
     res.json({

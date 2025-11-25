@@ -19,6 +19,7 @@ import {
   TrendingUp,
   ShoppingBagIcon,
   BookA,
+  Settings,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
@@ -31,6 +32,7 @@ import Products from "./pages/Products";
 
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
+import SystemConfiguration from "./pages/SystemConfiguration";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
@@ -55,6 +57,11 @@ const sidebarLinks = [
     name: "Courses",
     href: "/courses",
     icon: BookA,
+  },
+  {
+    name: "System Configuration",
+    href: "/system-configuration",
+    icon: Settings,
   },
 ];
 
@@ -241,6 +248,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CourseDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/system-configuration"
+              element={
+                <ProtectedRoute>
+                  <SystemConfiguration />
                 </ProtectedRoute>
               }
             />
