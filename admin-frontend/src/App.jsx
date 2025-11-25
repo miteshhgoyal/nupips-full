@@ -20,6 +20,7 @@ import {
   ShoppingBagIcon,
   BookA,
   Settings,
+  Coins,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
@@ -33,6 +34,7 @@ import Products from "./pages/Products";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
 import SystemConfiguration from "./pages/SystemConfiguration";
+import SystemIncomes from "./pages/SystemIncomes";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
@@ -57,6 +59,11 @@ const sidebarLinks = [
     name: "Courses",
     href: "/courses",
     icon: BookA,
+  },
+  {
+    name: "System Incomes",
+    href: "/system-incomes",
+    icon: Coins,
   },
   {
     name: "System Configuration",
@@ -256,6 +263,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <SystemConfiguration />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/system-incomes"
+              element={
+                <ProtectedRoute>
+                  <SystemIncomes />
                 </ProtectedRoute>
               }
             />

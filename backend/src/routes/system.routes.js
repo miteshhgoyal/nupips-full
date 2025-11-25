@@ -1,6 +1,7 @@
 import express from 'express';
 import SystemConfig from '../models/SystemConfig.js';
 import User from '../models/User.js';
+import IncomeExpense from '../models/IncomeExpense.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 import { startPerformanceFeesCron } from '../jobs/syncPerformanceFees.cron.js';
 
@@ -138,6 +139,20 @@ const validateConfigUpdate = (req, res, next) => {
     };
     next();
 };
+
+router.get("/incomes", authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const incomes = await IncomeExpense.find({
+            userId: req.user.userId,
+            type: "income",
+        }).sort({ date: -1 }).lean();
+
+        res.json({ total: incomes.length, incomes });
+    } catch (error) {
+        console.error("Get income history error:", error);
+        res.status(500).json({ message: "Failed to fetch income history" });
+    }
+});
 
 router.get('/config', authenticateToken, requireAdmin, async (req, res) => {
     try {
