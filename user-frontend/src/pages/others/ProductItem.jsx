@@ -284,49 +284,6 @@ const ProductItem = () => {
                 <ShoppingBag className="w-5 h-5" />
                 Buy Now
               </button>
-
-              {/* Features */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Truck className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      Free Delivery
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      On orders above $500
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      Secure Payment
-                    </p>
-                    <p className="text-xs text-gray-600">100% protected</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
-                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Package className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      Easy Returns
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      7 days return policy
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
