@@ -177,7 +177,21 @@ const UserSchema = new mongoose.Schema({
         refreshToken: { type: String, default: null },
         user: { type: Object, default: null },
         lastSync: { type: Date, default: null },
-        lastPerformanceFeesFetch: { type: Date, default: null } 
+        lastPerformanceFeesFetch: { type: Date, default: null },
+
+        // Parent hierarchy fields
+        parentId: { type: String, default: null },
+        parentEmail: { type: String, default: null },
+        parentUsername: { type: String, default: null },
+        parentGtcId: { type: String, default: null },
+        hierarchyLevel: { type: Number, default: null },
+        uplineChain: [{
+            gtcUserId: String,
+            email: String,
+            username: String,
+            level: Number
+        }],
+        parentInfoUpdatedAt: { type: Date, default: null }
     },
 
     incomeExpenseHistory: [{
