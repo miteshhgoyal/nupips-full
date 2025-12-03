@@ -2,7 +2,9 @@
 import express from 'express';
 import axios from 'axios';
 import https from 'https';
+import crypto from 'crypto';
 import User from '../models/User.js';
+import GTCMember from '../models/GTCMember.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 import { addIncomeExpenseEntry } from '../utils/walletUtils.js';
 
@@ -18,7 +20,7 @@ const gtcAxios = axios.create({
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
     },
     httpsAgent: new https.Agent({
-        rejectUnauthorized: process.env.NODE_ENV === 'production', // true in production
+        rejectUnauthorized: process.env.NODE_ENV === 'production',
     }),
 });
 
@@ -244,11 +246,11 @@ router.post('/sync-user', authenticateToken, async (req, res) => {
     }
 });
 
-// Fetch Performance Fees - Moved from auth routes
+// Fetch Performance Fees
 router.post('/fetch-performance-fees', authenticateToken, async (req, res) => {
     try {
         const { userId } = req.user;
-        const { startDate, endDate, forceUpdate = false } = req.body;  // Added forceUpdate option
+        const { startDate, endDate, forceUpdate = false } = req.body;
 
         if (!startDate || !endDate) {
             return res.status(400).json({ message: 'Start date and end date are required' });
@@ -259,7 +261,6 @@ router.post('/fetch-performance-fees', authenticateToken, async (req, res) => {
             return res.status(401).json({ message: 'GTC FX account not linked' });
         }
 
-        // CHECK FOR DUPLICATES using lastPerformanceFeesFetch
         const lastFetch = user.gtcfx?.lastPerformanceFeesFetch;
         const fetchEndDate = new Date(endDate);
 
@@ -271,7 +272,6 @@ router.post('/fetch-performance-fees', authenticateToken, async (req, res) => {
             });
         }
 
-        // Fetch from GTC API
         const response = await gtcAxios.post('/api/v3/share_profit_log', {
             starttime: Math.floor(new Date(startDate).getTime() / 1000),
             endtime: Math.floor(new Date(endDate).getTime() / 1000),
@@ -294,7 +294,6 @@ router.post('/fetch-performance-fees', authenticateToken, async (req, res) => {
 
         let newWalletBalance = user.walletBalance;
 
-        // Only add to wallet if new fees found AND not already processed
         if (totalPerformanceFee > 0 && (!lastFetch || forceUpdate || lastFetch < new Date(startDate))) {
             const incomeEntry = await addIncomeExpenseEntry(
                 userId,
@@ -304,12 +303,11 @@ router.post('/fetch-performance-fees', authenticateToken, async (req, res) => {
                 `Performance fees from ${startDate} to ${endDate}`
             );
 
-            // UPDATE USER with income entry ID and last fetch timestamp
             await User.findByIdAndUpdate(userId, {
-                $push: { incomeExpenseHistory: incomeEntry._id },  // Link income entry
+                $push: { incomeExpenseHistory: incomeEntry._id },
                 $set: {
                     'gtcfx.lastPerformanceFeesFetch': new Date(),
-                    $inc: { walletBalance: totalPerformanceFee }  // Atomic wallet update
+                    $inc: { walletBalance: totalPerformanceFee }
                 }
             });
 
@@ -341,6 +339,271 @@ router.post('/fetch-performance-fees', authenticateToken, async (req, res) => {
         }
 
         res.status(500).json({ message: 'Server error fetching performance fees' });
+    }
+});
+
+// ====================== WEBHOOK HELPER ======================
+function verifyGtcSignature(req) {
+    const secret = process.env.GTC_WEBHOOK_SECRET;
+    const signature = req.headers['x-gtc-signature'];
+
+    if (!secret || !signature) return true;
+
+    try {
+        const expected = crypto
+            .createHmac('sha256', secret)
+            .update(JSON.stringify(req.body))
+            .digest('hex');
+
+        return expected === signature;
+    } catch (e) {
+        console.error('Signature verification error:', e);
+        return false;
+    }
+}
+
+// ====================== WEBHOOK: FULL USER TREE ======================
+// GTC sends entire user tree at once
+// POST /api/gtcfx/webhook/user-tree
+router.post('/webhook/user-tree', async (req, res) => {
+    try {
+        console.log('📥 FULL USER TREE received from GTC');
+
+        if (!verifyGtcSignature(req)) {
+            return res.status(401).json({ success: false, message: 'Invalid signature' });
+        }
+
+        const { members } = req.body;
+
+        if (!Array.isArray(members) || members.length === 0) {
+            return res.status(400).json({ success: false, message: 'members[] array is required' });
+        }
+
+        // Acknowledge immediately
+        res.status(200).json({
+            success: true,
+            message: 'User tree received, processing started',
+            count: members.length,
+            timestamp: new Date().toISOString(),
+        });
+
+        // Process in background
+        let processed = 0;
+        let skipped = 0;
+
+        for (const m of members) {
+            const {
+                gtcUserId,
+                email,
+                username,
+                name,
+                parentGtcUserId,
+                level,
+                uplineChain,
+                joinedAt,
+                rawData,
+            } = m;
+
+            if (!gtcUserId || !email || !username) {
+                console.warn('⚠️ Skipping member with missing fields:', m);
+                skipped++;
+                continue;
+            }
+
+            await GTCMember.findOneAndUpdate(
+                { gtcUserId },
+                {
+                    $set: {
+                        email,
+                        username,
+                        name: name || null,
+                        parentGtcUserId: parentGtcUserId || null,
+                        level: level || 1,
+                        uplineChain: uplineChain || [],
+                        rawData: rawData || {},
+                        joinedAt: joinedAt ? new Date(joinedAt) : new Date(),
+                        lastUpdated: new Date(),
+                    },
+                },
+                { upsert: true, new: true }
+            );
+            processed++;
+        }
+
+        console.log(`✅ Processed ${processed} members, skipped ${skipped}`);
+
+    } catch (error) {
+        console.error('❌ Error processing FULL USER TREE:', error);
+    }
+});
+
+// ====================== WEBHOOK: SINGLE MEMBER UPDATE ======================
+// GTC sends single new/updated member
+// POST /api/gtcfx/webhook/member-update
+router.post('/webhook/member-update', async (req, res) => {
+    try {
+        console.log('📥 SINGLE MEMBER UPDATE from GTC:', req.body);
+
+        if (!verifyGtcSignature(req)) {
+            return res.status(401).json({ success: false, message: 'Invalid signature' });
+        }
+
+        const {
+            gtcUserId,
+            email,
+            username,
+            name,
+            parentGtcUserId,
+            level,
+            uplineChain,
+            joinedAt,
+            rawData,
+        } = req.body;
+
+        if (!gtcUserId || !email || !username) {
+            return res.status(400).json({
+                success: false,
+                message: 'gtcUserId, email, and username are required',
+            });
+        }
+
+        // Acknowledge immediately
+        res.status(200).json({
+            success: true,
+            message: 'Member update received successfully',
+            timestamp: new Date().toISOString(),
+        });
+
+        // Save/update member
+        await GTCMember.findOneAndUpdate(
+            { gtcUserId },
+            {
+                $set: {
+                    email,
+                    username,
+                    name: name || null,
+                    parentGtcUserId: parentGtcUserId || null,
+                    level: level || 1,
+                    uplineChain: uplineChain || [],
+                    rawData: rawData || {},
+                    joinedAt: joinedAt ? new Date(joinedAt) : new Date(),
+                    lastUpdated: new Date(),
+                },
+            },
+            { upsert: true, new: true }
+        );
+
+        console.log(`✅ Updated/created member: ${gtcUserId}`);
+
+    } catch (error) {
+        console.error('❌ Error processing MEMBER UPDATE:', error);
+    }
+});
+
+// ====================== API: GET ALL GTC MEMBERS ======================
+// GET /api/gtcfx/members
+router.get('/members', authenticateToken, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 100;
+        const skip = (page - 1) * limit;
+
+        const members = await GTCMember.find()
+            .sort({ joinedAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        const total = await GTCMember.countDocuments();
+
+        res.json({
+            success: true,
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+            count: members.length,
+            members,
+        });
+    } catch (error) {
+        console.error('Get members error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch members' });
+    }
+});
+
+// ====================== API: GET MEMBER BY GTC USER ID ======================
+// GET /api/gtcfx/members/:gtcUserId
+router.get('/members/:gtcUserId', authenticateToken, async (req, res) => {
+    try {
+        const { gtcUserId } = req.params;
+
+        const member = await GTCMember.findOne({ gtcUserId }).lean();
+
+        if (!member) {
+            return res.status(404).json({ success: false, message: 'Member not found' });
+        }
+
+        res.json({
+            success: true,
+            member,
+        });
+    } catch (error) {
+        console.error('Get member error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch member' });
+    }
+});
+
+// ====================== API: GET MEMBER TREE (DOWNLINE) ======================
+// GET /api/gtcfx/members/:gtcUserId/tree
+router.get('/members/:gtcUserId/tree', authenticateToken, async (req, res) => {
+    try {
+        const { gtcUserId } = req.params;
+
+        const member = await GTCMember.findOne({ gtcUserId }).lean();
+
+        if (!member) {
+            return res.status(404).json({ success: false, message: 'Member not found' });
+        }
+
+        // Find all members who have this gtcUserId in their upline chain
+        const downline = await GTCMember.find({
+            'uplineChain.gtcUserId': gtcUserId,
+        })
+            .sort({ level: 1, joinedAt: -1 })
+            .lean();
+
+        res.json({
+            success: true,
+            member,
+            downlineCount: downline.length,
+            downline,
+        });
+    } catch (error) {
+        console.error('Get member tree error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch member tree' });
+    }
+});
+
+// ====================== API: GET MEMBER'S DIRECT CHILDREN ======================
+// GET /api/gtcfx/members/:gtcUserId/children
+router.get('/members/:gtcUserId/children', authenticateToken, async (req, res) => {
+    try {
+        const { gtcUserId } = req.params;
+
+        const children = await GTCMember.find({
+            parentGtcUserId: gtcUserId,
+        })
+            .sort({ joinedAt: -1 })
+            .lean();
+
+        res.json({
+            success: true,
+            count: children.length,
+            children,
+        });
+    } catch (error) {
+        console.error('Get member children error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch member children' });
     }
 });
 
