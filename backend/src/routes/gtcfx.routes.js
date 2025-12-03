@@ -5,7 +5,6 @@ import https from 'https';
 import User from '../models/User.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 import { addIncomeExpenseEntry } from '../utils/walletUtils.js';
-import { notifyGTCWebhook, verifyWebhookSignature, saveParentInfo } from '../utils/webhookHelper.js';
 
 const router = express.Router();
 
@@ -67,7 +66,7 @@ router.post('/login', authenticateToken, async (req, res) => {
                 console.error('Failed to fetch GTC user info:', error.message);
             }
 
-            const updatedUser = await User.findByIdAndUpdate(
+            await User.findByIdAndUpdate(
                 userId,
                 {
                     $set: {
@@ -79,11 +78,6 @@ router.post('/login', authenticateToken, async (req, res) => {
                 },
                 { new: true }
             );
-
-            // Notify GTC webhook about this login (async, won't block response)
-            notifyGTCWebhook(updatedUser, gtcUserInfo).catch(err => {
-                console.error('GTC webhook notification failed (non-critical):', err.message);
-            });
 
             return res.json({
                 message: 'GTC FX login successful',
@@ -347,75 +341,6 @@ router.post('/fetch-performance-fees', authenticateToken, async (req, res) => {
         }
 
         res.status(500).json({ message: 'Server error fetching performance fees' });
-    }
-});
-
-// Webhook endpoint to receive parent info from GTC
-router.post('/webhook/parent-info', async (req, res) => {
-    try {
-        console.log('📥 Received webhook from GTC:', req.body);
-
-        // Verify webhook signature
-        if (!verifyWebhookSignature(req)) {
-            console.warn('⚠️ Invalid webhook signature received');
-            return res.status(401).json({ message: 'Invalid webhook signature' });
-        }
-
-        // Immediately acknowledge receipt (important for webhook pattern)
-        res.status(200).json({
-            success: true,
-            message: 'Parent info received successfully',
-            timestamp: new Date().toISOString()
-        });
-
-        // Process webhook data asynchronously
-        const { ourUserId, gtcUserId, parentInfo } = req.body;
-
-        if (!ourUserId || !parentInfo) {
-            console.error('❌ Missing required webhook data');
-            return;
-        }
-
-        // Save parent info to database
-        await saveParentInfo(ourUserId, parentInfo);
-
-        console.log(`✅ Successfully updated parent info for user ${ourUserId}`);
-
-    } catch (error) {
-        console.error('❌ Error processing parent info webhook:', error);
-        // Don't send error response - already sent 200
-    }
-});
-
-// Get parent hierarchy info for logged-in user
-router.get('/parent-info', authenticateToken, async (req, res) => {
-    try {
-        const userId = req.user.userId;
-
-        const user = await User.findById(userId).select('gtcfx');
-
-        if (!user || !user.gtcfx || !user.gtcfx.parentId) {
-            return res.json({
-                hasParentInfo: false,
-                message: 'No parent information available yet. Please login to GTC first.'
-            });
-        }
-
-        res.json({
-            hasParentInfo: true,
-            parentInfo: {
-                parentId: user.gtcfx.parentId,
-                parentEmail: user.gtcfx.parentEmail,
-                parentUsername: user.gtcfx.parentUsername,
-                parentGtcId: user.gtcfx.parentGtcId,
-                hierarchyLevel: user.gtcfx.hierarchyLevel,
-                uplineChain: user.gtcfx.uplineChain,
-                lastUpdated: user.gtcfx.parentInfoUpdatedAt
-            }
-        });
-    } catch (error) {
-        console.error('Get parent info error:', error);
-        res.status(500).json({ message: 'Server error retrieving parent info' });
     }
 });
 
