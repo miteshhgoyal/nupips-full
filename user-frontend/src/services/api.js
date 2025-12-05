@@ -48,21 +48,4 @@ export const authAPI = {
     resetPassword: (data) => api.post('/auth/reset-password', data),
 };
 
-// Profile API endpoints
-export const profileAPI = {
-    getProfile: () => api.get('/profile'),
-    updateProfile: (data) => api.put('/profile/update', data),
-    getSponsorInfo: (sponsorId) => api.get(`/profile/sponsor/${sponsorId}`),
-    updateLastLogin: () => api.post('/profile/update-login'),
-    getDashboard: () => api.get('/profile/dashboard'),
-    getDirectReferrals: () => api.get('/profile/referrals/direct'),
-    getDownlineLevels: () => api.get('/profile/downline/levels'),
-    getBinaryTree: (depth = 5) => api.get(`/profile/downline/binary-tree?depth=${depth}`),
-    getLifetimeIncomes: (data) => api.get('/profile/incomes', data),
-    getDailyEarnings: () => api.get('/profile/incomes/daily-earnings'),
-    getWeeklyEarnings: () => api.get('/profile/incomes/weekly-earnings'),
-    getWithdrawals: (type) => api.get(`/profile/withdrawals?type=${type}`),
-    createWithdrawalRequest: (data) => api.post('/profile/withdrawals', data),
-};
-
 export default api;

@@ -19,7 +19,7 @@ import {
   Award,
   Target,
 } from "lucide-react";
-import { profileAPI } from "../../services/api";
+import api from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 
 const MiniChart = ({ title, data, color = "orange" }) => {
@@ -62,7 +62,7 @@ const Dashboard = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await profileAPI.getDashboard();
+      const res = await api.get("/profile/dashboard");
       setData(res.data);
     } catch (e) {
       setError(e.response?.data?.message || "Failed to load dashboard");
