@@ -35,6 +35,7 @@ import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
 import SystemConfiguration from "./pages/SystemConfiguration";
 import SystemIncomes from "./pages/SystemIncomes";
+import Profile from "./pages/Profile";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
@@ -220,7 +221,7 @@ function App() {
               path="/profile"
               element={
                 <ProtectedRoute>
-                  <ComingSoon />
+                  <Profile />
                 </ProtectedRoute>
               }
             />

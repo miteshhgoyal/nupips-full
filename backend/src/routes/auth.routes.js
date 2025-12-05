@@ -185,4 +185,38 @@ router.post('/logout', (req, res) => {
     res.status(200).json({ message: 'Logged out successfully' });
 });
 
+// Change password endpoint for admin
+router.put("/change-password", authenticateToken, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        // Find admin user
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Verify current password
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Current password is incorrect" });
+        }
+
+        // Validate new password
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: "New password must be at least 6 characters" });
+        }
+
+        // Hash and save new password
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.json({ message: "Password updated successfully" });
+    } catch (error) {
+        console.error("Change password error:", error);
+        res.status(500).json({ message: "Failed to change password" });
+    }
+});
+
 export default router;
