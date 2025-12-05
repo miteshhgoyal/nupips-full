@@ -21,6 +21,7 @@ import {
   BookA,
   Settings,
   Coins,
+  Wallet,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
@@ -37,6 +38,8 @@ import SystemConfiguration from "./pages/SystemConfiguration";
 import SystemIncomes from "./pages/SystemIncomes";
 import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
+import Deposits from "./pages/Deposits";
+import Withdrawals from "./pages/Withdrawals";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
@@ -48,24 +51,26 @@ const sidebarLinks = [
     icon: Home,
   },
   {
-    name: "Products",
-    href: "/products",
-    icon: ShoppingBagIcon,
+    name: "Wallet",
+    icon: Wallet,
+    subItems: [
+      { name: "Deposit", href: "/deposits" },
+      { name: "Withdrawal", href: "/withdrawals" },
+      { name: "System Incomes", href: "/system-incomes" },
+    ],
   },
   {
-    name: "Orders",
-    href: "/orders",
-    icon: ShoppingBagIcon,
+    name: "Marketing Shop",
+    icon: ShoppingBag,
+    subItems: [
+      { name: "Products", href: "/products" },
+      { name: "Orders", href: "/orders" },
+    ],
   },
   {
     name: "Courses",
     href: "/courses",
     icon: BookA,
-  },
-  {
-    name: "System Incomes",
-    href: "/system-incomes",
-    icon: Coins,
   },
   {
     name: "System Configuration",
@@ -215,6 +220,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/deposits"
+              element={
+                <ProtectedRoute>
+                  <Deposits />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/withdrawals"
+              element={
+                <ProtectedRoute>
+                  <Withdrawals />
                 </ProtectedRoute>
               }
             />

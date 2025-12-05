@@ -11,6 +11,7 @@ import { authenticateToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
+// ==================== DASHBOARD ROUTE ====================
 router.get('/dashboard', authenticateToken, async (req, res) => {
     try {
         // Parallel aggregation queries for better performance
@@ -453,6 +454,318 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch dashboard data',
+            error: error.message
+        });
+    }
+});
+
+
+// ==================== DEPOSIT ROUTES ====================
+
+// 1. Get all deposits with basic filtering
+router.get('/deposits', authenticateToken, async (req, res) => {
+    try {
+        const { status, userId, page = 1, limit = 20 } = req.query;
+
+        // Build simple filter
+        const filter = {};
+        if (status) filter.status = status;
+        if (userId) filter.userId = userId;
+
+        // Pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const [deposits, total] = await Promise.all([
+            Deposit.find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .populate('userId', 'name email username')
+                .populate('processedBy', 'name email'),
+            Deposit.countDocuments(filter)
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: deposits,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Get deposits error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch deposits',
+            error: error.message
+        });
+    }
+});
+
+// 2. Get single deposit
+router.get('/deposits/:id', authenticateToken, async (req, res) => {
+    try {
+        const deposit = await Deposit.findById(req.params.id)
+            .populate('userId', 'name email username')
+            .populate('processedBy', 'name email');
+
+        if (!deposit) {
+            return res.status(404).json({
+                success: false,
+                message: 'Deposit not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: deposit
+        });
+    } catch (error) {
+        console.error('Get deposit error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch deposit',
+            error: error.message
+        });
+    }
+});
+
+// 3. Update deposit
+router.patch('/deposits/:id', authenticateToken, async (req, res) => {
+    try {
+        const { status, adminNotes } = req.body;
+
+        const deposit = await Deposit.findById(req.params.id);
+
+        if (!deposit) {
+            return res.status(404).json({
+                success: false,
+                message: 'Deposit not found'
+            });
+        }
+
+        // Update fields
+        if (status) deposit.status = status;
+        if (adminNotes) deposit.adminNotes = adminNotes;
+
+        // Set processedBy if completing
+        if (status && ['completed', 'processing'].includes(status)) {
+            deposit.processedBy = req.user.userId;
+            deposit.processedAt = new Date();
+        }
+
+        await deposit.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Deposit updated successfully',
+            data: deposit
+        });
+    } catch (error) {
+        console.error('Update deposit error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update deposit',
+            error: error.message
+        });
+    }
+});
+
+// 4. Delete deposit
+router.delete('/deposits/:id', authenticateToken, async (req, res) => {
+    try {
+        const deposit = await Deposit.findById(req.params.id);
+
+        if (!deposit) {
+            return res.status(404).json({
+                success: false,
+                message: 'Deposit not found'
+            });
+        }
+
+        // Prevent deletion of completed deposits
+        if (deposit.status === 'completed') {
+            return res.status(403).json({
+                success: false,
+                message: 'Cannot delete completed deposits'
+            });
+        }
+
+        await Deposit.findByIdAndDelete(req.params.id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Deposit deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete deposit error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete deposit',
+            error: error.message
+        });
+    }
+});
+
+
+// ==================== WITHDRAWAL ROUTES ====================
+
+// 1. Get all withdrawals with basic filtering
+router.get('/withdrawals', authenticateToken, async (req, res) => {
+    try {
+        const { status, userId, page = 1, limit = 20 } = req.query;
+
+        // Build simple filter
+        const filter = {};
+        if (status) filter.status = status;
+        if (userId) filter.userId = userId;
+
+        // Pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const [withdrawals, total] = await Promise.all([
+            Withdrawal.find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .populate('userId', 'name email username')
+                .populate('processedBy', 'name email'),
+            Withdrawal.countDocuments(filter)
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: withdrawals,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Get withdrawals error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch withdrawals',
+            error: error.message
+        });
+    }
+});
+
+// 2. Get single withdrawal
+router.get('/withdrawals/:id', authenticateToken, async (req, res) => {
+    try {
+        const withdrawal = await Withdrawal.findById(req.params.id)
+            .populate('userId', 'name email username')
+            .populate('processedBy', 'name email');
+
+        if (!withdrawal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Withdrawal not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: withdrawal
+        });
+    } catch (error) {
+        console.error('Get withdrawal error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch withdrawal',
+            error: error.message
+        });
+    }
+});
+
+// 3. Update withdrawal
+router.patch('/withdrawals/:id', authenticateToken, async (req, res) => {
+    try {
+        const { status, adminNotes, rejectionReason } = req.body;
+
+        const withdrawal = await Withdrawal.findById(req.params.id);
+
+        if (!withdrawal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Withdrawal not found'
+            });
+        }
+
+        // Update fields
+        if (status) withdrawal.status = status;
+        if (adminNotes) withdrawal.adminNotes = adminNotes;
+        if (rejectionReason) withdrawal.rejectionReason = rejectionReason;
+
+        // Set processedBy
+        if (status && ['completed', 'processing', 'rejected'].includes(status)) {
+            withdrawal.processedBy = req.user.userId;
+            withdrawal.processedAt = new Date();
+        }
+
+        await withdrawal.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Withdrawal updated successfully',
+            data: withdrawal
+        });
+    } catch (error) {
+        console.error('Update withdrawal error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update withdrawal',
+            error: error.message
+        });
+    }
+});
+
+// 4. Delete withdrawal
+router.delete('/withdrawals/:id', authenticateToken, async (req, res) => {
+    try {
+        const withdrawal = await Withdrawal.findById(req.params.id);
+
+        if (!withdrawal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Withdrawal not found'
+            });
+        }
+
+        // Prevent deletion of completed withdrawals
+        if (withdrawal.status === 'completed') {
+            return res.status(403).json({
+                success: false,
+                message: 'Cannot delete completed withdrawals'
+            });
+        }
+
+        // Refund to wallet if it was processing
+        if (withdrawal.status === 'processing') {
+            const user = await User.findById(withdrawal.userId);
+            if (user) {
+                user.walletBalance += withdrawal.amount;
+                await user.save();
+            }
+        }
+
+        await Withdrawal.findByIdAndDelete(req.params.id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Withdrawal deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete withdrawal error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete withdrawal',
             error: error.message
         });
     }
