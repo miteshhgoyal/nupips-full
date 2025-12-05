@@ -16,6 +16,7 @@ import productRoutes from "./routes/product.routes.js";
 import learnRoutes from "./routes/learn.routes.js";
 import systemRoutes from "./routes/system.routes.js";
 import incomesRoutes from "./routes/incomes.routes.js";
+import adminRoutes from './routes/admin.routes.js';
 import { startPerformanceFeesCron } from './jobs/syncPerformanceFees.cron.js';
 
 const app = express();
@@ -44,6 +45,7 @@ app.use("/product", productRoutes);
 app.use("/learn", learnRoutes);
 app.use("/system", systemRoutes);
 app.use("/incomes", incomesRoutes);
+app.use("/admin", adminRoutes);
 
 app.get('/', (req, res) => {
     res.json({
