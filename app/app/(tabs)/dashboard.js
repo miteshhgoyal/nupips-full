@@ -4,472 +4,397 @@ import {
     Text,
     ScrollView,
     SafeAreaView,
-    TouchableOpacity,
-    ActivityIndicator,
     RefreshControl,
-    Dimensions,
-    StatusBar,
+    ActivityIndicator,
+    TouchableOpacity,
 } from 'react-native';
-import {
-    DollarSign,
-    TrendingUp,
-    Wallet,
-    BarChart3,
-    User,
-    Mail,
-    Phone,
-    Calendar,
-    Users,
-    AlertCircle,
-    ChevronRight,
-    Lock,
-    Shield,
-} from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useAuth } from '@/context/authContext';
 import api from '@/services/api';
+import {
+    LayoutDashboard,
+    TrendingUp,
+    TrendingDown,
+    Wallet,
+    Users,
+    DollarSign,
+    Activity,
+    Calendar,
+    ArrowUpRight,
+    ArrowDownRight,
+    RefreshCw,
+    PieChart,
+    BarChart3,
+} from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
 
-const DashboardPage = () => {
-    const router = useRouter();
-    const [accountInfo, setAccountInfo] = useState(null);
+const MiniChart = ({ title, data, color = 'gray' }) => {
+    const max = Math.max(...data.map((d) => d.value), 1);
+    const colorMap = {
+        gray: 'bg-gray-700/30',
+        green: 'bg-green-600',
+        blue: 'bg-blue-600',
+        orange: 'bg-orange-600', // Added orange accent
+    };
+    return (
+        <View className="flex-1 min-w-0">
+            <Text className="text-xs text-gray-400 mb-2">{title}</Text>
+            <View className="flex-row items-end h-16">
+                {data.map((d, i) => (
+                    <View key={i} className="flex-1 flex-col justify-end mr-1 last:mr-0">
+                        <View
+                            className={`w-full ${colorMap[color]} rounded-t`}
+                            style={{ height: `${(d.value / max) * 100}%` }}
+                        />
+                    </View>
+                ))}
+            </View>
+            <View className="flex-row items-center justify-between mt-1">
+                <Text className="text-[10px] text-gray-400">{data[0]?.label}</Text>
+                <Text className="text-[10px] text-gray-400">{data[data.length - 1]?.label}</Text>
+            </View>
+        </View>
+    );
+};
+
+const Dashboard = () => {
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [refreshing, setRefreshing] = useState(false);
-    const screenWidth = Dimensions.get('window').width;
+    const [error, setError] = useState('');
+    const [data, setData] = useState(null);
 
-    useEffect(() => {
-        fetchAccountInfo();
-    }, []);
-
-    const fetchAccountInfo = async () => {
+    const load = async () => {
         setLoading(true);
-        setError(null);
-
+        setError('');
         try {
-            const response = await api.post('/account_info', {});
-
-            if (response.data.code === 200 && response.data.data) {
-                setAccountInfo(response.data.data);
-            } else {
-                setError(
-                    response.data.message || 'Failed to fetch account info'
-                );
-            }
-        } catch (err) {
-            console.error('Fetch account info error:', err);
-            setError(
-                err.response?.data?.message ||
-                'Network error. Please try again.'
-            );
+            const res = await api.get('/profile/dashboard');
+            setData(res.data);
+        } catch (e) {
+            setError(e.response?.data?.message || 'Failed to load dashboard');
         } finally {
             setLoading(false);
         }
     };
 
-    const onRefresh = async () => {
-        setRefreshing(true);
-        await fetchAccountInfo();
-        setRefreshing(false);
-    };
+    useEffect(() => {
+        load();
+    }, []);
 
-    // Loading State
     if (loading) {
         return (
-            <SafeAreaView className="flex-1 bg-gradient-to-b from-slate-50 to-slate-100">
-                <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#ea580c" />
-                    <Text className="text-slate-600 font-semibold mt-4">
-                        Loading your account...
-                    </Text>
-                </View>
+            <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
+                <StatusBar style="light" />
+                <ActivityIndicator size="large" color="#fff" />
+                <Text className="text-gray-400 mt-4">Loading dashboard...</Text>
             </SafeAreaView>
         );
     }
 
-    // Error State
     if (error) {
         return (
-            <SafeAreaView className="flex-1 bg-gradient-to-b from-slate-50 to-slate-100 justify-center p-6">
-                <View className="items-center">
-                    <View className="bg-red-100 rounded-full p-4 mb-4">
-                        <AlertCircle size={48} color="#dc2626" />
-                    </View>
-                    <Text className="text-lg font-semibold text-slate-900 text-center mb-2">
-                        Something went wrong
-                    </Text>
-                    <Text className="text-red-600 font-medium text-center mb-6">
-                        {error}
-                    </Text>
-                    <TouchableOpacity
-                        onPress={fetchAccountInfo}
-                        activeOpacity={0.7}
-                        className="bg-orange-600 px-8 py-3 rounded-lg"
-                    >
-                        <Text className="text-white font-semibold">
-                            Try Again
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
-        );
-    }
-
-    // No Data State
-    if (!accountInfo) {
-        return (
-            <SafeAreaView className="flex-1 bg-gradient-to-b from-slate-50 to-slate-100 items-center justify-center">
-                <AlertCircle size={48} color="#94a3b8" />
-                <Text className="text-slate-500 mt-4 font-medium">
-                    No account information available
-                </Text>
-            </SafeAreaView>
-        );
-    }
-
-    const StatCard = ({ title, value, icon: Icon, color, subtext }) => (
-        <View className="flex-1 bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <View className="flex-row items-start justify-between mb-3">
-                <View className="flex-1 pr-2">
-                    <Text className="text-xs text-slate-500 font-semibold uppercase tracking-wide">
-                        {title}
-                    </Text>
-                </View>
-                <View
-                    className={`rounded-lg p-2.5 ${color === 'orange'
-                        ? 'bg-orange-50'
-                        : color === 'green'
-                            ? 'bg-green-50'
-                            : color === 'purple'
-                                ? 'bg-purple-50'
-                                : 'bg-blue-50'
-                        }`}
+            <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center p-6">
+                <StatusBar style="light" />
+                <Text className="text-red-400 text-center mb-4">{error}</Text>
+                <TouchableOpacity
+                    onPress={load}
+                    className="px-6 py-3 bg-orange-900/10 rounded-xl text-white font-medium"
                 >
-                    <Icon
-                        size={20}
-                        color={
-                            color === 'orange'
-                                ? '#ea580c'
-                                : color === 'green'
-                                    ? '#16a34a'
-                                    : color === 'purple'
-                                        ? '#9333ea'
-                                        : '#0284c7'
-                        }
-                    />
-                </View>
-            </View>
-            <Text className="text-2xl font-bold text-slate-900 mb-1">
-                {value}
-            </Text>
-            {subtext && (
-                <Text className="text-xs text-slate-500">{subtext}</Text>
-            )}
-        </View>
-    );
+                    <Text>Try Again</Text>
+                </TouchableOpacity>
+            </SafeAreaView>
+        );
+    }
 
-    const InfoCard = ({ icon: Icon, label, value, subtext, divider = true }) => (
-        <View>
-            <View className="flex-row items-start gap-3 py-4">
-                <View className="bg-slate-100 rounded-lg p-2.5 mt-0.5">
-                    <Icon size={18} color="#64748b" />
-                </View>
-                <View className="flex-1">
-                    <Text className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-1">
-                        {label}
-                    </Text>
-                    <Text className="text-base font-semibold text-slate-900">
-                        {value}
-                    </Text>
-                    {subtext && (
-                        <Text className="text-xs text-slate-400 mt-1">
-                            {subtext}
-                        </Text>
-                    )}
-                </View>
-            </View>
-            {divider && <View className="h-px bg-slate-100" />}
-        </View>
-    );
-
-    const QuickActionButton = ({ icon: Icon, title, subtitle, color, onPress }) => (
-        <TouchableOpacity
-            onPress={onPress}
-            activeOpacity={0.7}
-            className="bg-white rounded-xl border border-slate-200 p-4 mb-3 flex-row items-center justify-between shadow-sm"
-        >
-            <View className="flex-1">
-                <Text className="text-base font-bold text-slate-900">
-                    {title}
-                </Text>
-                <Text className="text-sm text-slate-500 mt-1">{subtitle}</Text>
-            </View>
-            <View className={`rounded-lg p-3 ${color}`}>
-                <ChevronRight size={22} color="#666" />
-            </View>
-        </TouchableOpacity>
-    );
-
-    const AccountStatus = () => (
-        <View className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl border border-orange-200 p-4 mb-6">
-            <View className="flex-row items-center gap-3">
-                <View className="bg-orange-600 rounded-full p-2">
-                    <Shield size={20} color="white" />
-                </View>
-                <View className="flex-1">
-                    <Text className="text-sm font-semibold text-orange-900">
-                        Account Status
-                    </Text>
-                    <View className="flex-row items-center gap-2 mt-1">
-                        <View
-                            className={`w-2 h-2 rounded-full ${accountInfo.status === '1'
-                                ? 'bg-green-600'
-                                : 'bg-red-600'
-                                }`}
-                        />
-                        <Text className="text-sm font-medium text-orange-900">
-                            {accountInfo.status === '1' ? 'Active' : 'Inactive'}
-                        </Text>
-                    </View>
-                </View>
-            </View>
-        </View>
-    );
+    const {
+        walletBalance = 0,
+        financials = {},
+        tradingStats = {},
+        referralDetails = {},
+        downlineStats = {},
+        recentActivity = [],
+        chartData = {},
+    } = data;
 
     return (
-        <SafeAreaView className="flex-1 bg-orange-50">
-            <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+        <SafeAreaView className="flex-1 bg-gray-900">
+            <StatusBar style="light" />
+            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                <Text className="text-3xl text-white">Dashboard</Text>
+            </View>
             <ScrollView
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={onRefresh}
-                        tintColor="#ea580c"
-                    />
-                }
+                className="flex-1"
+                refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
             >
-                <View className="px-4 py-5">
-                    {/* Personalized Welcome Header */}
-                    <View className="mb-6">
-                        <Text className="text-xs text-slate-500 font-semibold uppercase tracking-wide">
-                            Welcome Back
-                        </Text>
-                        <Text className="text-3xl font-bold text-slate-900 mt-1">
-                            {accountInfo.nickname}
-                        </Text>
-                        <Text className="text-sm text-slate-500 mt-2">
-                            Member since{' '}
-                            {new Date(
-                                parseInt(accountInfo.create_time) * 1000
-                            ).toLocaleDateString('en-US', {
-                                month: 'short',
-                                year: 'numeric',
-                            })}
-                        </Text>
+                <View className="p-4 pb-24">
+                    <View className="flex-row items-center justify-between mb-8">
+                        <View>
+                            <Text className="text-2xl font-light text-white">
+                                Welcome back, {user?.name?.split(' ')[0] || 'User'}!
+                            </Text>
+                            <Text className="text-gray-400 mt-2">Here's your account overview</Text>
+                        </View>
+                        <TouchableOpacity onPress={load} className="p-3 rounded-xl border border-orange-600/70">
+                            <RefreshCw size={20} color="#ea580c" />
+                        </TouchableOpacity>
                     </View>
 
-                    {/* Account Status Alert */}
-                    <AccountStatus />
+                    {/* KPI Cards (2 columns) */}
+                    <View className="flex-row mb-6">
+                        <View className="flex-1 mr-3 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
+                            <View className="flex-row items-center justify-between mb-3">
+                                <Wallet size={24} color="#ea580c" />
+                            </View>
+                            <Text className="text-gray-400 text-sm mb-1">Wallet Balance</Text>
+                            <Text className="text-xl font-light text-white">${walletBalance.toFixed(2)}</Text>
+                        </View>
+                        <View className="flex-1 ml-3 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
+                            <View className="flex-row items-center justify-between mb-3">
+                                <TrendingUp size={24} color="#ea580c" />
+                            </View>
+                            <Text className="text-gray-400 text-sm mb-1">Total Deposits</Text>
+                            <Text className="text-xl font-light text-white">
+                                ${(financials.totalDeposits || 0).toFixed(2)}
+                            </Text>
+                        </View>
+                    </View>
+                    <View className="flex-row mb-6">
+                        <View className="flex-1 mr-3 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
+                            <View className="flex-row items-center justify-between mb-3">
+                                <TrendingDown size={24} color="#ea580c" />
+                            </View>
+                            <Text className="text-gray-400 text-sm mb-1">Total Withdrawals</Text>
+                            <Text className="text-xl font-light text-white">
+                                ${(financials.totalWithdrawals || 0).toFixed(2)}
+                            </Text>
+                        </View>
+                        <View className="flex-1 ml-3 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
+                            <View className="flex-row items-center justify-between mb-3">
+                                <DollarSign size={24} color="#ea580c" />
+                            </View>
+                            <Text className="text-gray-400 text-sm mb-1">Net Balance</Text>
+                            <Text
+                                className={`text-xl font-light ${financials.netBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}
+                            >
+                                ${(financials.netBalance || 0).toFixed(2)}
+                            </Text>
+                        </View>
+                    </View>
 
-                    {/* Key Statistics - 4 Column Grid */}
-                    <View className="mb-6">
-                        <Text className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-3">
-                            Account Overview
-                        </Text>
-
-                        {/* Row 1 */}
-                        <View className="flex-row gap-2 mb-3">
-                            <StatCard
-                                title="Balance"
-                                value={`$${parseFloat(
-                                    accountInfo.amount || 0
-                                ).toFixed(2)}`}
-                                icon={Wallet}
+                    {/* Performance Charts */}
+                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
+                        <View className="flex-row items-center justify-between mb-4">
+                            <Text className="text-xl font-light text-white">Performance Overview</Text>
+                            <BarChart3 size={20} color="#ea580c" />
+                        </View>
+                        <View className="flex-row">
+                            <MiniChart
+                                title="Deposits (7d)"
+                                data={
+                                    chartData.deposits || [
+                                        { label: 'Mon', value: 120 },
+                                        { label: 'Tue', value: 250 },
+                                        { label: 'Wed', value: 180 },
+                                        { label: 'Thu', value: 320 },
+                                        { label: 'Fri', value: 290 },
+                                        { label: 'Sat', value: 410 },
+                                        { label: 'Sun', value: 380 },
+                                    ]
+                                }
                                 color="orange"
                             />
-                            <StatCard
-                                title="Type"
-                                value={accountInfo.userType || 'User'}
-                                icon={User}
-                                color="green"
-                                subtext="Account level"
-                            />
-                        </View>
-
-                        {/* Row 2 */}
-                        <View className="flex-row gap-2">
-                            <StatCard
-                                title="Status"
-                                value={
-                                    accountInfo.status === '1'
-                                        ? 'Active'
-                                        : 'Inactive'
+                            <View className="w-3" />
+                            <MiniChart
+                                title="Withdrawals (7d)"
+                                data={
+                                    chartData.withdrawals || [
+                                        { label: 'Mon', value: 80 },
+                                        { label: 'Tue', value: 150 },
+                                        { label: 'Wed', value: 120 },
+                                        { label: 'Thu', value: 200 },
+                                        { label: 'Fri', value: 180 },
+                                        { label: 'Sat', value: 220 },
+                                        { label: 'Sun', value: 190 },
+                                    ]
                                 }
-                                icon={TrendingUp}
-                                color={
-                                    accountInfo.status === '1'
-                                        ? 'green'
-                                        : 'purple'
-                                }
-                            />
-                            <StatCard
-                                title="ID"
-                                value={accountInfo.id.substring(0, 6)}
-                                icon={Lock}
-                                color="blue"
-                                subtext="Unique ID"
+                                color="orange"
                             />
                         </View>
                     </View>
 
-                    {/* Personal Information Section */}
-                    <View className="bg-white rounded-xl border border-slate-200 p-5 mb-6 shadow-sm">
-                        <Text className="text-lg font-bold text-slate-900 mb-4">
-                            Personal Information
-                        </Text>
-
-                        <InfoCard
-                            icon={User}
-                            label="Nickname"
-                            value={accountInfo.nickname}
-                        />
-                        <InfoCard
-                            icon={User}
-                            label="Real Name"
-                            value={accountInfo.realname}
-                        />
-                        <InfoCard
-                            icon={Mail}
-                            label="Email"
-                            value={accountInfo.email}
-                            subtext={`Masked: ${accountInfo.email_text}`}
-                        />
-                        <InfoCard
-                            icon={Phone}
-                            label="Phone"
-                            value={accountInfo.phone}
-                            subtext={`Masked: ${accountInfo.phone_text}`}
-                            divider={false}
-                        />
-                    </View>
-
-                    {/* Account Details Section */}
-                    <View className="bg-white rounded-xl border border-slate-200 p-5 mb-6 shadow-sm">
-                        <Text className="text-lg font-bold text-slate-900 mb-4">
-                            Account Details
-                        </Text>
-
-                        <View className="bg-slate-50 rounded-lg p-3 mb-3 border border-slate-200">
-                            <Text className="text-xs text-slate-500 font-semibold uppercase mb-1 tracking-wide">
-                                Account ID
-                            </Text>
-                            <Text className="text-sm font-mono text-slate-900">
-                                {accountInfo.id}
-                            </Text>
+                    {/* Trading Performance */}
+                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
+                        <View className="flex-row items-center justify-between mb-5">
+                            <View className="flex-row gap-2 items-center">
+                                <Activity size={24} color="#ea580c" />
+                                <Text className="text-xl font-light text-white">Trading Performance</Text>
+                            </View>
                         </View>
-
-                        <View className="bg-slate-50 rounded-lg p-3 mb-3 border border-slate-200">
-                            <Text className="text-xs text-slate-500 font-semibold uppercase mb-1 tracking-wide">
-                                Parent ID
-                            </Text>
-                            <Text className="text-sm font-mono text-slate-900">
-                                {accountInfo.parent_id || 'N/A'}
-                            </Text>
-                        </View>
-
-                        <View className="flex-row gap-3">
-                            <View className="flex-1 bg-slate-50 rounded-lg p-3 border border-slate-200">
-                                <Text className="text-xs text-slate-500 font-semibold uppercase mb-1 tracking-wide">
-                                    Last Updated
-                                </Text>
-                                <Text className="text-sm text-slate-900">
-                                    {new Date(
-                                        parseInt(accountInfo.update_time) * 1000
-                                    ).toLocaleDateString()}
+                        <View className="flex-row">
+                            <View className="flex-1 p-4 bg-gray-700/20 rounded-xl border border-gray-600 mr-2">
+                                <Text className="text-xs text-gray-400 font-light mb-2">Total Trades</Text>
+                                <Text className="text-xl font-light text-white">
+                                    {tradingStats.totalTrades || 0}
                                 </Text>
                             </View>
-                            <View className="flex-1 bg-slate-50 rounded-lg p-3 border border-slate-200">
-                                <Text className="text-xs text-slate-500 font-semibold uppercase mb-1 tracking-wide">
-                                    Last Login
+                            <View className="flex-1 p-4 bg-gray-700/20 rounded-xl border border-gray-600 ml-2">
+                                <Text className="text-xs text-gray-400 font-light mb-2">Volume (Lots)</Text>
+                                <Text className="text-xl font-light text-white">
+                                    {Number(tradingStats.totalVolumeLots || 0).toFixed(2)}
                                 </Text>
-                                <Text className="text-sm text-slate-900">
-                                    {accountInfo.last_login_time === '0'
-                                        ? 'Never'
-                                        : new Date(
-                                            parseInt(
-                                                accountInfo.last_login_time
-                                            ) * 1000
-                                        ).toLocaleDateString()}
+                            </View>
+                        </View>
+                        <View className="flex-row mt-2">
+                            <View className="flex-1 p-4 bg-gray-700/20 rounded-xl border border-gray-600 mr-2">
+                                <Text className="text-xs text-gray-400 font-light mb-2">Total Profit</Text>
+                                <Text className="text-xl font-light text-green-500">
+                                    ${(tradingStats.totalProfit || 0).toFixed(2)}
+                                </Text>
+                            </View>
+                            <View className="flex-1 p-4 bg-gray-700/20 rounded-xl border border-gray-600 ml-2">
+                                <Text className="text-xs text-gray-400 font-light mb-2">Win Rate</Text>
+                                <Text className="text-xl font-light text-white">
+                                    {Number(tradingStats.winRate || 0).toFixed(1)}%
                                 </Text>
                             </View>
                         </View>
                     </View>
 
-                    {/* Quick Actions - Navigation */}
-                    <View className="mb-6">
-                        <Text className="text-xs text-slate-500 font-semibold uppercase tracking-wide mb-3">
-                            Quick Access
-                        </Text>
-
-                        <QuickActionButton
-                            icon={TrendingUp}
-                            title="Explore Strategies"
-                            subtitle="Browse and subscribe to trading strategies"
-                            color="bg-orange-50"
-                            onPress={() => router.push('/(tabs)/strategies')}
-                        />
-
-                        <QuickActionButton
-                            icon={TrendingUp}
-                            title="Unsubscribe Strategies"
-                            subtitle="Unsubscribe from subscribed trading strategies"
-                            color="bg-emerald-50"
-                            onPress={() => router.push('/(tabs)/unsubscribe')}
-                        />
-
-                        <QuickActionButton
-                            icon={Wallet}
-                            title="My Portfolio"
-                            subtitle="View your active subscriptions and investments"
-                            color="bg-green-50"
-                            onPress={() =>
-                                router.push('/(tabs)/subscriptions')
-                            }
-                        />
-
-                        <QuickActionButton
-                            icon={BarChart3}
-                            title="Profit Logs"
-                            subtitle="Track your earnings and transaction history"
-                            color="bg-purple-50"
-                            onPress={() => router.push('/(tabs)/profit-logs')}
-                        />
-
-                        <QuickActionButton
-                            icon={Users}
-                            title="Agent Members"
-                            subtitle="Manage your network and referrals"
-                            color="bg-blue-50"
-                            onPress={() => router.push('/(tabs)/members')}
-                        />
-
-                        <QuickActionButton
-                            icon={Users}
-                            title="Agent Commission Report"
-                            subtitle="Commission Report of agent"
-                            color="bg-red-50"
-                            onPress={() => router.push('/(tabs)/commission')}
-                        />
+                    {/* Referral Network */}
+                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
+                        <View className="flex-row items-center justify-between mb-5">
+                            <View className="flex-row gap-2 items-center">
+                                <Activity size={24} color="#ea580c" />
+                                <Text className="text-xl font-light text-white">Referral Network</Text>
+                            </View>
+                        </View>
+                        <View className="flex-row">
+                            <View className="flex-1 p-4 bg-gray-700/20 rounded-xl border border-gray-600 mr-2">
+                                <Text className="text-xs text-gray-400 font-light mb-2">Direct Referrals</Text>
+                                <Text className="text-xl font-light text-white">
+                                    {referralDetails.totalDirectReferrals || 0}
+                                </Text>
+                            </View>
+                            <View className="flex-1 p-4 bg-gray-700/20 rounded-xl border border-gray-600 ml-2">
+                                <Text className="text-xs text-gray-400 font-light mb-2">Total Downline</Text>
+                                <Text className="text-xl font-light text-white">
+                                    {referralDetails.totalDownlineUsers || 0}
+                                </Text>
+                            </View>
+                        </View>
+                        <View className="flex-row mt-2">
+                            <View className="flex-1 p-4 bg-gray-700/20 rounded-xl border border-gray-600 mr-2">
+                                <Text className="text-xs text-gray-400 font-light mb-2">Total Agents</Text>
+                                <Text className="text-xl font-light text-white">
+                                    {downlineStats.totalAgents || 0}
+                                </Text>
+                            </View>
+                            <View className="flex-1 p-4 bg-gray-700/20 rounded-xl border border-gray-600 ml-2">
+                                <Text className="text-xs text-gray-400 font-light mb-2">Cumulative Balance</Text>
+                                <Text className="text-xl font-light text-white">
+                                    ${(downlineStats.cumulativeBalance || 0).toFixed(2)}
+                                </Text>
+                            </View>
+                        </View>
                     </View>
 
-                    {/* Footer Info */}
-                    <View className="bg-slate-900 rounded-xl p-4 items-center mb-6">
-                        <Text className="text-xs text-slate-400 font-medium">
-                            Need help?
-                        </Text>
-                        <Text className="text-sm text-slate-300 mt-2 text-center">
-                            Contact support for assistance with your account
-                        </Text>
+                    {/* Pending Transactions */}
+                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
+                        <Text className="text-sm font-light text-white mb-4">Pending</Text>
+                        <View className="p-3 bg-gray-700/20 rounded-lg mb-3">
+                            <View className="flex-row items-center justify-between">
+                                <Text className="text-xs text-gray-400">Pending Deposits</Text>
+                                <Text className="text-sm font-light text-white">
+                                    ${(financials.pendingDeposits || 0).toFixed(2)}
+                                </Text>
+                            </View>
+                        </View>
+                        <View className="p-3 bg-gray-700/20 rounded-lg">
+                            <View className="flex-row items-center justify-between">
+                                <Text className="text-xs text-gray-400">Pending Withdrawals</Text>
+                                <Text className="text-sm font-light text-white">
+                                    ${(financials.pendingWithdrawals || 0).toFixed(2)}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Income Breakdown */}
+                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
+                        <View className="flex-row items-center justify-between mb-4">
+                            <Text className="text-sm font-light text-white">Income Breakdown</Text>
+                            <PieChart size={16} color="#ea580c" />
+                        </View>
+                        <View className="p-3 bg-gray-700/20 rounded-lg mb-3">
+                            <View className="flex-row items-center justify-between">
+                                <Text className="text-xs text-gray-400">Rebate Income</Text>
+                                <Text className="text-sm font-light text-white">
+                                    ${(financials.totalRebateIncome || 0).toFixed(2)}
+                                </Text>
+                            </View>
+                        </View>
+                        <View className="p-3 bg-gray-700/20 rounded-lg">
+                            <View className="flex-row items-center justify-between">
+                                <Text className="text-xs text-gray-400">Affiliate Income</Text>
+                                <Text className="text-sm font-light text-white">
+                                    ${(financials.totalAffiliateIncome || 0).toFixed(2)}
+                                </Text>
+                            </View>
+                        </View>
+                        <View className="h-px bg-gray-700/20 my-2" />
+                        <View className="p-3 bg-gray-700/20 rounded-lg">
+                            <View className="flex-row items-center justify-between">
+                                <Text className="text-xs font-light text-white">Total Income</Text>
+                                <Text className="text-sm font-light text-white">
+                                    $
+                                    {Number(
+                                        (financials.totalRebateIncome || 0) +
+                                        (financials.totalAffiliateIncome || 0)
+                                    ).toFixed(2)}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Recent Activity */}
+                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
+                        <Text className="text-sm font-light text-white mb-4">Recent Activity</Text>
+                        <View>
+                            {recentActivity && recentActivity.length > 0 ? (
+                                recentActivity.slice(0, 5).map((activity, i) => (
+                                    <View
+                                        key={i}
+                                        className="flex-row items-center justify-between p-3 bg-gray-700/20 rounded-lg mb-3"
+                                    >
+                                        <View className="flex-row items-center">
+                                            <View
+                                                className={`w-9 h-9 rounded-lg flex-row items-center justify-center bg-gray-700/20 mr-3`}
+                                            >
+                                                {activity.type === 'deposit' ? (
+                                                    <TrendingUp size={16} color="#ea580c" />
+                                                ) : activity.type === 'withdrawal' ? (
+                                                    <TrendingDown size={16} color="#ea580c" />
+                                                ) : (
+                                                    <Users size={16} color="#ea580c" />
+                                                )}
+                                            </View>
+                                            <View>
+                                                <Text className="text-sm font-light text-white">{activity.title}</Text>
+                                                <Text className="text-xs text-gray-400">{activity.date}</Text>
+                                            </View>
+                                        </View>
+                                        <Text
+                                            className={`text-sm font-light text-white`}
+                                        >
+                                            {activity.value}
+                                        </Text>
+                                    </View>
+                                ))
+                            ) : (
+                                <View className="text-center py-8">
+                                    <Calendar size={32} color="#ea580c" />
+                                    <Text className="text-xs text-gray-400">No recent activity</Text>
+                                </View>
+                            )}
+                        </View>
                     </View>
                 </View>
             </ScrollView>
@@ -477,4 +402,4 @@ const DashboardPage = () => {
     );
 };
 
-export default DashboardPage;
+export default Dashboard;

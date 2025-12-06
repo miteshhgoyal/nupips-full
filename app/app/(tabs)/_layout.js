@@ -1,243 +1,197 @@
-import React, { useState } from 'react';
-import { View, TouchableOpacity, Text, Dimensions } from 'react-native';
+import React from 'react';
+import { View, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/context/authContext';
-import { Menu, LogOut } from 'lucide-react-native';
+import { LogOut, LayoutDashboard, TrendingUp, Wallet, Users } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import {
-    LayoutDashboard,
-    TrendingUp,
-    Wallet,
-    Users,
-} from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ACTIVE_TAB_COLOR = '#ea580c';
 const INACTIVE_TAB_COLOR = '#9ca3af';
-const BACKGROUND_COLOR = '#ffffff';
-const BORDER_COLOR = '#e5e7eb';
+const BAR_BG = '#111827';
+const BAR_BORDER = '#374151';
+
+// layout config so you can tune it easily
+const TAB_BAR_CONFIG = {
+    paddingHorizontal: 16,
+    bottomInset: 8,
+    barHeight: 68,
+    borderRadius: 24,
+    itemMinWidth: 72,
+    itemGap: 8, // <== change this for spacing between tabs
+};
+
+const TAB_CONFIG = [
+    { name: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { name: 'strategies', label: 'Strategies', icon: TrendingUp },
+    { name: 'subscriptions', label: 'Portfolio', icon: Wallet },
+    { name: 'members', label: 'Agent', icon: Users },
+];
+
+function FloatingTabBar({ state, descriptors, navigation }) {
+    const { paddingHorizontal, bottomInset, barHeight, borderRadius, itemMinWidth, itemGap } =
+        TAB_BAR_CONFIG;
+
+    return (
+        <View
+            pointerEvents="box-none"
+            style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 0,
+                paddingBottom: bottomInset,
+                paddingHorizontal,
+            }}
+        >
+            <View
+                style={{
+                    backgroundColor: BAR_BG,
+                    borderRadius,
+                    borderWidth: 1,
+                    borderColor: BAR_BORDER,
+                    height: barHeight,
+                    shadowColor: '#000',
+                    shadowOpacity: 0.35,
+                    shadowRadius: 12,
+                    shadowOffset: { width: 0, height: -2 },
+                    elevation: 16,
+                    overflow: 'hidden',
+                    justifyContent: 'center',
+                }}
+            >
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{
+                        paddingHorizontal,
+                        alignItems: 'center',
+                        columnGap: itemGap,
+                    }}
+                >
+                    {state.routes.map((route, index) => {
+                        const config = TAB_CONFIG.find((t) => t.name === route.name);
+                        if (!config) return null;
+
+                        const { options } = descriptors[route.key];
+                        const isFocused = state.index === index;
+                        const Icon = config.icon;
+
+                        const onPress = () => {
+                            const event = navigation.emit({
+                                type: 'tabPress',
+                                target: route.key,
+                                canPreventDefault: true,
+                            });
+                            if (!isFocused && !event.defaultPrevented) {
+                                navigation.navigate(route.name);
+                            }
+                        };
+
+                        const onLongPress = () => {
+                            navigation.emit({
+                                type: 'tabLongPress',
+                                target: route.key,
+                            });
+                        };
+
+                        return (
+                            <TouchableOpacity
+                                key={route.key}
+                                accessibilityRole="button"
+                                accessibilityState={isFocused ? { selected: true } : {}}
+                                onPress={onPress}
+                                onLongPress={onLongPress}
+                                activeOpacity={0.85}
+                                style={{
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    minWidth: itemMinWidth,
+                                }}
+                            >
+                                <Icon
+                                    size={isFocused ? 26 : 22}
+                                    color={isFocused ? ACTIVE_TAB_COLOR : INACTIVE_TAB_COLOR}
+                                    strokeWidth={isFocused ? 2.5 : 2}
+                                />
+                                <Text
+                                    style={{
+                                        marginTop: 4,
+                                        fontSize: 11,
+                                        fontWeight: isFocused ? '700' : '600',
+                                        color: isFocused ? ACTIVE_TAB_COLOR : INACTIVE_TAB_COLOR,
+                                    }}
+                                >
+                                    {config.label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
+            </View>
+        </View>
+    );
+}
 
 export default function TabsLayout() {
     const { user, logout } = useAuth();
     const router = useRouter();
 
-    const handleLogout = async () => {
-        await logout();
-        router.push('/(auth)/signin');
-    };
+    // const handleLogout = async () => {
+    //   await logout();
+    //   router.push('/(auth)/signin');
+    // };
 
     return (
-        <SafeAreaView className="flex-1 bg-white">
-            {/* Header Section */}
-            <View className="flex-row items-center justify-between px-4 py-4 bg-gradient-to-r from-white to-gray-50 border-b border-gray-200">
-                <View className="flex-1">
-                    <Text className="text-xl font-bold text-slate-900">
-                        Nupips
-                    </Text>
-                    <Text className="text-xs text-gray-500 mt-1">
-                        Welcome back, {user?.nickname || 'User'}
-                    </Text>
-                </View>
-                <TouchableOpacity
-                    onPress={handleLogout}
-                    className="p-2 rounded-lg hover:bg-red-50"
-                    activeOpacity={0.7}
-                >
-                    <LogOut size={24} color={ACTIVE_TAB_COLOR} />
-                </TouchableOpacity>
-            </View>
-
-            {/* Main Content */}
+        <SafeAreaView className="flex-1 bg-gray-900">
             <Tabs
                 screenOptions={{
                     headerShown: false,
-                    tabBarActiveTintColor: ACTIVE_TAB_COLOR,
-                    tabBarInactiveTintColor: INACTIVE_TAB_COLOR,
+                    tabBarShowLabel: false,
                     tabBarStyle: {
-                        backgroundColor: BACKGROUND_COLOR,
-                        borderTopWidth: 1,
-                        borderTopColor: BORDER_COLOR,
-                        height: 75,
-                        paddingBottom: 8,
-                        paddingTop: 8,
-                        elevation: 8,
-                        shadowColor: '#000',
-                        shadowOffset: { width: 0, height: -2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 4,
+                        position: 'absolute',
+                        height: 0, // hide default bar but keep layout
                     },
-                    tabBarLabelStyle: {
-                        fontSize: 11,
-                        fontWeight: '600',
-                        marginTop: 4,
-                        letterSpacing: 0.3,
-                    },
-                    tabBarItemStyle: {
-                        paddingVertical: 6,
-                    },
-                    animation: 'fade',
                 }}
+                tabBar={(props) => <FloatingTabBar {...props} />}
             >
-                {/* Dashboard Tab */}
                 <Tabs.Screen
                     name="dashboard"
-                    options={{
-                        title: 'Dashboard',
-                        tabBarIcon: ({ color, focused }) => (
-                            <View className="items-center justify-center">
-                                <LayoutDashboard
-                                    size={focused ? 26 : 22}
-                                    color={color}
-                                    strokeWidth={focused ? 2.5 : 2}
-                                />
-                                {focused && (
-                                    <View className="w-1 h-1 rounded-full mt-1"
-                                        style={{ backgroundColor: color }}
-                                    />
-                                )}
-                            </View>
-                        ),
-                        tabBarLabel: ({ focused, color }) => (
-                            <Text style={{
-                                fontSize: 11,
-                                fontWeight: focused ? '700' : '600',
-                                color: color,
-                                marginTop: 2,
-                            }}>
-                                Dashboard
-                            </Text>
-                        ),
-                    }}
+                    options={{ title: 'Dashboard' }}
                 />
-
-                {/* Strategies Tab */}
                 <Tabs.Screen
                     name="strategies"
-                    options={{
-                        title: 'Strategies',
-                        tabBarIcon: ({ color, focused }) => (
-                            <View className="items-center justify-center">
-                                <TrendingUp
-                                    size={focused ? 26 : 22}
-                                    color={color}
-                                    strokeWidth={focused ? 2.5 : 2}
-                                />
-                                {focused && (
-                                    <View className="w-1 h-1 rounded-full mt-1"
-                                        style={{ backgroundColor: color }}
-                                    />
-                                )}
-                            </View>
-                        ),
-                        tabBarLabel: ({ focused, color }) => (
-                            <Text style={{
-                                fontSize: 11,
-                                fontWeight: focused ? '700' : '600',
-                                color: color,
-                                marginTop: 2,
-                            }}>
-                                Strategies
-                            </Text>
-                        ),
-                    }}
+                    options={{ title: 'Strategies' }}
                 />
-
-                {/* Portfolio Tab */}
                 <Tabs.Screen
                     name="subscriptions"
-                    options={{
-                        title: 'Portfolio',
-                        tabBarIcon: ({ color, focused }) => (
-                            <View className="items-center justify-center">
-                                <Wallet
-                                    size={focused ? 26 : 22}
-                                    color={color}
-                                    strokeWidth={focused ? 2.5 : 2}
-                                />
-                                {focused && (
-                                    <View className="w-1 h-1 rounded-full mt-1"
-                                        style={{ backgroundColor: color }}
-                                    />
-                                )}
-                            </View>
-                        ),
-                        tabBarLabel: ({ focused, color }) => (
-                            <Text style={{
-                                fontSize: 11,
-                                fontWeight: focused ? '700' : '600',
-                                color: color,
-                                marginTop: 2,
-                            }}>
-                                Portfolio
-                            </Text>
-                        ),
-                    }}
+                    options={{ title: 'Portfolio' }}
                     listeners={({ navigation }) => ({
-                        tabPress: (e) => {
+                        tabPress: () => {
                             navigation.navigate('subscriptions');
                         },
                     })}
                 />
-
-                {/* Profit Logs - Hidden */}
                 <Tabs.Screen
                     name="profit-logs"
-                    options={{
-                        href: null,
-                    }}
+                    options={{ href: null }}
                 />
-
-                {/* Unsubscribe - Hidden */}
                 <Tabs.Screen
                     name="unsubscribe"
-                    options={{
-                        href: null,
-                    }}
+                    options={{ href: null }}
                 />
-
-                {/* Agent Tab */}
                 <Tabs.Screen
                     name="members"
-                    options={{
-                        title: 'Agent',
-                        tabBarIcon: ({ color, focused }) => (
-                            <View className="items-center justify-center">
-                                <Users
-                                    size={focused ? 26 : 22}
-                                    color={color}
-                                    strokeWidth={focused ? 2.5 : 2}
-                                />
-                                {focused && (
-                                    <View className="w-1 h-1 rounded-full mt-1"
-                                        style={{ backgroundColor: color }}
-                                    />
-                                )}
-                            </View>
-                        ),
-                        tabBarLabel: ({ focused, color }) => (
-                            <Text style={{
-                                fontSize: 11,
-                                fontWeight: focused ? '700' : '600',
-                                color: color,
-                                marginTop: 2,
-                            }}>
-                                Agent
-                            </Text>
-                        ),
-                    }}
+                    options={{ title: 'Agent' }}
                     listeners={({ navigation }) => ({
-                        tabPress: (e) => {
+                        tabPress: () => {
                             navigation.navigate('members');
                         },
                     })}
                 />
-
-                {/* Commission - Hidden */}
                 <Tabs.Screen
                     name="commission"
-                    options={{
-                        href: null,
-                    }}
+                    options={{ href: null }}
                 />
             </Tabs>
         </SafeAreaView>
