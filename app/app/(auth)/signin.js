@@ -14,224 +14,98 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/authContext';
-import {
-    Eye,
-    EyeOff,
-    Lock,
-    Mail,
-    AlertCircle,
-} from 'lucide-react-native';
+import { Mail, Lock, AlertCircle, RotateCcw, LogIn, EyeOff, Eye, CheckCircle } from 'lucide-react-native';
 import api from '@/services/api';
+import axios from 'axios';
 
 const SignIn = () => {
     const router = useRouter();
     const { login, clearError, error: authError } = useAuth();
     const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-    const pageConfig = {
-        title: 'Welcome to Nupips User Panel',
-        submitButton: {
-            loading: 'Signing In...',
-            default: 'Continue',
-        },
-    };
-
-    const fieldConfigs = [
-        {
-            name: 'account',
-            label: 'Email',
-            type: 'email',
-            placeholder: 'Enter your email',
-            icon: Mail,
-            validation: 'Email is required',
-            required: true,
-        },
-        {
-            name: 'password',
-            label: 'Password',
-            type: 'password',
-            placeholder: 'Enter your password',
-            icon: Lock,
-            validation: 'Password is required',
-            required: true,
-            hasToggle: true,
-        },
-    ];
-
-    const initialFormData = fieldConfigs.reduce((acc, field) => {
-        acc[field.name] = '';
-        return acc;
-    }, {});
-
-    const [formData, setFormData] = useState(initialFormData);
-    const [passwordVisibility, setPasswordVisibility] = useState({});
+    const [formData, setFormData] = useState({ userInput: '', password: '' });
+    const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
-    const [submitError, setSubmitError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
 
     React.useEffect(() => {
-        const keyboardDidShow = Keyboard.addListener(
-            'keyboardDidShow',
-            () => setKeyboardVisible(true)
-        );
-        const keyboardDidHide = Keyboard.addListener(
-            'keyboardDidHide',
-            () => setKeyboardVisible(false)
-        );
-
+        const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+        const keyboardDidHide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
         return () => {
             keyboardDidShow.remove();
             keyboardDidHide.remove();
         };
     }, []);
 
-    const handleInputChange = (fieldName, value) => {
-        setFormData((prev) => ({ ...prev, [fieldName]: value }));
-        if (errors[fieldName]) {
-            setErrors((prev) => ({ ...prev, [fieldName]: '' }));
-        }
-        if (submitError) {
-            setSubmitError('');
+    const handleInputChange = (name, value) => {
+        setFormData((prev) => ({ ...prev, [name]: value }));
+        if (errors[name]) {
+            setErrors((prev) => ({ ...prev, [name]: '' }));
         }
         if (authError) {
             clearError();
         }
     };
 
-    const togglePasswordVisibility = (fieldName) => {
-        setPasswordVisibility((prev) => ({
-            ...prev,
-            [fieldName]: !prev[fieldName],
-        }));
-    };
-
     const validateForm = () => {
         const newErrors = {};
-
-        fieldConfigs.forEach((field) => {
-            if (field.required && !formData[field.name]?.trim()) {
-                newErrors[field.name] = field.validation;
-            }
-        });
-
-        if (
-            formData.account &&
-            !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.account)
-        ) {
-            newErrors.account = 'Please enter a valid email address';
-        }
-
+        if (!formData.userInput.trim()) newErrors.userInput = 'Username or Email is required';
+        if (!formData.password) newErrors.password = 'Password is required';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async () => {
-        if (!validateForm()) return;
-
+        if (isLoading || !validateForm()) return;
         setIsLoading(true);
-        setSubmitError('');
+        setSuccessMessage('');
+        setErrors({});
 
         try {
-            const response = await api.post('/login', {
-                account: formData.account,
+            console.log("=====================");
+            console.log("proceeding to send login request");
+            // const response = await api.post('/auth/login', {
+            //     userInput: formData.userInput,
+            //     password: formData.password,
+            //     rememberMe,
+            // });
+            const response = await axios.post('/auth/login', {
+                userInput: formData.userInput,
                 password: formData.password,
-            });
-
-            if (response.data.code === 200 && response.data.data) {
-                const { access_token, refresh_token, email } = response.data.data;
-
-                await login({
-                    access_token,
-                    refresh_token,
-                    email: email || formData.account,
-                });
-
-                // REMOVED: router.replace('/(tabs)/dashboard');
-                // MainLayout will handle navigation automatically
-            } else {
-                setSubmitError(
-                    response.data.message || 'Login failed. Please check your credentials.'
-                );
+                rememberMe,
+            }, {
+                'Content-Type': 'application/json',
+            })
+            console.log("login request sent");
+            if (response.data.token) {
+                console.log("login request successful");
+                setSuccessMessage('Login successful! Redirecting...');
+                console.log("logging in using auth context login function");
+                await login(response.data);
             }
+            console.log("login request was unsuccessful");
+            setTimeout(() => router.replace('/(tabs)/dashboard'), 1000);
         } catch (error) {
-            console.error('[SignIn] Login error:', error);
-
-            if (error.response?.data?.code === -1) {
-                setSubmitError(
-                    error.response.data.message || 'User does not exist or password is incorrect'
-                );
-            } else if (error.response?.data?.message) {
-                setSubmitError(error.response.data.message);
-            } else if (error.message === 'Network Error') {
-                setSubmitError(
-                    'Network error. Please check your connection and try again.'
-                );
-            } else {
-                setSubmitError('Login failed. Please try again.');
-            }
+            setErrors({
+                submit: error.response?.data?.message || 'Invalid credentials. Please try again.',
+            });
         } finally {
             setIsLoading(false);
         }
     };
 
-    const renderFormField = (field) => {
-        const Icon = field.icon;
-        const isPassword = field.type === 'password';
-        const showPassword = passwordVisibility[field.name];
-        const hasError = !!errors[field.name];
-
-        return (
-            <View key={field.name} className="mb-5">
-                <Text className="text-xs font-semibold text-gray-700 mb-2 uppercase">
-                    {field.label}
-                </Text>
-
-                <View
-                    className={`flex-row items-center bg-white border rounded-lg px-3 ${hasError ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                >
-                    <Icon size={20} color="#ea580c" />
-                    <TextInput
-                        value={formData[field.name]}
-                        onChangeText={(value) => handleInputChange(field.name, value)}
-                        placeholder={field.placeholder}
-                        placeholderTextColor="#d1d5db"
-                        secureTextEntry={isPassword && !showPassword}
-                        keyboardType={field.type === 'email' ? 'email-address' : 'default'}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        editable={!isLoading}
-                        className="flex-1 py-3 px-3 text-base text-gray-900"
-                    />
-
-                    {field.hasToggle && (
-                        <TouchableOpacity
-                            onPress={() => togglePasswordVisibility(field.name)}
-                            disabled={isLoading}
-                            className="p-1"
-                            activeOpacity={0.7}
-                        >
-                            {showPassword ? (
-                                <Eye size={18} color="#9ca3af" />
-                            ) : (
-                                <EyeOff size={18} color="#9ca3af" />
-                            )}
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                {errors[field.name] && (
-                    <Text className="text-xs text-red-600 mt-1.5">
-                        {errors[field.name]}
-                    </Text>
-                )}
-            </View>
-        );
+    const resetForm = () => {
+        setFormData({ userInput: '', password: '' });
+        setRememberMe(false);
+        setErrors({});
+        setSuccessMessage('');
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-orange-50">
-            <StatusBar barStyle="dark-content" backgroundColor="#fef3c7" />
+        <SafeAreaView className="flex-1 bg-gray-900">
+            <StatusBar barStyle="light-content" backgroundColor="#111827" />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 className="flex-1"
@@ -246,62 +120,126 @@ const SignIn = () => {
                     showsVerticalScrollIndicator={false}
                     bounces={false}
                 >
-                    <View className={`flex-1 justify-center ${keyboardVisible ? 'pb-72' : 'pb-0'}`}>
+                    <View className="w-full max-w-md mx-auto">
                         {/* Header */}
-                        <View className="mb-8">
-                            <Text className="text-2xl font-bold text-amber-900 text-center">
-                                {pageConfig.title}
-                            </Text>
+                        <View className="items-center mb-8">
+                            <View className="w-20 h-20 bg-orange-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-orange-900/50">
+                                <LogIn size={40} color="white" />
+                            </View>
+                            <Text className="text-3xl font-bold text-white mb-2">Nupips User Panel</Text>
+                            <Text className="text-gray-400 text-base">Welcome Back</Text>
                         </View>
 
                         {/* Form Container */}
-                        <View className="bg-white rounded-lg p-6 border border-orange-200">
-                            {/* Submit Error */}
-                            {submitError && (
-                                <View className="mb-4 flex-row items-start bg-red-50 border border-red-300 rounded-lg px-3 py-2.5">
-                                    <AlertCircle size={18} color="#dc2626" />
-                                    <Text className="flex-1 text-xs font-medium text-red-900 ml-2">
-                                        {submitError}
-                                    </Text>
+                        <View className="bg-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-700">
+                            {successMessage && (
+                                <View className="mb-4 p-3 bg-green-900/30 border border-green-700 rounded-lg flex-row items-center">
+                                    <CheckCircle size={18} color="#22c55e" />
+                                    <Text className="text-sm text-green-400 ml-2 flex-1">{successMessage}</Text>
                                 </View>
                             )}
 
-                            {/* Auth Error */}
-                            {authError && (
-                                <View className="mb-4 flex-row items-start bg-red-50 border border-red-300 rounded-lg px-3 py-2.5">
-                                    <AlertCircle size={18} color="#dc2626" />
-                                    <Text className="flex-1 text-xs font-medium text-red-900 ml-2">
-                                        {authError}
-                                    </Text>
+                            {errors.submit && (
+                                <View className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg flex-row items-center">
+                                    <AlertCircle size={18} color="#ef4444" />
+                                    <Text className="text-sm text-red-400 ml-2 flex-1">{errors.submit}</Text>
                                 </View>
                             )}
 
-                            {/* Form Fields */}
-                            {fieldConfigs.map(renderFormField)}
+                            {/* Username/Email Input */}
+                            <View className="mb-4">
+                                <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">
+                                    Username or Email
+                                </Text>
+                                <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
+                                    <Mail size={20} color="#ea580c" />
+                                    <TextInput
+                                        value={formData.userInput}
+                                        onChangeText={(value) => handleInputChange('userInput', value)}
+                                        placeholder="Enter Username or Email"
+                                        placeholderTextColor="#6b7280"
+                                        className="flex-1 py-3 px-3 text-base text-white"
+                                    />
+                                </View>
+                                {errors.userInput && (
+                                    <Text className="text-xs text-red-400 mt-1 ml-1">{errors.userInput}</Text>
+                                )}
+                            </View>
 
-                            {/* Submit Button */}
+                            {/* Password Input */}
+                            <View className="mb-4">
+                                <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">
+                                    Password
+                                </Text>
+                                <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
+                                    <Lock size={20} color="#ea580c" />
+                                    <TextInput
+                                        value={formData.password}
+                                        onChangeText={(value) => handleInputChange('password', value)}
+                                        placeholder="Enter Password"
+                                        placeholderTextColor="#6b7280"
+                                        secureTextEntry={!showPassword}
+                                        className="flex-1 py-3 px-3 text-base text-white"
+                                    />
+                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                        {showPassword ? (
+                                            <Eye size={20} color="#9ca3af" />
+                                        ) : (
+                                            <EyeOff size={20} color="#9ca3af" />
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                                {errors.password && (
+                                    <Text className="text-xs text-red-400 mt-1 ml-1">{errors.password}</Text>
+                                )}
+                            </View>
+
+                            {/* Remember Me */}
                             <TouchableOpacity
-                                onPress={handleSubmit}
-                                disabled={isLoading}
-                                activeOpacity={0.8}
-                                className={`mt-6 py-3.5 px-4 rounded-lg items-center justify-center ${isLoading ? 'bg-orange-400' : 'bg-orange-600'
-                                    }`}
+                                onPress={() => setRememberMe(!rememberMe)}
+                                className="flex-row items-center mb-6"
                             >
-                                <View className="flex-row items-center">
-                                    {isLoading && (
-                                        <ActivityIndicator
-                                            size="small"
-                                            color="#ffffff"
-                                            style={{ marginRight: 8 }}
-                                        />
-                                    )}
-                                    <Text className="text-white text-base font-bold">
-                                        {isLoading
-                                            ? pageConfig.submitButton.loading
-                                            : pageConfig.submitButton.default}
-                                    </Text>
-                                </View>
+                                <View className={`w-5 h-5 rounded border-2 mr-2 ${rememberMe ? 'bg-orange-600 border-orange-600' : 'border-gray-600'}`} />
+                                <Text className="text-sm text-gray-300">Remember me</Text>
                             </TouchableOpacity>
+
+                            {/* Action Buttons */}
+                            <View className="flex-row gap-3">
+                                <TouchableOpacity
+                                    onPress={resetForm}
+                                    className="flex-1 px-6 py-3.5 bg-gray-700 rounded-lg items-center justify-center border border-gray-600 flex-row"
+                                >
+                                    <RotateCcw size={18} color="#d1d5db" />
+                                    <Text className="text-gray-200 font-semibold text-sm ml-2">Reset</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={handleSubmit}
+                                    disabled={isLoading}
+                                    className="flex-1 px-6 py-3.5 bg-orange-600 rounded-lg items-center justify-center disabled:opacity-50 flex-row shadow-lg shadow-orange-900/50"
+                                >
+                                    {isLoading ? (
+                                        <ActivityIndicator size="small" color="#ffffff" />
+                                    ) : (
+                                        <>
+                                            <LogIn size={18} color="white" />
+                                            <Text className="text-white font-semibold text-sm ml-2">Sign In</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+
+                        {/* Footer */}
+                        <View className="items-center mt-6">
+                            <Text className="text-gray-400 text-sm">
+                                Don't have an account?{' '}
+                                <Text
+                                    onPress={() => router.push('/(auth)/signup')}
+                                    className="text-orange-500 font-semibold"
+                                >
+                                    Register Now
+                                </Text>
+                            </Text>
                         </View>
                     </View>
                 </ScrollView>
