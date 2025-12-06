@@ -16,7 +16,6 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/authContext';
 import { Mail, Lock, AlertCircle, RotateCcw, LogIn, EyeOff, Eye, CheckCircle } from 'lucide-react-native';
 import api from '@/services/api';
-import axios from 'axios';
 
 const SignIn = () => {
     const router = useRouter();
@@ -66,18 +65,11 @@ const SignIn = () => {
         try {
             console.log("=====================");
             console.log("proceeding to send login request");
-            // const response = await api.post('/auth/login', {
-            //     userInput: formData.userInput,
-            //     password: formData.password,
-            //     rememberMe,
-            // });
-            const response = await axios.post('/auth/login', {
+            const response = await api.post('/auth/login', {
                 userInput: formData.userInput,
                 password: formData.password,
                 rememberMe,
-            }, {
-                'Content-Type': 'application/json',
-            })
+            });
             console.log("login request sent");
             if (response.data.token) {
                 console.log("login request successful");
