@@ -7,6 +7,7 @@ import {
     RefreshControl,
     ActivityIndicator,
     TouchableOpacity,
+    FlatList,
 } from 'react-native';
 import { useAuth } from '@/context/authContext';
 import api from '@/services/api';
@@ -27,13 +28,25 @@ import {
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 
+// Horizontal Slider Card Component
+const HorizontalCard = ({ title, value, icon, color = 'gray' }) => (
+    <View className={`bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 w-48 mr-3`}>
+        <View className="flex-row items-center justify-between mb-3">
+            {icon}
+        </View>
+        <Text className="text-gray-400 text-sm mb-1">{title}</Text>
+        <Text className={`text-xl font-light ${color}`}>{value}</Text>
+    </View>
+);
+
+// MiniChart Component (same as before)
 const MiniChart = ({ title, data, color = 'gray' }) => {
     const max = Math.max(...data.map((d) => d.value), 1);
     const colorMap = {
         gray: 'bg-gray-700/30',
         green: 'bg-green-600',
         blue: 'bg-blue-600',
-        orange: 'bg-orange-600', // Added orange accent
+        orange: 'bg-orange-600',
     };
     return (
         <View className="flex-1 min-w-0">
@@ -114,6 +127,34 @@ const Dashboard = () => {
         chartData = {},
     } = data;
 
+    // KPI Cards for horizontal scroll
+    const kpiCards = [
+        {
+            title: 'Wallet Balance',
+            value: `$${walletBalance.toFixed(2)}`,
+            icon: <Wallet size={24} color="#ea580c" />,
+            color: 'text-white',
+        },
+        {
+            title: 'Total Deposits',
+            value: `$${(financials.totalDeposits || 0).toFixed(2)}`,
+            icon: <TrendingUp size={24} color="#ea580c" />,
+            color: 'text-white',
+        },
+        {
+            title: 'Total Withdrawals',
+            value: `$${(financials.totalWithdrawals || 0).toFixed(2)}`,
+            icon: <TrendingDown size={24} color="#ea580c" />,
+            color: 'text-white',
+        },
+        {
+            title: 'Net Balance',
+            value: `$${(financials.netBalance || 0).toFixed(2)}`,
+            icon: <DollarSign size={24} color="#ea580c" />,
+            color: financials.netBalance >= 0 ? 'text-green-500' : 'text-red-500',
+        },
+    ];
+
     return (
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
@@ -124,8 +165,8 @@ const Dashboard = () => {
                 className="flex-1"
                 refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
             >
-                <View className="p-4 pb-24">
-                    <View className="flex-row items-center justify-between mb-8">
+                <View className="py-4 pb-24">
+                    <View className="mx-4 flex-row items-center justify-between mb-8">
                         <View>
                             <Text className="text-2xl font-light text-white">
                                 Welcome back, {user?.name?.split(' ')[0] || 'User'}!
@@ -137,50 +178,27 @@ const Dashboard = () => {
                         </TouchableOpacity>
                     </View>
 
-                    {/* KPI Cards (2 columns) */}
-                    <View className="flex-row mb-5">
-                        <View className="flex-1 mr-2 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
-                            <View className="flex-row items-center justify-between mb-3">
-                                <Wallet size={24} color="#ea580c" />
-                            </View>
-                            <Text className="text-gray-400 text-sm mb-1">Wallet Balance</Text>
-                            <Text className="text-xl font-light text-white">${walletBalance.toFixed(2)}</Text>
-                        </View>
-                        <View className="flex-1 ml-3 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
-                            <View className="flex-row items-center justify-between mb-3">
-                                <TrendingUp size={24} color="#ea580c" />
-                            </View>
-                            <Text className="text-gray-400 text-sm mb-1">Total Deposits</Text>
-                            <Text className="text-xl font-light text-white">
-                                ${(financials.totalDeposits || 0).toFixed(2)}
-                            </Text>
-                        </View>
-                    </View>
-                    <View className="flex-row mb-6">
-                        <View className="flex-1 mr-2 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
-                            <View className="flex-row items-center justify-between mb-3">
-                                <TrendingDown size={24} color="#ea580c" />
-                            </View>
-                            <Text className="text-gray-400 text-sm mb-1">Total Withdrawals</Text>
-                            <Text className="text-xl font-light text-white">
-                                ${(financials.totalWithdrawals || 0).toFixed(2)}
-                            </Text>
-                        </View>
-                        <View className="flex-1 ml-3 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
-                            <View className="flex-row items-center justify-between mb-3">
-                                <DollarSign size={24} color="#ea580c" />
-                            </View>
-                            <Text className="text-gray-400 text-sm mb-1">Net Balance</Text>
-                            <Text
-                                className={`text-xl font-light ${financials.netBalance >= 0 ? 'text-green-500' : 'text-red-500'}`}
-                            >
-                                ${(financials.netBalance || 0).toFixed(2)}
-                            </Text>
-                        </View>
+                    {/* Horizontal KPI Cards */}
+                    <View className="ml-4 mb-6">
+                        <Text className="text-lg font-light text-white mb-2">Key Metrics</Text>
+                        <FlatList
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            data={kpiCards}
+                            renderItem={({ item }) => (
+                                <HorizontalCard
+                                    title={item.title}
+                                    value={item.value}
+                                    icon={item.icon}
+                                    color={item.color}
+                                />
+                            )}
+                            keyExtractor={(item, index) => index.toString()}
+                        />
                     </View>
 
                     {/* Performance Charts */}
-                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
+                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
                         <View className="flex-row items-center justify-between mb-4">
                             <Text className="text-xl font-light text-white">Performance Overview</Text>
                             <BarChart3 size={20} color="#ea580c" />
@@ -221,7 +239,7 @@ const Dashboard = () => {
                     </View>
 
                     {/* Trading Performance */}
-                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
+                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
                         <View className="flex-row items-center justify-between mb-5">
                             <View className="flex-row gap-2 items-center">
                                 <Activity size={24} color="#ea580c" />
@@ -259,7 +277,7 @@ const Dashboard = () => {
                     </View>
 
                     {/* Referral Network */}
-                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
+                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
                         <View className="flex-row items-center justify-between mb-5">
                             <View className="flex-row gap-2 items-center">
                                 <Activity size={24} color="#ea580c" />
@@ -297,7 +315,7 @@ const Dashboard = () => {
                     </View>
 
                     {/* Pending Transactions */}
-                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
+                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
                         <Text className="text-sm font-light text-white mb-4">Pending</Text>
                         <View className="p-3 bg-gray-900 rounded-lg mb-3">
                             <View className="flex-row items-center justify-between">
@@ -318,7 +336,7 @@ const Dashboard = () => {
                     </View>
 
                     {/* Income Breakdown */}
-                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
+                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
                         <View className="flex-row items-center justify-between mb-4">
                             <Text className="text-sm font-light text-white">Income Breakdown</Text>
                             <PieChart size={16} color="#ea580c" />
@@ -355,7 +373,7 @@ const Dashboard = () => {
                     </View>
 
                     {/* Recent Activity */}
-                    <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
+                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
                         <Text className="text-sm font-light text-white mb-4">Recent Activity</Text>
                         <View>
                             {recentActivity && recentActivity.length > 0 ? (
@@ -381,11 +399,7 @@ const Dashboard = () => {
                                                 <Text className="text-xs text-gray-400">{activity.date}</Text>
                                             </View>
                                         </View>
-                                        <Text
-                                            className={`text-sm font-light text-white`}
-                                        >
-                                            {activity.value}
-                                        </Text>
+                                        <Text className={`text-sm font-light text-white`}>{activity.value}</Text>
                                     </View>
                                 ))
                             ) : (
