@@ -78,11 +78,6 @@ const sidebarLinks = [
     icon: Users,
   },
   {
-    name: "Nupips Incomes",
-    href: "/nupips-incomes",
-    icon: Coins,
-  },
-  {
     name: "Shop",
     href: "/shop",
     icon: ShoppingBag,
@@ -98,18 +93,19 @@ const sidebarLinks = [
     subItems: [
       { name: "Authentication", href: "/gtcfx/auth" },
       { name: "Dashboard", href: "/gtcfx/dashboard" },
+      { name: "Profit Logs", href: "/gtcfx/profit-logs" },
+      { name: "Agent Members", href: "/gtcfx/agent/members" },
+      //   { name: "Unsubscribe", href: "/gtcfx/unsubscribe" },
+      //   { name: "Commission Report", href: "/gtcfx/agent/commission" },
       //   { name: "Strategies", href: "/gtcfx/strategies" },
       //   { name: "My Subscriptions", href: "/gtcfx/subscriptions" },
-      { name: "Profit Logs", href: "/gtcfx/profit-logs" },
-      //   { name: "Unsubscribe", href: "/gtcfx/unsubscribe" },
-      { name: "Agent Members", href: "/gtcfx/agent/members" },
-      //   { name: "Commission Report", href: "/gtcfx/agent/commission" },
     ],
   },
   {
     name: "Wallet",
     icon: Wallet,
     subItems: [
+      { name: "Nupips Incomes", href: "/nupips-incomes" },
       { name: "Deposit", href: "/deposit" },
       { name: "Withdrawal", href: "/withdrawal" },
       { name: "Internal Transfer", href: "/transfer" },

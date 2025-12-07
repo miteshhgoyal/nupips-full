@@ -2,7 +2,16 @@ import React from 'react';
 import { View, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/context/authContext';
-import { LogOut, LayoutDashboard, TrendingUp, Wallet, Users } from 'lucide-react-native';
+import {
+    LogOut,
+    LayoutDashboard,
+    TrendingUp,
+    Wallet,
+    Users,
+    Home,
+    ShoppingBag,
+    Book
+} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,14 +27,14 @@ const TAB_BAR_CONFIG = {
     barHeight: 68,
     borderRadius: 24,
     itemMinWidth: 72,
-    itemGap: 8, // <== change this for spacing between tabs
+    itemGap: 8,
 };
 
 const TAB_CONFIG = [
-    { name: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { name: 'strategies', label: 'Strategies', icon: TrendingUp },
-    { name: 'subscriptions', label: 'Portfolio', icon: Wallet },
-    { name: 'members', label: 'Agent', icon: Users },
+    { name: 'dashboard', label: 'Dashboard', icon: Home },
+    { name: 'nupips-team', label: 'Team', icon: Users },
+    { name: 'shop', label: 'Shop', icon: ShoppingBag },
+    { name: 'learn', label: 'Learn', icon: Book },
 ];
 
 function FloatingTabBar({ state, descriptors, navigation }) {
@@ -137,11 +146,6 @@ export default function TabsLayout() {
     const { user, logout } = useAuth();
     const router = useRouter();
 
-    // const handleLogout = async () => {
-    //   await logout();
-    //   router.push('/(auth)/signin');
-    // };
-
     return (
         <SafeAreaView className="flex-1 bg-gray-900">
             <Tabs
@@ -150,48 +154,73 @@ export default function TabsLayout() {
                     tabBarShowLabel: false,
                     tabBarStyle: {
                         position: 'absolute',
-                        height: 0, // hide default bar but keep layout
+                        height: 0,
                     },
                 }}
                 tabBar={(props) => <FloatingTabBar {...props} />}
             >
+                {/* Main Tab Screens */}
                 <Tabs.Screen
                     name="dashboard"
                     options={{ title: 'Dashboard' }}
                 />
                 <Tabs.Screen
-                    name="strategies"
-                    options={{ title: 'Strategies' }}
+                    name="nupips-team"
+                    options={{ title: 'Nupips Team' }}
                 />
                 <Tabs.Screen
-                    name="subscriptions"
-                    options={{ title: 'Portfolio' }}
-                    listeners={({ navigation }) => ({
-                        tabPress: () => {
-                            navigation.navigate('subscriptions');
-                        },
-                    })}
+                    name="shop"
+                    options={{ title: 'Shop' }}
                 />
                 <Tabs.Screen
-                    name="profit-logs"
-                    options={{ href: null }}
+                    name="learn"
+                    options={{ title: 'Learn' }}
+                />
+
+                {/* GTC FX Folder - Group Layout */}
+                <Tabs.Screen
+                    name="gtcfx"
+                    options={{
+                        href: null,
+                        title: 'GTC FX'
+                    }}
+                />
+
+                {/* Wallet Screens (Hidden from tab bar) */}
+                <Tabs.Screen
+                    name="nupips-incomes"
+                    options={{
+                        href: null,
+                        title: 'Nupips Incomes'
+                    }}
                 />
                 <Tabs.Screen
-                    name="unsubscribe"
-                    options={{ href: null }}
+                    name="deposit"
+                    options={{
+                        href: null,
+                        title: 'Deposit'
+                    }}
                 />
                 <Tabs.Screen
-                    name="members"
-                    options={{ title: 'Agent' }}
-                    listeners={({ navigation }) => ({
-                        tabPress: () => {
-                            navigation.navigate('members');
-                        },
-                    })}
+                    name="withdrawal"
+                    options={{
+                        href: null,
+                        title: 'Withdrawal'
+                    }}
                 />
                 <Tabs.Screen
-                    name="commission"
-                    options={{ href: null }}
+                    name="transfer"
+                    options={{
+                        href: null,
+                        title: 'Internal Transfer'
+                    }}
+                />
+                <Tabs.Screen
+                    name="transaction-history"
+                    options={{
+                        href: null,
+                        title: 'Transaction History'
+                    }}
                 />
             </Tabs>
         </SafeAreaView>
