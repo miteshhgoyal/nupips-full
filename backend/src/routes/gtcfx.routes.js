@@ -369,69 +369,84 @@ router.post('/webhook/user-tree', async (req, res) => {
     try {
         console.log('📥 FULL USER TREE received from GTC');
 
+        // Step 1: Verify signature
         if (!verifyGtcSignature(req)) {
             return res.status(401).json({ success: false, message: 'Invalid signature' });
         }
 
         const { members } = req.body;
 
+        // Step 2: Validate payload
         if (!Array.isArray(members) || members.length === 0) {
             return res.status(400).json({ success: false, message: 'members[] array is required' });
         }
 
-        // res.status(200).json({
-        //     success: true,
-        //     message: 'User tree received, processing started',
-        //     count: members.length,
-        //     timestamp: new Date().toISOString(),
-        // });
+        // Step 3: Acknowledge immediately (best practice for bulk operations)
+        res.status(200).json({
+            success: true,
+            message: 'User tree received, processing started',
+            count: members.length,
+            timestamp: new Date().toISOString(),
+        });
 
+        // Step 4: Process asynchronously in background
         let processed = 0;
         let skipped = 0;
+        let errors = 0;
 
         for (const m of members) {
-            const {
-                gtcUserId,
-                email,
-                username,
-                name,
-                parentGtcUserId,
-                level,
-                uplineChain,
-                joinedAt,
-                rawData,
-            } = m;
+            try {
+                const {
+                    gtcUserId,
+                    email,
+                    username,
+                    name,
+                    parentGtcUserId,
+                    level,
+                    uplineChain,
+                    joinedAt,
+                    rawData,
+                } = m;
 
-            if (!gtcUserId || !email || !username) {
-                console.warn('⚠️ Skipping member with missing fields:', m);
-                skipped++;
-                continue;
-            }
+                if (!gtcUserId || !email || !username) {
+                    console.warn('⚠️ Skipping member with missing fields:', m);
+                    skipped++;
+                    continue;
+                }
 
-            await GTCMember.findOneAndUpdate(
-                { gtcUserId },
-                {
-                    $set: {
-                        email,
-                        username,
-                        name: name || null,
-                        parentGtcUserId: parentGtcUserId || null,
-                        level: level || 1,
-                        uplineChain: uplineChain || [],
-                        rawData: rawData || {},
-                        joinedAt: joinedAt ? new Date(Number(joinedAt) * 1000) : new Date(),
-                        lastUpdated: new Date(),
+                await GTCMember.findOneAndUpdate(
+                    { gtcUserId },
+                    {
+                        $set: {
+                            email,
+                            username,
+                            name: name || null,
+                            parentGtcUserId: parentGtcUserId || null,
+                            level: level || 1,
+                            uplineChain: uplineChain || [],
+                            rawData: rawData || {},
+                            joinedAt: joinedAt ? new Date(Number(joinedAt) * 1000) : new Date(),
+                            lastUpdated: new Date(),
+                        },
                     },
-                },
-                { upsert: true, new: true }
-            );
-            processed++;
+                    { upsert: true, new: true }
+                );
+                processed++;
+            } catch (memberError) {
+                console.error(`❌ Error processing member ${m.gtcUserId}:`, memberError);
+                errors++;
+            }
         }
 
-        console.log(`✅ Processed ${processed} members, skipped ${skipped}`);
+        console.log(`✅ User tree processing complete: ${processed} processed, ${skipped} skipped, ${errors} errors`);
 
     } catch (error) {
         console.error('❌ Error processing FULL USER TREE:', error);
+
+        // Only send error response if we haven't sent success yet
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, message: 'Internal server error' });
+        }
     }
 });
 
