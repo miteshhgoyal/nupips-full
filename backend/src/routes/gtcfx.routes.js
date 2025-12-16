@@ -379,15 +379,13 @@ router.post('/webhook/user-tree', async (req, res) => {
             return res.status(400).json({ success: false, message: 'members[] array is required' });
         }
 
-        // Acknowledge immediately
-        res.status(200).json({
-            success: true,
-            message: 'User tree received, processing started',
-            count: members.length,
-            timestamp: new Date().toISOString(),
-        });
+        // res.status(200).json({
+        //     success: true,
+        //     message: 'User tree received, processing started',
+        //     count: members.length,
+        //     timestamp: new Date().toISOString(),
+        // });
 
-        // Process in background
         let processed = 0;
         let skipped = 0;
 
@@ -421,7 +419,7 @@ router.post('/webhook/user-tree', async (req, res) => {
                         level: level || 1,
                         uplineChain: uplineChain || [],
                         rawData: rawData || {},
-                        joinedAt: joinedAt ? new Date(joinedAt) : new Date(),
+                        joinedAt: joinedAt ? new Date(Number(joinedAt) * 1000) : new Date(),
                         lastUpdated: new Date(),
                     },
                 },
@@ -468,11 +466,11 @@ router.post('/webhook/member-update', async (req, res) => {
         }
 
         // Acknowledge immediately
-        res.status(200).json({
-            success: true,
-            message: 'Member update received successfully',
-            timestamp: new Date().toISOString(),
-        });
+        // res.status(200).json({
+        //     success: true,
+        //     message: 'Member update received successfully',
+        //     timestamp: new Date().toISOString(),
+        // });
 
         // Save/update member
         await GTCMember.findOneAndUpdate(
@@ -486,7 +484,7 @@ router.post('/webhook/member-update', async (req, res) => {
                     level: level || 1,
                     uplineChain: uplineChain || [],
                     rawData: rawData || {},
-                    joinedAt: joinedAt ? new Date(joinedAt) : new Date(),
+                    joinedAt: joinedAt ? new Date(Number(joinedAt) * 1000) : new Date(),
                     lastUpdated: new Date(),
                 },
             },
@@ -495,8 +493,15 @@ router.post('/webhook/member-update', async (req, res) => {
 
         console.log(`✅ Updated/created member: ${gtcUserId}`);
 
+        res.status(200).json({
+            success: true,
+            message: 'Member update processed successfully',
+            timestamp: new Date().toISOString(),
+        });
+
     } catch (error) {
         console.error('❌ Error processing MEMBER UPDATE:', error);
+        res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
 
