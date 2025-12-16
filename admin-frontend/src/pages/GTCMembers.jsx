@@ -630,14 +630,14 @@ const GTCMembers = () => {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                          <div className="w-10 h-10 shrink-0 bg-blue-100 rounded-full flex items-center justify-center">
                             <User className="w-5 h-5 text-blue-600" />
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">
+                            <p className="font-medium text-gray-900 text-nowrap">
                               {member.name || "N/A"}
                             </p>
-                            <p className="text-xs font-mono text-gray-500">
+                            <p className="text-xs font-mono text-gray-500 text-nowrap">
                               @{member.username}
                             </p>
                           </div>
@@ -646,7 +646,7 @@ const GTCMembers = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <Hash className="w-4 h-4 text-gray-400" />
-                          <span className="font-mono text-sm text-gray-900">
+                          <span className="font-mono text-sm text-gray-900 text-nowrap">
                             {member.gtcUserId}
                           </span>
                         </div>
@@ -654,13 +654,13 @@ const GTCMembers = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Mail className="w-4 h-4 text-gray-400" />
-                          <span className="truncate max-w-[200px]">
+                          <span className="truncate max-w-[200px] text-nowrap">
                             {member.email}
                           </span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 text-nowrap">
                           <Layers className="w-3 h-3" />
                           Level {member.level}
                         </span>
