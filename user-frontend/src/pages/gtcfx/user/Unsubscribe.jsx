@@ -1,4 +1,4 @@
-    // pages/gtcfx/user/Unsubscribe.jsx
+// pages/gtcfx/user/Unsubscribe.jsx
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -506,7 +506,7 @@ const GTCFxUnsubscribe = () => {
                   {/* Info Box */}
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                     <p className="text-xs text-amber-800 leading-relaxed">
-                      ⚠️ <strong>Important:</strong> Withdrawing all funds will
+                      <strong>Important:</strong> Withdrawing all funds will
                       unsubscribe you from this strategy. You can resubscribe
                       anytime.
                     </p>

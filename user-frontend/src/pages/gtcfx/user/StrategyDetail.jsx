@@ -404,7 +404,7 @@ const GTCFxStrategyDetail = () => {
               {/* Info Box */}
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
                 <p className="text-xs text-amber-800 leading-relaxed">
-                  ⚠️ By subscribing, you authorize this strategy to manage your
+                  By subscribing, you authorize this strategy to manage your
                   funds with the agreed-upon fee structure.
                 </p>
               </div>

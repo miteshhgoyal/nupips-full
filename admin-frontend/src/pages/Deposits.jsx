@@ -959,7 +959,7 @@ const AdminDeposits = () => {
               {selectedDeposit.status === "completed" && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
                   <p className="text-xs text-red-700">
-                    ⚠️ This deposit is completed and cannot be deleted.
+                    This deposit is completed and cannot be deleted.
                   </p>
                 </div>
               )}

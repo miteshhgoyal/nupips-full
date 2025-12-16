@@ -990,6 +990,10 @@ router.get('/users/:id/tree', authenticateToken, async (req, res) => {
 // 1. Get all GTC members with filtering
 router.get('/gtc-members', authenticateToken, async (req, res) => {
     try {
+        console.log('='.repeat(80));
+        console.log('[GTC MEMBERS] Fetching all GTC members with filters');
+        console.log('[GTC MEMBERS] Query params:', req.query);
+
         const { level, hasParent, search, page = 1, limit = 20 } = req.query;
 
         // Build filter
@@ -1013,8 +1017,11 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
             ];
         }
 
+        console.log('[GTC MEMBERS] Applied filter:', JSON.stringify(filter, null, 2));
+
         // Pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
+        console.log('[GTC MEMBERS] Pagination - Page:', page, 'Limit:', limit, 'Skip:', skip);
 
         const [members, total, stats] = await Promise.all([
             GTCMember.find(filter)
@@ -1046,6 +1053,8 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
             ])
         ]);
 
+        console.log('[GTC MEMBERS] Query completed - Found:', members.length, 'Total:', total);
+
         // Format stats
         const formattedStats = {
             total: stats[0].totalMembers[0]?.count || 0,
@@ -1054,6 +1063,10 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
             avgLevel: stats[0].avgLevel[0]?.avg || 0,
             maxLevel: stats[0].maxLevel[0]?.max || 0
         };
+
+        console.log('[GTC MEMBERS] Stats:', formattedStats);
+        console.log('[GTC MEMBERS] Request completed successfully');
+        console.log('='.repeat(80));
 
         res.status(200).json({
             success: true,
@@ -1067,7 +1080,12 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get GTC members error:', error);
+        console.error('='.repeat(80));
+        console.error('[GTC MEMBERS] ERROR - Failed to fetch members');
+        console.error('[GTC MEMBERS] Error details:', error.message);
+        console.error('[GTC MEMBERS] Stack trace:', error.stack);
+        console.error('='.repeat(80));
+
         res.status(500).json({
             success: false,
             message: 'Failed to fetch GTC members',
@@ -1079,31 +1097,51 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
 // 2. Get single GTC member (supports both MongoDB _id and gtcUserId)
 router.get('/gtc-members/:id', authenticateToken, async (req, res) => {
     try {
+        console.log('='.repeat(80));
+        console.log('[GTC MEMBER] Fetching single member');
+
         const { id } = req.params;
+        console.log('[GTC MEMBER] Requested ID:', id);
 
         let member;
+        let searchMethod;
 
         // Check if it's a valid MongoDB ObjectId
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            searchMethod = 'MongoDB ObjectId';
+            console.log('[GTC MEMBER] Searching by MongoDB _id');
             member = await GTCMember.findById(id).lean();
         } else {
-            // Otherwise treat it as gtcUserId
+            searchMethod = 'GTC User ID';
+            console.log('[GTC MEMBER] Searching by gtcUserId');
             member = await GTCMember.findOne({ gtcUserId: id }).lean();
         }
 
         if (!member) {
+            console.log('[GTC MEMBER] Member not found using:', searchMethod);
+            console.log('='.repeat(80));
             return res.status(404).json({
                 success: false,
                 message: 'GTC member not found'
             });
         }
 
+        console.log('[GTC MEMBER] Member found:', member.gtcUserId, '-', member.username);
+        console.log('[GTC MEMBER] Search method used:', searchMethod);
+        console.log('[GTC MEMBER] Request completed successfully');
+        console.log('='.repeat(80));
+
         res.status(200).json({
             success: true,
             data: member
         });
     } catch (error) {
-        console.error('Get GTC member error:', error);
+        console.error('='.repeat(80));
+        console.error('[GTC MEMBER] ERROR - Failed to fetch member');
+        console.error('[GTC MEMBER] Error details:', error.message);
+        console.error('[GTC MEMBER] Stack trace:', error.stack);
+        console.error('='.repeat(80));
+
         res.status(500).json({
             success: false,
             message: 'Failed to fetch GTC member',
@@ -1115,32 +1153,50 @@ router.get('/gtc-members/:id', authenticateToken, async (req, res) => {
 // 3. Get GTC member's team tree (supports both MongoDB _id and gtcUserId)
 router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
     try {
+        console.log('='.repeat(80));
+        console.log('[GTC MEMBER TREE] Fetching member tree');
+
         const { id } = req.params;
+        console.log('[GTC MEMBER TREE] Root ID:', id);
 
         let rootMember;
+        let searchMethod;
 
         // Check if it's a valid MongoDB ObjectId
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            searchMethod = 'MongoDB ObjectId';
+            console.log('[GTC MEMBER TREE] Searching root by MongoDB _id');
             rootMember = await GTCMember.findById(id).lean();
         } else {
-            // Otherwise treat it as gtcUserId
+            searchMethod = 'GTC User ID';
+            console.log('[GTC MEMBER TREE] Searching root by gtcUserId');
             rootMember = await GTCMember.findOne({ gtcUserId: id }).lean();
         }
 
         if (!rootMember) {
+            console.log('[GTC MEMBER TREE] Root member not found using:', searchMethod);
+            console.log('='.repeat(80));
             return res.status(404).json({
                 success: false,
                 message: 'GTC member not found'
             });
         }
 
+        console.log('[GTC MEMBER TREE] Root member found:', rootMember.gtcUserId, '-', rootMember.username);
+        console.log('[GTC MEMBER TREE] Building tree structure...');
+
         // Recursive function to build tree
         async function buildTree(gtcUserId, level = 1, maxLevel = 10) {
-            if (level > maxLevel) return [];
+            if (level > maxLevel) {
+                console.log('[GTC MEMBER TREE] Max level reached at level:', level);
+                return [];
+            }
 
             const children = await GTCMember.find({
                 parentGtcUserId: gtcUserId
             }).lean();
+
+            console.log('[GTC MEMBER TREE] Level', level, '- Found', children.length, 'children for gtcUserId:', gtcUserId);
 
             const tree = [];
             for (const child of children) {
@@ -1155,6 +1211,11 @@ router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
 
         const tree = await buildTree(rootMember.gtcUserId);
 
+        console.log('[GTC MEMBER TREE] Tree built successfully');
+        console.log('[GTC MEMBER TREE] Total direct children:', tree.length);
+        console.log('[GTC MEMBER TREE] Request completed successfully');
+        console.log('='.repeat(80));
+
         res.status(200).json({
             success: true,
             data: {
@@ -1163,7 +1224,12 @@ router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Get GTC member tree error:', error);
+        console.error('='.repeat(80));
+        console.error('[GTC MEMBER TREE] ERROR - Failed to fetch member tree');
+        console.error('[GTC MEMBER TREE] Error details:', error.message);
+        console.error('[GTC MEMBER TREE] Stack trace:', error.stack);
+        console.error('='.repeat(80));
+
         res.status(500).json({
             success: false,
             message: 'Failed to fetch GTC member tree',
@@ -1175,23 +1241,38 @@ router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
 // 4. Get GTC member by GTC User ID (explicit lookup - kept for backward compatibility)
 router.get('/gtc-members/lookup/:gtcUserId', authenticateToken, async (req, res) => {
     try {
+        console.log('='.repeat(80));
+        console.log('[GTC MEMBER LOOKUP] Explicit gtcUserId lookup');
+        console.log('[GTC MEMBER LOOKUP] GTC User ID:', req.params.gtcUserId);
+
         const member = await GTCMember.findOne({
             gtcUserId: req.params.gtcUserId
         }).lean();
 
         if (!member) {
+            console.log('[GTC MEMBER LOOKUP] Member not found with gtcUserId:', req.params.gtcUserId);
+            console.log('='.repeat(80));
             return res.status(404).json({
                 success: false,
                 message: 'GTC member not found'
             });
         }
 
+        console.log('[GTC MEMBER LOOKUP] Member found:', member.username, '-', member.email);
+        console.log('[GTC MEMBER LOOKUP] Request completed successfully');
+        console.log('='.repeat(80));
+
         res.status(200).json({
             success: true,
             data: member
         });
     } catch (error) {
-        console.error('Lookup GTC member error:', error);
+        console.error('='.repeat(80));
+        console.error('[GTC MEMBER LOOKUP] ERROR - Failed to lookup member');
+        console.error('[GTC MEMBER LOOKUP] Error details:', error.message);
+        console.error('[GTC MEMBER LOOKUP] Stack trace:', error.stack);
+        console.error('='.repeat(80));
+
         res.status(500).json({
             success: false,
             message: 'Failed to lookup GTC member',
@@ -1203,6 +1284,9 @@ router.get('/gtc-members/lookup/:gtcUserId', authenticateToken, async (req, res)
 // 5. Get GTC member statistics
 router.get('/gtc-members/stats/overview', authenticateToken, async (req, res) => {
     try {
+        console.log('='.repeat(80));
+        console.log('[GTC STATS] Fetching statistics overview');
+
         const stats = await GTCMember.aggregate([
             {
                 $facet: {
@@ -1228,18 +1312,32 @@ router.get('/gtc-members/stats/overview', authenticateToken, async (req, res) =>
             }
         ]);
 
+        const formattedData = {
+            total: stats[0].total[0]?.count || 0,
+            byLevel: stats[0].byLevel,
+            withParent: stats[0].withParent[0]?.count || 0,
+            rootMembers: stats[0].rootMembers[0]?.count || 0,
+            recentJoins: stats[0].recentJoins
+        };
+
+        console.log('[GTC STATS] Total members:', formattedData.total);
+        console.log('[GTC STATS] Members with parent:', formattedData.withParent);
+        console.log('[GTC STATS] Root members:', formattedData.rootMembers);
+        console.log('[GTC STATS] Levels breakdown:', formattedData.byLevel);
+        console.log('[GTC STATS] Request completed successfully');
+        console.log('='.repeat(80));
+
         res.status(200).json({
             success: true,
-            data: {
-                total: stats[0].total[0]?.count || 0,
-                byLevel: stats[0].byLevel,
-                withParent: stats[0].withParent[0]?.count || 0,
-                rootMembers: stats[0].rootMembers[0]?.count || 0,
-                recentJoins: stats[0].recentJoins
-            }
+            data: formattedData
         });
     } catch (error) {
-        console.error('Get GTC stats error:', error);
+        console.error('='.repeat(80));
+        console.error('[GTC STATS] ERROR - Failed to fetch statistics');
+        console.error('[GTC STATS] Error details:', error.message);
+        console.error('[GTC STATS] Stack trace:', error.stack);
+        console.error('='.repeat(80));
+
         res.status(500).json({
             success: false,
             message: 'Failed to fetch GTC statistics',

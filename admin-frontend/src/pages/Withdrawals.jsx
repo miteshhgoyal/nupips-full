@@ -1040,7 +1040,7 @@ const AdminWithdrawals = () => {
               {selectedWithdrawal.status === "completed" && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
                   <p className="text-xs text-red-700">
-                    ⚠️ This withdrawal is completed and cannot be deleted.
+                    This withdrawal is completed and cannot be deleted.
                   </p>
                 </div>
               )}

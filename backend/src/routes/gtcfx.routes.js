@@ -367,7 +367,7 @@ function verifyGtcSignature(req) {
 // POST /api/gtcfx/webhook/user-tree
 router.post('/webhook/user-tree', async (req, res) => {
     try {
-        console.log('📥 FULL USER TREE received from GTC');
+        console.log('FULL USER TREE received from GTC');
 
         // Step 1: Verify signature
         if (!verifyGtcSignature(req)) {
@@ -409,7 +409,7 @@ router.post('/webhook/user-tree', async (req, res) => {
                 } = m;
 
                 if (!gtcUserId || !email || !username) {
-                    console.warn('⚠️ Skipping member with missing fields:', m);
+                    console.warn('Skipping member with missing fields:', m);
                     skipped++;
                     continue;
                 }
@@ -433,15 +433,15 @@ router.post('/webhook/user-tree', async (req, res) => {
                 );
                 processed++;
             } catch (memberError) {
-                console.error(`❌ Error processing member ${m.gtcUserId}:`, memberError);
+                console.error(`Error processing member ${m.gtcUserId}:`, memberError);
                 errors++;
             }
         }
 
-        console.log(`✅ User tree processing complete: ${processed} processed, ${skipped} skipped, ${errors} errors`);
+        console.log(`User tree processing complete: ${processed} processed, ${skipped} skipped, ${errors} errors`);
 
     } catch (error) {
-        console.error('❌ Error processing FULL USER TREE:', error);
+        console.error('Error processing FULL USER TREE:', error);
 
         // Only send error response if we haven't sent success yet
         if (!res.headersSent) {
@@ -455,7 +455,7 @@ router.post('/webhook/user-tree', async (req, res) => {
 // POST /api/gtcfx/webhook/member-update
 router.post('/webhook/member-update', async (req, res) => {
     try {
-        console.log('📥 SINGLE MEMBER UPDATE from GTC:', req.body);
+        console.log('SINGLE MEMBER UPDATE from GTC:', req.body);
 
         if (!verifyGtcSignature(req)) {
             return res.status(401).json({ success: false, message: 'Invalid signature' });
@@ -506,7 +506,7 @@ router.post('/webhook/member-update', async (req, res) => {
             { upsert: true, new: true }
         );
 
-        console.log(`✅ Updated/created member: ${gtcUserId}`);
+        console.log(`Updated/created member: ${gtcUserId}`);
 
         res.status(200).json({
             success: true,
@@ -515,7 +515,7 @@ router.post('/webhook/member-update', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Error processing MEMBER UPDATE:', error);
+        console.error('Error processing MEMBER UPDATE:', error);
         res.status(500).json({ success: false, message: 'Internal server error' });
     }
 });
