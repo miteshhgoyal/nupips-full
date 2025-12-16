@@ -42,6 +42,7 @@ import Dashboard from "./pages/Dashboard";
 import Deposits from "./pages/Deposits";
 import Withdrawals from "./pages/Withdrawals";
 import Users from "./pages/Users";
+import GTCMembers from "./pages/GTCMembers";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
@@ -68,6 +69,11 @@ const sidebarLinks = [
       { name: "Products", href: "/products" },
       { name: "Orders", href: "/orders" },
     ],
+  },
+  {
+    name: "GTC Members",
+    href: "/gtc-members",
+    icon: UsersIcon,
   },
   {
     name: "Users",
@@ -227,6 +233,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gtc-members"
+              element={
+                <ProtectedRoute>
+                  <GTCMembers />
                 </ProtectedRoute>
               }
             />

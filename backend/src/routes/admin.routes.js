@@ -7,6 +7,7 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import IncomeExpense from '../models/IncomeExpense.js';
 import SystemConfig from '../models/SystemConfig.js';
+import GTCMember from '../models/GTCMember.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
@@ -978,6 +979,249 @@ router.get('/users/:id/tree', authenticateToken, async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to fetch user tree',
+            error: error.message
+        });
+    }
+});
+
+// ==================== GTC MEMBERS ROUTES ====================
+
+// 1. Get all GTC members with filtering
+router.get('/gtc-members', authenticateToken, async (req, res) => {
+    try {
+        const { level, hasParent, search, page = 1, limit = 20 } = req.query;
+
+        // Build filter
+        const filter = {};
+
+        if (level) filter.level = parseInt(level);
+
+        if (hasParent === 'true') {
+            filter.parentGtcUserId = { $ne: null };
+        } else if (hasParent === 'false') {
+            filter.parentGtcUserId = null;
+        }
+
+        // Search filter
+        if (search) {
+            filter.$or = [
+                { gtcUserId: { $regex: search, $options: 'i' } },
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { name: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const [members, total, stats] = await Promise.all([
+            GTCMember.find(filter)
+                .sort({ joinedAt: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .lean(),
+            GTCMember.countDocuments(filter),
+            GTCMember.aggregate([
+                {
+                    $facet: {
+                        totalMembers: [{ $count: 'count' }],
+                        withParent: [
+                            { $match: { parentGtcUserId: { $ne: null } } },
+                            { $count: 'count' }
+                        ],
+                        rootMembers: [
+                            { $match: { parentGtcUserId: null } },
+                            { $count: 'count' }
+                        ],
+                        avgLevel: [
+                            { $group: { _id: null, avg: { $avg: '$level' } } }
+                        ],
+                        maxLevel: [
+                            { $group: { _id: null, max: { $max: '$level' } } }
+                        ]
+                    }
+                }
+            ])
+        ]);
+
+        // Format stats
+        const formattedStats = {
+            total: stats[0].totalMembers[0]?.count || 0,
+            withParent: stats[0].withParent[0]?.count || 0,
+            rootMembers: stats[0].rootMembers[0]?.count || 0,
+            avgLevel: stats[0].avgLevel[0]?.avg || 0,
+            maxLevel: stats[0].maxLevel[0]?.max || 0
+        };
+
+        res.status(200).json({
+            success: true,
+            data: members,
+            stats: formattedStats,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Get GTC members error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch GTC members',
+            error: error.message
+        });
+    }
+});
+
+// 2. Get single GTC member with full details
+router.get('/gtc-members/:id', authenticateToken, async (req, res) => {
+    try {
+        const member = await GTCMember.findById(req.params.id).lean();
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC member not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: member
+        });
+    } catch (error) {
+        console.error('Get GTC member error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch GTC member',
+            error: error.message
+        });
+    }
+});
+
+// 3. Get GTC member's team tree
+router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
+    try {
+        const rootMember = await GTCMember.findById(req.params.id).lean();
+
+        if (!rootMember) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC member not found'
+            });
+        }
+
+        // Recursive function to build tree
+        async function buildTree(gtcUserId, level = 1, maxLevel = 10) {
+            if (level > maxLevel) return [];
+
+            const children = await GTCMember.find({
+                parentGtcUserId: gtcUserId
+            }).lean();
+
+            const tree = [];
+            for (const child of children) {
+                tree.push({
+                    ...child,
+                    level,
+                    children: await buildTree(child.gtcUserId, level + 1, maxLevel)
+                });
+            }
+            return tree;
+        }
+
+        const tree = await buildTree(rootMember.gtcUserId);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                root: rootMember,
+                tree
+            }
+        });
+    } catch (error) {
+        console.error('Get GTC member tree error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch GTC member tree',
+            error: error.message
+        });
+    }
+});
+
+// 4. Get GTC member by GTC User ID (alternative lookup)
+router.get('/gtc-members/lookup/:gtcUserId', authenticateToken, async (req, res) => {
+    try {
+        const member = await GTCMember.findOne({
+            gtcUserId: req.params.gtcUserId
+        }).lean();
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC member not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: member
+        });
+    } catch (error) {
+        console.error('Lookup GTC member error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to lookup GTC member',
+            error: error.message
+        });
+    }
+});
+
+// 5. Get GTC member statistics
+router.get('/gtc-members/stats/overview', authenticateToken, async (req, res) => {
+    try {
+        const stats = await GTCMember.aggregate([
+            {
+                $facet: {
+                    total: [{ $count: 'count' }],
+                    byLevel: [
+                        { $group: { _id: '$level', count: { $count: {} } } },
+                        { $sort: { _id: 1 } }
+                    ],
+                    withParent: [
+                        { $match: { parentGtcUserId: { $ne: null } } },
+                        { $count: 'count' }
+                    ],
+                    rootMembers: [
+                        { $match: { parentGtcUserId: null } },
+                        { $count: 'count' }
+                    ],
+                    recentJoins: [
+                        { $sort: { joinedAt: -1 } },
+                        { $limit: 10 },
+                        { $project: { name: 1, username: 1, email: 1, joinedAt: 1, level: 1 } }
+                    ]
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                total: stats[0].total[0]?.count || 0,
+                byLevel: stats[0].byLevel,
+                withParent: stats[0].withParent[0]?.count || 0,
+                rootMembers: stats[0].rootMembers[0]?.count || 0,
+                recentJoins: stats[0].recentJoins
+            }
+        });
+    } catch (error) {
+        console.error('Get GTC stats error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch GTC statistics',
             error: error.message
         });
     }
