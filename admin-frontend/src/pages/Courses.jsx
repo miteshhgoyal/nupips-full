@@ -17,6 +17,7 @@ import {
   EyeOff,
   Clock,
   Filter,
+  RefreshCw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -27,6 +28,7 @@ const Courses = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [courses, setCourses] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,6 +70,12 @@ const Courses = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadCourses();
+    setRefreshing(false);
+  };
+
   const handleAddCourse = async () => {
     setError("");
     setSuccess("");
@@ -85,6 +93,7 @@ const Courses = () => {
       setShowAddModal(false);
       resetForm();
       loadCourses();
+      setTimeout(() => setSuccess(""), 3000);
     } catch (e) {
       setError(e.response?.data?.message || "Failed to add course");
     } finally {
@@ -100,6 +109,7 @@ const Courses = () => {
       setShowDeleteModal(false);
       setSelectedCourse(null);
       loadCourses();
+      setTimeout(() => setSuccess(""), 3000);
     } catch (e) {
       setError(e.response?.data?.message || "Failed to delete course");
     } finally {
@@ -112,6 +122,7 @@ const Courses = () => {
       await api.put(`/learn/admin/courses/${course._id}/toggle-publish`);
       setSuccess(`Course ${!course.isPublished ? "published" : "unpublished"}`);
       loadCourses();
+      setTimeout(() => setSuccess(""), 3000);
     } catch (e) {
       setError(e.response?.data?.message || "Failed to update status");
     }
@@ -133,6 +144,14 @@ const Courses = () => {
     return `${mins}m`;
   };
 
+  // Calculate stats
+  const stats = {
+    total: courses.length,
+    published: courses.filter((c) => c.isPublished).length,
+    totalVideos: courses.reduce((sum, c) => sum + c.videos.length, 0),
+    totalDuration: courses.reduce((sum, c) => sum + (c.totalDuration || 0), 0),
+  };
+
   if (loading && courses.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -150,251 +169,207 @@ const Courses = () => {
         <title>Courses Management | Admin</title>
       </Helmet>
 
-      <div className="min-h-screen bg-white p-4 md:p-6 lg:p-8">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-orange-600 mb-6 transition-colors group"
-        >
-          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          <span className="font-medium">Back</span>
-        </button>
-
+      <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
         {/* Header */}
-        <div className="mb-6 md:mb-8">
+        <div className="mb-8">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="w-full sm:w-auto">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
-                  <PlayCircle className="w-5 h-5 md:w-6 md:h-6 text-white" />
-                </div>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-                  Courses Management
-                </h1>
-              </div>
-              <p className="text-sm md:text-base text-gray-600 ml-0 md:ml-[52px]">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <PlayCircle className="w-8 h-8 text-orange-600" />
+                Courses Management
+              </h1>
+              <p className="text-gray-600 mt-2">
                 Create and manage your educational courses
               </p>
             </div>
 
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="w-full sm:w-auto px-6 py-2.5 md:py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 text-sm md:text-base"
-            >
-              <Plus className="w-4 h-4 md:w-5 md:h-5" />
-              Add Course
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
+                />
+                Refresh
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Add Course
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Alert Messages */}
+        {/* Alerts */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 shadow-sm">
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-800 font-medium flex-1">{error}</p>
-            <button
-              onClick={() => setError("")}
-              className="hover:bg-red-100 rounded p-1 transition-colors flex-shrink-0"
-            >
+            <div className="flex-1">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+            <button onClick={() => setError("")}>
               <X className="w-4 h-4 text-red-600" />
             </button>
           </div>
         )}
 
         {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-start gap-3 shadow-sm">
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
             <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-green-800 font-medium flex-1">
-              {success}
-            </p>
-            <button
-              onClick={() => setSuccess("")}
-              className="hover:bg-green-100 rounded p-1 transition-colors flex-shrink-0"
-            >
+            <div className="flex-1">
+              <p className="text-sm text-green-700">{success}</p>
+            </div>
+            <button onClick={() => setSuccess("")}>
               <X className="w-4 h-4 text-green-600" />
             </button>
           </div>
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5 hover:shadow transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
-                <PlayCircle className="w-6 h-6 md:w-7 md:h-7 text-white" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                <PlayCircle className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <p className="text-xs md:text-sm font-medium text-gray-600 mb-0.5">
-                  Total Courses
-                </p>
-                <p className="text-2xl md:text-3xl font-bold text-gray-900">
-                  {courses.length}
-                </p>
-              </div>
+              <p className="text-sm font-medium text-blue-900">Total Courses</p>
             </div>
-            <div className="h-1.5 md:h-2 bg-blue-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full"
-                style={{ width: "100%" }}
-              />
-            </div>
+            <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5 hover:shadow transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-sm">
-                <Eye className="w-6 h-6 md:w-7 md:h-7 text-white" />
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                <Eye className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <p className="text-xs md:text-sm font-medium text-gray-600 mb-0.5">
-                  Published
-                </p>
-                <p className="text-2xl md:text-3xl font-bold text-gray-900">
-                  {courses.filter((c) => c.isPublished).length}
-                </p>
-              </div>
+              <p className="text-sm font-medium text-green-900">Published</p>
             </div>
-            <div className="h-1.5 md:h-2 bg-green-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full"
-                style={{
-                  width: `${
-                    courses.length > 0
-                      ? (courses.filter((c) => c.isPublished).length /
-                          courses.length) *
-                        100
-                      : 0
-                  }%`,
-                }}
-              />
-            </div>
+            <p className="text-2xl font-bold text-green-900">
+              {stats.published}
+            </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5 hover:shadow transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
-                <Video className="w-6 h-6 md:w-7 md:h-7 text-white" />
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+                <Video className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <p className="text-xs md:text-sm font-medium text-gray-600 mb-0.5">
-                  Total Videos
-                </p>
-                <p className="text-2xl md:text-3xl font-bold text-gray-900">
-                  {courses.reduce((sum, c) => sum + c.videos.length, 0)}
-                </p>
-              </div>
+              <p className="text-sm font-medium text-purple-900">
+                Total Videos
+              </p>
             </div>
-            <div className="h-1.5 md:h-2 bg-purple-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full"
-                style={{ width: "90%" }}
-              />
-            </div>
+            <p className="text-2xl font-bold text-purple-900">
+              {stats.totalVideos}
+            </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5 hover:shadow transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-sm">
-                <Clock className="w-6 h-6 md:w-7 md:h-7 text-white" />
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                <Clock className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <p className="text-xs md:text-sm font-medium text-gray-600 mb-0.5">
-                  Total Duration
-                </p>
-                <p className="text-2xl md:text-3xl font-bold text-gray-900">
-                  {formatDuration(
-                    courses.reduce((sum, c) => sum + (c.totalDuration || 0), 0)
-                  )}
-                </p>
-              </div>
+              <p className="text-sm font-medium text-orange-900">
+                Total Duration
+              </p>
             </div>
-            <div className="h-1.5 md:h-2 bg-orange-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full"
-                style={{ width: "75%" }}
-              />
-            </div>
+            <p className="text-2xl font-bold text-orange-900">
+              {formatDuration(stats.totalDuration)}
+            </p>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6 mb-6">
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
-            <h3 className="text-base md:text-lg font-bold text-gray-900">
-              Filter Courses
-            </h3>
+            <Filter className="w-5 h-5 text-orange-600" />
+            <h2 className="text-lg font-bold text-gray-900">Filters</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            <div className="relative">
-              <Search className="w-4 h-4 md:w-5 md:h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search courses by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 md:pl-10 pr-4 py-2.5 md:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-sm md:text-base"
-              />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search courses by name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
             </div>
 
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-4 py-2.5 md:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white text-sm md:text-base"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Category
+              </label>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="all">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Courses Grid */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-4 md:p-6 bg-orange-50 border-b border-orange-100">
-            <h2 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
-              <PlayCircle className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
-              All Courses
-              <span className="text-orange-600">({courses.length})</span>
-            </h2>
-          </div>
-
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {courses.length === 0 ? (
-            <div className="p-8 md:p-16 text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gray-100 rounded-xl mb-4 md:mb-6">
-                <PlayCircle className="w-8 h-8 md:w-10 md:h-10 text-gray-400" />
+            <div className="p-16 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <PlayCircle className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
                 No Courses Yet
               </h3>
-              <p className="text-sm md:text-base text-gray-600 mb-6 max-w-md mx-auto">
+              <p className="text-sm text-gray-600 mb-6 max-w-md mx-auto">
                 Start creating your educational platform by adding your first
                 course
               </p>
               <button
                 onClick={() => setShowAddModal(true)}
-                className="px-6 py-2.5 md:py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow inline-flex items-center gap-2 text-sm md:text-base"
+                className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow inline-flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
                 Add Your First Course
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 p-4 md:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
               {courses.map((course) => (
                 <div
                   key={course._id}
-                  className="bg-white border border-gray-200 rounded-lg p-4 md:p-5 hover:shadow transition-all hover:border-orange-200 group"
+                  className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-lg transition-all hover:border-orange-200 group"
                 >
                   <div className="flex items-start justify-between mb-4">
-                    <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow transition-shadow flex-shrink-0">
-                      <PlayCircle className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-sm group-hover:shadow transition-shadow">
+                      <PlayCircle className="w-6 h-6 text-white" />
                     </div>
                     <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 md:px-3 md:py-1.5 rounded-lg text-xs font-semibold border ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border ${
                         course.isPublished
                           ? "bg-green-50 text-green-700 border-green-200"
                           : "bg-gray-50 text-gray-700 border-gray-200"
@@ -403,21 +378,21 @@ const Courses = () => {
                       {course.isPublished ? (
                         <>
                           <Eye className="w-3 h-3" />
-                          <span className="hidden sm:inline">Published</span>
+                          Published
                         </>
                       ) : (
                         <>
                           <EyeOff className="w-3 h-3" />
-                          <span className="hidden sm:inline">Draft</span>
+                          Draft
                         </>
                       )}
                     </span>
                   </div>
 
-                  <h3 className="font-bold text-gray-900 mb-2 text-base md:text-lg group-hover:text-orange-600 transition-colors line-clamp-1">
+                  <h3 className="font-bold text-gray-900 mb-2 text-lg group-hover:text-orange-600 transition-colors line-clamp-1">
                     {course.name}
                   </h3>
-                  <p className="text-xs md:text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-2 leading-relaxed">
                     {course.description}
                   </p>
 
@@ -440,38 +415,29 @@ const Courses = () => {
                   <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => navigate(`/courses/${course._id}`)}
-                      className="flex-1 py-2 md:py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs md:text-sm font-semibold transition-all border border-blue-200 hover:shadow-sm"
+                      className="flex-1 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-sm font-semibold transition-all border border-blue-200 hover:shadow-sm"
                     >
                       Manage
                     </button>
                     <button
                       onClick={() => togglePublish(course)}
-                      className={`flex-1 py-2 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all border hover:shadow-sm ${
+                      className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all border hover:shadow-sm ${
                         course.isPublished
                           ? "bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                           : "bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200"
                       }`}
                     >
-                      <span className="hidden sm:inline">
-                        {course.isPublished ? "Unpublish" : "Publish"}
-                      </span>
-                      <span className="sm:hidden">
-                        {course.isPublished ? (
-                          <EyeOff className="w-3.5 h-3.5 mx-auto" />
-                        ) : (
-                          <Eye className="w-3.5 h-3.5 mx-auto" />
-                        )}
-                      </span>
+                      {course.isPublished ? "Unpublish" : "Publish"}
                     </button>
                     <button
                       onClick={() => {
                         setSelectedCourse(course);
                         setShowDeleteModal(true);
                       }}
-                      className="w-9 h-9 md:w-10 md:h-10 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 flex items-center justify-center transition-all hover:shadow-sm flex-shrink-0 group/btn"
+                      className="w-10 h-10 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 flex items-center justify-center transition-all hover:shadow-sm group/btn"
                       title="Delete Course"
                     >
-                      <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-600 group-hover/btn:scale-110 transition-transform" />
+                      <Trash2 className="w-4 h-4 text-red-600 group-hover/btn:scale-110 transition-transform" />
                     </button>
                   </div>
                 </div>
@@ -484,31 +450,36 @@ const Courses = () => {
       {/* Add Course Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl md:rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-4 md:p-6 border-b border-gray-200 bg-orange-50 flex-shrink-0">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">
-                    Add New Course
-                  </h2>
-                  <p className="text-xs md:text-sm text-gray-600">
-                    Create a new educational course
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
+                    <Plus className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Add New Course
+                    </h2>
+                    <p className="text-xs text-gray-500">
+                      Create a new educational course
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => {
                     setShowAddModal(false);
                     resetForm();
                   }}
-                  className="w-10 h-10 md:w-11 md:h-11 flex items-center justify-center rounded-lg hover:bg-orange-100 transition-colors"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <X className="w-5 h-5 md:w-6 md:h-6 text-gray-600" />
+                  <X className="w-5 h-5 text-gray-500" />
                 </button>
               </div>
             </div>
 
-            <div className="p-4 md:p-6 overflow-y-auto flex-1">
-              <div className="space-y-4 md:space-y-5">
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Course Name <span className="text-red-500">*</span>
@@ -520,7 +491,7 @@ const Courses = () => {
                       setFormData((prev) => ({ ...prev, name: e.target.value }))
                     }
                     placeholder="e.g., Complete Web Development"
-                    className="w-full px-4 py-2.5 md:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-sm md:text-base"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   />
                 </div>
 
@@ -538,7 +509,7 @@ const Courses = () => {
                     }
                     placeholder="Describe what students will learn in this course..."
                     rows={4}
-                    className="w-full px-4 py-2.5 md:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none transition-all text-sm md:text-base"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none transition-all"
                   />
                 </div>
 
@@ -556,19 +527,19 @@ const Courses = () => {
                       }))
                     }
                     placeholder="e.g., Programming, Design, Business"
-                    className="w-full px-4 py-2.5 md:py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-sm md:text-base"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="p-4 md:p-6 bg-gray-50 border-t border-gray-200 flex items-center gap-3 flex-shrink-0">
+            <div className="p-6 bg-gray-50 border-t border-gray-200 flex items-center gap-3 flex-shrink-0">
               <button
                 onClick={() => {
                   setShowAddModal(false);
                   resetForm();
                 }}
-                className="flex-1 py-2.5 md:py-3 border-2 border-gray-200 rounded-lg hover:bg-white font-semibold transition-all text-sm md:text-base"
+                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors"
               >
                 Cancel
               </button>
@@ -580,16 +551,16 @@ const Courses = () => {
                   !formData.description ||
                   !formData.category
                 }
-                className="flex-1 py-2.5 md:py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm md:text-base"
+                className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <>
-                    <Loader className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                    <Loader className="w-5 h-5 animate-spin" />
                     Creating...
                   </>
                 ) : (
                   <>
-                    <Plus className="w-4 h-4 md:w-5 md:h-5" />
+                    <Plus className="w-5 h-5" />
                     Create Course
                   </>
                 )}
@@ -602,22 +573,23 @@ const Courses = () => {
       {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedCourse && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl md:rounded-2xl max-w-md w-full shadow-2xl">
-            <div className="p-6 md:p-8 text-center">
-              <div className="w-14 h-14 md:w-16 md:h-16 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-4 md:mb-5">
-                <Trash2 className="w-7 h-7 md:w-8 md:h-8 text-red-600" />
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="p-6">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-6 h-6 text-red-600" />
               </div>
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
                 Delete Course?
-              </h3>
-              <p className="text-sm md:text-base text-gray-600 mb-2 leading-relaxed">
+              </h2>
+              <p className="text-sm text-gray-600 text-center mb-2">
                 Are you sure you want to delete
               </p>
-              <p className="text-sm md:text-base text-gray-900 font-semibold mb-2 px-2">
+              <p className="text-sm text-gray-900 font-semibold text-center mb-6">
                 "{selectedCourse.name}"?
               </p>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
-                <p className="text-xs md:text-sm text-red-800 font-medium mb-1">
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-red-800 font-medium mb-1">
                   ⚠️ Warning: This action is permanent
                 </p>
                 <p className="text-xs text-red-700">
@@ -625,29 +597,30 @@ const Courses = () => {
                   deleted.
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+
+              <div className="flex gap-3">
                 <button
                   onClick={() => {
                     setShowDeleteModal(false);
                     setSelectedCourse(null);
                   }}
-                  className="flex-1 py-2.5 md:py-3 border-2 border-gray-200 rounded-lg hover:bg-gray-50 font-semibold transition-all text-sm md:text-base"
+                  className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteCourse}
                   disabled={submitting}
-                  className="flex-1 py-2.5 md:py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow disabled:opacity-50 flex items-center justify-center gap-2 text-sm md:text-base"
+                  className="flex-1 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>
-                      <Loader className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
+                      <Loader className="w-5 h-5 animate-spin" />
                       Deleting...
                     </>
                   ) : (
                     <>
-                      <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                      <Trash2 className="w-5 h-5" />
                       Delete Course
                     </>
                   )}

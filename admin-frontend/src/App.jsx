@@ -22,6 +22,7 @@ import {
   Settings,
   Coins,
   Wallet,
+  Users as UsersIcon,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
@@ -40,6 +41,7 @@ import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import Deposits from "./pages/Deposits";
 import Withdrawals from "./pages/Withdrawals";
+import Users from "./pages/Users";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
@@ -66,6 +68,11 @@ const sidebarLinks = [
       { name: "Products", href: "/products" },
       { name: "Orders", href: "/orders" },
     ],
+  },
+  {
+    name: "Users",
+    href: "/users",
+    icon: UsersIcon,
   },
   {
     name: "Courses",
@@ -220,6 +227,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <Users />
                 </ProtectedRoute>
               }
             />

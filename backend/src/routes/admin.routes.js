@@ -771,4 +771,216 @@ router.delete('/withdrawals/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== USER ROUTES ====================
+
+// 1. Get all users with filtering
+router.get('/users', authenticateToken, async (req, res) => {
+    try {
+        const { status, userType, search, page = 1, limit = 20 } = req.query;
+
+        // Build filter
+        const filter = { email: { $ne: process.env.ADMIN_EMAIL } };
+        if (status) filter.status = status;
+        if (userType) filter.userType = userType;
+
+        // Search filter
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const [users, total, stats] = await Promise.all([
+            User.find(filter)
+                .select('-password -gtcfx.accessToken -gtcfx.refreshToken')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .lean(),
+            User.countDocuments(filter),
+            User.aggregate([
+                {
+                    $facet: {
+                        totalUsers: [{ $count: 'count' }],
+                        activeUsers: [
+                            { $match: { status: 'active' } },
+                            { $count: 'count' }
+                        ],
+                        inactiveUsers: [
+                            { $match: { status: 'inactive' } },
+                            { $count: 'count' }
+                        ],
+                        agentUsers: [
+                            { $match: { userType: 'agent' } },
+                            { $count: 'count' }
+                        ],
+                        traderUsers: [
+                            { $match: { userType: 'trader' } },
+                            { $count: 'count' }
+                        ],
+                        totalWalletBalance: [
+                            { $group: { _id: null, total: { $sum: '$walletBalance' } } }
+                        ]
+                    }
+                }
+            ])
+        ]);
+
+        // Format stats
+        const formattedStats = {
+            total: stats[0].totalUsers[0]?.count || 0,
+            active: stats[0].activeUsers[0]?.count || 0,
+            inactive: stats[0].inactiveUsers[0]?.count || 0,
+            agents: stats[0].agentUsers[0]?.count || 0,
+            traders: stats[0].traderUsers[0]?.count || 0,
+            totalBalance: stats[0].totalWalletBalance[0]?.total || 0
+        };
+
+        res.status(200).json({
+            success: true,
+            data: users,
+            stats: formattedStats,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Get users error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch users',
+            error: error.message
+        });
+    }
+});
+
+// 2. Get single user with full details
+router.get('/users/:id', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id)
+            .select('-password -gtcfx.accessToken -gtcfx.refreshToken')
+            .populate('referralDetails.referredBy', 'name username email')
+            .lean();
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: user
+        });
+    } catch (error) {
+        console.error('Get user error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch user',
+            error: error.message
+        });
+    }
+});
+
+// 3. Update user (admin can only update basic details)
+router.patch('/users/:id', authenticateToken, async (req, res) => {
+    try {
+        const { name, email, phone, status, userType } = req.body;
+
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Update only allowed fields
+        if (name) user.name = name;
+        if (email) user.email = email;
+        if (phone) user.phone = phone;
+        if (status) user.status = status;
+        if (userType) user.userType = userType;
+
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'User updated successfully',
+            data: user
+        });
+    } catch (error) {
+        console.error('Update user error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update user',
+            error: error.message
+        });
+    }
+});
+
+// 4. Get user's team tree
+router.get('/users/:id/tree', authenticateToken, async (req, res) => {
+    try {
+        const rootUser = await User.findById(req.params.id)
+            .select('name username email phone userType status walletBalance financials')
+            .lean();
+
+        if (!rootUser) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Recursive function to build tree
+        async function buildTree(userId, level = 1, maxLevel = 10) {
+            if (level > maxLevel) return [];
+
+            const children = await User.find({
+                'referralDetails.referredBy': userId
+            })
+                .select('name username email phone userType status walletBalance financials createdAt')
+                .lean();
+
+            const tree = [];
+            for (const child of children) {
+                tree.push({
+                    ...child,
+                    level,
+                    children: await buildTree(child._id, level + 1, maxLevel)
+                });
+            }
+            return tree;
+        }
+
+        const tree = await buildTree(req.params.id);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                root: rootUser,
+                tree
+            }
+        });
+    } catch (error) {
+        console.error('Get user tree error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch user tree',
+            error: error.message
+        });
+    }
+});
+
 export default router;
