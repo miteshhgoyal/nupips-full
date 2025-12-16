@@ -9,6 +9,7 @@ import IncomeExpense from '../models/IncomeExpense.js';
 import SystemConfig from '../models/SystemConfig.js';
 import GTCMember from '../models/GTCMember.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -1075,10 +1076,20 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
     }
 });
 
-// 2. Get single GTC member with full details
+// 2. Get single GTC member (supports both MongoDB _id and gtcUserId)
 router.get('/gtc-members/:id', authenticateToken, async (req, res) => {
     try {
-        const member = await GTCMember.findById(req.params.id).lean();
+        const { id } = req.params;
+
+        let member;
+
+        // Check if it's a valid MongoDB ObjectId
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            member = await GTCMember.findById(id).lean();
+        } else {
+            // Otherwise treat it as gtcUserId
+            member = await GTCMember.findOne({ gtcUserId: id }).lean();
+        }
 
         if (!member) {
             return res.status(404).json({
@@ -1101,10 +1112,20 @@ router.get('/gtc-members/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// 3. Get GTC member's team tree
+// 3. Get GTC member's team tree (supports both MongoDB _id and gtcUserId)
 router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
     try {
-        const rootMember = await GTCMember.findById(req.params.id).lean();
+        const { id } = req.params;
+
+        let rootMember;
+
+        // Check if it's a valid MongoDB ObjectId
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            rootMember = await GTCMember.findById(id).lean();
+        } else {
+            // Otherwise treat it as gtcUserId
+            rootMember = await GTCMember.findOne({ gtcUserId: id }).lean();
+        }
 
         if (!rootMember) {
             return res.status(404).json({
@@ -1151,7 +1172,7 @@ router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
     }
 });
 
-// 4. Get GTC member by GTC User ID (alternative lookup)
+// 4. Get GTC member by GTC User ID (explicit lookup - kept for backward compatibility)
 router.get('/gtc-members/lookup/:gtcUserId', authenticateToken, async (req, res) => {
     try {
         const member = await GTCMember.findOne({
@@ -1187,7 +1208,7 @@ router.get('/gtc-members/stats/overview', authenticateToken, async (req, res) =>
                 $facet: {
                     total: [{ $count: 'count' }],
                     byLevel: [
-                        { $group: { _id: '$level', count: { $count: {} } } },
+                        { $group: { _id: '$level', count: { $sum: 1 } } },
                         { $sort: { _id: 1 } }
                     ],
                     withParent: [
