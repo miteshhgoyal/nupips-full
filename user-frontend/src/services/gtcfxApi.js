@@ -1,7 +1,7 @@
 // services/gtcfxApi.js
 import axios from 'axios';
 import { gtcfxTokenService } from './gtcfxTokenService';
-import tokenService from './tokenService'; // ← Import YOUR tokenService
+import { tokenService } from './tokenService'; // ← Import YOUR tokenService
 import localApi from './api';
 
 const api = axios.create({
