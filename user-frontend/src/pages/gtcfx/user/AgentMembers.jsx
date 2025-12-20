@@ -1,5 +1,5 @@
 // pages/gtcfx/user/AgentMembers.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Helmet } from "react-helmet";
 import {
   Loader,
@@ -25,6 +25,10 @@ import {
 } from "lucide-react";
 import api from "../../../services/gtcfxApi";
 
+const TREE_CACHE_KEY = "gtcfx_full_tree";
+const TREE_CACHE_TIME_KEY = "gtcfx_full_tree_time";
+const TREE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 const GTCFxAgentMembers = () => {
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +46,10 @@ const GTCFxAgentMembers = () => {
   const [treeData, setTreeData] = useState(null);
   const [loadingTree, setLoadingTree] = useState(false);
   const [expandedTreeNodes, setExpandedTreeNodes] = useState(new Set());
+
+  // Modal scroll preservation
+  const modalScrollRef = useRef(null);
+  const modalScrollPosRef = useRef(0);
 
   const ITEMS_PER_PAGE = 10;
 
@@ -83,19 +91,92 @@ const GTCFxAgentMembers = () => {
     }
   };
 
-  // Load full tree structure
-  const loadFullTree = async () => {
-    setLoadingTree(true);
+  // Helpers for modal scroll
+  const rememberModalScroll = () => {
+    if (modalScrollRef.current) {
+      modalScrollPosRef.current = modalScrollRef.current.scrollTop;
+    }
+  };
+
+  const restoreModalScroll = () => {
+    if (modalScrollRef.current) {
+      modalScrollRef.current.scrollTop = modalScrollPosRef.current;
+    }
+  };
+
+  useEffect(() => {
+    // when expandedTreeNodes changes (toggle), restore previous scroll
+    restoreModalScroll();
+  }, [expandedTreeNodes]);
+
+  // Cache helpers
+  const readCachedTree = () => {
+    try {
+      const raw = sessionStorage.getItem(TREE_CACHE_KEY);
+      const timeRaw = sessionStorage.getItem(TREE_CACHE_TIME_KEY);
+      if (!raw || !timeRaw) return null;
+
+      const savedAt = parseInt(timeRaw, 10);
+      if (!savedAt || Date.now() - savedAt > TREE_CACHE_TTL_MS) {
+        // expired
+        sessionStorage.removeItem(TREE_CACHE_KEY);
+        sessionStorage.removeItem(TREE_CACHE_TIME_KEY);
+        return null;
+      }
+
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  };
+
+  const writeCachedTree = (data) => {
+    try {
+      sessionStorage.setItem(TREE_CACHE_KEY, JSON.stringify(data));
+      sessionStorage.setItem(TREE_CACHE_TIME_KEY, String(Date.now()));
+    } catch {
+      // ignore quota errors
+    }
+  };
+
+  const clearCachedTree = () => {
+    try {
+      sessionStorage.removeItem(TREE_CACHE_KEY);
+      sessionStorage.removeItem(TREE_CACHE_TIME_KEY);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Open full tree modal with 5‑minute cache
+  const openFullTree = async () => {
     setError(null);
+
+    // 1) Try cache (only when user reopens modal etc.)
+    const cached = readCachedTree();
+    if (cached) {
+      setTreeData(cached);
+      setShowTreeModal(true);
+      if (cached?.tree?.member_id) {
+        setExpandedTreeNodes(new Set([cached.tree.member_id]));
+      }
+      return;
+    }
+
+    // 2) No valid cache -> fetch fresh
+    setLoadingTree(true);
     try {
       const response = await api.post("/agent/member_tree");
 
       if (response.data.code === 200) {
-        setTreeData(response.data.data);
+        const data = response.data.data;
+        setTreeData(data);
+        writeCachedTree(data);
+
         setShowTreeModal(true);
         // Auto-expand root node
-        if (response.data.data?.tree?.member_id) {
-          setExpandedTreeNodes(new Set([response.data.data.tree.member_id]));
+        if (data?.tree?.member_id) {
+          setExpandedTreeNodes(new Set([data.tree.member_id]));
         }
       } else {
         setError(response.data.message || "Failed to load tree");
@@ -107,6 +188,14 @@ const GTCFxAgentMembers = () => {
       setLoadingTree(false);
     }
   };
+
+  // Optional: clear cache when leaving page or on unmount
+  useEffect(() => {
+    return () => {
+      // Comment this out if you want cache to survive component unmount
+      // clearCachedTree();
+    };
+  }, []);
 
   // Build tree structure from flat list (for paginated view)
   const buildTree = (membersList) => {
@@ -224,7 +313,10 @@ const GTCFxAgentMembers = () => {
     });
   };
 
-  const toggleTreeNode = (memberId) => {
+  // Use scroll-preserving variant for tree modal
+  const safeToggleTreeNode = (memberId) => {
+    // remember scroll before expanding/collapsing
+    rememberModalScroll();
     setExpandedTreeNodes((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(memberId)) {
@@ -266,7 +358,7 @@ const GTCFxAgentMembers = () => {
             <div className="flex items-center gap-2">
               {hasChildren ? (
                 <button
-                  onClick={() => toggleTreeNode(node.member_id)}
+                  onClick={() => safeToggleTreeNode(node.member_id)}
                   className="p-1 hover:bg-orange-100 rounded transition-colors flex-shrink-0"
                 >
                   {isExpanded ? (
@@ -470,7 +562,7 @@ const GTCFxAgentMembers = () => {
           <td className="px-4 py-3">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-gray-400" />
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-gray-600 text-nowrap">
                 {new Date(member.create_time * 1000).toLocaleDateString(
                   "en-US",
                   { month: "short", day: "numeric", year: "2-digit" }
@@ -571,7 +663,7 @@ const GTCFxAgentMembers = () => {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={loadFullTree}
+              onClick={openFullTree}
               disabled={loadingTree}
               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -802,7 +894,7 @@ const GTCFxAgentMembers = () => {
           </div>
         )}
 
-        {/* Member Hierarchy */}
+        {/* Member Hierarchy side cards */}
         {members.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Top Members by Balance */}
@@ -931,7 +1023,7 @@ const GTCFxAgentMembers = () => {
             </div>
 
             {/* Modal Body - Scrollable Table */}
-            <div className="flex-1 overflow-y-auto">
+            <div ref={modalScrollRef} className="flex-1 overflow-y-auto">
               {treeData.tree ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
