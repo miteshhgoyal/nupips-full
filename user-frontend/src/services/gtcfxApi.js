@@ -4,7 +4,7 @@ import { gtcfxTokenService } from './gtcfxTokenService';
 import localApi from './api';
 
 const api = axios.create({
-    baseURL: '/api/v3',
+    baseURL: (import.meta.env.VITE_REACT_APP_API_URL || 'http://localhost:8000/') + '/api/v3',
     timeout: 120000,
     headers: {
         'Content-Type': 'application/json',

@@ -1,10 +1,6 @@
 {
     "rewrites": [
         {
-            "source": "/api/v3/:path*",
-            "destination": "https://test.gtctrader1203.top/api/v3/:path*"
-        },
-        {
             "source": "/api/(.*)",
             "destination": "/api/$1"
         },
