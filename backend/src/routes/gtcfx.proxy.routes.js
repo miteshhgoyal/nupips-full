@@ -37,7 +37,7 @@ const proxyGtcRequest = async (req, res) => {
             });
         }
 
-        const endpoint = req.originalUrl.replace('/api/v3', '');
+        const endpoint = '/api/v3' + req.path;
 
         const config = {
             method: req.method.toLowerCase(),
