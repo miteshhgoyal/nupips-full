@@ -83,14 +83,14 @@ const proxyGtcRequest = async (req, res) => {
 // All proxy routes
 router.post('/account_info', authenticateToken, proxyGtcRequest);
 router.post('/refresh', authenticateToken, proxyGtcRequest);
-router.post('/pammlist', authenticateToken, proxyGtcRequest);
-router.post('/pammdetail', authenticateToken, proxyGtcRequest);
-router.post('/subscribepamm', authenticateToken, proxyGtcRequest);
-router.post('/subscribelist', authenticateToken, proxyGtcRequest);
-router.post('/redeempamm', authenticateToken, proxyGtcRequest);
-router.post('/shareprofitlog', authenticateToken, proxyGtcRequest);
-router.post('/agentcommissionreport', authenticateToken, proxyGtcRequest);
-router.post('/agentmember', authenticateToken, proxyGtcRequest);
+router.post('/pamm_list', authenticateToken, proxyGtcRequest);
+router.post('/pamm_detail', authenticateToken, proxyGtcRequest);
+router.post('/subscribe_pamm', authenticateToken, proxyGtcRequest);
+router.post('/subscribe_list', authenticateToken, proxyGtcRequest);
+router.post('/redeem_pamm', authenticateToken, proxyGtcRequest);
+router.post('/share_profit_log', authenticateToken, proxyGtcRequest);
+router.post('/agent/commission_report', authenticateToken, proxyGtcRequest);
+router.post('/agent/member', authenticateToken, proxyGtcRequest);
 router.post('/logout', authenticateToken, proxyGtcRequest);
 
 export default router;
