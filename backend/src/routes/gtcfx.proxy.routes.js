@@ -31,10 +31,13 @@ const proxyGtcRequest = async (req, res) => {
         // Get user's stored GTC tokens
         const user = await User.findById(userId).select('gtcfx');
 
+        // Check if GTC token exists
         if (!user?.gtcfx?.accessToken) {
-            return res.status(401).json({
+            return res.status(200).json({  // Changed from 401 to 200
                 code: 401,
-                message: 'GTC FX session not found. Please login first.'
+                message: 'GTC FX session not found',
+                authenticated: false,
+                requiresLogin: true  // Flag for frontend
             });
         }
 
@@ -67,14 +70,15 @@ const proxyGtcRequest = async (req, res) => {
             method: req.method,
             error: error.message,
             status: error.response?.status,
-            data: error.response?.data,
         });
 
-        // Handle token expiration
+        // Handle token expiration from GTC API
         if (error.response?.status === 401) {
-            return res.status(401).json({
+            return res.status(200).json({  // Changed from 401
                 code: 401,
-                message: 'GTC FX session expired. Please re-authenticate.',
+                message: 'GTC FX session expired',
+                authenticated: false,
+                requiresLogin: true
             });
         }
 

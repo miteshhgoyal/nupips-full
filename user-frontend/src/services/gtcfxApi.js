@@ -25,12 +25,16 @@ api.interceptors.request.use(
     }
 );
 
+// services/gtcfxApi.js
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Check if it's a 401 response with requiresLogin flag
+        const responseData = error.response?.data;
+
+        if (responseData?.code === 401 && responseData?.requiresLogin && !originalRequest._retry) {
             originalRequest._retry = true;
 
             try {
@@ -67,8 +71,13 @@ api.interceptors.response.use(
                 console.error('Token refresh failed:', refreshError);
             }
 
+            // Clear tokens and redirect ONLY if refresh failed
             gtcfxTokenService.clearTokens();
-            window.location.href = '/gtcfx/auth';
+
+            // Prevent redirect loop - only redirect if not already on auth page
+            if (!window.location.pathname.includes('/gtcfx/auth')) {
+                window.location.href = '/gtcfx/auth';
+            }
         }
 
         return Promise.reject(error);
