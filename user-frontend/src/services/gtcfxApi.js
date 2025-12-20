@@ -4,7 +4,6 @@ import { gtcfxTokenService } from './gtcfxTokenService';
 import localApi from './api';
 
 const api = axios.create({
-    // baseURL: (import.meta.env.VITE_REACT_APP_API_URL || 'http://localhost:8000') + '/api/v3',
     baseURL: 'https://api.nupips.com/api/v3',
     timeout: 120000,
     headers: {
@@ -12,39 +11,26 @@ const api = axios.create({
     },
 });
 
-api.interceptors.request.use(
-    (config) => {
-        const token = gtcfxTokenService.getToken();
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
+// REMOVE the request interceptor that adds Authorization header
+// Backend proxy will handle it
 
-// services/gtcfxApi.js
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-
-        // Check if it's a 401 response with requiresLogin flag
         const responseData = error.response?.data;
 
-        if (responseData?.code === 401 && responseData?.requiresLogin && !originalRequest._retry) {
+        // Check for GTC session expiration
+        if (responseData?.code === 401 && !responseData?.authenticated && !originalRequest._retry) {
             originalRequest._retry = true;
 
             try {
                 const refreshToken = gtcfxTokenService.getRefreshToken();
 
                 if (refreshToken && !gtcfxTokenService.isTokenExpired(refreshToken)) {
-                    const response = await axios.post(
-                        `${api.defaults.baseURL}/refresh`,
-                        { refresh_token: refreshToken }
-                    );
+                    const response = await api.post('/refresh', {
+                        refresh_token: refreshToken
+                    });
 
                     if (response.data.code === 200 && response.data.data?.access_token) {
                         const newAccessToken = response.data.data.access_token;
@@ -59,22 +45,21 @@ api.interceptors.response.use(
                                 access_token: newAccessToken,
                                 refresh_token: newRefreshToken
                             });
+
+                            // Retry original request
+                            return api(originalRequest);
                         } catch (backendError) {
                             console.warn('Failed to update tokens in backend:', backendError);
                         }
-
-                        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-                        return api(originalRequest);
                     }
                 }
             } catch (refreshError) {
                 console.error('Token refresh failed:', refreshError);
             }
 
-            // Clear tokens and redirect ONLY if refresh failed
+            // Refresh failed, clear and redirect
             gtcfxTokenService.clearTokens();
 
-            // Prevent redirect loop - only redirect if not already on auth page
             if (!window.location.pathname.includes('/gtcfx/auth')) {
                 window.location.href = '/gtcfx/auth';
             }

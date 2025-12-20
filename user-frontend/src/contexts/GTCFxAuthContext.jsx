@@ -89,7 +89,7 @@ export const GTCFxAuthProvider = ({ children }) => {
       if (response.data.authenticated && response.data.data) {
         const { access_token, refresh_token, user } = response.data.data;
 
-        // Load tokens into memory
+        // Load tokens into memory for refresh logic
         gtcfxTokenService.setToken(access_token);
         gtcfxTokenService.setRefreshToken(refresh_token);
 
@@ -100,7 +100,7 @@ export const GTCFxAuthProvider = ({ children }) => {
 
         setGtcAuthenticated(true);
 
-        // Fetch fresh user data
+        // Optionally fetch fresh user data
         await fetchGTCUserInfo();
       } else {
         setGtcAuthenticated(false);
