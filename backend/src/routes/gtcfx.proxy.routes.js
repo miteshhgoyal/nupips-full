@@ -91,6 +91,7 @@ router.post('/redeem_pamm', authenticateToken, proxyGtcRequest);
 router.post('/share_profit_log', authenticateToken, proxyGtcRequest);
 router.post('/agent/commission_report', authenticateToken, proxyGtcRequest);
 router.post('/agent/member', authenticateToken, proxyGtcRequest);
+router.post('/agent/member_tree', authenticateToken, proxyGtcRequest);
 router.post('/logout', authenticateToken, proxyGtcRequest);
 
 export default router;
