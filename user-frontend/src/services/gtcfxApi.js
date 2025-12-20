@@ -1,6 +1,7 @@
 // services/gtcfxApi.js
 import axios from 'axios';
 import { gtcfxTokenService } from './gtcfxTokenService';
+import tokenService from './tokenService'; // ← Import YOUR tokenService
 import localApi from './api';
 
 const api = axios.create({
@@ -11,16 +12,27 @@ const api = axios.create({
     },
 });
 
-// REMOVE the request interceptor that adds Authorization header
-// Backend proxy will handle it
+// Send YOUR backend JWT token (NOT GTC token)
+api.interceptors.request.use(
+    (config) => {
+        const token = tokenService.getToken(); // Get YOUR backend token
+        if (token && !tokenService.isTokenExpired(token)) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
+// Keep existing response interceptor for GTC token refresh
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
         const responseData = error.response?.data;
 
-        // Check for GTC session expiration
         if (responseData?.code === 401 && !responseData?.authenticated && !originalRequest._retry) {
             originalRequest._retry = true;
 
@@ -39,14 +51,12 @@ api.interceptors.response.use(
                         gtcfxTokenService.setToken(newAccessToken);
                         gtcfxTokenService.setRefreshToken(newRefreshToken);
 
-                        // Update tokens in backend database
                         try {
                             await localApi.post('/gtcfx/refresh-tokens', {
                                 access_token: newAccessToken,
                                 refresh_token: newRefreshToken
                             });
 
-                            // Retry original request
                             return api(originalRequest);
                         } catch (backendError) {
                             console.warn('Failed to update tokens in backend:', backendError);
@@ -57,7 +67,6 @@ api.interceptors.response.use(
                 console.error('Token refresh failed:', refreshError);
             }
 
-            // Refresh failed, clear and redirect
             gtcfxTokenService.clearTokens();
 
             if (!window.location.pathname.includes('/gtcfx/auth')) {
