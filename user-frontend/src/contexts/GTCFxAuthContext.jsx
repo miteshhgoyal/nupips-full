@@ -63,7 +63,7 @@ export const GTCFxAuthProvider = ({ children }) => {
         gtcfxTokenService.setUser(userInfo);
 
         // Update in backend
-        await gtcfxBackendAPI
+        await api
           .post("/gtcfx/sync-user")
           .catch((err) => console.warn("Failed to sync user to backend:", err));
 
