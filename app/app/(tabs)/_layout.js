@@ -186,7 +186,7 @@ export default function TabsLayout() {
                     }}
                 />
 
-                {/* Wallet Screens (Hidden from tab bar) */}
+                {/* Wallet/Finance Screens (Hidden from tab bar) */}
                 <Tabs.Screen
                     name="nupips-incomes"
                     options={{
@@ -220,6 +220,63 @@ export default function TabsLayout() {
                     options={{
                         href: null,
                         title: 'Transaction History'
+                    }}
+                />
+
+                {/* Profile Screen */}
+                <Tabs.Screen
+                    name="profile"
+                    options={{
+                        href: null,
+                        title: 'Profile'
+                    }}
+                />
+
+                {/* Shop Related Screens (Hidden) */}
+                <Tabs.Screen
+                    name="product-item"
+                    options={{
+                        href: null,
+                        title: 'Product Details'
+                    }}
+                />
+                <Tabs.Screen
+                    name="place-order"
+                    options={{
+                        href: null,
+                        title: 'Place Order'
+                    }}
+                />
+                <Tabs.Screen
+                    name="orders"
+                    options={{
+                        href: null,
+                        title: 'My Orders'
+                    }}
+                />
+
+                {/* Learn Related Screens (Hidden) */}
+                <Tabs.Screen
+                    name="course-view"
+                    options={{
+                        href: null,
+                        title: 'Course Details'
+                    }}
+                />
+                <Tabs.Screen
+                    name="lesson-view"
+                    options={{
+                        href: null,
+                        title: 'Lesson View'
+                    }}
+                />
+
+                {/* Coming Soon Screen */}
+                <Tabs.Screen
+                    name="coming-soon"
+                    options={{
+                        href: null,
+                        title: 'Coming Soon'
                     }}
                 />
             </Tabs>
