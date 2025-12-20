@@ -12,7 +12,7 @@ const router = express.Router();
 
 // Dedicated axios instance for GTC FX API calls
 const gtcAxios = axios.create({
-    baseURL: process.env.GTC_FX_API_URL || 'https://test.gtctrader1203.top',
+    baseURL: process.env.GTC_FX_API_URL || 'https://apiv1.gtctrader100.top',
     timeout: 30000,
     headers: {
         'Content-Type': 'application/json',
