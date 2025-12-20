@@ -1,21 +1,23 @@
 // services/gtcfxApi.js
 import axios from 'axios';
 import { gtcfxTokenService } from './gtcfxTokenService';
-import { tokenService } from './tokenService'; // ← Import YOUR tokenService
+import { tokenService } from './tokenService';
 import localApi from './api';
 
 const api = axios.create({
     baseURL: 'https://api.nupips.com/api/v3',
-    timeout: 120000,
+    timeout: 180000, // ← 3 minutes for large tree data
     headers: {
         'Content-Type': 'application/json',
     },
+    maxContentLength: 100 * 1024 * 1024, // ← 100MB
+    maxBodyLength: 100 * 1024 * 1024,
 });
 
 // Send YOUR backend JWT token (NOT GTC token)
 api.interceptors.request.use(
     (config) => {
-        const token = tokenService.getToken(); // Get YOUR backend token
+        const token = tokenService.getToken();
         if (token && !tokenService.isTokenExpired(token)) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -32,6 +34,12 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
         const responseData = error.response?.data;
+
+        // Handle timeout errors
+        if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+            console.error('Request timeout:', originalRequest.url);
+            return Promise.reject(error);
+        }
 
         if (responseData?.code === 401 && !responseData?.authenticated && !originalRequest._retry) {
             originalRequest._retry = true;

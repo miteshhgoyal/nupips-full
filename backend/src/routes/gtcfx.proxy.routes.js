@@ -11,7 +11,7 @@ const GTC_API_BASE = process.env.GTC_FX_API_URL || 'https://apiv1.gtctrader100.t
 
 const gtcAxios = axios.create({
     baseURL: GTC_API_BASE,
-    timeout: 30000,
+    timeout: 120000,
     headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
@@ -19,6 +19,8 @@ const gtcAxios = axios.create({
     httpsAgent: new https.Agent({
         rejectUnauthorized: process.env.NODE_ENV === 'production',
     }),
+    maxContentLength: 100 * 1024 * 1024, // ← 100MB max response size
+    maxBodyLength: 100 * 1024 * 1024,
 });
 
 // Generic proxy middleware
@@ -45,6 +47,7 @@ const proxyGtcRequest = async (req, res) => {
             headers: {
                 Authorization: `Bearer ${user.gtcfx.accessToken}`,
             },
+            timeout: req.path === '/agent/member_tree' ? 180000 : 120000, // ← 3 min for tree
         };
 
         if (req.method === 'POST') {
@@ -57,9 +60,20 @@ const proxyGtcRequest = async (req, res) => {
     } catch (error) {
         console.error('GTC Proxy Error:', {
             endpoint: req.originalUrl,
+            method: req.method,
             status: error.response?.status,
-            message: error.response?.data?.message,
+            code: error.code,
+            message: error.response?.data?.message || error.message,
         });
+
+        // Handle timeout
+        if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+            return res.status(200).json({
+                code: 408,
+                message: 'Request timeout - please try again',
+                data: null
+            });
+        }
 
         if (error.response?.status === 401) {
             return res.status(200).json({
@@ -70,12 +84,12 @@ const proxyGtcRequest = async (req, res) => {
         }
 
         if (error.response?.data) {
-            return res.status(error.response.status || 400).json(error.response.data);
+            return res.status(200).json(error.response.data);
         }
 
-        res.status(500).json({
+        res.status(200).json({
             code: 500,
-            message: 'Proxy request failed',
+            message: error.message || 'Proxy request failed',
         });
     }
 };
