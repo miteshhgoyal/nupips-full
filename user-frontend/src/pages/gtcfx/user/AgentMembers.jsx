@@ -447,7 +447,7 @@ const GTCFxAgentMembers = () => {
           <td className="px-3 py-2.5">
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3 text-gray-400" />
-              <p className="text-[11px] text-gray-600">
+              <p className="text-[11px] text-gray-600 text-nowrap">
                 {new Date(node.create_time * 1000).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
