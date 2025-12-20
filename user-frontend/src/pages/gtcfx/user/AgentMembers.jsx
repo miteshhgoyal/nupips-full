@@ -20,9 +20,8 @@ import {
   RefreshCw,
   Network,
   X,
-  User,
   Phone,
-  Eye,
+  FileJson,
 } from "lucide-react";
 import api from "../../../services/gtcfxApi";
 
@@ -43,10 +42,6 @@ const GTCFxAgentMembers = () => {
   const [treeData, setTreeData] = useState(null);
   const [loadingTree, setLoadingTree] = useState(false);
   const [expandedTreeNodes, setExpandedTreeNodes] = useState(new Set());
-
-  // Detail Modal States
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedMember, setSelectedMember] = useState(null);
 
   const ITEMS_PER_PAGE = 10;
 
@@ -137,85 +132,25 @@ const GTCFxAgentMembers = () => {
     return rootMembers;
   };
 
-  const handleExport = () => {
-    const flattenTree = (node, level = 0) => {
-      let result = [
-        {
-          level,
-          member_id: node.member_id,
-          email: node.email,
-          nickname: node.nickname,
-          realname: node.realname,
-          parent_id: node.parent_id,
-          user_type: node.user_type,
-          amount: node.amount,
-          create_time: new Date(node.create_time * 1000).toLocaleDateString(),
-          phone: node.phone || "",
-        },
-      ];
-
-      if (node.children && node.children.length > 0) {
-        node.children.forEach((child) => {
-          result = result.concat(flattenTree(child, level + 1));
-        });
-      }
-
-      return result;
+  // Export as JSON
+  const handleExportJSON = () => {
+    const dataToExport = treeData?.tree || {
+      members: members,
+      total: totalMembers,
+      exported_at: new Date().toISOString(),
+      page: currentPage,
     };
 
-    const dataToExport = treeData?.tree
-      ? flattenTree(treeData.tree)
-      : members.map((m) => ({
-          level: m.level || 0,
-          member_id: m.member_id,
-          email: m.email,
-          nickname: m.nickname,
-          realname: m.realname,
-          parent_id: m.parent_id,
-          user_type: m.user_type,
-          amount: m.amount,
-          create_time: new Date(m.create_time * 1000).toLocaleDateString(),
-          phone: m.phone || "",
-        }));
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [
-        [
-          "Level",
-          "Member ID",
-          "Email",
-          "Nickname",
-          "Real Name",
-          "Parent ID",
-          "Account Type",
-          "Balance",
-          "Phone",
-          "Registered",
-        ],
-        ...dataToExport.map((member) => [
-          member.level,
-          member.member_id,
-          member.email,
-          member.nickname,
-          member.realname,
-          member.parent_id,
-          member.user_type,
-          member.amount,
-          member.phone,
-          member.create_time,
-        ]),
-      ]
-        .map((e) => e.join(","))
-        .join("\n");
-
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute(
-      "download",
-      `agent-members-tree-${new Date().getTime()}.csv`
-    );
+    link.href = url;
+    link.download = `team-tree-${new Date().getTime()}.json`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handlePageInputChange = (e) => {
@@ -301,174 +236,160 @@ const GTCFxAgentMembers = () => {
     });
   };
 
-  const openMemberDetail = (member) => {
-    setSelectedMember(member);
-    setShowDetailModal(true);
-  };
-
-  // Recursive tree node renderer for full tree modal
-  const renderFullTreeNode = (node, isRoot = false) => {
+  // Recursive tree node renderer - Table Row format with all details
+  const TreeNodeRow = ({ node, isRoot = false }) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedTreeNodes.has(node.member_id);
     const level = node.level || 0;
+    const indent = level * 20;
 
     return (
-      <div key={node.member_id} className={`${!isRoot ? "ml-6" : ""} relative`}>
-        {!isRoot && (
-          <div className="absolute left-0 top-0 w-4 h-6 border-l-2 border-b-2 border-gray-300 rounded-bl-lg -ml-3"></div>
-        )}
-
-        <div
-          className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+      <>
+        <tr
+          className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
             isRoot
-              ? "bg-gradient-to-r from-orange-500 to-orange-600 border-orange-700 shadow-lg"
+              ? "bg-gradient-to-r from-orange-50 to-orange-100 font-semibold"
               : level === 1
-              ? "bg-purple-50 border-purple-200"
+              ? "bg-purple-50/40"
               : level === 2
-              ? "bg-blue-50 border-blue-200"
-              : "bg-white border-gray-200 hover:border-orange-300 hover:shadow-sm"
-          } mb-2`}
+              ? "bg-blue-50/40"
+              : level > 2
+              ? "bg-gray-50/40"
+              : ""
+          }`}
         >
-          {/* Expand/Collapse Button */}
-          {hasChildren ? (
-            <button
-              onClick={() => toggleTreeNode(node.member_id)}
-              className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
-                isRoot
-                  ? "bg-white/20 hover:bg-white/30"
-                  : "bg-gray-100 hover:bg-gray-200"
-              }`}
-            >
-              {isExpanded ? (
-                <ChevronDown
-                  className={`w-4 h-4 ${
-                    isRoot ? "text-white" : "text-gray-700"
-                  }`}
-                />
-              ) : (
-                <ChevronRightIcon
-                  className={`w-4 h-4 ${
-                    isRoot ? "text-white" : "text-gray-700"
-                  }`}
-                />
-              )}
-            </button>
-          ) : (
-            <div className="w-7 h-7 flex items-center justify-center">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isRoot ? "bg-white/50" : "bg-gray-300"
-                }`}
-              ></div>
-            </div>
-          )}
-
-          {/* User Avatar */}
-          <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-              isRoot
-                ? "bg-white/20"
-                : level === 1
-                ? "bg-purple-200"
-                : level === 2
-                ? "bg-blue-200"
-                : "bg-orange-100"
-            }`}
+          {/* Member Name & Avatar */}
+          <td
+            className="px-3 py-2.5"
+            style={{ paddingLeft: `${12 + indent}px` }}
           >
-            <span
-              className={`font-bold text-sm ${
-                isRoot ? "text-white" : "text-gray-700"
-              }`}
-            >
-              {(node.nickname || "U").charAt(0).toUpperCase()}
-            </span>
-          </div>
-
-          {/* User Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p
-                className={`font-semibold text-sm truncate ${
-                  isRoot ? "text-white" : "text-gray-900"
-                }`}
-              >
-                {node.nickname}
-              </p>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  isRoot
-                    ? "bg-white/20 text-white"
-                    : node.user_type === "agent"
-                    ? "bg-purple-100 text-purple-700"
-                    : "bg-green-100 text-green-700"
-                }`}
-              >
-                {node.user_type === "agent" ? "Agent" : "Direct"}
-              </span>
-              {level > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 font-semibold">
-                  L{level}
-                </span>
+            <div className="flex items-center gap-2">
+              {hasChildren ? (
+                <button
+                  onClick={() => toggleTreeNode(node.member_id)}
+                  className="p-1 hover:bg-orange-100 rounded transition-colors flex-shrink-0"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-3.5 h-3.5 text-orange-600" />
+                  ) : (
+                    <ChevronRightIcon className="w-3.5 h-3.5 text-gray-400" />
+                  )}
+                </button>
+              ) : (
+                <div className="w-5" />
               )}
-            </div>
-            <p
-              className={`text-xs truncate mt-0.5 ${
-                isRoot ? "text-white/80" : "text-gray-500"
-              }`}
-            >
-              {node.email}
-            </p>
-          </div>
-
-          {/* Balance & Actions */}
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p
-                className={`text-xs ${
-                  isRoot ? "text-white/80" : "text-gray-500"
-                } mb-0.5`}
-              >
-                Balance
-              </p>
-              <p
-                className={`text-sm font-bold ${
-                  isRoot ? "text-white" : "text-green-600"
-                }`}
-              >
-                ${parseFloat(node.amount || 0).toFixed(2)}
-              </p>
-              {hasChildren && (
-                <span
-                  className={`text-xs ${
-                    isRoot ? "text-white/70" : "text-gray-500"
+              <div className="flex items-center gap-2 min-w-0">
+                <div
+                  className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                    isRoot
+                      ? "bg-orange-500 text-white"
+                      : level === 1
+                      ? "bg-purple-400 text-white"
+                      : level === 2
+                      ? "bg-blue-400 text-white"
+                      : "bg-gray-400 text-white"
                   }`}
                 >
-                  {node.children.length} member
-                  {node.children.length !== 1 ? "s" : ""}
-                </span>
-              )}
+                  {(node.nickname || "U").charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-gray-900 truncate">
+                    {node.nickname}
+                  </p>
+                  <p className="text-[10px] text-gray-500 truncate">
+                    {node.realname || "N/A"}
+                  </p>
+                </div>
+              </div>
             </div>
+          </td>
 
-            <button
-              onClick={() => openMemberDetail(node)}
-              className={`p-2 rounded-lg transition-all ${
-                isRoot
-                  ? "bg-white/20 hover:bg-white/30"
-                  : "bg-gray-100 hover:bg-gray-200"
+          {/* Email */}
+          <td className="px-3 py-2.5">
+            <div className="flex items-center gap-1">
+              <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
+              <p className="text-[11px] text-gray-600 truncate max-w-[180px]">
+                {node.email}
+              </p>
+            </div>
+          </td>
+
+          {/* Phone */}
+          <td className="px-3 py-2.5">
+            <div className="flex items-center gap-1">
+              <Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />
+              <p className="text-[11px] text-gray-600 truncate">
+                {node.phone || "N/A"}
+              </p>
+            </div>
+          </td>
+
+          {/* Type */}
+          <td className="px-3 py-2.5">
+            <span
+              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                node.user_type === "agent"
+                  ? "bg-purple-100 text-purple-700"
+                  : "bg-green-100 text-green-700"
               }`}
             >
-              <Eye
-                className={`w-4 h-4 ${isRoot ? "text-white" : "text-gray-600"}`}
-              />
-            </button>
-          </div>
-        </div>
+              {node.user_type === "agent" ? "Agent" : "Direct"}
+            </span>
+          </td>
+
+          {/* Level */}
+          <td className="px-3 py-2.5 text-center">
+            <span className="inline-block px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-semibold">
+              L{level}
+            </span>
+          </td>
+
+          {/* Balance */}
+          <td className="px-3 py-2.5 text-right">
+            <p className="font-bold text-green-600 text-xs">
+              ${parseFloat(node.amount || 0).toFixed(2)}
+            </p>
+          </td>
+
+          {/* Registered */}
+          <td className="px-3 py-2.5">
+            <div className="flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-gray-400" />
+              <p className="text-[11px] text-gray-600">
+                {new Date(node.create_time * 1000).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "2-digit",
+                })}
+              </p>
+            </div>
+          </td>
+
+          {/* Member ID */}
+          <td className="px-3 py-2.5">
+            <p className="text-[10px] font-mono text-gray-500">
+              {node.member_id}
+            </p>
+          </td>
+
+          {/* Team Size */}
+          <td className="px-3 py-2.5 text-center">
+            {hasChildren && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-semibold">
+                <Users className="w-3 h-3" />
+                {node.children.length}
+              </span>
+            )}
+          </td>
+        </tr>
 
         {/* Children */}
         {hasChildren &&
           isExpanded &&
-          node.children.map((child) => renderFullTreeNode(child, false))}
-      </div>
+          node.children.map((child) => (
+            <TreeNodeRow key={child.member_id} node={child} isRoot={false} />
+          ))}
+      </>
     );
   };
 
@@ -676,12 +597,12 @@ const GTCFxAgentMembers = () => {
               Expand All
             </button>
             <button
-              onClick={handleExport}
-              disabled={members.length === 0}
+              onClick={handleExportJSON}
+              disabled={members.length === 0 && !treeData}
               className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Download className="w-4 h-4" />
-              Export
+              <FileJson className="w-4 h-4" />
+              Export JSON
             </button>
           </div>
         </div>
@@ -986,50 +907,82 @@ const GTCFxAgentMembers = () => {
         )}
       </div>
 
-      {/* Full Tree Modal */}
+      {/* Full Tree Modal - Compact 90vh with reduced width */}
       {showTreeModal && treeData && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-orange-50 to-orange-100">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-orange-50 to-orange-100">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <Network className="w-6 h-6 text-orange-600" />
-                  Complete Team Tree Structure
+                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <Network className="w-5 h-5 text-orange-600" />
+                  Complete Team Tree
                 </h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Hierarchical view of your entire downline network
+                <p className="text-xs text-gray-600 mt-0.5">
+                  Hierarchical view of your entire network
                 </p>
               </div>
               <button
                 onClick={() => setShowTreeModal(false)}
-                className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white transition-colors"
               >
-                <X className="w-6 h-6 text-gray-600" />
+                <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-6">
+            {/* Modal Body - Scrollable Table */}
+            <div className="flex-1 overflow-y-auto">
               {treeData.tree ? (
-                <div className="mb-6">
-                  {renderFullTreeNode(treeData.tree, true)}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-gray-100 z-10">
+                      <tr className="border-b border-gray-200">
+                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
+                          Member
+                        </th>
+                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
+                          Email
+                        </th>
+                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
+                          Phone
+                        </th>
+                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
+                          Type
+                        </th>
+                        <th className="px-3 py-2 text-center text-[11px] font-semibold text-gray-900">
+                          Level
+                        </th>
+                        <th className="px-3 py-2 text-right text-[11px] font-semibold text-gray-900">
+                          Balance
+                        </th>
+                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
+                          Registered
+                        </th>
+                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
+                          ID
+                        </th>
+                        <th className="px-3 py-2 text-center text-[11px] font-semibold text-gray-900">
+                          Team
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <TreeNodeRow node={treeData.tree} isRoot={true} />
+                    </tbody>
+                  </table>
                 </div>
               ) : (
-                <div className="text-center py-12 bg-gray-50 rounded-xl">
-                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 font-medium">
+                <div className="text-center py-12 bg-gray-50">
+                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 font-medium text-sm">
                     No team members yet
-                  </p>
-                  <p className="text-sm text-gray-400 mt-2">
-                    Share your referral link to start building your team
                   </p>
                 </div>
               )}
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
+            <div className="p-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
               <button
                 onClick={() => {
                   if (treeData?.tree) {
@@ -1044,7 +997,7 @@ const GTCFxAgentMembers = () => {
                     setExpandedTreeNodes(new Set(allNodes));
                   }
                 }}
-                className="px-4 py-2 border border-gray-200 hover:bg-white text-gray-700 rounded-lg text-sm font-medium transition-all"
+                className="px-3 py-1.5 border border-gray-200 hover:bg-white text-gray-700 rounded-lg text-xs font-medium transition-all"
               >
                 Expand All
               </button>
@@ -1054,174 +1007,16 @@ const GTCFxAgentMembers = () => {
                     setExpandedTreeNodes(new Set([treeData.tree.member_id]));
                   }
                 }}
-                className="px-4 py-2 border border-gray-200 hover:bg-white text-gray-700 rounded-lg text-sm font-medium transition-all"
+                className="px-3 py-1.5 border border-gray-200 hover:bg-white text-gray-700 rounded-lg text-xs font-medium transition-all"
               >
                 Collapse All
               </button>
               <button
-                onClick={handleExport}
-                className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-sm font-medium transition-all shadow-md hover:shadow-lg"
+                onClick={handleExportJSON}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg"
               >
-                Export Tree
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Member Detail Modal */}
-      {showDetailModal && selectedMember && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-white font-bold text-2xl">
-                      {(selectedMember.nickname || "U").charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      {selectedMember.nickname}
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      {selectedMember.realname || "No real name provided"}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white transition-colors"
-                >
-                  <X className="w-6 h-6 text-gray-600" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-6">
-                {/* Basic Info */}
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5 text-orange-600" />
-                    Basic Information
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Member ID</p>
-                      <p className="font-mono font-semibold text-gray-900">
-                        {selectedMember.member_id}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Email</p>
-                      <p className="font-semibold text-gray-900 truncate">
-                        {selectedMember.email}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Phone</p>
-                      <p className="font-semibold text-gray-900">
-                        {selectedMember.phone || "N/A"}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Parent ID</p>
-                      <p className="font-mono font-semibold text-gray-900">
-                        {selectedMember.parent_id || "Root"}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">User Type</p>
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                          selectedMember.user_type === "agent"
-                            ? "bg-purple-100 text-purple-700"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {selectedMember.user_type === "agent"
-                          ? "Agent"
-                          : "Direct Client"}
-                      </span>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Level</p>
-                      <p className="font-semibold text-orange-600">
-                        Level {selectedMember.level || 0}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Financial Info */}
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-orange-600" />
-                    Financial Information
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="p-6 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
-                      <p className="text-sm text-green-700 mb-2">
-                        Account Balance
-                      </p>
-                      <p className="text-3xl font-bold text-green-900">
-                        ${parseFloat(selectedMember.amount || 0).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Registration Info */}
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-orange-600" />
-                    Registration Information
-                  </h3>
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">Registered On</p>
-                    <p className="font-semibold text-gray-900">
-                      {new Date(
-                        selectedMember.create_time * 1000
-                      ).toLocaleString("en-US", {
-                        dateStyle: "full",
-                        timeStyle: "short",
-                      })}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Team Info */}
-                {selectedMember.children &&
-                  selectedMember.children.length > 0 && (
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <Users className="w-5 h-5 text-orange-600" />
-                        Team Information
-                      </h3>
-                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                        <p className="text-sm text-blue-700 mb-1">
-                          Direct Downline Members
-                        </p>
-                        <p className="text-2xl font-bold text-blue-900">
-                          {selectedMember.children.length}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-all"
-              >
-                Close
+                <FileJson className="w-3.5 h-3.5" />
+                Export JSON
               </button>
             </div>
           </div>

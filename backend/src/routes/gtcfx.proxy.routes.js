@@ -47,7 +47,7 @@ const proxyGtcRequest = async (req, res) => {
             headers: {
                 Authorization: `Bearer ${user.gtcfx.accessToken}`,
             },
-            timeout: req.path === '/agent/member_tree' ? 180000 : 120000, // ← 3 min for tree
+            timeout: req.path === '/agent/member_tree' ? 300000 : 120000, // ← 5 min for tree
         };
 
         if (req.method === 'POST') {

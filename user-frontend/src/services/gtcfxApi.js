@@ -6,7 +6,7 @@ import localApi from './api';
 
 const api = axios.create({
     baseURL: 'https://api.nupips.com/api/v3',
-    timeout: 180000, // ← 3 minutes for large tree data
+    timeout: 300000, // ← 5 minutes for large tree data
     headers: {
         'Content-Type': 'application/json',
     },
