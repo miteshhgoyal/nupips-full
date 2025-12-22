@@ -45,6 +45,18 @@ const SystemSchema = new mongoose.Schema({
             message: 'Performance fee time must be in HH:MM 24-hour format'
         }
     },
+
+    // PAMM UUID Configuration
+    pammUuid: {
+        type: String,
+        default: null,
+        trim: true,
+    },
+    pammEnabled: {
+        type: Boolean,
+        default: false
+    },
+
     updatedAt: {
         type: Date,
         default: Date.now
@@ -74,7 +86,9 @@ SystemSchema.statics.getOrCreateConfig = async function () {
                 maxUplineLevels: 10,
                 performanceFeeFrequency: "monthly",
                 performanceFeeDates: [1], // default: 1st of month
-                performanceFeeTime: "00:00"
+                performanceFeeTime: "00:00",
+                pammUuid: null,
+                pammEnabled: false
             });
         }
         return config;

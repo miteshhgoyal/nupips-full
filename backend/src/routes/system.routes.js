@@ -35,7 +35,9 @@ const validateConfigUpdate = (req, res, next) => {
         uplineDistribution,
         performanceFeeFrequency,
         performanceFeeDates,
-        performanceFeeTime
+        performanceFeeTime,
+        pammUuid,
+        pammEnabled
     } = req.body;
 
     if (systemPercentage === undefined || systemPercentage < 0 || systemPercentage > 100) {
@@ -93,7 +95,6 @@ const validateConfigUpdate = (req, res, next) => {
         });
     }
 
-    // Validate new simplified frequency field
     const validFrequencies = ['daily', 'monthly'];
     if (!performanceFeeFrequency || !validFrequencies.includes(performanceFeeFrequency)) {
         return res.status(400).json({
@@ -102,7 +103,6 @@ const validateConfigUpdate = (req, res, next) => {
         });
     }
 
-    // Validate time format HH:MM 24-hour
     if (
         !performanceFeeTime ||
         typeof performanceFeeTime !== 'string' ||
@@ -114,7 +114,6 @@ const validateConfigUpdate = (req, res, next) => {
         });
     }
 
-    // If monthly, validate dates array
     if (performanceFeeFrequency === 'monthly') {
         if (
             !Array.isArray(performanceFeeDates) ||
@@ -128,6 +127,17 @@ const validateConfigUpdate = (req, res, next) => {
         }
     }
 
+    // Validate PAMM UUID if provided
+    if (pammUuid && pammUuid.trim()) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(pammUuid.trim())) {
+            return res.status(400).json({
+                success: false,
+                message: 'PAMM UUID must be a valid UUID v4 format'
+            });
+        }
+    }
+
     req.validatedData = {
         systemPercentage,
         traderPercentage,
@@ -135,7 +145,9 @@ const validateConfigUpdate = (req, res, next) => {
         uplineDistribution,
         performanceFeeFrequency,
         performanceFeeDates: performanceFeeFrequency === 'monthly' ? performanceFeeDates : [],
-        performanceFeeTime
+        performanceFeeTime,
+        pammUuid: pammUuid?.trim() || null,
+        pammEnabled: Boolean(pammEnabled)
     };
     next();
 };
@@ -187,7 +199,9 @@ router.put('/config',
                 uplineDistribution,
                 performanceFeeFrequency,
                 performanceFeeDates,
-                performanceFeeTime
+                performanceFeeTime,
+                pammUuid,
+                pammEnabled
             } = req.validatedData;
 
             let config = await SystemConfig.getOrCreateConfig();
@@ -199,6 +213,8 @@ router.put('/config',
             config.performanceFeeFrequency = performanceFeeFrequency;
             config.performanceFeeDates = performanceFeeDates;
             config.performanceFeeTime = performanceFeeTime;
+            config.pammUuid = pammUuid;
+            config.pammEnabled = pammEnabled;
             config.updatedAt = new Date();
 
             await config.save();
