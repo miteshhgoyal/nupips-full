@@ -549,21 +549,52 @@ router.patch('/deposits/:id', authenticateToken, async (req, res) => {
             });
         }
 
+        const previousStatus = deposit.status;
+
         // Update fields
         if (status) deposit.status = status;
         if (adminNotes) deposit.adminNotes = adminNotes;
 
-        // Set processedBy if completing
+        // Set processedBy if completing or processing
         if (status && ['completed', 'processing'].includes(status)) {
             deposit.processedBy = req.user.userId;
             deposit.processedAt = new Date();
+        }
+
+        // If admin marks as completed, add money to user wallet
+        if (status === 'completed' && previousStatus !== 'completed') {
+            const user = await User.findById(deposit.userId);
+
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found'
+                });
+            }
+
+            // Add deposit amount to wallet
+            user.walletBalance += deposit.amount;
+
+            // Record transaction in user's financials
+            user.financials.totalDeposits += deposit.amount;
+            user.financials.depositHistory.push({
+                amount: deposit.amount,
+                date: new Date(),
+                transactionId: deposit.transactionId,
+                method: deposit.paymentMethod
+            });
+
+            await user.save();
+            deposit.completedAt = new Date();
         }
 
         await deposit.save();
 
         res.status(200).json({
             success: true,
-            message: 'Deposit updated successfully',
+            message: status === 'completed' && previousStatus !== 'completed'
+                ? `Deposit completed successfully. $${deposit.amount} added to user's wallet.`
+                : 'Deposit updated successfully',
             data: deposit
         });
     } catch (error) {
