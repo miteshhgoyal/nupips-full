@@ -23,11 +23,27 @@ import { startPerformanceFeesCron } from './jobs/syncPerformanceFees.cron.js';
 const app = express();
 const PORT = process.env.PORT || 8000;
 
+const allowedOrigins = [
+    'https://admin.nupips.com',
+    'https://nupips.com',
+    'https://user.nupips.com',
+    'http://localhost:5173',        // dev origin
+    'http://localhost:5174',        // dev origin
+];
+
 const corsOptions = {
-    origin: '*',
+    origin: function (origin, callback) {
+        // allow non-browser tools with no origin
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST', 'DELETE', 'PATCH', 'PUT', 'OPTIONS'],
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 app.use(cors(corsOptions));
