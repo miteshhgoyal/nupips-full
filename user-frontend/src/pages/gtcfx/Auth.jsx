@@ -13,6 +13,7 @@ import {
   DollarSign,
   Calendar,
   Shield,
+  ArrowLeft,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useGTCFxAuth } from "../../contexts/GTCFxAuthContext";
@@ -79,7 +80,6 @@ const GTCFxAuth = () => {
     setSubmitError("");
 
     try {
-      // Call YOUR backend API instead of GTC FX directly
       const response = await api.post("/gtcfx/login", {
         account: formData.account,
         password: formData.password,
@@ -96,6 +96,8 @@ const GTCFxAuth = () => {
 
         if (loginSuccess) {
           setFormData({ account: "", password: "" });
+          // Redirect to dashboard after successful login
+          navigate("/gtcfx/dashboard");
         } else {
           setSubmitError("Failed to complete login. Please try again.");
         }
@@ -125,6 +127,7 @@ const GTCFxAuth = () => {
   const handleLogout = async () => {
     await gtcLogout();
     setFormData({ account: "", password: "" });
+    // Stay on this page after logout
   };
 
   // Loading state
@@ -144,19 +147,34 @@ const GTCFxAuth = () => {
     return (
       <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
+          {/* Back Button */}
+          <div className="mb-6">
+            <Link
+              to="/gtcfx/brokers"
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors group"
+            >
+              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+              <span className="text-sm font-medium">
+                Back to Broker Selection
+              </span>
+            </Link>
+          </div>
+
           {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
               <TrendingUp className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              GTC FX Account
+              GTC FX Connected
             </h1>
-            <p className="text-gray-600">Manage your GTC FX authentication</p>
+            <p className="text-gray-600">
+              Your broker account is connected and active
+            </p>
           </div>
 
           {/* User Info Card */}
-          <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border border-gray-200 mb-6">
+          <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border-2 border-green-200 mb-6">
             {/* Profile Section */}
             <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-gray-200">
               <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
@@ -179,14 +197,14 @@ const GTCFxAuth = () => {
                   <span
                     className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
                       gtcUser.status === 1
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
+                        ? "bg-green-100 text-green-700 border border-green-300"
+                        : "bg-red-100 text-red-700 border border-red-300"
                     }`}
                   >
                     <Shield className="w-3 h-3" />
                     {gtcUser.status === 1 ? "Active" : "Inactive"}
                   </span>
-                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 border border-blue-300 rounded-full text-xs font-semibold">
                     <Activity className="w-3 h-3" />
                     {gtcUser.userType === 1 ? "Agent" : "User"}
                   </span>
@@ -196,7 +214,7 @@ const GTCFxAuth = () => {
 
             {/* Account Details Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              <div className="p-4 bg-gray-50 rounded-xl">
+              <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
                     <DollarSign className="w-5 h-5 text-orange-600" />
@@ -212,7 +230,7 @@ const GTCFxAuth = () => {
                 </div>
               </div>
 
-              <div className="p-4 bg-gray-50 rounded-xl">
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                     <Calendar className="w-5 h-5 text-blue-600" />
@@ -240,38 +258,31 @@ const GTCFxAuth = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Link
                 to="/gtcfx/dashboard"
-                className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
+                className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg group"
               >
                 <span>Go to Dashboard</span>
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
 
               <button
                 onClick={handleLogout}
-                className="w-full bg-white hover:bg-red-50 text-red-600 border-2 border-red-200 hover:border-red-300 py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+                className="w-full bg-white hover:bg-red-50 text-red-600 border-2 border-red-200 hover:border-red-300 py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 group"
               >
-                <LogOut className="w-5 h-5" />
-                <span>Logout</span>
+                <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <span>Disconnect Broker</span>
               </button>
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Quick Access Links */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Link
-              to="/gtcfx/strategies"
+              to="/gtcfx/dashboard"
               className="p-4 bg-white border-2 border-gray-200 hover:border-orange-500 rounded-xl hover:bg-orange-50 transition-all text-center group"
             >
               <TrendingUp className="w-8 h-8 text-orange-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-              <p className="font-semibold text-gray-900">Strategies</p>
-            </Link>
-
-            <Link
-              to="/gtcfx/subscriptions"
-              className="p-4 bg-white border-2 border-gray-200 hover:border-green-500 rounded-xl hover:bg-green-50 transition-all text-center group"
-            >
-              <Activity className="w-8 h-8 text-green-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-              <p className="font-semibold text-gray-900">My Subscriptions</p>
+              <p className="font-semibold text-gray-900">Dashboard</p>
+              <p className="text-xs text-gray-500 mt-1">View overview</p>
             </Link>
 
             <Link
@@ -280,6 +291,16 @@ const GTCFxAuth = () => {
             >
               <DollarSign className="w-8 h-8 text-purple-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
               <p className="font-semibold text-gray-900">Profit Logs</p>
+              <p className="text-xs text-gray-500 mt-1">Track earnings</p>
+            </Link>
+
+            <Link
+              to="/gtcfx/agent/members"
+              className="p-4 bg-white border-2 border-gray-200 hover:border-green-500 rounded-xl hover:bg-green-50 transition-all text-center group"
+            >
+              <Activity className="w-8 h-8 text-green-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+              <p className="font-semibold text-gray-900">Agent Members</p>
+              <p className="text-xs text-gray-500 mt-1">Manage team</p>
             </Link>
           </div>
         </div>
@@ -291,16 +312,29 @@ const GTCFxAuth = () => {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link
+            to="/gtcfx/brokers"
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-medium">
+              Back to Broker Selection
+            </span>
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
             <TrendingUp className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            GTC FX Login
+            Connect to GTC FX
           </h1>
           <p className="text-gray-600">
-            Access your trading account and strategies
+            Enter your GTC FX credentials to connect your account
           </p>
         </div>
 
@@ -340,7 +374,7 @@ const GTCFxAuth = () => {
                       ? "border-red-300 bg-red-50"
                       : "border-gray-200 bg-gray-50"
                   } disabled:bg-gray-100 disabled:cursor-not-allowed`}
-                  placeholder="Enter your email"
+                  placeholder="Enter your GTC FX email"
                   autoComplete="email"
                 />
               </div>
@@ -370,7 +404,7 @@ const GTCFxAuth = () => {
                       ? "border-red-300 bg-red-50"
                       : "border-gray-200 bg-gray-50"
                   } disabled:bg-gray-100 disabled:cursor-not-allowed`}
-                  placeholder="Enter your password"
+                  placeholder="Enter your GTC FX password"
                   autoComplete="current-password"
                 />
                 <button
@@ -403,10 +437,13 @@ const GTCFxAuth = () => {
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Signing In...</span>
+                  <span>Connecting...</span>
                 </>
               ) : (
-                <span>Login to GTC FX</span>
+                <>
+                  <span>Connect to GTC FX</span>
+                  <ArrowRight className="w-5 h-5" />
+                </>
               )}
             </button>
           </form>
@@ -420,7 +457,7 @@ const GTCFxAuth = () => {
               href="mailto:support@gtcfx.com"
               className="text-orange-600 hover:text-orange-700 font-medium"
             >
-              Contact Support
+              Contact GTC FX Support
             </a>
           </p>
         </div>

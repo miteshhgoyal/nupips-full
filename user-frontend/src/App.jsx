@@ -35,6 +35,8 @@ import Deposit from "./pages/wallet/Deposit";
 import Withdrawal from "./pages/wallet/Withdrawal";
 import TransactionHistory from "./pages/wallet/TransactionHistory";
 
+import BrokerSelection from "./pages/user/BrokerSelection";
+
 // Import GTC FX Pages
 import GTCFxAuth from "./pages/gtcfx/Auth";
 import GTCFxDashboard from "./pages/gtcfx/user/Dashboard";
@@ -91,7 +93,8 @@ const sidebarLinks = [
     name: "GTC FX",
     icon: TrendingUp,
     subItems: [
-      { name: "Authentication", href: "/gtcfx/auth" },
+      { name: "Connect Your Broker", href: "/gtcfx/brokers" },
+      //   { name: "Authentication", href: "/gtcfx/auth" },
       { name: "Dashboard", href: "/gtcfx/dashboard" },
       { name: "Profit Logs", href: "/gtcfx/profit-logs" },
       { name: "Agent Members", href: "/gtcfx/agent/members" },
@@ -255,6 +258,15 @@ function App() {
                 element={
                   <ProtectedRoute requireAuth={false}>
                     <Login />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/gtcfx/brokers"
+                element={
+                  <ProtectedRoute>
+                    <BrokerSelection />
                   </ProtectedRoute>
                 }
               />
