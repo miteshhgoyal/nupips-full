@@ -50,7 +50,14 @@ const UserSchema = new mongoose.Schema({
         index: true
     },
 
-    // Addresses Array (NEW)
+    privacySettings: {
+        hideDetailsFromDownline: {
+            type: Boolean,
+            default: false // By default, details are visible
+        }
+    },
+
+    // Addresses Array
     addresses: [addressSchema],
 
     // Referral System

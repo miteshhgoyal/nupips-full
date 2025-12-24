@@ -39,24 +39,29 @@ const Profile = () => {
   const { updateUser } = useAuth();
   const navigate = useNavigate();
 
+  // Loading states
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [loadingSponsor, setLoadingSponsor] = useState(false);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+
+  // Alert states
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
 
+  // Data states
   const [data, setData] = useState(null);
   const [sponsorData, setSponsorData] = useState(null);
 
-  // Basic editable
+  // Edit states
   const [editing, setEditing] = useState(false);
   const [basic, setBasic] = useState({ name: "", username: "" });
 
-  // Referral copy
+  // Utility states
   const [copiedReferral, setCopiedReferral] = useState(false);
 
-  // Password form
+  // Password form state
   const [pwd, setPwd] = useState({
     current: "",
     next: "",
@@ -82,7 +87,6 @@ const Profile = () => {
         username: res.data.username || "",
       });
 
-      // Load sponsor info if user has referrer
       if (res.data.referralDetails?.referredBy) {
         loadSponsor();
       }
@@ -111,7 +115,6 @@ const Profile = () => {
     load();
   }, []);
 
-  // validators
   const validateBasic = () => {
     if (!basic.name.trim()) return "Name is required";
     if (!basic.username.trim()) return "Username is required";
@@ -172,6 +175,28 @@ const Profile = () => {
       setErr(e.response?.data?.message || "Failed to change password");
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  const togglePrivacy = async () => {
+    resetAlerts();
+    setSavingPrivacy(true);
+    try {
+      const newValue = !data.privacySettings?.hideDetailsFromDownline;
+      const res = await api.put("/profile/privacy", {
+        hideDetailsFromDownline: newValue,
+      });
+      setData(res.data.user);
+      updateUser && updateUser(res.data.user);
+      setOk(
+        newValue
+          ? "Privacy enabled: Your details are now hidden from downline"
+          : "Privacy disabled: Your details are now visible to downline"
+      );
+    } catch (e) {
+      setErr(e.response?.data?.message || "Failed to update privacy settings");
+    } finally {
+      setSavingPrivacy(false);
     }
   };
 
@@ -357,7 +382,6 @@ const Profile = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Full Name
@@ -376,7 +400,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Username */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Username
@@ -412,7 +435,6 @@ const Profile = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                {/* Current Password */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Current Password
@@ -444,7 +466,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* New Password */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     New Password
@@ -479,7 +500,6 @@ const Profile = () => {
                   </p>
                 </div>
 
-                {/* Confirm Password */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Confirm New Password
@@ -531,8 +551,69 @@ const Profile = () => {
               </button>
             </div>
 
+            {/* Privacy Settings Section */}
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              <div className="mb-6">
+                <h2 className="text-lg font-bold text-gray-900">
+                  Privacy Settings
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Control what information your downline members can see
+                </p>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border border-purple-200">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <EyeOff className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-purple-900 mb-1">
+                        Hide Details from Downline
+                      </h3>
+                      <p className="text-sm text-purple-700 leading-relaxed">
+                        When enabled, your downline members won't be able to see
+                        your wallet balance, deposit/withdrawal history, or
+                        downline count. They will only see your basic contact
+                        information.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={togglePrivacy}
+                    disabled={savingPrivacy}
+                    className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                      data.privacySettings?.hideDetailsFromDownline
+                        ? "bg-purple-600"
+                        : "bg-gray-300"
+                    } ${savingPrivacy ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <span
+                      className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                        data.privacySettings?.hideDetailsFromDownline
+                          ? "translate-x-7"
+                          : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {data.privacySettings?.hideDetailsFromDownline && (
+                  <div className="mt-4 flex items-center gap-2 text-sm text-purple-800 bg-purple-100 rounded-lg p-3">
+                    <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      Your financial details are hidden from your downline
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Sponsor/Upline Information Section */}
-            {sponsorData && (
+
+            {sponsorData && !sponsorData.detailsHidden && (
               <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-200 shadow-sm">
                 <div className="flex items-center gap-2 mb-6">
                   <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
@@ -603,61 +684,69 @@ const Profile = () => {
                   {/* Right: Stats */}
                   <div className="space-y-3">
                     {/* <div className="bg-white rounded-lg p-4 border border-purple-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Wallet className="w-5 h-5 text-purple-600" />
-                          <span className="text-xs text-gray-600">
-                            Wallet Balance
-                          </span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Wallet className="w-5 h-5 text-purple-600" />
+                              <span className="text-xs text-gray-600">
+                                Wallet Balance
+                              </span>
+                            </div>
+                            <span className="text-sm font-bold text-purple-900">
+                              $
+                              {Number(sponsorData.walletBalance || 0).toFixed(
+                                2
+                              )}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-sm font-bold text-purple-900">
-                          ${Number(sponsorData.walletBalance || 0).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg p-4 border border-purple-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="w-5 h-5 text-green-600" />
-                          <span className="text-xs text-gray-600">
-                            Total Deposits
-                          </span>
+                        <div className="bg-white rounded-lg p-4 border border-purple-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <TrendingUp className="w-5 h-5 text-green-600" />
+                              <span className="text-xs text-gray-600">
+                                Total Deposits
+                              </span>
+                            </div>
+                            <span className="text-sm font-bold text-green-700">
+                              $
+                              {Number(sponsorData.totalDeposits || 0).toFixed(
+                                2
+                              )}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-sm font-bold text-green-700">
-                          ${Number(sponsorData.totalDeposits || 0).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg p-4 border border-purple-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <TrendingDown className="w-5 h-5 text-red-600" />
-                          <span className="text-xs text-gray-600">
-                            Total Withdrawals
-                          </span>
+                        <div className="bg-white rounded-lg p-4 border border-purple-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <TrendingDown className="w-5 h-5 text-red-600" />
+                              <span className="text-xs text-gray-600">
+                                Total Withdrawals
+                              </span>
+                            </div>
+                            <span className="text-sm font-bold text-red-700">
+                              $
+                              {Number(
+                                sponsorData.totalWithdrawals || 0
+                              ).toFixed(2)}
+                            </span>
+                          </div>
                         </div>
-                        <span className="text-sm font-bold text-red-700">
-                          $
-                          {Number(sponsorData.totalWithdrawals || 0).toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="bg-white rounded-lg p-4 border border-purple-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Activity className="w-5 h-5 text-blue-600" />
-                          <span className="text-xs text-gray-600">
-                            Downline Count
-                          </span>
-                        </div>
-                        <span className="text-sm font-bold text-blue-700">
-                          {sponsorData.downlineCount || 0}
-                        </span>
-                      </div>
-                    </div> */}
+                        <div className="bg-white rounded-lg p-4 border border-purple-200">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Activity className="w-5 h-5 text-blue-600" />
+                              <span className="text-xs text-gray-600">
+                                Downline Count
+                              </span>
+                            </div>
+                            <span className="text-sm font-bold text-blue-700">
+                              {sponsorData.downlineCount || 0}
+                            </span>
+                          </div>
+                        </div> */}
 
                     <div className="bg-white rounded-lg p-4 border border-purple-200">
                       <div className="flex items-center justify-between">
@@ -721,7 +810,6 @@ const Profile = () => {
                 Share your unique link and earn rewards
               </p>
 
-              {/* Referral Code Display */}
               <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200 mb-3">
                 <p className="text-xs text-orange-700 mb-1">
                   Your Referral Code
@@ -731,7 +819,6 @@ const Profile = () => {
                 </p>
               </div>
 
-              {/* Referral Link with Copy Button */}
               <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
                 <p className="text-xs text-gray-500 mb-2">Full Link</p>
                 <div className="flex items-center gap-2">
@@ -768,7 +855,6 @@ const Profile = () => {
               </div>
 
               <div className="space-y-4">
-                {/* Email */}
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center">
                     <Mail className="w-5 h-5 text-gray-400" />
@@ -781,7 +867,6 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Phone */}
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center">
                     <Phone className="w-5 h-5 text-gray-400" />

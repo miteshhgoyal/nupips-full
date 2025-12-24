@@ -243,6 +243,34 @@ router.get("/dashboard", authenticateToken, async (req, res) => {
     }
 });
 
+router.put("/privacy", authenticateToken, async (req, res) => {
+    try {
+        const { hideDetailsFromDownline } = req.body;
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Update privacy setting
+        if (typeof hideDetailsFromDownline === 'boolean') {
+            user.privacySettings = user.privacySettings || {};
+            user.privacySettings.hideDetailsFromDownline = hideDetailsFromDownline;
+        }
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: "Privacy settings updated successfully",
+            user: await User.findById(user._id).select("-password")
+        });
+    } catch (error) {
+        console.error("Update privacy settings error:", error);
+        res.status(500).json({ message: "Failed to update privacy settings" });
+    }
+});
+
 // Get sponsor/upline information
 router.get("/sponsor", authenticateToken, async (req, res) => {
     try {
@@ -256,14 +284,17 @@ router.get("/sponsor", authenticateToken, async (req, res) => {
 
         // Fetch sponsor details
         const sponsor = await User.findById(me.referralDetails.referredBy)
-            .select("name username email phone userType status createdAt walletBalance financials downlineStats")
+            .select("name username email phone userType status createdAt walletBalance financials downlineStats privacySettings")
             .lean();
 
         if (!sponsor) {
             return res.json({ hasSponsor: false, sponsor: null });
         }
 
-        // Return safe sponsor data
+        // Check if sponsor has enabled privacy mode
+        const hideDetails = sponsor.privacySettings?.hideDetailsFromDownline || false;
+
+        // Return safe sponsor data with conditional privacy
         res.json({
             hasSponsor: true,
             sponsor: {
@@ -275,10 +306,15 @@ router.get("/sponsor", authenticateToken, async (req, res) => {
                 userType: sponsor.userType,
                 status: sponsor.status,
                 memberSince: sponsor.createdAt,
-                walletBalance: sponsor.walletBalance || 0,
-                totalDeposits: sponsor.financials?.totalDeposits || 0,
-                totalWithdrawals: sponsor.financials?.totalWithdrawals || 0,
-                downlineCount: sponsor.downlineStats?.totalTraders + sponsor.downlineStats?.totalAgents || 0,
+
+                // Hide financial details if privacy is enabled
+                walletBalance: hideDetails ? null : (sponsor.walletBalance || 0),
+                totalDeposits: hideDetails ? null : (sponsor.financials?.totalDeposits || 0),
+                totalWithdrawals: hideDetails ? null : (sponsor.financials?.totalWithdrawals || 0),
+                downlineCount: hideDetails ? null : (sponsor.downlineStats?.totalTraders + sponsor.downlineStats?.totalAgents || 0),
+
+                // Privacy indicator
+                detailsHidden: hideDetails
             }
         });
     } catch (e) {
