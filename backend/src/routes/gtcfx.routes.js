@@ -480,13 +480,6 @@ router.post('/webhook/member-update', async (req, res) => {
             });
         }
 
-        // Acknowledge immediately
-        // res.status(200).json({
-        //     success: true,
-        //     message: 'Member update received successfully',
-        //     timestamp: new Date().toISOString(),
-        // });
-
         // Save/update member
         await GTCMember.findOneAndUpdate(
             { gtcUserId },

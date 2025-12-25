@@ -53,7 +53,7 @@ const UserSchema = new mongoose.Schema({
     privacySettings: {
         hideDetailsFromDownline: {
             type: Boolean,
-            default: false // By default, details are visible
+            default: false
         }
     },
 
@@ -206,6 +206,8 @@ const UserSchema = new mongoose.Schema({
 // Indexes
 UserSchema.index({ email: 1, status: 1 });
 UserSchema.index({ userType: 1, status: 1 });
+UserSchema.index({ 'referralDetails.referredBy': 1 });
+UserSchema.index({ 'referralDetails.referralTree.userId': 1 });
 
 // Method: Update financial stats from Deposit/Withdrawal models
 UserSchema.methods.updateFinancials = async function () {
@@ -265,28 +267,40 @@ UserSchema.methods.updateFinancials = async function () {
 // Method: Update downline stats
 UserSchema.methods.updateDownlineStats = async function () {
     try {
-        // Find all users referred by this user
-        const downlineUsers = await mongoose.model('User').find({
-            'referralDetails.referredBy': this._id
+        // Get all direct referrals (level 1 only)
+        const directReferrals = this.referralDetails.referralTree.filter(
+            entry => entry.level === 1
+        );
+
+        // Fetch actual user documents for direct referrals
+        const directUserIds = directReferrals.map(r => r.userId);
+        const directUsers = await mongoose.model('User').find({
+            _id: { $in: directUserIds }
         });
 
         // Count by type
-        this.downlineStats.totalAgents = downlineUsers.filter(u => u.userType === 'agent').length;
-        this.downlineStats.totalTraders = downlineUsers.filter(u => u.userType === 'trader').length;
+        this.downlineStats.totalAgents = directUsers.filter(u => u.userType === 'agent').length;
+        this.downlineStats.totalTraders = directUsers.filter(u => u.userType === 'trader').length;
+
+        // Get all downline users (all levels)
+        const allDownlineUserIds = this.referralDetails.referralTree.map(r => r.userId);
+        const allDownlineUsers = await mongoose.model('User').find({
+            _id: { $in: allDownlineUserIds }
+        });
 
         // Calculate cumulative balance (this user + all downline)
-        const downlineBalance = downlineUsers.reduce((sum, u) => sum + (u.walletBalance || 0), 0);
+        const downlineBalance = allDownlineUsers.reduce((sum, u) => sum + (u.walletBalance || 0), 0);
         this.downlineStats.cumulativeBalance = (this.walletBalance || 0) + downlineBalance;
 
         // Calculate total downline volume
-        this.downlineStats.totalDownlineVolume = downlineUsers.reduce(
+        this.downlineStats.totalDownlineVolume = allDownlineUsers.reduce(
             (sum, u) => sum + (u.tradingStats?.totalVolumeLots || 0),
             0
         );
 
         // Update referral counts
-        this.referralDetails.totalDirectReferrals = downlineUsers.length;
-        this.referralDetails.totalDownlineUsers = downlineUsers.length;
+        this.referralDetails.totalDirectReferrals = directReferrals.length;
+        this.referralDetails.totalDownlineUsers = this.referralDetails.referralTree.length;
 
         await this.save();
         return this.downlineStats;
@@ -307,6 +321,35 @@ UserSchema.methods.notifyReferrer = async function () {
         }
     } catch (error) {
         console.error('Error notifying referrer:', error);
+    }
+};
+
+// Method: Get full referral tree with user details
+UserSchema.methods.getReferralTreeWithDetails = async function (maxLevel = null) {
+    try {
+        let query = { userId: { $in: this.referralDetails.referralTree.map(r => r.userId) } };
+
+        if (maxLevel) {
+            const filteredTree = this.referralDetails.referralTree.filter(r => r.level <= maxLevel);
+            query = { userId: { $in: filteredTree.map(r => r.userId) } };
+        }
+
+        const users = await mongoose.model('User').find(query)
+            .select('name username email phone walletBalance userType status tradingStats downlineStats');
+
+        // Merge tree data with user details
+        return this.referralDetails.referralTree
+            .filter(entry => maxLevel ? entry.level <= maxLevel : true)
+            .map(entry => {
+                const user = users.find(u => u._id.toString() === entry.userId.toString());
+                return {
+                    ...entry.toObject(),
+                    userDetails: user
+                };
+            });
+    } catch (error) {
+        console.error('Error getting referral tree with details:', error);
+        throw error;
     }
 };
 
