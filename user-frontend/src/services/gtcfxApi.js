@@ -5,7 +5,7 @@ import { tokenService } from './tokenService';
 import localApi from './api';
 
 const api = axios.create({
-    baseURL: 'https://api.nupips.com/api/v3',
+    baseURL: (import.meta.env.VITE_REACT_APP_API_URL || 'http://localhost:8000') + '/api/v3',
     timeout: 300000, // ← 5 minutes for large tree data
     headers: {
         'Content-Type': 'application/json',
