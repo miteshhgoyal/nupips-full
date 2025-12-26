@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Star,
   Zap,
+  Calendar,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGTCFxAuth } from "../contexts/GTCFxAuthContext";
@@ -82,24 +83,23 @@ const Competition = () => {
   };
 
   const getRankIcon = (rank) => {
-    if (rank === 1) return { icon: Trophy, color: "text-yellow-500" };
-    if (rank === 2) return { icon: Trophy, color: "text-gray-400" };
-    if (rank === 3) return { icon: Trophy, color: "text-amber-600" };
-    if (rank <= 10) return { icon: Medal, color: "text-orange-500" };
-    return { icon: Award, color: "text-gray-400" };
+    if (rank === 1) return { icon: Trophy, color: "text-amber-500" };
+    if (rank === 2) return { icon: Trophy, color: "text-slate-400" };
+    if (rank === 3) return { icon: Trophy, color: "text-orange-600" };
+    if (rank === 4) return { icon: Medal, color: "text-cyan-500" };
+    if (rank <= 10) return { icon: Medal, color: "text-blue-500" };
+    return { icon: Award, color: "text-gray-500" };
   };
 
-  const getRankBg = (rank) => {
-    if (rank === 1)
-      return "bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-300";
-    if (rank === 2)
-      return "bg-gradient-to-br from-gray-50 to-gray-100 border-gray-300";
-    if (rank === 3)
-      return "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-300";
-    return "bg-white border-gray-200";
+  const getRankBadgeColor = (rank) => {
+    if (rank === 1) return "bg-amber-100 text-amber-700 border-amber-300";
+    if (rank === 2) return "bg-slate-100 text-slate-700 border-slate-300";
+    if (rank === 3) return "bg-orange-100 text-orange-700 border-orange-300";
+    if (rank === 4) return "bg-cyan-100 text-cyan-700 border-cyan-300";
+    if (rank <= 10) return "bg-blue-100 text-blue-700 border-blue-300";
+    return "bg-gray-100 text-gray-700 border-gray-300";
   };
 
-  // Calculate progress
   const calculateProgress = () => {
     if (!competitionPeriod) return { percentage: 0, daysRemaining: 0 };
 
@@ -118,77 +118,47 @@ const Competition = () => {
 
   const { percentage, daysRemaining } = calculateProgress();
 
-  // Get user's eligible reward
   const getUserReward = () => {
     if (!userRank || !rewards.length) return null;
-    return rewards.find((r) => {
-      const [min, max] = r.rankRange
-        .split("-")
-        .map((s) => parseInt(s.replace(/D/g, "")));
-      return userRank.rank >= (min || 1) && userRank.rank <= max;
-    });
+    return rewards.find(
+      (r) => userRank.rank >= r.minRank && userRank.rank <= r.maxRank
+    );
   };
 
   const eligibleReward = getUserReward();
 
-  // Enhanced Progress Bar Component
+  // Enhanced Progress Bar Component with Rank Ranges
   const ProgressBar = () => {
-    // Generate milestones for individual ranks from rewards
-    const generateMilestones = () => {
+    const generateRankMilestones = () => {
       if (!rewards || rewards.length === 0) return [];
 
       const milestones = [];
       const totalParticipants = stats?.totalParticipants || 100;
 
-      // Parse each reward's rank range and create individual rank milestones
       rewards.forEach((reward) => {
-        const rankMatch = reward.rankRange.match(/d+/g);
-        if (!rankMatch) return;
+        const rank = reward.minRank;
+        const position = ((totalParticipants - rank) / totalParticipants) * 100;
 
-        const minRank = parseInt(rankMatch[0]);
-        const maxRank = parseInt(rankMatch[rankMatch.length - 1]);
+        let tierColor = "blue";
+        if (rank === 1) tierColor = "gold";
+        else if (rank === 2) tierColor = "silver";
+        else if (rank === 3) tierColor = "bronze";
+        else if (rank === 4) tierColor = "platinum";
 
-        // For single ranks or important positions (1, 2, 3, 4), add individual milestones
-        if (minRank === maxRank || minRank <= 4) {
-          const rank = minRank;
-          const position =
-            ((totalParticipants - rank) / totalParticipants) * 100;
-
-          milestones.push({
-            position: Math.max(5, Math.min(95, position)),
-            prize: reward.prize,
-            rank: rank,
-            rankRange: `Rank #${rank}`,
-            color:
-              rank === 1
-                ? "yellow"
-                : rank === 2
-                ? "gray"
-                : rank === 3
-                ? "amber"
-                : "blue",
-          });
-        } else if (minRank > 4) {
-          // For ranges like 11-25, just show the starting rank
-          const position =
-            ((totalParticipants - minRank) / totalParticipants) * 100;
-          milestones.push({
-            position: Math.max(5, Math.min(95, position)),
-            prize: reward.prize,
-            rank: minRank,
-            rankRange: reward.rankRange,
-            color: "purple",
-          });
-        }
+        milestones.push({
+          position: Math.max(5, Math.min(95, position)),
+          rankRange: reward.rankRange,
+          prize: reward.prize,
+          rank: rank,
+          color: tierColor,
+        });
       });
 
-      // Sort by rank (ascending) so they appear in order
       return milestones.sort((a, b) => a.rank - b.rank);
     };
 
-    const milestones = generateMilestones();
+    const milestones = generateRankMilestones();
 
-    // Calculate user position on progress bar
     const totalParticipants = stats?.totalParticipants || 100;
     const userPosition = userRank
       ? Math.max(
@@ -200,100 +170,100 @@ const Competition = () => {
         )
       : 0;
 
-    // Determine user's status (crossed ranks, heading towards next)
     const getUserStatus = () => {
-      if (!userRank) return { crossed: [], nextTarget: null };
+      if (!userRank) return { achieved: [], nextTarget: null };
 
-      const crossed = milestones.filter((m) => userRank.rank <= m.rank);
+      const achieved = milestones.filter((m) => userRank.rank <= m.rank);
       const nextTarget = milestones.find((m) => userRank.rank > m.rank);
 
-      return { crossed, nextTarget };
+      return { achieved, nextTarget };
     };
 
-    const { crossed, nextTarget } = getUserStatus();
+    const { achieved, nextTarget } = getUserStatus();
 
-    const getColorClasses = (color) => {
-      const colors = {
-        yellow: {
-          bg: "bg-yellow-100",
-          border: "border-yellow-400",
-          text: "text-yellow-700",
-        },
-        gray: {
-          bg: "bg-gray-100",
-          border: "border-gray-400",
-          text: "text-gray-700",
-        },
-        amber: {
-          bg: "bg-amber-100",
+    const getTierStyles = (color) => {
+      const styles = {
+        gold: {
+          bg: "bg-gradient-to-b from-amber-50 to-amber-100",
           border: "border-amber-400",
-          text: "text-amber-700",
+          text: "text-amber-900",
+          icon: "text-amber-600",
+        },
+        silver: {
+          bg: "bg-gradient-to-b from-slate-50 to-slate-100",
+          border: "border-slate-400",
+          text: "text-slate-900",
+          icon: "text-slate-600",
+        },
+        bronze: {
+          bg: "bg-gradient-to-b from-orange-50 to-orange-100",
+          border: "border-orange-400",
+          text: "text-orange-900",
+          icon: "text-orange-600",
+        },
+        platinum: {
+          bg: "bg-gradient-to-b from-cyan-50 to-cyan-100",
+          border: "border-cyan-400",
+          text: "text-cyan-900",
+          icon: "text-cyan-600",
         },
         blue: {
-          bg: "bg-blue-100",
+          bg: "bg-gradient-to-b from-blue-50 to-blue-100",
           border: "border-blue-400",
-          text: "text-blue-700",
-        },
-        purple: {
-          bg: "bg-purple-100",
-          border: "border-purple-400",
-          text: "text-purple-700",
+          text: "text-blue-900",
+          icon: "text-blue-600",
         },
       };
-      return colors[color] || colors.blue;
+      return styles[color] || styles.blue;
     };
 
     return (
-      <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6">
+      <div className="bg-white rounded-lg p-6 border border-gray-200 mb-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">
-              Your Competition Journey
+            <h3 className="text-lg font-semibold text-gray-900">
+              Competition Progress
             </h3>
-            <p className="text-sm text-gray-600">
-              {daysRemaining} days remaining until Dec 31, 2025
+            <p className="text-sm text-gray-600 mt-1">
+              {daysRemaining} days remaining · Dec 31, 2025
             </p>
           </div>
           {userRank && (
-            <div className="text-right bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl px-4 py-3 border border-orange-200">
-              <p className="text-xs text-gray-600 font-semibold">
-                Current Rank
-              </p>
-              <p className="text-3xl font-bold text-orange-600">
+            <div className="text-right bg-gradient-to-b from-orange-50 to-orange-100 rounded-lg px-4 py-3 border border-orange-200">
+              <p className="text-xs text-gray-600 font-medium">Current Rank</p>
+              <p className="text-2xl font-bold text-orange-600">
                 #{userRank.rank}
               </p>
             </div>
           )}
         </div>
 
-        {/* Status indicators */}
         {userRank && nextTarget && (
-          <div className="mb-4 p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+          <div className="mb-4 p-3 bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
             <div className="flex items-center gap-2 text-sm">
-              <Zap className="w-4 h-4 text-blue-600" />
+              <Target className="w-4 h-4 text-blue-600" />
               <p className="text-blue-900">
-                <span className="font-semibold">Next milestone:</span> Reach
-                Rank #{nextTarget.rank} to win {nextTarget.prize}
+                <span className="font-medium">Next milestone:</span> Reach rank{" "}
+                {nextTarget.rankRange} to win {nextTarget.prize}
               </p>
             </div>
           </div>
         )}
 
-        {/* Progress track with dynamic positioning */}
-        <div className="relative pt-12 pb-8">
-          {/* Main progress bar */}
-          <div className="h-3 bg-gray-200 rounded-full overflow-hidden border border-gray-300">
+        <div className="relative pt-16 pb-12">
+          <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600 transition-all duration-700"
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-400 to-orange-500 transition-all duration-700"
               style={{ width: `${userPosition}%` }}
             />
           </div>
 
-          {/* Milestone markers */}
-          <div className="absolute inset-x-0 top-0">
+          {/* Rank milestone markers */}
+          <div className="absolute inset-x-0 top-0 bottom-0">
             {milestones.map((milestone, index) => {
-              const colorClasses = getColorClasses(milestone.color);
-              const isPassed = userRank && userRank.rank <= milestone.rank;
+              const tierStyles = getTierStyles(milestone.color);
+              const isAchieved = userRank && userRank.rank <= milestone.rank;
+              const { icon: TierIcon } = getRankIcon(milestone.rank);
 
               return (
                 <div
@@ -305,36 +275,34 @@ const Competition = () => {
                   }}
                 >
                   <div className="flex flex-col items-center">
-                    {/* Prize card */}
                     <div
-                      className={`${colorClasses.bg} border-2 ${colorClasses.border} rounded-lg px-3 py-2 shadow-sm min-w-[100px] mb-2`}
+                      className={`${tierStyles.bg} border ${tierStyles.border} rounded-lg px-3 py-2 min-w-[90px] mb-2`}
                     >
-                      <p
-                        className={`text-xs font-bold ${colorClasses.text} text-center whitespace-nowrap`}
-                      >
-                        {milestone.rankRange}
-                      </p>
-                      <p className="text-xs text-gray-900 font-semibold text-center mt-1">
+                      <div className="flex items-center justify-center gap-1 mb-1">
+                        <TierIcon className={`w-4 h-4 ${tierStyles.icon}`} />
+                        <p className={`text-xs font-bold ${tierStyles.text}`}>
+                          {milestone.rankRange}
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-900 font-semibold text-center">
                         {milestone.prize}
                       </p>
-                      {isPassed && (
+                      {isAchieved && (
                         <div className="flex items-center justify-center mt-1">
                           <CheckCircle className="w-3 h-3 text-green-600" />
                         </div>
                       )}
                     </div>
 
-                    {/* Connecting line */}
                     <div
-                      className={`w-px h-8 ${
-                        isPassed ? "bg-orange-500" : "bg-gray-300"
+                      className={`w-px h-10 ${
+                        isAchieved ? "bg-orange-500" : "bg-gray-300"
                       }`}
                     />
 
-                    {/* Marker dot */}
                     <div
-                      className={`w-4 h-4 rounded-full border-2 ${
-                        isPassed
+                      className={`w-3 h-3 rounded-full border-2 ${
+                        isAchieved
                           ? "bg-orange-500 border-orange-600"
                           : "bg-white border-gray-300"
                       }`}
@@ -348,25 +316,275 @@ const Competition = () => {
           {/* User position marker */}
           {userRank && (
             <div
-              className="absolute top-0"
+              className="absolute"
               style={{
                 left: `${userPosition}%`,
-                transform: "translateX(-50%) translateY(-8px)",
+                top: "50%",
+                transform: "translate(-50%, -50%)",
               }}
             >
               <div className="relative flex flex-col items-center">
-                {/* Badge */}
-                <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white text-xs font-bold px-3 py-1 rounded-full border-2 border-white shadow-md mb-2 whitespace-nowrap">
-                  You're here!
+                <div className="bg-gradient-to-b from-orange-500 to-orange-600 text-white text-xs font-semibold px-3 py-1 rounded-full border-2 border-white mb-2 whitespace-nowrap">
+                  You
                 </div>
-
-                {/* Star marker */}
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center animate-pulse">
-                  <Star className="w-5 h-5 text-white fill-white" />
+                <div className="w-8 h-8 bg-gradient-to-b from-orange-500 to-orange-600 rounded-full border-4 border-white flex items-center justify-center">
+                  <Star className="w-4 h-4 text-white fill-white" />
                 </div>
               </div>
             </div>
           )}
+        </div>
+
+        {userRank && achieved.length > 0 && (
+          <div className="mt-4 p-3 bg-gradient-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
+            <div className="flex items-center gap-2 text-sm text-green-900">
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="font-medium">
+                {achieved.length} milestone{achieved.length !== 1 ? "s" : ""}{" "}
+                achieved
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Scoring Breakdown Component
+  const ScoringBreakdown = () => {
+    if (!userRank || !competitionRules) return null;
+
+    const scoringMetrics = [
+      {
+        name: "Direct Referrals",
+        icon: Users,
+        color: "orange",
+        weight: competitionRules.directReferralsWeight,
+        score: userRank.breakdown?.directReferralsScore || 0,
+        progress: userRank.progressPercentages?.directReferrals || 0,
+        current: userRank.metrics?.directReferrals || 0,
+        target: userRank.targets?.maxDirectReferrals || 150,
+        unit: "referrals",
+      },
+      {
+        name: "Trading Volume",
+        icon: DollarSign,
+        color: "blue",
+        weight: competitionRules.tradingVolumeWeight,
+        score: userRank.breakdown?.tradingVolumeScore || 0,
+        progress: userRank.progressPercentages?.tradingVolume || 0,
+        current: userRank.metrics?.tradingVolumeDollars || 0,
+        target: userRank.targets?.maxVolume || 2000000,
+        unit: "USD",
+        format: "currency",
+      },
+      {
+        name: "Team Size",
+        icon: Users,
+        color: "green",
+        weight: competitionRules.teamSizeWeight,
+        score: userRank.breakdown?.teamSizeScore || 0,
+        progress: userRank.progressPercentages?.teamSize || 0,
+        current: userRank.metrics?.nupipsTeamSize || 0,
+        target: userRank.targets?.maxTeamSize || 500,
+        unit: "members",
+      },
+      {
+        name: "Profitability",
+        icon: TrendingUp,
+        color: "purple",
+        weight: competitionRules.profitabilityWeight,
+        score: userRank.breakdown?.profitabilityScore || 0,
+        progress: userRank.progressPercentages?.profitability || 0,
+        current: userRank.metrics?.winRate || 0,
+        target: 100,
+        unit: "% win rate",
+      },
+      {
+        name: "Account Balance",
+        icon: DollarSign,
+        color: "indigo",
+        weight: competitionRules.accountBalanceWeight,
+        score: userRank.breakdown?.accountBalanceScore || 0,
+        progress: userRank.progressPercentages?.accountBalance || 0,
+        current: userRank.metrics?.accountBalance || 0,
+        target: userRank.targets?.maxBalance || 100000,
+        unit: "USD",
+        format: "currency",
+      },
+      {
+        name: "KYC Verification",
+        icon: CheckCircle,
+        color: "pink",
+        weight: competitionRules.kycCompletionWeight,
+        score: userRank.breakdown?.kycCompletionScore || 0,
+        progress: userRank.progressPercentages?.kycCompletion || 0,
+        current: userRank.metrics?.isKYCVerified ? 1 : 0,
+        target: 1,
+        unit: "verified",
+      },
+      {
+        name: "Active Trades",
+        icon: Activity,
+        color: "teal",
+        weight: competitionRules.activeTradesWeight,
+        score: userRank.breakdown?.activeTradesScore || 0,
+        progress: userRank.progressPercentages?.activeTrades || 0,
+        current: userRank.metrics?.activeTrades || 0,
+        target: userRank.targets?.maxActiveTrades || 50,
+        unit: "trades",
+      },
+      {
+        name: "Consistency",
+        icon: Calendar,
+        color: "yellow",
+        weight: competitionRules.consistencyWeight,
+        score: userRank.breakdown?.consistencyScore || 0,
+        progress: userRank.progressPercentages?.consistency || 0,
+        current: userRank.metrics?.tradingDays || 0,
+        target: userRank.targets?.maxConsistencyDays || 90,
+        unit: "days",
+      },
+    ];
+
+    const getColorClasses = (color) => {
+      const colors = {
+        orange: {
+          bg: "from-orange-50 to-orange-100",
+          border: "border-orange-200",
+          text: "text-orange-700",
+          progress: "bg-orange-500",
+        },
+        blue: {
+          bg: "from-blue-50 to-blue-100",
+          border: "border-blue-200",
+          text: "text-blue-700",
+          progress: "bg-blue-500",
+        },
+        green: {
+          bg: "from-green-50 to-green-100",
+          border: "border-green-200",
+          text: "text-green-700",
+          progress: "bg-green-500",
+        },
+        purple: {
+          bg: "from-purple-50 to-purple-100",
+          border: "border-purple-200",
+          text: "text-purple-700",
+          progress: "bg-purple-500",
+        },
+        indigo: {
+          bg: "from-indigo-50 to-indigo-100",
+          border: "border-indigo-200",
+          text: "text-indigo-700",
+          progress: "bg-indigo-500",
+        },
+        pink: {
+          bg: "from-pink-50 to-pink-100",
+          border: "border-pink-200",
+          text: "text-pink-700",
+          progress: "bg-pink-500",
+        },
+        teal: {
+          bg: "from-teal-50 to-teal-100",
+          border: "border-teal-200",
+          text: "text-teal-700",
+          progress: "bg-teal-500",
+        },
+        yellow: {
+          bg: "from-yellow-50 to-yellow-100",
+          border: "border-yellow-200",
+          text: "text-yellow-700",
+          progress: "bg-yellow-500",
+        },
+      };
+      return colors[color] || colors.blue;
+    };
+
+    const formatValue = (value, format) => {
+      if (format === "currency") {
+        return `$${value.toLocaleString()}`;
+      }
+      return value.toLocaleString();
+    };
+
+    return (
+      <div className="bg-white rounded-lg p-6 border border-gray-200 mb-6">
+        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-orange-600" />
+          Scoring Breakdown
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {scoringMetrics.map((metric, index) => {
+            const colors = getColorClasses(metric.color);
+            const Icon = metric.icon;
+
+            return (
+              <div
+                key={index}
+                className={`bg-gradient-to-b ${colors.bg} border ${colors.border} rounded-lg p-4`}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Icon className={`w-4 h-4 ${colors.text}`} />
+                    <span className="text-sm font-medium text-gray-900">
+                      {metric.name}
+                    </span>
+                  </div>
+                  <span className="text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                    {metric.weight}%
+                  </span>
+                </div>
+
+                <div className="mb-2">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <span className="text-xs text-gray-600">Score</span>
+                    <span className={`text-lg font-bold ${colors.text}`}>
+                      {metric.score.toFixed(1)}
+                    </span>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xs text-gray-600">Progress</span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {formatValue(metric.current, metric.format)} /{" "}
+                      {formatValue(metric.target, metric.format)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="relative h-2 bg-white rounded-full overflow-hidden border border-gray-200">
+                  <div
+                    className={`absolute inset-y-0 left-0 ${colors.progress} transition-all duration-500`}
+                    style={{ width: `${Math.min(metric.progress, 100)}%` }}
+                  />
+                </div>
+                <div className="flex justify-end mt-1">
+                  <span className="text-xs text-gray-600">
+                    {metric.progress.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Score</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Base: {userRank.baseScore.toFixed(1)} × Bonus:{" "}
+                {userRank.bonusMultiplier}x
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-bold text-orange-600">
+                {userRank.score.toFixed(1)}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">out of 100</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -375,28 +593,27 @@ const Competition = () => {
   // Not Connected View
   if (!gtcAuthenticated || !gtcUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 p-4 sm:p-6 lg:p-8">
+      <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-blue-50 p-4 sm:p-6 lg:p-8">
         <Helmet>
           <title>Trading Competition - Nupips</title>
         </Helmet>
 
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-b from-orange-500 to-orange-600 rounded-xl mb-6">
               <Trophy className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
               Annual Trading Championship
             </h1>
             <p className="text-gray-600 text-lg">
-              Connect your broker to compete for $35,000+ in prizes
+              Connect your broker to compete for amazing prizes
             </p>
           </div>
 
-          {/* Connect Broker CTA */}
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-8 mb-8 text-white">
+          <div className="bg-gradient-to-b from-orange-500 to-orange-600 rounded-xl p-8 mb-8 text-white">
             <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0">
+              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0">
                 <AlertCircle className="w-10 h-10 text-white" />
               </div>
               <div className="flex-1 text-center md:text-left">
@@ -405,11 +622,11 @@ const Competition = () => {
                 </h2>
                 <p className="text-orange-100 text-lg mb-4">
                   Join {stats?.totalParticipants || "hundreds of"} traders
-                  competing for massive prizes
+                  competing for amazing prizes
                 </p>
                 <button
                   onClick={() => navigate("/gtcfx/auth")}
-                  className="px-8 py-4 bg-white text-orange-600 font-bold rounded-xl hover:bg-orange-50 transition-all inline-flex items-center gap-3 group"
+                  className="px-8 py-4 bg-white text-orange-600 font-semibold rounded-lg hover:bg-orange-50 transition-all inline-flex items-center gap-3 group"
                 >
                   <span>Connect Broker Now</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -418,38 +635,36 @@ const Competition = () => {
             </div>
           </div>
 
-          {/* Prize Showcase */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl p-6 text-white transform hover:scale-105 transition-transform">
+            <div className="bg-gradient-to-b from-amber-400 to-amber-500 rounded-xl p-6 text-white">
               <Trophy className="w-12 h-12 mb-4" />
-              <h3 className="text-xl font-bold mb-2">1st Place</h3>
-              <p className="text-3xl font-bold mb-2">$10,000</p>
-              <p className="text-yellow-100 text-sm">+ Diamond Benefits</p>
+              <h3 className="text-xl font-semibold mb-2">1st Place</h3>
+              <p className="text-3xl font-bold mb-2">Moscow Trip</p>
+              <p className="text-amber-100 text-sm">VIP Status</p>
             </div>
 
-            <div className="bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl p-6 text-white transform hover:scale-105 transition-transform">
+            <div className="bg-gradient-to-b from-slate-400 to-slate-500 rounded-xl p-6 text-white">
               <Trophy className="w-12 h-12 mb-4" />
-              <h3 className="text-xl font-bold mb-2">2nd Place</h3>
-              <p className="text-3xl font-bold mb-2">$7,500</p>
-              <p className="text-gray-100 text-sm">+ Platinum Benefits</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-2xl p-6 text-white transform hover:scale-105 transition-transform">
-              <Trophy className="w-12 h-12 mb-4" />
-              <h3 className="text-xl font-bold mb-2">3rd Place</h3>
+              <h3 className="text-xl font-semibold mb-2">2nd Place</h3>
               <p className="text-3xl font-bold mb-2">$5,000</p>
-              <p className="text-amber-100 text-sm">+ Gold Benefits</p>
+              <p className="text-slate-100 text-sm">Gold Benefits</p>
+            </div>
+
+            <div className="bg-gradient-to-b from-orange-600 to-orange-700 rounded-xl p-6 text-white">
+              <Trophy className="w-12 h-12 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">3rd Place</h3>
+              <p className="text-3xl font-bold mb-2">$5,000</p>
+              <p className="text-orange-100 text-sm">Gold Benefits</p>
             </div>
           </div>
 
-          {/* Quick Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl p-6 border border-gray-200">
+            <div className="bg-white rounded-xl p-6 border border-gray-200">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-b from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                   <Target className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-semibold text-gray-900">
                   How It Works
                 </h3>
               </div>
@@ -481,31 +696,39 @@ const Competition = () => {
               </ul>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 border border-gray-200">
+            <div className="bg-white rounded-xl p-6 border border-gray-200">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-b from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <BarChart3 className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Scoring</h3>
+                <h3 className="text-xl font-semibold text-gray-900">Scoring</h3>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+                <div className="flex items-center justify-between p-3 bg-gradient-to-b from-orange-50 to-orange-100 rounded-lg border border-orange-200">
                   <span className="text-sm text-gray-700">
                     Direct Referrals
                   </span>
-                  <span className="text-sm font-bold text-orange-600">25%</span>
+                  <span className="text-sm font-semibold text-orange-600">
+                    25%
+                  </span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-between p-3 bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                   <span className="text-sm text-gray-700">Trading Volume</span>
-                  <span className="text-sm font-bold text-blue-600">20%</span>
+                  <span className="text-sm font-semibold text-blue-600">
+                    20%
+                  </span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-                  <span className="text-sm text-gray-700">Team Growth</span>
-                  <span className="text-sm font-bold text-green-600">15%</span>
+                <div className="flex items-center justify-between p-3 bg-gradient-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
+                  <span className="text-sm text-gray-700">Team Size</span>
+                  <span className="text-sm font-semibold text-green-600">
+                    15%
+                  </span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                <div className="flex items-center justify-between p-3 bg-gradient-to-b from-purple-50 to-purple-100 rounded-lg border border-purple-200">
                   <span className="text-sm text-gray-700">Profitability</span>
-                  <span className="text-sm font-bold text-purple-600">15%</span>
+                  <span className="text-sm font-semibold text-purple-600">
+                    15%
+                  </span>
                 </div>
               </div>
             </div>
@@ -534,7 +757,7 @@ const Competition = () => {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-gradient-to-br from-red-50 to-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-200">
+          <div className="w-16 h-16 bg-gradient-to-b from-red-50 to-red-100 rounded-xl flex items-center justify-center mx-auto mb-4 border border-red-200">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -543,7 +766,7 @@ const Competition = () => {
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => fetchCompetitionData()}
-            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all"
+            className="px-6 py-3 bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all"
           >
             Try Again
           </button>
@@ -554,7 +777,7 @@ const Competition = () => {
 
   // Main Competition View
   return (
-    <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-4 sm:p-6 lg:p-8">
       <Helmet>
         <title>Trading Competition - Nupips</title>
       </Helmet>
@@ -563,14 +786,14 @@ const Competition = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center">
+            <div className="w-16 h-16 bg-gradient-to-b from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
               <Trophy className="w-8 h-8 text-white" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
                 Trading Championship
               </h1>
-              <p className="text-sm text-gray-600 flex items-center gap-2">
+              <p className="text-sm text-gray-600 flex items-center gap-2 mt-1">
                 <Clock className="w-4 h-4" />
                 Ends Dec 31, 2025
               </p>
@@ -580,7 +803,7 @@ const Competition = () => {
           <button
             onClick={() => fetchCompetitionData(false)}
             disabled={refreshing}
-            className="px-4 py-2 bg-white border border-gray-200 hover:border-orange-500 rounded-xl font-semibold text-gray-700 hover:text-orange-600 transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-white border border-gray-200 hover:border-orange-500 rounded-lg font-medium text-gray-700 hover:text-orange-600 transition-all flex items-center gap-2 disabled:opacity-50"
           >
             <RefreshCw
               className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -591,30 +814,23 @@ const Competition = () => {
 
         {/* Top Prizes */}
         {rewards.length > 0 && (
-          <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6">
-            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-lg p-6 border border-gray-200 mb-6">
+            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Gift className="w-5 h-5 text-orange-600" />
-              Top Prizes
+              Prize Pool
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              {rewards.slice(0, 5).map((reward, index) => {
-                const { icon: Icon, color } = getRankIcon(index + 1);
-                const bgClass =
-                  index === 0
-                    ? "from-yellow-50 to-yellow-100 border-yellow-300"
-                    : index === 1
-                    ? "from-gray-50 to-gray-100 border-gray-300"
-                    : index === 2
-                    ? "from-amber-50 to-amber-100 border-amber-300"
-                    : "from-blue-50 to-blue-100 border-blue-300";
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {rewards.map((reward, index) => {
+                const { icon: Icon, color } = getRankIcon(reward.minRank);
+                const badgeColor = getRankBadgeColor(reward.minRank);
                 return (
                   <div
                     key={index}
-                    className={`p-4 rounded-xl border-2 bg-gradient-to-br ${bgClass}`}
+                    className={`p-4 rounded-lg border ${badgeColor}`}
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Icon className={`w-5 h-5 ${color}`} />
-                      <p className="text-xs font-bold text-gray-900">
+                      <p className="text-xs font-semibold">
                         {reward.rankRange}
                       </p>
                     </div>
@@ -634,15 +850,18 @@ const Competition = () => {
         {/* Progress Bar */}
         <ProgressBar />
 
+        {/* Scoring Breakdown */}
+        <ScoringBreakdown />
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - User Info */}
           <div className="lg:col-span-1 space-y-6">
             {/* User Rank Card */}
             {userRank && (
-              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white border border-orange-400">
+              <div className="bg-gradient-to-b from-orange-500 to-orange-600 rounded-lg p-6 text-white border border-orange-400">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-white/90 text-xs font-semibold uppercase">
+                    <p className="text-white/90 text-xs font-medium uppercase tracking-wide">
                       Your Rank
                     </p>
                     <p className="text-4xl font-bold">#{userRank.rank}</p>
@@ -653,7 +872,7 @@ const Competition = () => {
                   })()}
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-4 border border-white/20">
+                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-4 border border-white/20">
                   <div className="flex items-baseline justify-between mb-2">
                     <span className="text-white/90 text-sm">Total Score</span>
                     <span className="text-3xl font-bold">
@@ -667,12 +886,10 @@ const Competition = () => {
                 </div>
 
                 {eligibleReward && (
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
                     <div className="flex items-center gap-2 mb-2">
                       <Gift className="w-5 h-5" />
-                      <p className="text-sm font-semibold">
-                        Current Prize Tier
-                      </p>
+                      <p className="text-sm font-medium">Current Prize Tier</p>
                     </div>
                     <p className="text-lg font-bold">{eligibleReward.prize}</p>
                     <p className="text-xs text-white/80 mt-1">
@@ -681,18 +898,16 @@ const Competition = () => {
                   </div>
                 )}
 
-                <div className="mt-4 flex items-center gap-2">
+                <div className="mt-4 flex items-center gap-2 text-sm">
                   {userRank.isVerified ? (
                     <>
                       <CheckCircle className="w-4 h-4" />
-                      <span className="text-xs">KYC Verified (+10% Bonus)</span>
+                      <span>KYC Verified (+10% Bonus)</span>
                     </>
                   ) : (
                     <>
                       <AlertCircle className="w-4 h-4 text-yellow-300" />
-                      <span className="text-xs">
-                        Complete KYC for +10% Bonus
-                      </span>
+                      <span>Complete KYC for +10% Bonus</span>
                     </>
                   )}
                 </div>
@@ -701,51 +916,51 @@ const Competition = () => {
 
             {/* Key Metrics */}
             {userRank && (
-              <div className="bg-white rounded-xl p-6 border border-gray-200">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <div className="bg-white rounded-lg p-6 border border-gray-200">
+                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Activity className="w-5 h-5 text-blue-600" />
-                  Your Performance
+                  Key Metrics
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-b from-orange-50 to-orange-100 rounded-lg border border-orange-200">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-orange-600" />
                       <span className="text-sm text-gray-700">
                         Direct Referrals
                       </span>
                     </div>
-                    <span className="font-bold text-gray-900">
+                    <span className="font-semibold text-gray-900">
                       {userRank.metrics.directReferrals}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-blue-600" />
                       <span className="text-sm text-gray-700">
                         Trading Volume
                       </span>
                     </div>
-                    <span className="font-bold text-gray-900">
+                    <span className="font-semibold text-gray-900">
                       $
                       {userRank.metrics.tradingVolumeDollars?.toLocaleString() ||
                         0}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-green-600" />
                       <span className="text-sm text-gray-700">Win Rate</span>
                     </div>
-                    <span className="font-bold text-gray-900">
+                    <span className="font-semibold text-gray-900">
                       {userRank.metrics.winRate?.toFixed(1) || 0}%
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-b from-purple-50 to-purple-100 rounded-lg border border-purple-200">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-purple-600" />
                       <span className="text-sm text-gray-700">Team Size</span>
                     </div>
-                    <span className="font-bold text-gray-900">
+                    <span className="font-semibold text-gray-900">
                       {userRank.metrics.nupipsTeamSize}
                     </span>
                   </div>
@@ -756,14 +971,14 @@ const Competition = () => {
 
           {/* Right Column - Leaderboard */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="p-5 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="p-5 bg-gradient-to-b from-orange-500 to-orange-600 text-white">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold flex items-center gap-2">
                     <Crown className="w-6 h-6" />
                     Leaderboard
                   </h2>
-                  <span className="text-sm bg-white/20 px-3 py-1 rounded-lg font-semibold">
+                  <span className="text-sm bg-white/20 px-3 py-1 rounded-lg font-medium">
                     Top {Math.min(leaderboard.length, 50)}
                   </span>
                 </div>
@@ -774,13 +989,14 @@ const Competition = () => {
                   const isExpanded = expandedUser === entry.userId;
                   const isCurrentUser = entry.userId === gtcUser?.id;
                   const { icon: RankIcon, color } = getRankIcon(entry.rank);
+                  const badgeColor = getRankBadgeColor(entry.rank);
 
                   return (
                     <div
                       key={entry.userId}
                       className={`transition-all ${
                         isCurrentUser
-                          ? "bg-gradient-to-br from-orange-50 to-orange-100 border-l-4 border-orange-500"
+                          ? "bg-gradient-to-b from-orange-50 to-orange-100 border-l-4 border-orange-500"
                           : "hover:bg-gray-50"
                       }`}
                     >
@@ -788,14 +1004,12 @@ const Competition = () => {
                         <div className="flex items-center gap-4">
                           {/* Rank */}
                           <div
-                            className={`flex items-center justify-center w-12 h-12 rounded-xl border-2 flex-shrink-0 ${getRankBg(
-                              entry.rank
-                            )}`}
+                            className={`flex items-center justify-center w-12 h-12 rounded-lg border ${badgeColor} flex-shrink-0`}
                           >
                             {entry.rank <= 3 ? (
                               <RankIcon className={`w-6 h-6 ${color}`} />
                             ) : (
-                              <span className="text-sm font-bold text-gray-700">
+                              <span className="text-sm font-semibold">
                                 #{entry.rank}
                               </span>
                             )}
@@ -804,7 +1018,7 @@ const Competition = () => {
                           {/* User Info */}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <p className="font-bold text-gray-900 truncate">
+                              <p className="font-semibold text-gray-900 truncate">
                                 {entry.username}
                               </p>
                               {entry.isVerified && (
@@ -814,7 +1028,7 @@ const Competition = () => {
                                 <Award className="w-4 h-4 text-purple-600" />
                               )}
                               {isCurrentUser && (
-                                <span className="text-xs bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-0.5 rounded-full font-semibold">
+                                <span className="text-xs bg-gradient-to-b from-orange-500 to-orange-600 text-white px-2 py-0.5 rounded-full font-medium">
                                   You
                                 </span>
                               )}
@@ -861,7 +1075,7 @@ const Competition = () => {
                       {/* Expanded Details */}
                       {isExpanded && (
                         <div className="px-4 pb-4">
-                          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+                          <div className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                               <div className="bg-white p-3 rounded-lg border border-gray-200">
                                 <p className="text-xs text-gray-600 mb-1">

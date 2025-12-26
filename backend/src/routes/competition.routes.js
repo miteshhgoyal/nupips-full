@@ -50,40 +50,52 @@ const COMPETITION_CONFIG = {
     },
     rewards: [
         {
-            rankRange: "1st Place",
+            rankRange: "1st",
+            minRank: 1,
+            maxRank: 1,
             title: "Champion",
             prize: "Moscow Russia Trip",
-            description: "Lifetime VIP status, exclusive training, priority support"
+            description: "Lifetime VIP status + exclusive training"
         },
         {
-            rankRange: "2nd Place",
+            rankRange: "2nd",
+            minRank: 2,
+            maxRank: 2,
             title: "Grand Master",
-            prize: "$5,000 Cash + Gold Benefits",
-            description: "Premium features access, advanced analytics, VIP support"
+            prize: "$5,000 Cash",
+            description: "Gold Benefits + premium features"
         },
         {
-            rankRange: "3rd Place",
+            rankRange: "3rd",
+            minRank: 3,
+            maxRank: 3,
             title: "Master",
-            prize: "$5,000 Cash + Gold Benefits",
-            description: "Gold tier features, priority processing, exclusive webinars"
+            prize: "$5,000 Cash",
+            description: "Gold Benefits + priority support"
         },
         {
-            rankRange: "4th-5th",
-            title: "Elite Traders",
-            prize: "$2,500 Cash + Silver Benefits",
-            description: "Silver tier access, enhanced support, trading tools"
+            rankRange: "4th",
+            minRank: 4,
+            maxRank: 4,
+            title: "Elite Platinum",
+            prize: "$2,500 Cash",
+            description: "Silver Benefits + trading tools"
         },
         {
-            rankRange: "6th-10th",
+            rankRange: "5th-10th",
+            minRank: 5,
+            maxRank: 10,
             title: "Top Performers",
-            prize: "$1,000 Cash + Bronze Benefits",
-            description: "Bronze tier features, community recognition"
+            prize: "$1,000 Cash",
+            description: "Bronze Benefits + recognition"
         },
         {
             rankRange: "11th-25th",
+            minRank: 11,
+            maxRank: 25,
             title: "Rising Stars",
-            prize: "$500 Trading Credit",
-            description: "Special badges, community spotlight"
+            prize: "$500 Credit",
+            description: "Special badges + community spotlight"
         },
     ],
     period: {
@@ -262,40 +274,32 @@ async function calculateEnhancedCompetitionScore(user, gtcData) {
 
     // 1. Direct Referrals Score (25%) - From Nupips database
     const directReferrals = user.referralDetails?.totalDirectReferrals || 0;
-    scores.directReferrals = Math.min(
-        directReferrals / normalizers.maxDirectReferrals,
-        1
-    ) * rules.directReferralsWeight;
+    const directReferralsProgress = Math.min(directReferrals / normalizers.maxDirectReferrals, 1);
+    scores.directReferrals = directReferralsProgress * rules.directReferralsWeight;
 
     // 2. Team Size Score (15%) - Combined Nupips + GTC team
     const nupipsTeamSize = user.referralDetails?.totalDownlineUsers || 0;
     const gtcTeamSize = gtcData?.gtcTeamSize || 0;
-    const totalTeamSize = Math.max(nupipsTeamSize, gtcTeamSize); // Use larger value
-    scores.teamSize = Math.min(
-        totalTeamSize / normalizers.maxTeamSize,
-        1
-    ) * rules.teamSizeWeight;
+    const totalTeamSize = Math.max(nupipsTeamSize, gtcTeamSize);
+    const teamSizeProgress = Math.min(totalTeamSize / normalizers.maxTeamSize, 1);
+    scores.teamSize = teamSizeProgress * rules.teamSizeWeight;
 
     // 3. Trading Volume Score (20%) - From GTC profit logs
     const tradingVolume = gtcData?.totalVolumeLots || 0;
-    const volumeInDollars = tradingVolume * 100000; // Convert lots to approx dollar value
-    scores.tradingVolume = Math.min(
-        volumeInDollars / normalizers.maxVolume,
-        1
-    ) * rules.tradingVolumeWeight;
+    const volumeInDollars = tradingVolume * 100000;
+    const volumeProgress = Math.min(volumeInDollars / normalizers.maxVolume, 1);
+    scores.tradingVolume = volumeProgress * rules.tradingVolumeWeight;
 
     // 4. Profitability Score (15%) - Win rate and profit percent combined
     const winRate = gtcData?.winRate || 0;
-    const profitPercent = Math.max(gtcData?.profitPercent || 0, 0); // Don't penalize for losses
+    const profitPercent = Math.max(gtcData?.profitPercent || 0, 0);
     const profitabilityScore = (winRate / 100) * 0.5 + (Math.min(profitPercent / 100, 1)) * 0.5;
     scores.profitability = profitabilityScore * rules.profitabilityWeight;
 
     // 5. Account Balance Score (10%) - Rewards larger accounts
     const accountBalance = gtcData?.accountBalance || 0;
-    scores.accountBalance = Math.min(
-        accountBalance / normalizers.maxBalance,
-        1
-    ) * rules.accountBalanceWeight;
+    const balanceProgress = Math.min(accountBalance / normalizers.maxBalance, 1);
+    scores.accountBalance = balanceProgress * rules.accountBalanceWeight;
 
     // 6. KYC Completion Score (5%) - Binary: verified or not
     const isKYCVerified = gtcData?.kycStatus === 1;
@@ -308,14 +312,13 @@ async function calculateEnhancedCompetitionScore(user, gtcData) {
 
     // 7. Active Trades Score (5%) - Rewards active trading
     const activeTrades = gtcData?.activeTrades || 0;
-    scores.activeTrades = Math.min(
-        activeTrades / normalizers.maxActiveTrades,
-        1
-    ) * rules.activeTradesWeight;
+    const activeTradesProgress = Math.min(activeTrades / normalizers.maxActiveTrades, 1);
+    scores.activeTrades = activeTradesProgress * rules.activeTradesWeight;
 
     // 8. Consistency Score (5%) - Rewards regular trading
     const consistencyScore = gtcData?.consistencyScore || 0;
-    scores.consistency = (consistencyScore / 100) * rules.consistencyWeight;
+    const consistencyProgress = consistencyScore / 100;
+    scores.consistency = consistencyProgress * rules.consistencyWeight;
 
     // Apply agent bonus if applicable
     if (gtcData?.isAgent || user.userType === 'agent') {
@@ -342,6 +345,16 @@ async function calculateEnhancedCompetitionScore(user, gtcData) {
             activeTradesScore: parseFloat(scores.activeTrades.toFixed(2)),
             consistencyScore: parseFloat(scores.consistency.toFixed(2)),
         },
+        progressPercentages: {
+            directReferrals: parseFloat((directReferralsProgress * 100).toFixed(1)),
+            teamSize: parseFloat((teamSizeProgress * 100).toFixed(1)),
+            tradingVolume: parseFloat((volumeProgress * 100).toFixed(1)),
+            profitability: parseFloat((profitabilityScore * 100).toFixed(1)),
+            accountBalance: parseFloat((balanceProgress * 100).toFixed(1)),
+            kycCompletion: isKYCVerified ? 100 : 0,
+            activeTrades: parseFloat((activeTradesProgress * 100).toFixed(1)),
+            consistency: parseFloat((consistencyProgress * 100).toFixed(1)),
+        },
         metrics: {
             // Nupips metrics
             directReferrals,
@@ -364,6 +377,14 @@ async function calculateEnhancedCompetitionScore(user, gtcData) {
             isKYCVerified,
             isAgent: gtcData?.isAgent || false,
         },
+        targets: {
+            maxDirectReferrals: normalizers.maxDirectReferrals,
+            maxTeamSize: normalizers.maxTeamSize,
+            maxVolume: normalizers.maxVolume,
+            maxBalance: normalizers.maxBalance,
+            maxActiveTrades: normalizers.maxActiveTrades,
+            maxConsistencyDays: normalizers.maxConsistencyDays,
+        }
     };
 }
 
@@ -392,7 +413,9 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
                 rules: COMPETITION_CONFIG.rules,
                 rewards: COMPETITION_CONFIG.rewards,
                 period: COMPETITION_CONFIG.period,
-                totalParticipants: 0,
+                stats: {
+                    totalParticipants: 0,
+                },
             });
         }
 
@@ -402,7 +425,7 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
                 const gtcData = await fetchComprehensiveGTCData(user);
 
                 if (!gtcData) {
-                    return null; // Skip users without GTC data
+                    return null;
                 }
 
                 const scoreData = await calculateEnhancedCompetitionScore(user, gtcData);
@@ -417,7 +440,9 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
                     baseScore: scoreData.baseScore,
                     bonusMultiplier: scoreData.bonusMultiplier,
                     breakdown: scoreData.breakdown,
+                    progressPercentages: scoreData.progressPercentages,
                     metrics: scoreData.metrics,
+                    targets: scoreData.targets,
                     isVerified: scoreData.metrics.isKYCVerified,
                     isAgent: scoreData.metrics.isAgent,
                 };
@@ -568,7 +593,9 @@ router.get('/my-stats', authenticateToken, async (req, res) => {
                 eligibleReward: getRewardForRank(rank),
             },
             breakdown: scoreData.breakdown,
+            progressPercentages: scoreData.progressPercentages,
             metrics: scoreData.metrics,
+            targets: scoreData.targets,
             gtcAccountInfo: {
                 balance: gtcData.accountBalance,
                 equity: gtcData.equity,
@@ -611,13 +638,8 @@ router.get('/config', async (req, res) => {
  * Helper function to determine reward for a given rank
  */
 function getRewardForRank(rank) {
-    if (rank === 1) return COMPETITION_CONFIG.rewards[0];
-    if (rank === 2) return COMPETITION_CONFIG.rewards[1];
-    if (rank === 3) return COMPETITION_CONFIG.rewards[2];
-    if (rank <= 5) return COMPETITION_CONFIG.rewards[3];
-    if (rank <= 10) return COMPETITION_CONFIG.rewards[4];
-    if (rank <= 25) return COMPETITION_CONFIG.rewards[5];
-    return null;
+    const reward = COMPETITION_CONFIG.rewards.find(r => rank >= r.minRank && rank <= r.maxRank);
+    return reward || null;
 }
 
 export default router;
