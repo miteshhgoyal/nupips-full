@@ -136,11 +136,10 @@ const DefaultRoute = () => {
 };
 
 // Layout Wrapper Component with Dynamic Sidebar
-const LayoutWrapper = ({ children }) => {
+const LayoutWrapper = ({ children, competitionEnabled }) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [competitionEnabled, setCompetitionEnabled] = useState(false);
   const { gtcAuthenticated, gtcUser } = useGTCFxAuth();
 
   // Check if current route should show layout
@@ -152,28 +151,6 @@ const LayoutWrapper = ({ children }) => {
     "/reset-password",
   ];
   const showLayout = !noLayoutRoutes.includes(location.pathname);
-
-  // Fetch competition config to check if enabled
-  useEffect(() => {
-    const checkCompetitionStatus = async () => {
-      try {
-        const response = await api.get(`/competition/leaderboard`);
-        const data = await response.data;
-        if (data.success && data.config?.period?.active) {
-          setCompetitionEnabled(true);
-        } else {
-          setCompetitionEnabled(false);
-        }
-      } catch (error) {
-        console.error("Failed to check competition status:", error);
-        setCompetitionEnabled(false);
-      }
-    };
-
-    if (showLayout) {
-      checkCompetitionStatus();
-    }
-  }, [showLayout]);
 
   // Generate dynamic sidebar links based on GTC FX connection status and competition config
   const dynamicSidebarLinks = useMemo(() => {
@@ -282,11 +259,33 @@ const LayoutWrapper = ({ children }) => {
 
 // Main App Component
 function App() {
+  const [competitionEnabled, setCompetitionEnabled] = useState(false);
+
+  // Fetch competition config to check if enabled
+  useEffect(() => {
+    const checkCompetitionStatus = async () => {
+      try {
+        const response = await api.get(`/competition/leaderboard`);
+        const data = await response.data;
+        if (data.success && data.config?.period?.active) {
+          setCompetitionEnabled(true);
+        } else {
+          setCompetitionEnabled(false);
+        }
+      } catch (error) {
+        console.error("Failed to check competition status:", error);
+        setCompetitionEnabled(false);
+      }
+    };
+
+    checkCompetitionStatus();
+  }, []);
+
   return (
     <Router>
       <AuthProvider>
         <GTCFxAuthProvider>
-          <LayoutWrapper>
+          <LayoutWrapper competitionEnabled={competitionEnabled}>
             <Routes>
               {/* Public routes - no authentication required */}
               <Route
@@ -305,16 +304,16 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              {competitionEnabled && (
-                <Route
-                  path="/competition"
-                  element={
-                    <ProtectedRoute>
-                      <Competition />
-                    </ProtectedRoute>
-                  }
-                />
-              )}
+
+              {/* Competition route - conditionally rendered */}
+              <Route
+                path="/competition"
+                element={
+                  <ProtectedRoute>
+                    <Competition />
+                  </ProtectedRoute>
+                }
+              />
 
               <Route
                 path="/brokers"
