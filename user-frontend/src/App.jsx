@@ -1,5 +1,5 @@
 // App.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -8,7 +8,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { GTCFxAuthProvider } from "./contexts/GTCFxAuthContext";
+import { GTCFxAuthProvider, useGTCFxAuth } from "./contexts/GTCFxAuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GTCFxProtectedRoute from "./components/GTCFxProtectedRoute";
 import Navbar from "./components/Navbar";
@@ -22,6 +22,8 @@ import {
   Wallet,
   Users,
   Coins,
+  Link2,
+  Swords,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
@@ -61,6 +63,7 @@ import Learn from "./pages/others/Learn";
 import CourseView from "./pages/others/CourseView";
 import LessonView from "./pages/others/LessonView";
 import NupipsIncomes from "./pages/user/NupipsIncomes";
+import Competition from "./pages/Competition";
 
 // Navigation configuration
 const navbarLinks = [
@@ -68,7 +71,8 @@ const navbarLinks = [
   { name: "My Orders", href: "/orders", icon: ShoppingBag },
 ];
 
-const sidebarLinks = [
+// Base sidebar links (always visible)
+const baseSidebarLinks = [
   {
     name: "Dashboard",
     href: "/dashboard",
@@ -89,33 +93,39 @@ const sidebarLinks = [
     href: "/learn",
     icon: Book,
   },
-  {
-    name: "GTC FX",
-    icon: TrendingUp,
-    subItems: [
-      { name: "Connect Your Broker", href: "/gtcfx/brokers" },
-      //   { name: "Authentication", href: "/gtcfx/auth" },
-      { name: "Dashboard", href: "/gtcfx/dashboard" },
-      { name: "Profit Logs", href: "/gtcfx/profit-logs" },
-      { name: "Agent Members", href: "/gtcfx/agent/members" },
-      //   { name: "Unsubscribe", href: "/gtcfx/unsubscribe" },
-      //   { name: "Commission Report", href: "/gtcfx/agent/commission" },
-      //   { name: "Strategies", href: "/gtcfx/strategies" },
-      //   { name: "My Subscriptions", href: "/gtcfx/subscriptions" },
-    ],
-  },
-  {
-    name: "Wallet",
-    icon: Wallet,
-    subItems: [
-      { name: "Nupips Incomes", href: "/nupips-incomes" },
-      { name: "Deposit", href: "/deposit" },
-      { name: "Withdrawal", href: "/withdrawal" },
-      { name: "Internal Transfer", href: "/transfer" },
-      { name: "Transaction History", href: "/transaction-history" },
-    ],
-  },
+  { name: "Competition", href: "/competition", icon: Swords },
 ];
+
+// GTC FX sidebar section (only when connected)
+const gtcFxSidebarSection = {
+  name: "GTC FX",
+  icon: TrendingUp,
+  subItems: [
+    { name: "Dashboard", href: "/gtcfx/dashboard" },
+    { name: "Profit Logs", href: "/gtcfx/profit-logs" },
+    { name: "Agent Members", href: "/gtcfx/agent/members" },
+  ],
+};
+
+// Broker connection link (only when not connected)
+const brokerConnectionLink = {
+  name: "Connect Your Broker",
+  href: "/brokers",
+  icon: Link2,
+};
+
+// Wallet section (always visible)
+const walletSidebarSection = {
+  name: "Wallet",
+  icon: Wallet,
+  subItems: [
+    { name: "Nupips Incomes", href: "/nupips-incomes" },
+    { name: "Deposit", href: "/deposit" },
+    { name: "Withdrawal", href: "/withdrawal" },
+    { name: "Internal Transfer", href: "/transfer" },
+    { name: "Transaction History", href: "/transaction-history" },
+  ],
+};
 
 // Default Route Component
 const DefaultRoute = () => {
@@ -139,11 +149,12 @@ const DefaultRoute = () => {
   return <Navigate to="/dashboard" replace />;
 };
 
-// Layout Wrapper Component
+// Layout Wrapper Component with Dynamic Sidebar
 const LayoutWrapper = ({ children }) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const { gtcAuthenticated, gtcUser } = useGTCFxAuth();
 
   // Check if current route should show layout
   const noLayoutRoutes = [
@@ -155,6 +166,26 @@ const LayoutWrapper = ({ children }) => {
   ];
 
   const showLayout = !noLayoutRoutes.includes(location.pathname);
+
+  // Generate dynamic sidebar links based on GTC FX connection status
+  const dynamicSidebarLinks = useMemo(() => {
+    const links = [...baseSidebarLinks];
+
+    // Add broker connection link if GTC FX is NOT connected
+    if (!gtcAuthenticated || !gtcUser) {
+      links.push(brokerConnectionLink);
+    }
+
+    // Add GTC FX section if connected
+    if (gtcAuthenticated && gtcUser) {
+      links.push(gtcFxSidebarSection);
+    }
+
+    // Always add wallet section at the end
+    links.push(walletSidebarSection);
+
+    return links;
+  }, [gtcAuthenticated, gtcUser]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -199,7 +230,7 @@ const LayoutWrapper = ({ children }) => {
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={toggleSidebar}
-        navigationLinks={sidebarLinks}
+        navigationLinks={dynamicSidebarLinks}
         config={CONFIG}
       />
 
@@ -263,7 +294,16 @@ function App() {
               />
 
               <Route
-                path="/gtcfx/brokers"
+                path="/competition"
+                element={
+                  <ProtectedRoute>
+                    <Competition />
+                  </ProtectedRoute>
+                }
+              />
+
+              <Route
+                path="/brokers"
                 element={
                   <ProtectedRoute>
                     <BrokerSelection />
@@ -415,36 +455,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              {/* <Route
-                path="/gtcfx/strategies"
-                element={
-                  <ProtectedRoute>
-                    <GTCFxProtectedRoute>
-                      <GTCFxStrategies />
-                    </GTCFxProtectedRoute>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/gtcfx/strategies/:uuid"
-                element={
-                  <ProtectedRoute>
-                    <GTCFxProtectedRoute>
-                      <GTCFxStrategyDetail />
-                    </GTCFxProtectedRoute>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/gtcfx/subscriptions"
-                element={
-                  <ProtectedRoute>
-                    <GTCFxProtectedRoute>
-                      <GTCFxSubscriptions />
-                    </GTCFxProtectedRoute>
-                  </ProtectedRoute>
-                }
-              /> */}
               <Route
                 path="/gtcfx/profit-logs"
                 element={
@@ -455,16 +465,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              {/* <Route
-                path="/gtcfx/unsubscribe"
-                element={
-                  <ProtectedRoute>
-                    <GTCFxProtectedRoute>
-                      <GTCFxUnsubscribe />
-                    </GTCFxProtectedRoute>
-                  </ProtectedRoute>
-                }
-              /> */}
               <Route
                 path="/gtcfx/agent/members"
                 element={
@@ -475,16 +475,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              {/* <Route
-                path="/gtcfx/agent/commission"
-                element={
-                  <ProtectedRoute>
-                    <GTCFxProtectedRoute>
-                      <GTCFxCommissionReport />
-                    </GTCFxProtectedRoute>
-                  </ProtectedRoute>
-                }
-              /> */}
 
               {/* Default redirect */}
               <Route path="/" element={<DefaultRoute />} />

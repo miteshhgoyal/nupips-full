@@ -24,24 +24,24 @@ const BrokerSelection = () => {
         "Agent Commission System",
       ],
     },
-    {
-      id: "broker2",
-      name: "Broker 2",
-      logo: null,
-      description: "Coming soon - More brokers will be available",
-      available: false,
-      route: null,
-      features: ["Multiple Assets", "Low Fees", "Fast Execution"],
-    },
-    {
-      id: "broker3",
-      name: "Broker 3",
-      logo: null,
-      description: "Coming soon - Expand your trading options",
-      available: false,
-      route: null,
-      features: ["Copy Trading", "AI Signals", "Portfolio Management"],
-    },
+    // {
+    //   id: "broker2",
+    //   name: "Broker 2",
+    //   logo: null,
+    //   description: "Coming soon - More brokers will be available",
+    //   available: false,
+    //   route: null,
+    //   features: ["Multiple Assets", "Low Fees", "Fast Execution"],
+    // },
+    // {
+    //   id: "broker3",
+    //   name: "Broker 3",
+    //   logo: null,
+    //   description: "Coming soon - Expand your trading options",
+    //   available: false,
+    //   route: null,
+    //   features: ["Copy Trading", "AI Signals", "Portfolio Management"],
+    // },
   ];
 
   const handleBrokerSelect = (broker) => {
@@ -89,7 +89,7 @@ const BrokerSelection = () => {
         )}
 
         {/* Broker Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-8">
           {brokers.map((broker) => {
             const isConnected = broker.id === "gtcfx" && gtcFxConnected;
 
@@ -200,10 +200,6 @@ const BrokerSelection = () => {
               </div>
             );
           })}
-        </div>
-
-        {/* Info Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Why Connect */}
           <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl">
             <div className="flex items-start gap-3 mb-4">
@@ -233,9 +229,42 @@ const BrokerSelection = () => {
               </li>
             </ul>
           </div>
+        </div>
+
+        {/* Info Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Why Connect */}
+          {/* <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Info className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg">
+                Why Connect a Broker?
+              </h3>
+            </div>
+            <ul className="space-y-3 text-sm text-gray-700">
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <span>Access professional trading strategies</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <span>Track your profit logs and performance in real-time</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <span>Manage subscriptions and automate trading</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <span>Earn agent commissions from referrals</span>
+              </li>
+            </ul>
+          </div> */}
 
           {/* Coming Soon */}
-          <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl">
+          {/* <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <TrendingUp className="w-5 h-5 text-white" />
@@ -257,7 +286,7 @@ const BrokerSelection = () => {
                 <li>• Unified trading dashboard</li>
               </ul>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
