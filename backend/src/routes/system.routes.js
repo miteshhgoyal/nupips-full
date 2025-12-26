@@ -1,3 +1,5 @@
+// routes/system.routes.js
+
 import express from 'express';
 import SystemConfig from '../models/SystemConfig.js';
 import User from '../models/User.js';
@@ -152,6 +154,41 @@ const validateConfigUpdate = (req, res, next) => {
     next();
 };
 
+// ===== PUBLIC ROUTES (Authenticated Users) =====
+
+// Public endpoint - Get PAMM UUID only (for all authenticated users)
+router.get('/public/pamm-config', authenticateToken, async (req, res) => {
+    try {
+        const config = await SystemConfig.getOrCreateConfig();
+
+        if (!config) {
+            return res.status(404).json({
+                success: false,
+                message: 'PAMM configuration not found'
+            });
+        }
+
+        // Only return PAMM-related fields (not sensitive system config)
+        res.json({
+            success: true,
+            data: {
+                pammUuid: config.pammUuid || null,
+                pammEnabled: config.pammEnabled || false
+            }
+        });
+    } catch (error) {
+        console.error('Public PAMM config fetch error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch PAMM configuration',
+            error: error.message
+        });
+    }
+});
+
+// ===== ADMIN ROUTES =====
+
+// Get admin income history
 router.get("/incomes", authenticateToken, requireAdmin, async (req, res) => {
     try {
         const incomes = await IncomeExpense.find({
@@ -166,6 +203,7 @@ router.get("/incomes", authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
+// Get full system config (admin only)
 router.get('/config', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const config = await SystemConfig.getOrCreateConfig();
@@ -186,6 +224,7 @@ router.get('/config', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
+// Update system config (admin only)
 router.put('/config',
     authenticateToken,
     requireAdmin,

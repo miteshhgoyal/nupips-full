@@ -101,6 +101,7 @@ const gtcFxSidebarSection = {
   name: "GTC FX",
   icon: TrendingUp,
   subItems: [
+    { name: "Authentication", href: "/gtcfx/auth" },
     { name: "Dashboard", href: "/gtcfx/dashboard" },
     { name: "Profit Logs", href: "/gtcfx/profit-logs" },
     { name: "Agent Members", href: "/gtcfx/agent/members" },
