@@ -25,8 +25,9 @@ import {
   Link2,
   Swords,
 } from "lucide-react";
-import CONFIG from "./constants";
+import { CONFIG } from "./constants";
 import "./App.css";
+import api from "./services/api";
 
 // Import your pages
 import Register from "./pages/Register";
@@ -156,15 +157,8 @@ const LayoutWrapper = ({ children }) => {
   useEffect(() => {
     const checkCompetitionStatus = async () => {
       try {
-        const response = await fetch(
-          `${CONFIG.API_BASE_URL}/competition/leaderboard`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
-        const data = await response.json();
+        const response = await api.get(`/competition/leaderboard`);
+        const data = await response.data;
         if (data.success && data.config?.period?.active) {
           setCompetitionEnabled(true);
         } else {
@@ -311,14 +305,17 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/competition"
-                element={
-                  <ProtectedRoute>
-                    <Competition />
-                  </ProtectedRoute>
-                }
-              />
+              {competitionEnabled && (
+                <Route
+                  path="/competition"
+                  element={
+                    <ProtectedRoute>
+                      <Competition />
+                    </ProtectedRoute>
+                  }
+                />
+              )}
+
               <Route
                 path="/brokers"
                 element={
