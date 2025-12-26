@@ -1,4 +1,4 @@
-// App.jsx
+// frontend/src/App.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import {
   BrowserRouter as Router,
@@ -25,18 +25,16 @@ import {
   Link2,
   Swords,
 } from "lucide-react";
-import { CONFIG } from "./constants";
+import CONFIG from "./constants";
 import "./App.css";
 
 // Import your pages
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ComingSoon from "./pages/others/ComingSoon";
-
 import Deposit from "./pages/wallet/Deposit";
 import Withdrawal from "./pages/wallet/Withdrawal";
 import TransactionHistory from "./pages/wallet/TransactionHistory";
-
 import BrokerSelection from "./pages/user/BrokerSelection";
 
 // Import GTC FX Pages
@@ -48,7 +46,7 @@ import GTCFxSubscriptions from "./pages/gtcfx/user/MySubscriptions";
 import GTCFxProfitLogs from "./pages/gtcfx/user/ProfitLogs";
 import GTCFxUnsubscribe from "./pages/gtcfx/user/Unsubscribe";
 import GTCFxAgentMembers from "./pages/gtcfx/user/AgentMembers";
-// import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
+import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
 
 import Profile from "./pages/user/Profile";
 import Dashboard from "./pages/user/Dashboard";
@@ -58,7 +56,6 @@ import Shop from "./pages/others/Shop";
 import Orders from "./pages/user/Orders";
 import ProductItem from "./pages/others/ProductItem";
 import PlaceOrder from "./pages/others/PlaceOrder";
-
 import Learn from "./pages/others/Learn";
 import CourseView from "./pages/others/CourseView";
 import LessonView from "./pages/others/LessonView";
@@ -71,30 +68,20 @@ const navbarLinks = [
   { name: "My Orders", href: "/orders", icon: ShoppingBag },
 ];
 
-// Base sidebar links (always visible)
+// Base sidebar links always visible
 const baseSidebarLinks = [
-  {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: Home,
-  },
-  {
-    name: "Nupips Team",
-    href: "/nupips-team",
-    icon: Users,
-  },
-  {
-    name: "Shop",
-    href: "/shop",
-    icon: ShoppingBag,
-  },
-  {
-    name: "Learn",
-    href: "/learn",
-    icon: Book,
-  },
-  { name: "Competition", href: "/competition", icon: Swords },
+  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Nupips Team", href: "/nupips-team", icon: Users },
+  { name: "Shop", href: "/shop", icon: ShoppingBag },
+  { name: "Learn", href: "/learn", icon: Book },
 ];
+
+// Competition link (conditionally shown)
+const competitionLink = {
+  name: "Competition",
+  href: "/competition",
+  icon: Swords,
+};
 
 // GTC FX sidebar section (only when connected)
 const gtcFxSidebarSection = {
@@ -104,7 +91,7 @@ const gtcFxSidebarSection = {
     { name: "Authentication", href: "/gtcfx/auth" },
     { name: "Dashboard", href: "/gtcfx/dashboard" },
     { name: "Profit Logs", href: "/gtcfx/profit-logs" },
-    { name: "Agent Members", href: "/gtcfx/agent/members" },
+    { name: "Agent Members", href: "/gtcfx/agentmembers" },
   ],
 };
 
@@ -115,7 +102,7 @@ const brokerConnectionLink = {
   icon: Link2,
 };
 
-// Wallet section (always visible)
+// Wallet section always visible
 const walletSidebarSection = {
   name: "Wallet",
   icon: Wallet,
@@ -143,10 +130,7 @@ const DefaultRoute = () => {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!user) return <Navigate to="/login" replace />;
   return <Navigate to="/dashboard" replace />;
 };
 
@@ -155,6 +139,7 @@ const LayoutWrapper = ({ children }) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [competitionEnabled, setCompetitionEnabled] = useState(false);
   const { gtcAuthenticated, gtcUser } = useGTCFxAuth();
 
   // Check if current route should show layout
@@ -165,15 +150,48 @@ const LayoutWrapper = ({ children }) => {
     "/forgot-password",
     "/reset-password",
   ];
-
   const showLayout = !noLayoutRoutes.includes(location.pathname);
 
-  // Generate dynamic sidebar links based on GTC FX connection status
+  // Fetch competition config to check if enabled
+  useEffect(() => {
+    const checkCompetitionStatus = async () => {
+      try {
+        const response = await fetch(
+          `${CONFIG.API_BASE_URL}/competition/leaderboard`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        const data = await response.json();
+        if (data.success && data.config?.period?.active) {
+          setCompetitionEnabled(true);
+        } else {
+          setCompetitionEnabled(false);
+        }
+      } catch (error) {
+        console.error("Failed to check competition status:", error);
+        setCompetitionEnabled(false);
+      }
+    };
+
+    if (showLayout) {
+      checkCompetitionStatus();
+    }
+  }, [showLayout]);
+
+  // Generate dynamic sidebar links based on GTC FX connection status and competition config
   const dynamicSidebarLinks = useMemo(() => {
     const links = [...baseSidebarLinks];
 
+    // Add competition link if enabled
+    if (competitionEnabled) {
+      links.push(competitionLink);
+    }
+
     // Add broker connection link if GTC FX is NOT connected
-    if (!gtcAuthenticated || !gtcUser) {
+    if (!gtcAuthenticated && !gtcUser) {
       links.push(brokerConnectionLink);
     }
 
@@ -186,13 +204,12 @@ const LayoutWrapper = ({ children }) => {
     links.push(walletSidebarSection);
 
     return links;
-  }, [gtcAuthenticated, gtcUser]);
+  }, [gtcAuthenticated, gtcUser, competitionEnabled]);
 
   useEffect(() => {
     const checkMobile = () => {
       const isMobileNow = window.innerWidth < 768;
       setIsMobile(isMobileNow);
-
       if (isMobileNow) {
         setSidebarOpen(false);
       } else {
@@ -203,6 +220,7 @@ const LayoutWrapper = ({ children }) => {
     checkMobile();
     window.addEventListener("resize", checkMobile);
 
+    // Global sidebar toggle function
     window.toggleSidebar = toggleSidebar;
 
     return () => {
@@ -293,7 +311,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               <Route
                 path="/competition"
                 element={
@@ -302,7 +319,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               <Route
                 path="/brokers"
                 element={
@@ -312,7 +328,7 @@ function App() {
                 }
               />
 
-              {/* Main App Protected routes */}
+              {/* Main App - Protected routes */}
               <Route
                 path="/dashboard"
                 element={
@@ -378,7 +394,7 @@ function App() {
                 }
               />
               <Route
-                path="/learn/course/:id"
+                path="/learn/:courseid"
                 element={
                   <ProtectedRoute>
                     <CourseView />
@@ -401,7 +417,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
               <Route
                 path="/deposit"
                 element={
@@ -467,7 +482,7 @@ function App() {
                 }
               />
               <Route
-                path="/gtcfx/agent/members"
+                path="/gtcfx/agentmembers"
                 element={
                   <ProtectedRoute>
                     <GTCFxProtectedRoute>
@@ -479,7 +494,6 @@ function App() {
 
               {/* Default redirect */}
               <Route path="/" element={<DefaultRoute />} />
-
               {/* 404 fallback */}
               <Route path="*" element={<DefaultRoute />} />
             </Routes>

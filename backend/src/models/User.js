@@ -184,7 +184,14 @@ const UserSchema = new mongoose.Schema({
         refreshToken: { type: String, default: null },
         user: { type: Object, default: null },
         lastSync: { type: Date, default: null },
-        lastPerformanceFeesFetch: { type: Date, default: null }
+        lastPerformanceFeesFetch: { type: Date, default: null },
+
+        referralLink: {
+            type: String,
+            default: null,
+            trim: true,
+        },
+        referralLinkUpdatedAt: { type: Date, default: null }
     },
 
     incomeExpenseHistory: [{

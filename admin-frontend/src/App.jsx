@@ -23,6 +23,7 @@ import {
   Coins,
   Wallet,
   Users as UsersIcon,
+  Swords,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
@@ -43,6 +44,7 @@ import Deposits from "./pages/Deposits";
 import Withdrawals from "./pages/Withdrawals";
 import Users from "./pages/Users";
 import GTCMembers from "./pages/GTCMembers";
+import Competition from "./pages/Competition";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
@@ -70,6 +72,7 @@ const sidebarLinks = [
       { name: "Orders", href: "/orders" },
     ],
   },
+  { name: "Competition", href: "/competition", icon: Swords },
   {
     name: "GTC Members",
     href: "/gtc-members",
@@ -233,6 +236,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/competition"
+              element={
+                <ProtectedRoute>
+                  <Competition />
                 </ProtectedRoute>
               }
             />

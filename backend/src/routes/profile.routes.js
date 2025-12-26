@@ -567,4 +567,107 @@ router.get('/addresses', authenticateToken, async (req, res) => {
     }
 });
 
+// ==================== GTC REFERRAL LINK MANAGEMENT ====================
+
+// Get GTC referral link
+router.get('/gtc/referral-link', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId).select('gtcfx.referralLink gtcfx.referralLinkUpdatedAt');
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json({
+            success: true,
+            referralLink: user.gtcfx?.referralLink || null,
+            updatedAt: user.gtcfx?.referralLinkUpdatedAt || null
+        });
+    } catch (error) {
+        console.error('Get GTC referral link error:', error);
+        res.status(500).json({ message: 'Failed to fetch referral link', error: error.message });
+    }
+});
+
+// Add/Update GTC referral link
+router.put('/gtc/referral-link', authenticateToken, async (req, res) => {
+    try {
+        const { referralLink } = req.body;
+
+        if (!referralLink || typeof referralLink !== 'string') {
+            return res.status(400).json({ message: 'Referral link is required' });
+        }
+
+        const trimmedLink = referralLink.trim();
+
+        // Validate URL format
+        const urlPattern = /^https?:\/\/.+/;
+        if (!urlPattern.test(trimmedLink)) {
+            return res.status(400).json({
+                message: 'Invalid referral link format. Must be a valid URL (http:// or https://)'
+            });
+        }
+
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Initialize gtcfx object if it doesn't exist
+        if (!user.gtcfx) {
+            user.gtcfx = {};
+        }
+
+        // Update referral link
+        user.gtcfx.referralLink = trimmedLink;
+        user.gtcfx.referralLinkUpdatedAt = new Date();
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'GTC referral link updated successfully',
+            referralLink: user.gtcfx.referralLink,
+            updatedAt: user.gtcfx.referralLinkUpdatedAt
+        });
+    } catch (error) {
+        console.error('Update GTC referral link error:', error);
+        res.status(500).json({
+            message: 'Failed to update referral link',
+            error: error.message
+        });
+    }
+});
+
+// Remove GTC referral link
+router.delete('/gtc/referral-link', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (!user.gtcfx) {
+            return res.status(404).json({ message: 'No referral link found' });
+        }
+
+        // Remove referral link
+        user.gtcfx.referralLink = null;
+        user.gtcfx.referralLinkUpdatedAt = new Date();
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'GTC referral link removed successfully'
+        });
+    } catch (error) {
+        console.error('Remove GTC referral link error:', error);
+        res.status(500).json({
+            message: 'Failed to remove referral link',
+            error: error.message
+        });
+    }
+});
+
 export default router;
