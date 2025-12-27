@@ -1,4 +1,4 @@
-// frontend/src/App.jsx
+// App.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import {
   BrowserRouter as Router,
@@ -33,9 +33,11 @@ import api from "./services/api";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ComingSoon from "./pages/others/ComingSoon";
+
 import Deposit from "./pages/wallet/Deposit";
 import Withdrawal from "./pages/wallet/Withdrawal";
 import TransactionHistory from "./pages/wallet/TransactionHistory";
+
 import BrokerSelection from "./pages/user/BrokerSelection";
 
 // Import GTC FX Pages
@@ -57,6 +59,7 @@ import Shop from "./pages/others/Shop";
 import Orders from "./pages/user/Orders";
 import ProductItem from "./pages/others/ProductItem";
 import PlaceOrder from "./pages/others/PlaceOrder";
+
 import Learn from "./pages/others/Learn";
 import CourseView from "./pages/others/CourseView";
 import LessonView from "./pages/others/LessonView";
@@ -92,7 +95,7 @@ const gtcFxSidebarSection = {
     { name: "Authentication", href: "/gtcfx/auth" },
     { name: "Dashboard", href: "/gtcfx/dashboard" },
     { name: "Profit Logs", href: "/gtcfx/profit-logs" },
-    { name: "Agent Members", href: "/gtcfx/agentmembers" },
+    { name: "Agent Members", href: "/gtcfx/agent/members" },
   ],
 };
 
@@ -103,7 +106,7 @@ const brokerConnectionLink = {
   icon: Link2,
 };
 
-// Wallet section always visible
+// Wallet section (always visible)
 const walletSidebarSection = {
   name: "Wallet",
   icon: Wallet,
@@ -131,7 +134,10 @@ const DefaultRoute = () => {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   return <Navigate to="/dashboard" replace />;
 };
 
@@ -150,9 +156,10 @@ const LayoutWrapper = ({ children, competitionEnabled }) => {
     "/forgot-password",
     "/reset-password",
   ];
+
   const showLayout = !noLayoutRoutes.includes(location.pathname);
 
-  // Generate dynamic sidebar links based on GTC FX connection status and competition config
+  // Generate dynamic sidebar links based on GTC FX connection status
   const dynamicSidebarLinks = useMemo(() => {
     const links = [...baseSidebarLinks];
 
@@ -181,6 +188,7 @@ const LayoutWrapper = ({ children, competitionEnabled }) => {
     const checkMobile = () => {
       const isMobileNow = window.innerWidth < 768;
       setIsMobile(isMobileNow);
+
       if (isMobileNow) {
         setSidebarOpen(false);
       } else {
@@ -191,7 +199,6 @@ const LayoutWrapper = ({ children, competitionEnabled }) => {
     checkMobile();
     window.addEventListener("resize", checkMobile);
 
-    // Global sidebar toggle function
     window.toggleSidebar = toggleSidebar;
 
     return () => {
@@ -265,12 +272,10 @@ function App() {
   useEffect(() => {
     const checkCompetitionStatus = async () => {
       try {
-        const response = await api.get(`/competition/leaderboard`);
+        const response = await api.get(`/competition/status`);
         const data = await response.data;
-        if (data.success && data.config?.period?.active) {
-          setCompetitionEnabled(true);
-        } else {
-          setCompetitionEnabled(false);
+        if (data.status) {
+          setCompetitionEnabled(data.status);
         }
       } catch (error) {
         console.error("Failed to check competition status:", error);
@@ -324,7 +329,7 @@ function App() {
                 }
               />
 
-              {/* Main App - Protected routes */}
+              {/* Main App Protected routes */}
               <Route
                 path="/dashboard"
                 element={
@@ -390,7 +395,7 @@ function App() {
                 }
               />
               <Route
-                path="/learn/:courseid"
+                path="/learn/course/:id"
                 element={
                   <ProtectedRoute>
                     <CourseView />
@@ -413,6 +418,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+
               <Route
                 path="/deposit"
                 element={
@@ -478,7 +484,7 @@ function App() {
                 }
               />
               <Route
-                path="/gtcfx/agentmembers"
+                path="/gtcfx/agent/members"
                 element={
                   <ProtectedRoute>
                     <GTCFxProtectedRoute>
@@ -490,6 +496,7 @@ function App() {
 
               {/* Default redirect */}
               <Route path="/" element={<DefaultRoute />} />
+
               {/* 404 fallback */}
               <Route path="*" element={<DefaultRoute />} />
             </Routes>

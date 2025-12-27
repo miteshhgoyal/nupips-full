@@ -44,7 +44,7 @@ import Deposits from "./pages/Deposits";
 import Withdrawals from "./pages/Withdrawals";
 import Users from "./pages/Users";
 import GTCMembers from "./pages/GTCMembers";
-import Competition from "./pages/Competition";
+// import Competition from "./pages/Competition";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
@@ -72,7 +72,7 @@ const sidebarLinks = [
       { name: "Orders", href: "/orders" },
     ],
   },
-  { name: "Competition", href: "/competition", icon: Swords },
+  //   { name: "Competition", href: "/competition", icon: Swords },
   {
     name: "GTC Members",
     href: "/gtc-members",
@@ -239,14 +239,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
+            {/* <Route
               path="/competition"
               element={
                 <ProtectedRoute>
                   <Competition />
                 </ProtectedRoute>
               }
-            />
+            /> */}
             <Route
               path="/gtc-members"
               element={
