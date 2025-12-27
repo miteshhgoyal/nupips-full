@@ -304,13 +304,13 @@ const Orders = () => {
           />
           <StatCard
             title="Revenue"
-            value={`₹${stats.totalRevenue.toFixed(2)}`}
+            value={`$${stats.totalRevenue.toFixed(2)}`}
             icon={TrendingUp}
             color="orange"
           />
           <StatCard
             title="Refunded"
-            value={`₹${stats.totalRefunds.toFixed(2)}`}
+            value={`$${stats.totalRefunds.toFixed(2)}`}
             icon={RefreshCw}
             color="gray"
           />
@@ -457,12 +457,12 @@ const Orders = () => {
                         </td>
                         <td className="px-4 py-4 text-right">
                           <p className="font-bold text-gray-900">
-                            ₹{order.amount.toFixed(2)}
+                            ${order.amount.toFixed(2)}
                           </p>
                           {isCancelled && order.refundAmount > 0 && (
                             <p className="text-xs text-green-600 font-semibold flex items-center justify-end gap-1 mt-1">
                               <RefreshCw className="w-3 h-3" />
-                              Refund: ₹{order.refundAmount.toFixed(2)}
+                              Refund: ${order.refundAmount.toFixed(2)}
                             </p>
                           )}
                           <p className="text-xs text-gray-500 mt-1">
@@ -734,7 +734,7 @@ const OrderDetailModal = ({
                       Order Cancelled & Locked
                     </p>
                     <p className="text-xs text-red-700 mt-1">
-                      Refund of ₹{order.refundAmount?.toFixed(2)} has been
+                      Refund of ${order.refundAmount?.toFixed(2)} has been
                       processed to customer's wallet. This order cannot be
                       modified.
                     </p>
@@ -773,7 +773,7 @@ const OrderDetailModal = ({
                 <InfoField
                   icon={CreditCard}
                   label="Wallet Balance"
-                  value={`₹${
+                  value={`$${
                     order.userId?.walletBalance?.toFixed(2) || "0.00"
                   }`}
                 />
@@ -848,7 +848,7 @@ const OrderDetailModal = ({
                       </div>
                     </div>
                     <p className="font-bold text-gray-900">
-                      ₹{(item.price || 0).toFixed(2)}
+                      ${(item.price || 0).toFixed(2)}
                     </p>
                   </div>
                 ))}
@@ -903,7 +903,7 @@ const OrderDetailModal = ({
                     Order Amount
                   </span>
                   <span className="font-bold text-gray-900">
-                    ₹{order.amount.toFixed(2)}
+                    ${order.amount.toFixed(2)}
                   </span>
                 </div>
                 {isCancelled && order.refundAmount > 0 && (
@@ -913,7 +913,7 @@ const OrderDetailModal = ({
                       Refund Processed
                     </span>
                     <span className="font-bold text-green-600">
-                      +₹{order.refundAmount.toFixed(2)}
+                      +${order.refundAmount.toFixed(2)}
                     </span>
                   </div>
                 )}

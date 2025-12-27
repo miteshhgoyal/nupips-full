@@ -809,14 +809,14 @@ router.put("/order/cancel/:orderId", authenticateToken, async (req, res) => {
             status: "Cancelled",
             timestamp: new Date(),
             updatedBy: req.user.userId,
-            note: `Refunded ₹${order.amount.toFixed(2)} to wallet`,
+            note: `Refunded $${order.amount.toFixed(2)} to wallet`,
         });
 
         await order.save();
         await user.save();
 
         res.json({
-            message: `Order cancelled successfully. ₹${order.amount.toFixed(2)} refunded to wallet.`,
+            message: `Order cancelled successfully. $${order.amount.toFixed(2)} refunded to wallet.`,
             order,
             refundedAmount: order.amount,
         });

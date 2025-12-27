@@ -120,7 +120,7 @@ const NupipsIncomes = () => {
                         </View>
                     </View>
                     <Text className="text-white font-bold text-xl mb-1">
-                        +₹{parseFloat(income.amount).toFixed(2)}
+                        +${parseFloat(income.amount).toFixed(2)}
                     </Text>
                     <View className="flex-row items-center gap-2">
                         <Calendar size={14} color="#9ca3af" />
@@ -194,7 +194,7 @@ const NupipsIncomes = () => {
                                 </Text>
                             </View>
                             <Text className="text-3xl font-bold text-white">
-                                ₹{totalIncome.toFixed(2)}
+                                ${totalIncome.toFixed(2)}
                             </Text>
                             <Text className="text-xs text-green-400 mt-1">
                                 {filteredIncomes.length} income entries
@@ -211,7 +211,7 @@ const NupipsIncomes = () => {
                                 </Text>
                             </View>
                             <Text className="text-3xl font-bold text-white">
-                                ₹
+                                $
                                 {filteredIncomes.length > 0
                                     ? (totalIncome / filteredIncomes.length).toFixed(2)
                                     : '0.00'}
@@ -280,14 +280,14 @@ const NupipsIncomes = () => {
                                                     key={cat}
                                                     onPress={() => setFilterCategory(cat)}
                                                     className={`px-4 py-2 rounded-xl ${filterCategory === cat
-                                                            ? 'bg-orange-600'
-                                                            : 'bg-gray-900 border border-gray-700'
+                                                        ? 'bg-orange-600'
+                                                        : 'bg-gray-900 border border-gray-700'
                                                         }`}
                                                 >
                                                     <Text
                                                         className={`font-semibold capitalize ${filterCategory === cat
-                                                                ? 'text-white'
-                                                                : 'text-gray-400'
+                                                            ? 'text-white'
+                                                            : 'text-gray-400'
                                                             }`}
                                                     >
                                                         {cat === 'all'
@@ -348,8 +348,8 @@ const NupipsIncomes = () => {
                                             }
                                             disabled={currentPage === 1}
                                             className={`w-10 h-10 rounded-lg flex items-center justify-center ${currentPage === 1
-                                                    ? 'bg-gray-700/30'
-                                                    : 'bg-orange-600'
+                                                ? 'bg-gray-700/30'
+                                                : 'bg-orange-600'
                                                 }`}
                                         >
                                             <ChevronLeft
@@ -370,8 +370,8 @@ const NupipsIncomes = () => {
                                             }
                                             disabled={currentPage === totalPages}
                                             className={`w-10 h-10 rounded-lg flex items-center justify-center ${currentPage === totalPages
-                                                    ? 'bg-gray-700/30'
-                                                    : 'bg-orange-600'
+                                                ? 'bg-gray-700/30'
+                                                : 'bg-orange-600'
                                                 }`}
                                         >
                                             <ChevronRight
@@ -429,7 +429,7 @@ const NupipsIncomes = () => {
                                     <View className="mb-6 p-6 bg-gray-800/40 rounded-xl border border-gray-700/30 items-center">
                                         <Text className="text-xs text-gray-400 mb-2">Amount</Text>
                                         <Text className="text-4xl font-bold text-green-400">
-                                            +₹{parseFloat(selectedIncome.amount).toFixed(2)}
+                                            +${parseFloat(selectedIncome.amount).toFixed(2)}
                                         </Text>
                                     </View>
 

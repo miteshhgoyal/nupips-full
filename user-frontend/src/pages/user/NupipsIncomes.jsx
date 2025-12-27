@@ -195,7 +195,7 @@ const NupipsIncomes = () => {
               <p className="text-sm font-medium text-green-900">Total Income</p>
             </div>
             <p className="text-2xl font-bold text-green-900">
-              ₹{totalIncome.toFixed(2)}
+              ${totalIncome.toFixed(2)}
             </p>
             <p className="text-xs text-green-700 mt-1">
               {filteredIncomes.length} income entries
@@ -212,7 +212,7 @@ const NupipsIncomes = () => {
               </p>
             </div>
             <p className="text-2xl font-bold text-blue-900">
-              ₹
+              $
               {filteredIncomes.length > 0
                 ? (totalIncome / filteredIncomes.length).toFixed(2)
                 : "0.00"}
@@ -359,7 +359,7 @@ const NupipsIncomes = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <p className="text-sm font-bold text-green-600">
-                          +₹{parseFloat(income.amount).toFixed(2)}
+                          +${parseFloat(income.amount).toFixed(2)}
                         </p>
                       </td>
                       <td className="px-6 py-4">
@@ -450,7 +450,7 @@ const NupipsIncomes = () => {
               <div className="mb-6 text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
                 <p className="text-xs text-gray-600 mb-1">Amount</p>
                 <p className="text-3xl font-bold text-green-600">
-                  +₹{parseFloat(selectedIncome.amount).toFixed(2)}
+                  +${parseFloat(selectedIncome.amount).toFixed(2)}
                 </p>
               </div>
 

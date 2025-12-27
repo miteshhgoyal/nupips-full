@@ -292,7 +292,7 @@ const Orders = () => {
                     Total Spent
                   </p>
                   <p className="text-3xl font-bold text-green-900 mt-1">
-                    ₹{stats.totalSpent.toFixed(2)}
+                    ${stats.totalSpent.toFixed(2)}
                   </p>
                   <p className="text-xs text-green-700 mt-2">
                     Across {stats.completed} delivered orders
@@ -309,7 +309,7 @@ const Orders = () => {
                     Cancelled & Refunded
                   </p>
                   <p className="text-3xl font-bold text-red-900 mt-1">
-                    ₹{stats.totalRefunds.toFixed(2)}
+                    ${stats.totalRefunds.toFixed(2)}
                   </p>
                   <p className="text-xs text-red-700 mt-2">
                     {stats.cancelled} cancelled orders
@@ -472,13 +472,13 @@ const Orders = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <p className="font-bold text-lg text-gray-900">
-                            ₹{order.amount.toFixed(2)}
+                            ${order.amount.toFixed(2)}
                           </p>
                           {order.status === "Cancelled" &&
                             order.refundAmount > 0 && (
                               <p className="text-xs text-green-600 font-semibold flex items-center justify-end gap-1 mt-1">
                                 <CheckCircle className="w-3 h-3" />
-                                Refunded: ₹{order.refundAmount.toFixed(2)}
+                                Refunded: ${order.refundAmount.toFixed(2)}
                               </p>
                             )}
                         </td>
@@ -579,13 +579,13 @@ const OrderDetailModal = ({ order, onClose }) => {
               />
               <InfoItem
                 label="Total Amount"
-                value={`₹${order.amount.toFixed(2)}`}
+                value={`$${order.amount.toFixed(2)}`}
                 bold
               />
               {order.refundAmount > 0 && (
                 <InfoItem
                   label="Refund Amount"
-                  value={`₹${order.refundAmount.toFixed(2)}`}
+                  value={`$${order.refundAmount.toFixed(2)}`}
                   className="text-green-600"
                   bold
                 />
@@ -599,7 +599,7 @@ const OrderDetailModal = ({ order, onClose }) => {
                     Order Cancelled
                   </p>
                   <p className="text-xs text-red-700 mt-1">
-                    This order cannot be modified. Refund of ₹
+                    This order cannot be modified. Refund of $
                     {order.refundAmount?.toFixed(2)} has been processed to your
                     wallet.
                   </p>
@@ -644,7 +644,7 @@ const OrderDetailModal = ({ order, onClose }) => {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-xl text-orange-600">
-                      ₹{item.price.toFixed(2)}
+                      ${item.price.toFixed(2)}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">per item</p>
                   </div>
@@ -730,14 +730,14 @@ const OrderDetailModal = ({ order, onClose }) => {
               <div className="flex items-center justify-between p-3 bg-white rounded-lg">
                 <span className="text-gray-700">Amount Paid</span>
                 <span className="font-bold text-red-600">
-                  -₹{order.amount.toFixed(2)}
+                  -${order.amount.toFixed(2)}
                 </span>
               </div>
               {order.status === "Cancelled" && order.refundAmount > 0 && (
                 <div className="flex items-center justify-between p-3 bg-white rounded-lg">
                   <span className="text-gray-700">Refund Processed</span>
                   <span className="font-bold text-green-600">
-                    +₹{order.refundAmount.toFixed(2)}
+                    +${order.refundAmount.toFixed(2)}
                   </span>
                 </div>
               )}
