@@ -1,4 +1,3 @@
-// pages/Competition.jsx
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -324,7 +323,7 @@ const Competition = () => {
                   high-weight areas to maximize your ranking!
                 </p>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {config.ui.metricConfig.map((item, index) => {
                     const Icon = getIconComponent(item.icon);
                     const weight = config.rules[`${item.key}Weight`] || 0;
@@ -561,53 +560,59 @@ const Competition = () => {
     );
   };
 
-  // Scoring Breakdown Component
+  // Scoring Breakdown Component - SIMPLIFIED FOR 5 METRICS
   const ScoringBreakdown = () => {
     if (!userRank || !config?.ui?.metricConfig) return null;
 
     const buildScoringMetrics = () => {
-      return config.ui.metricConfig.map((metricDef) => {
-        const key = metricDef.key;
-        const weight = config.rules[`${key}Weight`];
-        const score = userRank.breakdown[`${key}Score`] || 0;
-        const progress = userRank.progressPercentages[key] || 0;
+      return config.ui.metricConfig
+        .filter((metricDef) => {
+          // Only show the 5 essential metrics
+          return [
+            "directReferrals",
+            "tradingVolume",
+            "teamSize",
+            "profitability",
+            "accountBalance",
+            "kycCompletion",
+          ].includes(metricDef.key);
+        })
+        .map((metricDef) => {
+          const key = metricDef.key;
+          const weight = config.rules[`${key}Weight`] || 0;
+          const score = userRank.breakdown[`${key}Score`] || 0;
+          const progress = userRank.progressPercentages[key] || 0;
 
-        let current, target;
-        if (key === "directReferrals") {
-          current = userRank.metrics.directReferrals;
-          target = userRank.targets.maxDirectReferrals;
-        } else if (key === "tradingVolume") {
-          current = userRank.metrics.tradingVolumeDollars;
-          target = userRank.targets.maxVolume;
-        } else if (key === "teamSize") {
-          current = userRank.metrics.nupipsTeamSize;
-          target = userRank.targets.maxTeamSize;
-        } else if (key === "profitability") {
-          current = userRank.metrics.winRate;
-          target = 100;
-        } else if (key === "accountBalance") {
-          current = userRank.metrics.accountBalance;
-          target = userRank.targets.maxBalance;
-        } else if (key === "kycCompletion") {
-          current = userRank.metrics.isKYCVerified ? 1 : 0;
-          target = 1;
-        } else if (key === "activeTrades") {
-          current = userRank.metrics.activeTrades;
-          target = userRank.targets.maxActiveTrades;
-        } else if (key === "consistency") {
-          current = userRank.metrics.tradingDays;
-          target = userRank.targets.maxConsistencyDays;
-        }
+          let current, displayValue;
+          if (key === "directReferrals") {
+            current = userRank.metrics.directReferrals || 0;
+            displayValue = current;
+          } else if (key === "tradingVolume") {
+            current = userRank.metrics.tradingVolumeDollars || 0;
+            displayValue = `$${current.toLocaleString()}`;
+          } else if (key === "teamSize") {
+            current = userRank.metrics.nupipsTeamSize || 0;
+            displayValue = current;
+          } else if (key === "profitability") {
+            current = userRank.metrics.winRate || 0;
+            displayValue = `${current.toFixed(1)}%`;
+          } else if (key === "accountBalance") {
+            current = userRank.metrics.accountBalance || 0;
+            displayValue = `$${current.toLocaleString()}`;
+          } else if (key === "kycCompletion") {
+            current = userRank.metrics.isKYCVerified ? 1 : 0;
+            displayValue = current ? "✓ Verified" : "✗ Not Verified";
+          }
 
-        return {
-          ...metricDef,
-          weight,
-          score,
-          progress,
-          current,
-          target,
-        };
-      });
+          return {
+            ...metricDef,
+            weight,
+            score,
+            progress,
+            current,
+            displayValue,
+          };
+        });
     };
 
     const scoringMetrics = buildScoringMetrics();
@@ -619,7 +624,7 @@ const Competition = () => {
           Your Score Breakdown
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {scoringMetrics.map((metric, index) => {
             const colors = getColorClasses(metric.color);
             const Icon = getIconComponent(metric.icon);
@@ -649,10 +654,9 @@ const Competition = () => {
                     </span>
                   </div>
                   <div className="flex items-baseline justify-between">
-                    <span className="text-xs text-gray-600">Progress</span>
+                    <span className="text-xs text-gray-600">Current</span>
                     <span className="text-sm font-semibold text-gray-900">
-                      {formatValue(metric.current, metric.format)} /{" "}
-                      {formatValue(metric.target, metric.format)}
+                      {metric.displayValue}
                     </span>
                   </div>
                 </div>
@@ -1032,7 +1036,7 @@ const Competition = () => {
                   .slice(0, config?.ui?.topDisplayCount || 50)
                   .map((entry) => {
                     const isExpanded = expandedUser === entry.userId;
-                    const isCurrentUser = entry.userId === gtcUser?.id;
+                    const isCurrentUser = entry.userId === userRank?.userId;
                     const { icon: RankIcon, color } = getRankIcon(entry.rank);
                     const badgeColor = getRankBadgeColor(entry.rank);
 
@@ -1066,9 +1070,6 @@ const Competition = () => {
                                 </p>
                                 {entry.isVerified && (
                                   <CheckCircle className="w-4 h-4 text-blue-600" />
-                                )}
-                                {entry.isAgent && (
-                                  <Award className="w-4 h-4 text-purple-600" />
                                 )}
                                 {isCurrentUser && (
                                   <span className="text-xs bg-gradient-to-b from-orange-500 to-orange-600 text-white px-2 py-0.5 rounded-full font-medium">

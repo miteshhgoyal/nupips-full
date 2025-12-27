@@ -49,7 +49,7 @@ gtcAxios.interceptors.response.use(
     }
 );
 
-// CENTRALIZED COMPETITION CONFIGURATION - SINGLE SOURCE OF TRUTH
+// CENTRALIZED COMPETITION CONFIGURATION - SIMPLIFIED
 let COMPETITION_CONFIG = {
     period: {
         active: true,
@@ -58,18 +58,14 @@ let COMPETITION_CONFIG = {
         description: 'Trading Championship'
     },
     rules: {
-        directReferralsWeight: 25,
-        teamSizeWeight: 15,
-        tradingVolumeWeight: 20,
+        directReferralsWeight: 30,
+        teamSizeWeight: 20,
+        tradingVolumeWeight: 25,
         profitabilityWeight: 15,
-        accountBalanceWeight: 10,
-        kycCompletionWeight: 5,
-        activeTradesWeight: 5,
-        consistencyWeight: 5
+        accountBalanceWeight: 10
     },
     bonusMultipliers: {
-        kycVerified: 1.1,
-        agentStatus: 1.05
+        kycVerified: 1.1
     },
     prizes: [
         {
@@ -166,7 +162,7 @@ let COMPETITION_CONFIG = {
                 },
                 {
                     title: 'Score Calculation',
-                    description: 'Your score is calculated from 8 different metrics with weighted contributions. See breakdown below for details.',
+                    description: 'Your score is calculated from 5 different metrics with weighted contributions. See breakdown below for details.',
                     icon: 'BarChart3'
                 }
             ],
@@ -183,9 +179,7 @@ let COMPETITION_CONFIG = {
             { key: 'teamSize', name: 'Team Size', icon: 'Users', color: 'green', unit: 'members', format: 'number' },
             { key: 'profitability', name: 'Profitability', icon: 'TrendingUp', color: 'purple', unit: 'win rate', format: 'percentage' },
             { key: 'accountBalance', name: 'Account Balance', icon: 'DollarSign', color: 'indigo', unit: 'USD', format: 'currency' },
-            { key: 'kycCompletion', name: 'KYC Verification', icon: 'CheckCircle', color: 'pink', unit: 'verified', format: 'boolean' },
-            { key: 'activeTrades', name: 'Active Trades', icon: 'Activity', color: 'teal', unit: 'trades', format: 'number' },
-            { key: 'consistency', name: 'Consistency', icon: 'Calendar', color: 'yellow', unit: 'days', format: 'number' }
+            { key: 'kycCompletion', name: 'KYC Verification', icon: 'CheckCircle', color: 'pink', unit: 'verified', format: 'boolean' }
         ],
         rankColors: {
             '1': { bg: 'amber', text: 'amber', icon: 'Trophy' },
@@ -258,51 +252,28 @@ async function fetchComprehensiveGTCData(user) {
         const totalProfit = parseFloat(accountData.totalprofit || 0);
         const totalLoss = parseFloat(accountData.totalloss || 0);
         const balance = parseFloat(accountData.amount || 0);
-        const equity = parseFloat(accountData.equity || balance);
         const netProfit = totalProfit - totalLoss;
-        const profitPercent = balance > 0 ? (netProfit / balance) * 100 : 0;
         const winRate = (totalProfit + totalLoss) > 0 ? (totalProfit / (totalProfit + totalLoss)) * 100 : 0;
 
         let totalVolumeLots = 0;
-        let activeTrades = 0;
-        let tradingDays = new Set();
-
         profitLogs.forEach(log => {
             totalVolumeLots += parseFloat(log.volume || 0);
-            if (log.status === 'active' || log.status === 1) activeTrades++;
-            if (log.createdat) {
-                const tradeDate = new Date(log.createdat).toDateString();
-                tradingDays.add(tradeDate);
-            }
         });
 
-        const consistencyScore = tradingDays.size;
         const gtcTeamSize = memberData?.total || 0;
         const gtcDirectMembers = memberData?.list?.filter(m => m.level === 1).length || 0;
 
         return {
             accountBalance: balance,
-            equity: equity,
-            margin: parseFloat(accountData.margin || 0),
-            freeMargin: parseFloat(accountData.freemargin || 0),
-            marginLevel: parseFloat(accountData.marginlevel || 0),
             totalProfit: totalProfit,
             totalLoss: totalLoss,
             netProfit: netProfit,
-            profitPercent: profitPercent,
             winRate: winRate,
             totalVolumeLots: totalVolumeLots,
-            activeTrades: activeTrades,
             totalTrades: profitLogs.length,
-            consistencyScore: consistencyScore,
-            tradingDaysCount: tradingDays.size,
             kycStatus: parseInt(accountData.kycstatus || 0),
-            accountLevel: parseInt(accountData.level || 0),
-            isAgent: accountData.usertype === 'agent' || accountData.isagent === 1,
             gtcTeamSize: gtcTeamSize,
-            gtcDirectMembers: gtcDirectMembers,
-            rawAccountData: accountData,
-            profitLogsCount: profitLogs.length
+            gtcDirectMembers: gtcDirectMembers
         };
     } catch (error) {
         console.error('Error fetching comprehensive GTC data:', error.message);
@@ -310,7 +281,7 @@ async function fetchComprehensiveGTCData(user) {
     }
 }
 
-// Calculate competition score (without max normalizers)
+// Calculate competition score - SIMPLIFIED
 async function calculateEnhancedCompetitionScore(user, gtcData) {
     const { rules, bonusMultipliers } = COMPETITION_CONFIG;
 
@@ -319,10 +290,7 @@ async function calculateEnhancedCompetitionScore(user, gtcData) {
         teamSize: 0,
         tradingVolume: 0,
         profitability: 0,
-        accountBalance: 0,
-        kycCompletion: 0,
-        activeTrades: 0,
-        consistency: 0
+        accountBalance: 0
     };
 
     let bonusMultiplier = 1.0;
@@ -347,8 +315,7 @@ async function calculateEnhancedCompetitionScore(user, gtcData) {
 
     // Profitability
     const winRate = gtcData?.winRate || 0;
-    const profitPercent = Math.max(gtcData?.profitPercent || 0, 0);
-    const profitabilityScore = (winRate / 100) * 0.5 + Math.min(profitPercent / 100, 1) * 0.5;
+    const profitabilityScore = winRate / 100;
     scores.profitability = profitabilityScore * rules.profitabilityWeight;
 
     // Account Balance - using log scale
@@ -358,23 +325,7 @@ async function calculateEnhancedCompetitionScore(user, gtcData) {
 
     // KYC Completion
     const isKYCVerified = gtcData?.kycStatus === 1;
-    scores.kycCompletion = isKYCVerified ? rules.kycCompletionWeight : 0;
     if (isKYCVerified) bonusMultiplier *= bonusMultipliers.kycVerified;
-
-    // Active Trades - using log scale
-    const activeTrades = gtcData?.activeTrades || 0;
-    const activeTradesScore = Math.log10(activeTrades + 1) / Math.log10(51); // log scale to 50
-    scores.activeTrades = activeTradesScore * rules.activeTradesWeight;
-
-    // Consistency - using log scale
-    const consistencyDays = gtcData?.consistencyScore || 0;
-    const consistencyScore = Math.log10(consistencyDays + 1) / Math.log10(91); // log scale to 90
-    scores.consistency = consistencyScore * rules.consistencyWeight;
-
-    // Agent bonus
-    if (gtcData?.isAgent || user.userType === 'agent') {
-        bonusMultiplier *= bonusMultipliers.agentStatus;
-    }
 
     const baseScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
     const totalScore = baseScore * bonusMultiplier;
@@ -388,10 +339,7 @@ async function calculateEnhancedCompetitionScore(user, gtcData) {
             teamSizeScore: parseFloat(scores.teamSize.toFixed(2)),
             tradingVolumeScore: parseFloat(scores.tradingVolume.toFixed(2)),
             profitabilityScore: parseFloat(scores.profitability.toFixed(2)),
-            accountBalanceScore: parseFloat(scores.accountBalance.toFixed(2)),
-            kycCompletionScore: parseFloat(scores.kycCompletion.toFixed(2)),
-            activeTradesScore: parseFloat(scores.activeTrades.toFixed(2)),
-            consistencyScore: parseFloat(scores.consistency.toFixed(2))
+            accountBalanceScore: parseFloat(scores.accountBalance.toFixed(2))
         },
         progressPercentages: {
             directReferrals: parseFloat((directReferralsScore * 100).toFixed(1)),
@@ -399,9 +347,7 @@ async function calculateEnhancedCompetitionScore(user, gtcData) {
             tradingVolume: parseFloat((volumeScore * 100).toFixed(1)),
             profitability: parseFloat((profitabilityScore * 100).toFixed(1)),
             accountBalance: parseFloat((balanceScore * 100).toFixed(1)),
-            kycCompletion: isKYCVerified ? 100 : 0,
-            activeTrades: parseFloat((activeTradesScore * 100).toFixed(1)),
-            consistency: parseFloat((consistencyScore * 100).toFixed(1))
+            kycCompletion: isKYCVerified ? 100 : 0
         },
         metrics: {
             directReferrals,
@@ -409,16 +355,10 @@ async function calculateEnhancedCompetitionScore(user, gtcData) {
             gtcTeamSize: gtcData?.gtcTeamSize || 0,
             tradingVolumeLots: parseFloat((gtcData?.totalVolumeLots || 0).toFixed(2)),
             tradingVolumeDollars: parseFloat(volumeInDollars.toFixed(2)),
-            profitPercent: parseFloat((gtcData?.profitPercent || 0).toFixed(2)),
             winRate: parseFloat((gtcData?.winRate || 0).toFixed(2)),
             accountBalance: parseFloat((gtcData?.accountBalance || 0).toFixed(2)),
-            equity: parseFloat((gtcData?.equity || 0).toFixed(2)),
-            activeTrades: gtcData?.activeTrades || 0,
             totalTrades: gtcData?.totalTrades || 0,
-            consistencyScore: parseFloat((gtcData?.consistencyScore || 0).toFixed(2)),
-            tradingDays: gtcData?.tradingDaysCount || 0,
-            isKYCVerified,
-            isAgent: gtcData?.isAgent || false
+            isKYCVerified
         }
     };
 }
@@ -487,20 +427,7 @@ function generateImprovementSuggestions(userRank, nextRankUser) {
             icon: 'CheckCircle',
             priority: 'critical',
             action: 'Complete KYC for instant 10% score boost',
-            impact: '5.0'
-        });
-    }
-
-    if (userRank.metrics.tradingDays < nextRankUser.metrics.tradingDays) {
-        const diff = nextRankUser.metrics.tradingDays - userRank.metrics.tradingDays;
-        improvements.push({
-            area: 'Consistency',
-            icon: 'Calendar',
-            priority: 'low',
-            action: `Trade for ${diff} more day${diff !== 1 ? 's' : ''}`,
-            impact: userRank.breakdown.consistencyScore < nextRankUser.breakdown.consistencyScore
-                ? (nextRankUser.breakdown.consistencyScore - userRank.breakdown.consistencyScore).toFixed(1)
-                : '0'
+            impact: (userRank.totalScore * 0.1).toFixed(1)
         });
     }
 
@@ -562,8 +489,7 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
                     breakdown: scoreData.breakdown,
                     progressPercentages: scoreData.progressPercentages,
                     metrics: scoreData.metrics,
-                    isVerified: scoreData.metrics.isKYCVerified,
-                    isAgent: scoreData.metrics.isAgent
+                    isVerified: scoreData.metrics.isKYCVerified
                 };
             } catch (error) {
                 console.error(`Error processing user ${user.username}:`, error.message);
@@ -607,8 +533,7 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
             totalParticipants: leaderboard.length,
             averageScore: parseFloat((leaderboard.reduce((sum, u) => sum + u.score, 0) / leaderboard.length).toFixed(2)),
             highestScore: leaderboard[0]?.score || 0,
-            kycVerifiedCount: leaderboard.filter(u => u.isVerified).length,
-            agentCount: leaderboard.filter(u => u.isAgent).length
+            kycVerifiedCount: leaderboard.filter(u => u.isVerified).length
         };
 
         res.json({
@@ -753,8 +678,7 @@ router.get('/admin/top-rankers', authenticateToken, requireAdmin, async (req, re
                     breakdown: scoreData.breakdown,
                     progressPercentages: scoreData.progressPercentages,
                     metrics: scoreData.metrics,
-                    isVerified: scoreData.metrics.isKYCVerified,
-                    isAgent: scoreData.metrics.isAgent
+                    isVerified: scoreData.metrics.isKYCVerified
                 };
             } catch (error) {
                 console.error(`Error processing user ${user.username}:`, error.message);
@@ -784,8 +708,7 @@ router.get('/admin/top-rankers', authenticateToken, requireAdmin, async (req, re
                 totalParticipants: rankedUsers.length,
                 averageScore: parseFloat((rankedUsers.reduce((sum, u) => sum + u.score, 0) / rankedUsers.length).toFixed(2)),
                 highestScore: rankedUsers[0]?.score || 0,
-                kycVerifiedCount: rankedUsers.filter(u => u.isVerified).length,
-                agentCount: rankedUsers.filter(u => u.isAgent).length
+                kycVerifiedCount: rankedUsers.filter(u => u.isVerified).length
             }
         });
     } catch (error) {
@@ -809,18 +732,14 @@ router.post('/admin/reset-config', authenticateToken, requireAdmin, async (req, 
                 description: 'Trading Championship'
             },
             rules: {
-                directReferralsWeight: 25,
-                teamSizeWeight: 15,
-                tradingVolumeWeight: 20,
+                directReferralsWeight: 30,
+                teamSizeWeight: 20,
+                tradingVolumeWeight: 25,
                 profitabilityWeight: 15,
-                accountBalanceWeight: 10,
-                kycCompletionWeight: 5,
-                activeTradesWeight: 5,
-                consistencyWeight: 5
+                accountBalanceWeight: 10
             },
             bonusMultipliers: {
-                kycVerified: 1.1,
-                agentStatus: 1.05
+                kycVerified: 1.1
             }
         };
 

@@ -1,4 +1,3 @@
-// backend/src/models/CompetitionConfig.js
 import mongoose from 'mongoose';
 
 const competitionConfigSchema = new mongoose.Schema({
@@ -10,22 +9,18 @@ const competitionConfigSchema = new mongoose.Schema({
         description: { type: String, default: 'Trading Championship' }
     },
 
-    // Scoring Rules - Only weights, no max values
+    // Scoring Rules - Only essential metrics
     rules: {
-        directReferralsWeight: { type: Number, default: 25, min: 0, max: 100 },
-        teamSizeWeight: { type: Number, default: 15, min: 0, max: 100 },
-        tradingVolumeWeight: { type: Number, default: 20, min: 0, max: 100 },
+        directReferralsWeight: { type: Number, default: 30, min: 0, max: 100 },
+        teamSizeWeight: { type: Number, default: 20, min: 0, max: 100 },
+        tradingVolumeWeight: { type: Number, default: 25, min: 0, max: 100 },
         profitabilityWeight: { type: Number, default: 15, min: 0, max: 100 },
-        accountBalanceWeight: { type: Number, default: 10, min: 0, max: 100 },
-        kycCompletionWeight: { type: Number, default: 5, min: 0, max: 100 },
-        activeTradesWeight: { type: Number, default: 5, min: 0, max: 100 },
-        consistencyWeight: { type: Number, default: 5, min: 0, max: 100 }
+        accountBalanceWeight: { type: Number, default: 10, min: 0, max: 100 }
     },
 
-    // Bonus Multipliers
+    // Bonus Multipliers - Only KYC
     bonusMultipliers: {
-        kycVerified: { type: Number, default: 1.1, min: 1 },
-        agentStatus: { type: Number, default: 1.05, min: 1 }
+        kycVerified: { type: Number, default: 1.1, min: 1 }
     },
 
     // Prizes

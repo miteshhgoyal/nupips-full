@@ -1,4 +1,3 @@
-// admin/pages/Competition.jsx
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -27,18 +26,9 @@ import {
   X,
   Info,
   Zap,
-  Eye,
-  EyeOff,
   Clock,
   BarChart3,
-  Percent,
   RefreshCw,
-  Check,
-  Edit3,
-  Trash2,
-  Plus,
-  ArrowUp,
-  ArrowDown,
   AlertTriangle,
 } from "lucide-react";
 import api from "../services/api";
@@ -59,7 +49,7 @@ const Competition = () => {
   const [expandedRanker, setExpandedRanker] = useState(null);
 
   // UI State
-  const [activeTab, setActiveTab] = useState("overview"); // overview, period, weights, normalizers, bonuses, prizes, rankers
+  const [activeTab, setActiveTab] = useState("overview");
   const [showResetModal, setShowResetModal] = useState(false);
 
   useEffect(() => {
@@ -207,9 +197,6 @@ const Competition = () => {
       green: "bg-green-500",
       purple: "bg-purple-500",
       indigo: "bg-indigo-500",
-      pink: "bg-pink-500",
-      teal: "bg-teal-500",
-      yellow: "bg-yellow-500",
     };
 
     return (
@@ -375,7 +362,7 @@ const Competition = () => {
                 </h1>
                 <p className="text-gray-600 mt-1">
                   Configure competition settings, view rankings, and manage
-                  rewards
+                  rewards (5 Essential Metrics)
                 </p>
               </div>
             </div>
@@ -468,8 +455,7 @@ const Competition = () => {
                       icon: Calendar,
                     },
                     { id: "weights", label: "Scoring Weights", icon: Sliders },
-                    { id: "normalizers", label: "Max Values", icon: Target },
-                    { id: "bonuses", label: "Bonus Multipliers", icon: Zap },
+                    { id: "bonuses", label: "KYC Bonus", icon: Zap },
                     { id: "prizes", label: "Prize Structure", icon: Gift },
                     { id: "rankers", label: "Top Rankers", icon: Crown },
                   ].map((tab) => {
@@ -507,7 +493,8 @@ const Competition = () => {
                           Competition Overview
                         </h2>
                         <p className="text-sm text-gray-600">
-                          Current status and key metrics
+                          Current status and key metrics (Simplified - 5 Metrics
+                          Only)
                         </p>
                       </div>
                     </div>
@@ -578,7 +565,7 @@ const Competition = () => {
                   {/* Quick Stats */}
                   <div className="bg-white rounded-xl border border-gray-200 p-6">
                     <h3 className="font-bold text-gray-900 mb-4">
-                      Weight Distribution
+                      Weight Distribution (5 Essential Metrics)
                     </h3>
                     <div className="space-y-3">
                       {Object.entries(config.rules).map(([key, value]) => {
@@ -586,11 +573,8 @@ const Competition = () => {
                           directReferralsWeight: "Direct Referrals",
                           teamSizeWeight: "Team Size",
                           tradingVolumeWeight: "Trading Volume",
-                          profitabilityWeight: "Profitability",
+                          profitabilityWeight: "Profitability (Win Rate)",
                           accountBalanceWeight: "Account Balance",
-                          kycCompletionWeight: "KYC Completion",
-                          activeTradesWeight: "Active Trades",
-                          consistencyWeight: "Consistency",
                         };
                         return (
                           <div key={key} className="flex items-center gap-3">
@@ -720,7 +704,7 @@ const Competition = () => {
                     <Sliders className="w-6 h-6 text-orange-600" />
                     <div className="flex-1">
                       <h2 className="text-xl font-bold text-gray-900">
-                        Scoring Weights
+                        Scoring Weights (5 Metrics)
                       </h2>
                       <p className="text-sm text-gray-600">
                         Adjust the weight of each metric (must total 100%)
@@ -769,7 +753,7 @@ const Competition = () => {
                     />
 
                     <WeightSlider
-                      label="Profitability"
+                      label="Profitability (Win Rate)"
                       value={config.rules.profitabilityWeight}
                       onChange={(val) =>
                         updateConfig("rules", "profitabilityWeight", val)
@@ -786,36 +770,6 @@ const Competition = () => {
                       }
                       icon={DollarSign}
                       color="indigo"
-                    />
-
-                    <WeightSlider
-                      label="KYC Completion"
-                      value={config.rules.kycCompletionWeight}
-                      onChange={(val) =>
-                        updateConfig("rules", "kycCompletionWeight", val)
-                      }
-                      icon={CheckCircle}
-                      color="pink"
-                    />
-
-                    <WeightSlider
-                      label="Active Trades"
-                      value={config.rules.activeTradesWeight}
-                      onChange={(val) =>
-                        updateConfig("rules", "activeTradesWeight", val)
-                      }
-                      icon={Activity}
-                      color="teal"
-                    />
-
-                    <WeightSlider
-                      label="Consistency"
-                      value={config.rules.consistencyWeight}
-                      onChange={(val) =>
-                        updateConfig("rules", "consistencyWeight", val)
-                      }
-                      icon={Calendar}
-                      color="yellow"
                     />
                   </div>
 
@@ -836,86 +790,6 @@ const Competition = () => {
                 </div>
               )}
 
-              {/* Normalizers Tab */}
-              {activeTab === "normalizers" && (
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Target className="w-6 h-6 text-orange-600" />
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900">
-                        Maximum Values
-                      </h2>
-                      <p className="text-sm text-gray-600">
-                        Set the maximum target values for progress calculation
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {[
-                      {
-                        key: "maxDirectReferrals",
-                        label: "Max Direct Referrals",
-                        icon: Users,
-                      },
-                      {
-                        key: "maxTeamSize",
-                        label: "Max Team Size",
-                        icon: Users,
-                      },
-                      {
-                        key: "maxVolume",
-                        label: "Max Trading Volume ($)",
-                        icon: DollarSign,
-                      },
-                      {
-                        key: "maxBalance",
-                        label: "Max Account Balance ($)",
-                        icon: DollarSign,
-                      },
-                      {
-                        key: "maxActiveTrades",
-                        label: "Max Active Trades",
-                        icon: Activity,
-                      },
-                      {
-                        key: "maxConsistencyDays",
-                        label: "Max Consistency Days",
-                        icon: Calendar,
-                      },
-                    ].map((field) => {
-                      const Icon = field.icon;
-                      return (
-                        <div
-                          key={field.key}
-                          className="p-4 bg-gray-50 rounded-lg border border-gray-200"
-                        >
-                          <div className="flex items-center gap-2 mb-2">
-                            <Icon className="w-5 h-5 text-gray-700" />
-                            <label className="text-sm font-medium text-gray-900">
-                              {field.label}
-                            </label>
-                          </div>
-                          <input
-                            type="number"
-                            value={config.normalizers[field.key]}
-                            onChange={(e) =>
-                              updateConfig(
-                                "normalizers",
-                                field.key,
-                                Number(e.target.value)
-                              )
-                            }
-                            min={0}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
               {/* Bonus Multipliers Tab */}
               {activeTab === "bonuses" && (
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -923,10 +797,10 @@ const Competition = () => {
                     <Zap className="w-6 h-6 text-orange-600" />
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">
-                        Bonus Multipliers
+                        KYC Verification Bonus
                       </h2>
                       <p className="text-sm text-gray-600">
-                        Set bonus multipliers for special achievements
+                        Set bonus multiplier for KYC verified users
                       </p>
                     </div>
                   </div>
@@ -970,50 +844,11 @@ const Competition = () => {
                         </div>
                       </div>
                     </div>
-
-                    <div className="p-5 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-purple-900 flex items-center gap-2">
-                            <Award className="w-5 h-5" />
-                            Agent Status Bonus
-                          </h3>
-                          <p className="text-sm text-purple-700 mt-1">
-                            Bonus multiplier for agent users
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <input
-                            type="number"
-                            value={config.bonusMultipliers.agentStatus}
-                            onChange={(e) =>
-                              updateConfig(
-                                "bonusMultipliers",
-                                "agentStatus",
-                                Number(e.target.value)
-                              )
-                            }
-                            min={1}
-                            max={2}
-                            step={0.01}
-                            className="w-24 px-3 py-2 border border-purple-300 rounded-lg text-center font-bold text-purple-800"
-                          />
-                          <p className="text-xs text-purple-700 mt-1">
-                            +
-                            {(
-                              (config.bonusMultipliers.agentStatus - 1) *
-                              100
-                            ).toFixed(0)}
-                            % boost
-                          </p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Prizes Tab */}
+              {/* Prizes Tab - Keep as is, it's working */}
               {activeTab === "prizes" && (
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <div className="flex items-center gap-3 mb-6">
@@ -1105,7 +940,7 @@ const Competition = () => {
                 </div>
               )}
 
-              {/* Top Rankers Tab */}
+              {/* Top Rankers Tab - Updated for 5 metrics */}
               {activeTab === "rankers" && (
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-6">
@@ -1190,9 +1025,6 @@ const Competition = () => {
                                     </p>
                                     {ranker.isVerified && (
                                       <CheckCircle className="w-4 h-4 text-blue-600" />
-                                    )}
-                                    {ranker.isAgent && (
-                                      <Award className="w-4 h-4 text-purple-600" />
                                     )}
                                   </div>
                                   <p className="text-sm text-gray-600">
@@ -1288,23 +1120,20 @@ const Competition = () => {
                                   </div>
                                 </div>
 
-                                {/* Score Breakdown */}
+                                {/* Score Breakdown - 5 metrics only */}
                                 <div className="mt-4 pt-4 border-t border-gray-200">
                                   <h4 className="font-semibold text-gray-900 mb-3">
-                                    Score Breakdown
+                                    Score Breakdown (5 Metrics)
                                   </h4>
-                                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                                     {Object.entries(ranker.breakdown).map(
                                       ([key, value]) => {
                                         const labels = {
                                           directReferralsScore: "Referrals",
                                           teamSizeScore: "Team",
                                           tradingVolumeScore: "Volume",
-                                          profitabilityScore: "Profit",
+                                          profitabilityScore: "Win Rate",
                                           accountBalanceScore: "Balance",
-                                          kycCompletionScore: "KYC",
-                                          activeTradesScore: "Trades",
-                                          consistencyScore: "Consistency",
                                         };
                                         return (
                                           <div
