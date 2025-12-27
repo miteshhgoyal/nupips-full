@@ -20,7 +20,6 @@ export const useSubscriptionStatus = () => {
 
         setLoading(true);
         try {
-            // Get system PAMM UUID from public endpoint (no admin required)
             const configRes = await api.get("/system/public/pamm-config");
             const uuid = configRes.data?.data?.pammUuid;
 
@@ -33,7 +32,6 @@ export const useSubscriptionStatus = () => {
 
             setPammUuid(uuid);
 
-            // Check subscription list using gtcfxApi
             const subsRes = await gtcfxApi.post("/subscribe_list", {
                 page: 1,
                 page_size: 100,
@@ -56,7 +54,6 @@ export const useSubscriptionStatus = () => {
                 setSubscriptionDetails(null);
             }
         } catch (error) {
-            console.error("Error checking subscription:", error);
             setIsSubscribed(false);
             setSubscriptionDetails(null);
         } finally {
