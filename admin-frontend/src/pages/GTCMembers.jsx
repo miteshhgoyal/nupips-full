@@ -150,7 +150,7 @@ const GTCMembers = () => {
 
       if (response.data.success) {
         setSuccess(
-          `✅ Synced ${response.data.syncResult.stats.totalMembers} members in ${response.data.syncResult.stats.duration}!`
+          `Synced ${response.data.syncResult.stats.totalMembers} members in ${response.data.syncResult.stats.duration}!`
         );
         setShowSyncModal(false);
         setSyncToken("");
@@ -519,13 +519,13 @@ const GTCMembers = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <button
+              {/* <button
                 onClick={() => setShowSyncModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-colors shadow-sm"
               >
                 <RefreshCw className="w-5 h-5" />
                 Sync from GTC
-              </button>
+              </button> */}
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
