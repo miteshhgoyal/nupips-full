@@ -26,6 +26,11 @@ import {
   Hash,
   Clock,
   Layers,
+  CheckCircle,
+  DollarSign,
+  Phone,
+  UserCheck,
+  Users,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -64,12 +69,17 @@ const GTCMembers = () => {
   // Modals
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showTreeModal, setShowTreeModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
 
   // Tree view
   const [treeData, setTreeData] = useState(null);
   const [loadingTree, setLoadingTree] = useState(false);
   const [expandedNodes, setExpandedNodes] = useState(new Set());
+
+  // Sync
+  const [syncing, setSyncing] = useState(false);
+  const [syncToken, setSyncToken] = useState("");
 
   useEffect(() => {
     fetchMembers();
@@ -124,9 +134,41 @@ const GTCMembers = () => {
     setTimeout(fetchMembers, 100);
   };
 
+  const handleSync = async () => {
+    if (!syncToken.trim()) {
+      setError("Please enter GTC JWT token");
+      return;
+    }
+
+    setSyncing(true);
+    setError(null);
+
+    try {
+      const response = await api.post("/admin/gtc-members/sync", {
+        token: syncToken,
+      });
+
+      if (response.data.success) {
+        setSuccess(
+          `✅ Synced ${response.data.syncResult.stats.totalMembers} members in ${response.data.syncResult.stats.duration}!`
+        );
+        setShowSyncModal(false);
+        setSyncToken("");
+        await fetchMembers();
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Failed to sync members from GTC API"
+      );
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const openDetailModal = async (member) => {
     try {
-      const response = await api.get(`/admin/gtc-members/${member._id}`);
+      const memberId = member._id || member.gtcUserId;
+      const response = await api.get(`/admin/gtc-members/${memberId}`);
       if (response.data.success) {
         setSelectedMember(response.data.data);
         setShowDetailModal(true);
@@ -139,11 +181,20 @@ const GTCMembers = () => {
   const loadMemberTree = async (memberId) => {
     setLoadingTree(true);
     setError(null);
+    setExpandedNodes(new Set()); // Reset expanded nodes
+
     try {
       const response = await api.get(`/admin/gtc-members/${memberId}/tree`);
       if (response.data.success) {
         setTreeData(response.data.data);
         setShowTreeModal(true);
+        // Auto-expand first level
+        if (response.data.data.tree?.length > 0) {
+          const firstLevelIds = response.data.data.tree.map(
+            (child) => child._id
+          );
+          setExpandedNodes(new Set(firstLevelIds));
+        }
       }
     } catch (err) {
       setError("Failed to load member tree");
@@ -164,13 +215,46 @@ const GTCMembers = () => {
     });
   };
 
-  const renderTreeNode = (node, isRoot = false) => {
+  const expandAll = () => {
+    const getAllIds = (node) => {
+      let ids = [node._id];
+      if (node.children && node.children.length > 0) {
+        node.children.forEach((child) => {
+          ids = [...ids, ...getAllIds(child)];
+        });
+      }
+      return ids;
+    };
+
+    if (treeData && treeData.tree) {
+      const allIds = treeData.tree.flatMap(getAllIds);
+      setExpandedNodes(new Set(allIds));
+    }
+  };
+
+  const collapseAll = () => {
+    setExpandedNodes(new Set());
+  };
+
+  const countTotalDescendants = (node) => {
+    if (!node.children || node.children.length === 0) return 0;
+    return node.children.reduce(
+      (sum, child) => sum + 1 + countTotalDescendants(child),
+      0
+    );
+  };
+
+  const renderTreeNode = (node, isRoot = false, depth = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(node._id);
+    const totalDescendants = hasChildren ? countTotalDescendants(node) : 0;
 
     return (
-      <div key={node._id} className={`${!isRoot ? "ml-8" : ""} relative`}>
-        {!isRoot && (
+      <div
+        key={node._id}
+        className={`${!isRoot && depth > 0 ? "ml-8" : ""} relative`}
+      >
+        {!isRoot && depth > 0 && (
           <div className="absolute left-0 top-0 w-4 h-6 border-l-2 border-b-2 border-gray-300 rounded-bl-lg -ml-4"></div>
         )}
 
@@ -251,7 +335,7 @@ const GTCMembers = () => {
                     : "bg-blue-100 text-blue-700"
                 }`}
               >
-                GTC ID: {node.gtcUserId}
+                ID: {node.gtcUserId}
               </span>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -262,6 +346,28 @@ const GTCMembers = () => {
               >
                 Level {node.level}
               </span>
+              {node.userType && (
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    node.userType === "agent"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-orange-100 text-orange-700"
+                  }`}
+                >
+                  {node.userType === "agent" ? "Agent" : "Direct"}
+                </span>
+              )}
+              {node.amount > 0 && (
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    isRoot
+                      ? "bg-white/20 text-white"
+                      : "bg-emerald-100 text-emerald-700"
+                  }`}
+                >
+                  ${node.amount.toFixed(2)}
+                </span>
+              )}
             </div>
           </div>
 
@@ -271,23 +377,30 @@ const GTCMembers = () => {
                 isRoot ? "text-white/80" : "text-gray-500"
               } mb-0.5`}
             >
-              Email
+              {hasChildren ? "Team Size" : "Email"}
             </p>
-            <p
-              className={`text-sm font-medium truncate max-w-[200px] ${
-                isRoot ? "text-white" : "text-gray-900"
-              }`}
-            >
-              {node.email}
-            </p>
-            {hasChildren && (
-              <span
-                className={`text-xs ${
-                  isRoot ? "text-white/70" : "text-gray-500"
+            {hasChildren ? (
+              <div
+                className={`text-sm font-bold ${
+                  isRoot ? "text-white" : "text-gray-900"
                 }`}
               >
-                {node.children.length} downline
-              </span>
+                <span className="text-lg">{node.children.length}</span>
+                <span className="text-xs ml-1">direct</span>
+                {totalDescendants > node.children.length && (
+                  <div className="text-xs font-normal">
+                    ({totalDescendants} total)
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p
+                className={`text-sm font-medium truncate max-w-[200px] ${
+                  isRoot ? "text-white" : "text-gray-900"
+                }`}
+              >
+                {node.email}
+              </p>
             )}
           </div>
 
@@ -310,7 +423,9 @@ const GTCMembers = () => {
 
         {hasChildren && isExpanded && (
           <div className="mt-2 space-y-2 pl-4 border-l-2 border-gray-200">
-            {node.children.map((child) => renderTreeNode(child))}
+            {node.children.map((child) =>
+              renderTreeNode(child, false, depth + 1)
+            )}
           </div>
         )}
       </div>
@@ -324,7 +439,10 @@ const GTCMembers = () => {
         "Username",
         "Name",
         "Email",
+        "Phone",
         "Level",
+        "User Type",
+        "Amount",
         "Parent GTC ID",
         "Joined At",
       ],
@@ -333,7 +451,10 @@ const GTCMembers = () => {
         m.username,
         m.name || "N/A",
         m.email,
+        m.phone || "N/A",
         m.level,
+        m.userType || "agent",
+        m.amount || 0,
         m.parentGtcUserId || "Root",
         new Date(m.joinedAt).toLocaleDateString(),
       ]),
@@ -398,6 +519,13 @@ const GTCMembers = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowSyncModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-colors shadow-sm"
+              >
+                <RefreshCw className="w-5 h-5" />
+                Sync from GTC
+              </button>
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
@@ -523,6 +651,7 @@ const GTCMembers = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                   placeholder="Search by GTC ID, email, or username..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -540,8 +669,8 @@ const GTCMembers = () => {
               >
                 <option value="">All Levels</option>
                 {Array.from({ length: stats.maxLevel || 10 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    Level {i + 1}
+                  <option key={i} value={i}>
+                    Level {i}
                   </option>
                 ))}
               </select>
@@ -618,6 +747,9 @@ const GTCMembers = () => {
                         </div>
                         <p className="text-gray-600 font-medium">
                           No GTC members found
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Try syncing from GTC API to import members
                         </p>
                       </div>
                     </td>
@@ -697,7 +829,11 @@ const GTCMembers = () => {
                             className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors disabled:opacity-50"
                             title="View Tree"
                           >
-                            <Network className="w-4 h-4" />
+                            {loadingTree ? (
+                              <Loader className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Network className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                       </td>
@@ -741,6 +877,68 @@ const GTCMembers = () => {
         )}
       </div>
 
+      {/* Sync Modal */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <RefreshCw className="w-6 h-6 text-green-600" />
+                Sync from GTC API
+              </h2>
+              <button
+                onClick={() => setShowSyncModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-4">
+              Enter your GTC JWT token to sync the entire member tree structure
+              from the GTC platform.
+            </p>
+
+            <textarea
+              value={syncToken}
+              onChange={(e) => setSyncToken(e.target.value)}
+              placeholder="Paste your GTC JWT token here..."
+              className="w-full h-32 px-4 py-2 border border-gray-200 rounded-xl resize-none focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4 font-mono text-sm"
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleSync}
+                disabled={syncing || !syncToken.trim()}
+                className="flex-1 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {syncing ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-5 h-5" />
+                    Sync Now
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowSyncModal(false);
+                  setSyncToken("");
+                }}
+                disabled={syncing}
+                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Detail Modal */}
       {showDetailModal && selectedMember && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -749,7 +947,7 @@ const GTCMembers = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center">
-                    <Globe className="w-8 h-8 text-white" />
+                    <User className="w-8 h-8 text-white" />
                   </div>
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">
@@ -795,12 +993,50 @@ const GTCMembers = () => {
                       {selectedMember.email}
                     </span>
                   </div>
+                  {selectedMember.phone && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 flex items-center gap-1">
+                        <Phone className="w-3 h-3" /> Phone
+                      </span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {selectedMember.phone}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Level</span>
                     <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
                       Level {selectedMember.level}
                     </span>
                   </div>
+                  {selectedMember.userType && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 flex items-center gap-1">
+                        <UserCheck className="w-3 h-3" /> User Type
+                      </span>
+                      <span
+                        className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                          selectedMember.userType === "agent"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-orange-100 text-orange-800"
+                        }`}
+                      >
+                        {selectedMember.userType === "agent"
+                          ? "Agent"
+                          : "Direct"}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMember.amount !== undefined && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600 flex items-center gap-1">
+                        <DollarSign className="w-3 h-3" /> Amount
+                      </span>
+                      <span className="text-sm font-bold text-emerald-700">
+                        ${selectedMember.amount.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -813,7 +1049,7 @@ const GTCMembers = () => {
                       Parent GTC ID
                     </p>
                   </div>
-                  <p className="text-lg font-bold text-green-900 font-mono">
+                  <p className="text-lg font-bold text-green-900 font-mono truncate">
                     {selectedMember.parentGtcUserId || "Root Member"}
                   </p>
                 </div>
@@ -835,8 +1071,9 @@ const GTCMembers = () => {
               {selectedMember.uplineChain &&
                 selectedMember.uplineChain.length > 0 && (
                   <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3">
-                      Upline Chain
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3 flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Upline Chain ({selectedMember.uplineChain.length})
                     </h3>
                     <div className="space-y-2">
                       {selectedMember.uplineChain.map((upline, idx) => (
@@ -890,14 +1127,16 @@ const GTCMembers = () => {
                       {formatDate(selectedMember.lastUpdated)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">
-                      Record Created
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatDate(selectedMember.createdAt)}
-                    </span>
-                  </div>
+                  {selectedMember.createdAt && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">
+                        Record Created
+                      </span>
+                      <span className="text-sm font-medium text-gray-900">
+                        {formatDate(selectedMember.createdAt)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -916,8 +1155,8 @@ const GTCMembers = () => {
 
       {/* Tree Modal */}
       {showTreeModal && treeData && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
               <div className="flex items-center justify-between">
                 <div>
@@ -928,14 +1167,38 @@ const GTCMembers = () => {
                   <p className="text-sm text-gray-600 mt-1">
                     {treeData.root.name || treeData.root.username}'s downline
                     hierarchy
+                    {treeData.tree && treeData.tree.length > 0 && (
+                      <span className="ml-2 text-blue-600 font-semibold">
+                        ({treeData.tree.length} direct •{" "}
+                        {treeData.tree.reduce(
+                          (sum, node) => sum + countTotalDescendants(node),
+                          0
+                        )}{" "}
+                        total)
+                      </span>
+                    )}
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowTreeModal(false)}
-                  className="p-2 hover:bg-white rounded-lg transition-colors"
-                >
-                  <X className="w-6 h-6 text-gray-600" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={expandAll}
+                    className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Expand All
+                  </button>
+                  <button
+                    onClick={collapseAll}
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Collapse All
+                  </button>
+                  <button
+                    onClick={() => setShowTreeModal(false)}
+                    className="p-2 hover:bg-white rounded-lg transition-colors"
+                  >
+                    <X className="w-6 h-6 text-gray-600" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -947,15 +1210,19 @@ const GTCMembers = () => {
                     _id: "root",
                     children: treeData.tree,
                   },
-                  true
+                  true,
+                  0
                 )}
               </div>
 
-              {treeData.tree.length === 0 && (
+              {(!treeData.tree || treeData.tree.length === 0) && (
                 <div className="text-center py-12 bg-gray-50 rounded-xl">
                   <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500 font-medium">
                     No downline members yet
+                  </p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    This member hasn't recruited anyone to their team
                   </p>
                 </div>
               )}

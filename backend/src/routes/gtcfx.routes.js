@@ -7,6 +7,7 @@ import User from '../models/User.js';
 import GTCMember from '../models/GTCMember.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 import { addIncomeExpenseEntry } from '../utils/walletUtils.js';
+import { syncMemberTreeFromAPI, getTreeStats } from '../services/gtcTreeSyncService.js';
 
 const router = express.Router();
 
@@ -617,6 +618,116 @@ router.get('/members/:gtcUserId/children', authenticateToken, async (req, res) =
     } catch (error) {
         console.error('Get member children error:', error);
         res.status(500).json({ success: false, message: 'Failed to fetch member children' });
+    }
+});
+
+// ====================== SYNC MEMBER TREE FROM GTC API ======================
+router.post('/sync-member-tree', async (req, res) => {
+    try {
+        console.log('🚀 Manual tree sync initiated');
+
+        const { token } = req.body;
+
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                message: 'JWT token is required'
+            });
+        }
+
+        // Step 1: Fetch tree data from GTC API
+        console.log('📡 Fetching tree from GTC API...');
+
+        const response = await axios.post(
+            'https://apiv1.mygtc.app/api/v3/agent/member_tree',
+            {},
+            {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                }
+            }
+        );
+
+        if (response.data.code !== 200) {
+            throw new Error(`GTC API error: ${response.data.message}`);
+        }
+
+        // Step 2: Sync the tree to database
+        const result = await syncMemberTreeFromAPI(response.data);
+
+        // Step 3: Get updated statistics
+        const stats = await getTreeStats();
+
+        res.status(200).json({
+            success: true,
+            message: 'Member tree synced successfully',
+            syncResult: result,
+            treeStats: stats,
+        });
+
+    } catch (error) {
+        console.error('❌ Error in sync-member-tree:', error);
+
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to sync member tree',
+            error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        });
+    }
+});
+
+// ====================== GET TREE STATISTICS ======================
+router.get('/tree-stats', async (req, res) => {
+    try {
+        const stats = await getTreeStats();
+        res.status(200).json({ success: true, data: stats });
+    } catch (error) {
+        console.error('Error fetching tree stats:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ====================== GET MEMBER HIERARCHY ======================
+router.get('/member/:gtcUserId/hierarchy', async (req, res) => {
+    try {
+        const { gtcUserId } = req.params;
+
+        // Get the member
+        const member = await GTCMember.findOne({ gtcUserId });
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'Member not found'
+            });
+        }
+
+        // Get direct children
+        const children = await GTCMember.find({
+            parentGtcUserId: gtcUserId
+        }).select('gtcUserId email username name level userType amount');
+
+        // Get all descendants count (recursive)
+        const descendants = await GTCMember.countDocuments({
+            uplineChain: {
+                $elemMatch: { gtcUserId: gtcUserId }
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                member,
+                directChildren: children,
+                directChildrenCount: children.length,
+                totalDescendants: descendants,
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching member hierarchy:', error);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 

@@ -28,6 +28,20 @@ const GTCMemberSchema = new mongoose.Schema({
         type: String,
     },
 
+    // ADD THESE FIELDS
+    phone: {
+        type: String,
+    },
+    amount: {
+        type: Number,
+        default: 0,
+    },
+    userType: {
+        type: String,
+        enum: ['agent', 'direct'],
+        default: 'agent',
+    },
+
     // Tree / parent info
     parentGtcUserId: {
         type: String,
@@ -36,7 +50,7 @@ const GTCMemberSchema = new mongoose.Schema({
     },
     level: {
         type: Number,
-        default: 1,
+        default: 0,  // API uses 0-based levels
     },
     uplineChain: [UplineSchema],
 
@@ -61,5 +75,6 @@ const GTCMemberSchema = new mongoose.Schema({
 
 GTCMemberSchema.index({ gtcUserId: 1, level: 1 });
 GTCMemberSchema.index({ parentGtcUserId: 1 });
+GTCMemberSchema.index({ userType: 1 });
 
 export default mongoose.model('GTCMember', GTCMemberSchema);
