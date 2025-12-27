@@ -340,7 +340,7 @@ const GTCFxAgentMembers = () => {
         <tr
           className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
             isRoot
-              ? "bg-gradient-to-r from-orange-50 to-orange-100 font-semibold"
+              ? "bg-linear-to-r from-orange-50 to-orange-100 font-semibold"
               : level === 1
               ? "bg-purple-50/40"
               : level === 2
@@ -515,7 +515,7 @@ const GTCFxAgentMembers = () => {
                 <div className="w-5" />
               )}
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                <div className="w-8 h-8 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
                   <span className="text-white font-bold text-xs">
                     {member.nickname.charAt(0).toUpperCase()}
                   </span>
@@ -634,7 +634,7 @@ const GTCFxAgentMembers = () => {
               setCurrentPage(1);
               fetchMembers();
             }}
-            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
+            className="px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
           >
             Try Again
           </button>
@@ -665,7 +665,7 @@ const GTCFxAgentMembers = () => {
             <button
               onClick={openFullTree}
               disabled={loadingTree}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-4 py-2 bg-linear-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loadingTree ? (
                 <Loader className="w-4 h-4 animate-spin" />
@@ -691,7 +691,7 @@ const GTCFxAgentMembers = () => {
             <button
               onClick={handleExportJSON}
               disabled={members.length === 0 && !treeData}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-4 py-2 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FileJson className="w-4 h-4" />
               Export JSON
@@ -917,7 +917,7 @@ const GTCFxAgentMembers = () => {
                     >
                       <div className="flex items-center gap-2.5 flex-1 min-w-0">
                         <div className="relative">
-                          <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                          <div className="w-8 h-8 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
                             <span className="text-white font-bold text-xs">
                               {member.nickname.charAt(0).toUpperCase()}
                             </span>
@@ -963,7 +963,7 @@ const GTCFxAgentMembers = () => {
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-orange-50 transition-colors"
                     >
                       <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <div className="w-8 h-8 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
                           <span className="text-white font-bold text-xs">
                             {member.nickname.charAt(0).toUpperCase()}
                           </span>
@@ -1004,7 +1004,7 @@ const GTCFxAgentMembers = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Modal Header */}
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-orange-50 to-orange-100">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-linear-to-r from-orange-50 to-orange-100">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                   <Network className="w-5 h-5 text-orange-600" />
@@ -1105,7 +1105,7 @@ const GTCFxAgentMembers = () => {
               </button>
               <button
                 onClick={handleExportJSON}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg"
               >
                 <FileJson className="w-3.5 h-3.5" />
                 Export JSON

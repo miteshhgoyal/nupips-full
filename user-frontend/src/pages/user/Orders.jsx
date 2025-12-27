@@ -232,7 +232,7 @@ const Orders = () => {
 
       <div className="min-h-screen bg-white">
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-50 to-orange-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="bg-linear-to-r from-orange-50 to-orange-100 py-12 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <h1 className="text-4xl font-bold text-gray-900 flex items-center gap-3">
               <Package className="w-10 h-10 text-orange-600" />
@@ -268,7 +268,7 @@ const Orders = () => {
 
           {/* Enhanced Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
+            <div className="bg-linear-to-br from-blue-50 to-blue-100 p-6 rounded-xl border border-blue-200">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-blue-600 text-sm font-medium">
@@ -285,7 +285,7 @@ const Orders = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
+            <div className="bg-linear-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-green-600 text-sm font-medium">
@@ -302,7 +302,7 @@ const Orders = () => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-xl border border-red-200">
+            <div className="bg-linear-to-br from-red-50 to-red-100 p-6 rounded-xl border border-red-200">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-red-600 text-sm font-medium">
@@ -416,7 +416,7 @@ const Orders = () => {
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+                <thead className="bg-linear-to-r from-orange-50 to-orange-100 border-b border-orange-200">
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                       Order ID
@@ -541,7 +541,7 @@ const OrderDetailModal = ({ order, onClose }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Modal Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200 p-6 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-linear-to-r from-orange-50 to-orange-100 border-b border-orange-200 p-6 flex items-center justify-between z-10">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Order Details</h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -558,7 +558,7 @@ const OrderDetailModal = ({ order, onClose }) => {
 
         <div className="p-6 space-y-6">
           {/* Order Summary */}
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+          <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <h3 className="font-bold text-gray-900 text-lg mb-4 flex items-center gap-2">
               <Package className="w-5 h-5 text-orange-600" />
               Order Summary
@@ -721,7 +721,7 @@ const OrderDetailModal = ({ order, onClose }) => {
           )}
 
           {/* Wallet Transaction Summary */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <h3 className="font-bold text-gray-900 text-lg mb-4 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-blue-600" />
               Wallet Transaction

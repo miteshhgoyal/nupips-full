@@ -125,7 +125,7 @@ const DefaultRoute = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-200">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-orange-50 via-white to-orange-200">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-700 text-lg">Loading...</p>
@@ -218,7 +218,7 @@ const LayoutWrapper = ({ children, competitionEnabled }) => {
 
   // Render with layout
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 relative overflow-x-hidden">
+    <div className="min-h-screen bg-linear-to-br from-gray-50 to-blue-50/30 relative overflow-x-hidden">
       <Navbar
         toggleSidebar={toggleSidebar}
         navigationLinks={navbarLinks}

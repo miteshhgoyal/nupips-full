@@ -353,7 +353,7 @@ const Profile = () => {
 
         {/* Financial Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+          <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
@@ -368,7 +368,7 @@ const Profile = () => {
             <p className="text-xs text-orange-700 mt-1">Current balance</p>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+          <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-white" />
@@ -383,7 +383,7 @@ const Profile = () => {
             <p className="text-xs text-green-700 mt-1">All time</p>
           </div>
 
-          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+          <div className="bg-linear-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
                 <TrendingDown className="w-5 h-5 text-white" />
@@ -398,7 +398,7 @@ const Profile = () => {
             <p className="text-xs text-red-700 mt-1">All time</p>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                 <Send className="w-5 h-5 text-white" />
@@ -626,7 +626,7 @@ const Profile = () => {
               <button
                 onClick={changePassword}
                 disabled={changingPassword}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50"
               >
                 {changingPassword ? (
                   <>
@@ -653,7 +653,7 @@ const Profile = () => {
                 </p>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border border-purple-200">
+              <div className="bg-linear-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border border-purple-200">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3 flex-1">
                     <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
@@ -746,7 +746,7 @@ const Profile = () => {
               ) : (
                 <>
                   {!gtcReferralLink && !editingGTCLink ? (
-                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+                    <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
                       <div className="text-center">
                         <ExternalLink className="w-12 h-12 text-orange-500 mx-auto mb-3" />
                         <p className="text-sm text-orange-900 mb-4">
@@ -790,7 +790,7 @@ const Profile = () => {
                             <button
                               onClick={saveGTCReferralLink}
                               disabled={savingGTCLink}
-                              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+                              className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50"
                             >
                               {savingGTCLink ? (
                                 <>
@@ -816,7 +816,7 @@ const Profile = () => {
                           </div>
                         </div>
                       ) : (
-                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
+                        <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-5 border border-green-200">
                           <div className="flex items-start gap-3 mb-4">
                             <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
                               <CheckCircle className="w-5 h-5 text-white" />
@@ -882,7 +882,7 @@ const Profile = () => {
 
             {/* Sponsor/Upline Information Section */}
             {sponsorData && !sponsorData.detailsHidden && (
-              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-200 shadow-sm">
+              <div className="bg-linear-to-br from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-200 shadow-sm">
                 <div className="flex items-center gap-2 mb-6">
                   <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
                     <Award className="w-5 h-5 text-white" />
@@ -1013,7 +1013,7 @@ const Profile = () => {
                 Share your unique link and earn rewards
               </p>
 
-              <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200 mb-3">
+              <div className="p-4 bg-linear-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200 mb-3">
                 <p className="text-xs text-orange-700 mb-1">
                   Your Referral Code
                 </p>

@@ -144,7 +144,7 @@ const GTCFxProfitLogs = () => {
                             setCurrentPage(1);
                             fetchProfitLogs();
                         }}
-                        className="px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-xl font-medium"
+                        className="px-6 py-3 bg-linear-to-r from-orange-600 to-orange-500 text-white rounded-xl font-medium"
                     >
                         <Text>Try Again</Text>
                     </TouchableOpacity>
@@ -170,7 +170,7 @@ const GTCFxProfitLogs = () => {
                         </View>
                         <TouchableOpacity
                             onPress={handleExport}
-                            className="flex flex-row items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-xl font-medium"
+                            className="flex flex-row items-center gap-2 px-6 py-3 bg-linear-to-r from-orange-600 to-orange-500 text-white rounded-xl font-medium"
                         >
                             <Download size={20} color="#ffffff" />
                             <Text>Export CSV</Text>
@@ -295,7 +295,7 @@ const GTCFxProfitLogs = () => {
                             <View className="flex items-end">
                                 <TouchableOpacity
                                     onPress={handleApplyFilters}
-                                    className="w-full px-4 py-3 bg-gradient-to-r from-orange-600 to-orange-500 text-white font-medium rounded-xl"
+                                    className="w-full px-4 py-3 bg-linear-to-r from-orange-600 to-orange-500 text-white font-medium rounded-xl"
                                 >
                                     <Text>Apply Filters</Text>
                                 </TouchableOpacity>

@@ -152,7 +152,7 @@ const GTCFxAuth = () => {
                     <View className="mx-4 my-8">
                         {/* Header */}
                         <View className="text-center mb-8">
-                            <View className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-600 to-orange-500 rounded-2xl shadow-lg mb-6">
+                            <View className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-br from-orange-600 to-orange-500 rounded-2xl shadow-lg mb-6">
                                 <TrendingUp size={40} color="#ffffff" />
                             </View>
                             <Text className="text-3xl font-bold text-white mb-2">GTC FX Account</Text>
@@ -163,7 +163,7 @@ const GTCFxAuth = () => {
                         <View className="bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-700 mb-6">
                             {/* Profile Section */}
                             <View className="flex flex-col items-center gap-6 mb-8 pb-8 border-b border-gray-700">
-                                <View className="w-20 h-20 bg-gradient-to-br from-orange-600 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                                <View className="w-20 h-20 bg-linear-to-br from-orange-600 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
                                     {gtcUser.avatar ? (
                                         <Image
                                             source={{ uri: gtcUser.avatar }}
@@ -239,7 +239,7 @@ const GTCFxAuth = () => {
                             <View className="grid grid-cols-1 gap-4">
                                 <TouchableOpacity
                                     onPress={() => router.push("/gtcfx/dashboard")}
-                                    className="flex flex-row items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-600 to-orange-500 text-white py-4 px-6 rounded-xl font-semibold"
+                                    className="flex flex-row items-center justify-center gap-2 w-full bg-linear-to-r from-orange-600 to-orange-500 text-white py-4 px-6 rounded-xl font-semibold"
                                 >
                                     <Text>Go to Dashboard</Text>
                                     <ArrowRight size={20} color="#ffffff" />
@@ -266,7 +266,7 @@ const GTCFxAuth = () => {
             <View className="w-full mx-4">
                 {/* Header */}
                 <View className="text-center mb-8">
-                    <View className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-600 to-orange-500 rounded-2xl shadow-lg mb-6">
+                    <View className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-br from-orange-600 to-orange-500 rounded-2xl shadow-lg mb-6">
                         <TrendingUp size={40} color="#ffffff" />
                     </View>
                     <Text className="text-3xl font-bold text-white mb-2">GTC FX Login</Text>
@@ -351,7 +351,7 @@ const GTCFxAuth = () => {
                         <TouchableOpacity
                             onPress={handleLogin}
                             disabled={isLoading}
-                            className="w-full bg-gradient-to-r from-orange-600 to-orange-500 text-white py-4 px-6 rounded-xl font-semibold flex flex-row items-center justify-center gap-2"
+                            className="w-full bg-linear-to-r from-orange-600 to-orange-500 text-white py-4 px-6 rounded-xl font-semibold flex flex-row items-center justify-center gap-2"
                         >
                             {isLoading ? (
                                 <>

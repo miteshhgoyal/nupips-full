@@ -197,7 +197,7 @@ const Deposit = () => {
                 <View className="py-4 pb-24 px-4">
                     {/* Current Balance */}
                     {user && (
-                        <View className="bg-gradient-to-r from-orange-600 to-orange-500 rounded-xl p-5 mb-6">
+                        <View className="bg-linear-to-r from-orange-600 to-orange-500 rounded-xl p-5 mb-6">
                             <View className="flex-row items-center gap-2 mb-2">
                                 <Wallet size={20} color="#fff" />
                                 <Text className="text-sm font-semibold text-white">
@@ -249,8 +249,8 @@ const Deposit = () => {
                                             placeholderTextColor="#6b7280"
                                             keyboardType="decimal-pad"
                                             className={`pl-12 pr-4 py-4 text-lg text-white rounded-xl ${amountError
-                                                    ? 'bg-red-500/20 border-2 border-red-500/30'
-                                                    : 'bg-gray-900 border-2 border-gray-700'
+                                                ? 'bg-red-500/20 border-2 border-red-500/30'
+                                                : 'bg-gray-900 border-2 border-gray-700'
                                                 }`}
                                         />
                                     </View>
@@ -295,8 +295,8 @@ const Deposit = () => {
                                             key={option.value}
                                             onPress={() => setSelectedCrypto(option.value)}
                                             className={`p-4 rounded-xl border-2 ${selectedCrypto === option.value
-                                                    ? 'border-orange-500 bg-orange-500/10'
-                                                    : 'border-gray-700'
+                                                ? 'border-orange-500 bg-orange-500/10'
+                                                : 'border-gray-700'
                                                 }`}
                                         >
                                             <View className="mb-3">
@@ -344,8 +344,8 @@ const Deposit = () => {
                                 onPress={handleContinue}
                                 disabled={loading || !amount || amountError}
                                 className={`rounded-xl py-4 items-center ${loading || !amount || amountError
-                                        ? 'bg-gray-700/50'
-                                        : 'bg-orange-600'
+                                    ? 'bg-gray-700/50'
+                                    : 'bg-orange-600'
                                     }`}
                             >
                                 {loading ? (

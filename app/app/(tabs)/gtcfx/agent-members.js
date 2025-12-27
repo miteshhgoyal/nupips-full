@@ -220,7 +220,7 @@ const GTCFxAgentMembers = () => {
                                 <View style={{ width: 20 }} />
                             )}
                             <View className="flex flex-row items-center gap-2.5 min-w-0">
-                                <View className="w-8 h-8 bg-gradient-to-br from-orange-600 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                                <View className="w-8 h-8 bg-linear-to-br from-orange-600 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
                                     <Text className="text-white font-bold text-xs">
                                         {member.nickname.charAt(0).toUpperCase()}
                                     </Text>
@@ -245,8 +245,8 @@ const GTCFxAgentMembers = () => {
                     <View className="px-4 py-3">
                         <Text
                             className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${member.user_type === "agent"
-                                    ? "bg-purple-900 text-purple-300"
-                                    : "bg-green-900 text-green-300"
+                                ? "bg-purple-900 text-purple-300"
+                                : "bg-green-900 text-green-300"
                                 }`}
                         >
                             {member.user_type === "agent" ? "Agent" : "Direct"}
@@ -327,7 +327,7 @@ const GTCFxAgentMembers = () => {
                             setCurrentPage(1);
                             fetchMembers();
                         }}
-                        className="px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-xl font-medium"
+                        className="px-6 py-3 bg-linear-to-r from-orange-600 to-orange-500 text-white rounded-xl font-medium"
                     >
                         <Text>Try Again</Text>
                     </TouchableOpacity>
@@ -367,7 +367,7 @@ const GTCFxAgentMembers = () => {
                             <TouchableOpacity
                                 onPress={handleExport}
                                 disabled={members.length === 0}
-                                className="flex flex-row items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+                                className="flex flex-row items-center gap-1.5 px-4 py-2 bg-linear-to-r from-orange-600 to-orange-500 text-white rounded-lg text-xs font-medium transition-all disabled:opacity-50"
                             >
                                 <Download size={16} color="#ffffff" />
                                 <Text>Export</Text>
@@ -556,7 +556,7 @@ const GTCFxAgentMembers = () => {
                                             >
                                                 <View className="flex flex-row items-center gap-2.5 flex-1 min-w-0">
                                                     <View className="relative">
-                                                        <View className="w-8 h-8 bg-gradient-to-br from-orange-600 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                                                        <View className="w-8 h-8 bg-linear-to-br from-orange-600 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
                                                             <Text className="text-white font-bold text-xs">
                                                                 {member.nickname.charAt(0).toUpperCase()}
                                                             </Text>
@@ -598,7 +598,7 @@ const GTCFxAgentMembers = () => {
                                                 className="flex flex-row items-center justify-between p-3 bg-gray-900 rounded-lg hover:bg-orange-900 transition-colors"
                                             >
                                                 <View className="flex flex-row items-center gap-2.5 flex-1 min-w-0">
-                                                    <View className="w-8 h-8 bg-gradient-to-br from-orange-600 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                                                    <View className="w-8 h-8 bg-linear-to-br from-orange-600 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
                                                         <Text className="text-white font-bold text-xs">
                                                             {member.nickname.charAt(0).toUpperCase()}
                                                         </Text>
@@ -617,8 +617,8 @@ const GTCFxAgentMembers = () => {
                                                 </View>
                                                 <Text
                                                     className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${member.user_type === "agent"
-                                                            ? "bg-purple-900 text-purple-300"
-                                                            : "bg-green-900 text-green-300"
+                                                        ? "bg-purple-900 text-purple-300"
+                                                        : "bg-green-900 text-green-300"
                                                         }`}
                                                 >
                                                     {member.user_type === "agent" ? "Agent" : "Direct"}

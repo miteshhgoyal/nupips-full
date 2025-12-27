@@ -62,7 +62,7 @@ const BrokerSelection = () => {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
             <TrendingUp className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
@@ -130,7 +130,7 @@ const BrokerSelection = () => {
                   <div
                     className={`w-16 h-16 rounded-xl flex items-center justify-center shadow-md mb-4 transition-transform ${
                       broker.available
-                        ? "bg-gradient-to-br from-orange-500 to-orange-600 hover:scale-110"
+                        ? "bg-linear-to-br from-orange-500 to-orange-600 hover:scale-110"
                         : "bg-gray-300"
                     }`}
                   >
@@ -178,7 +178,7 @@ const BrokerSelection = () => {
                       className={`w-full py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-between group ${
                         isConnected
                           ? "bg-green-600 hover:bg-green-700 text-white"
-                          : "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg"
+                          : "bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md hover:shadow-lg"
                       }`}
                     >
                       <span>
@@ -201,7 +201,7 @@ const BrokerSelection = () => {
             );
           })}
           {/* Why Connect */}
-          <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl">
+          <div className="p-6 bg-linear-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Info className="w-5 h-5 text-white" />
@@ -234,7 +234,7 @@ const BrokerSelection = () => {
         {/* Info Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Why Connect */}
-          {/* <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl">
+          {/* <div className="p-6 bg-linear-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-2xl">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Info className="w-5 h-5 text-white" />
@@ -264,7 +264,7 @@ const BrokerSelection = () => {
           </div> */}
 
           {/* Coming Soon */}
-          {/* <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl">
+          {/* <div className="p-6 bg-linear-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <TrendingUp className="w-5 h-5 text-white" />

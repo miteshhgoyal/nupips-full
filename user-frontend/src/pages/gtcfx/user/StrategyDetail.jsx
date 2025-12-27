@@ -155,7 +155,7 @@ const GTCFxStrategyDetail = () => {
             <p className="text-gray-600 mb-6">{error}</p>
             <button
               onClick={fetchStrategyDetail}
-              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
+              className="px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
             >
               Try Again
             </button>
@@ -200,7 +200,7 @@ const GTCFxStrategyDetail = () => {
         {/* Header Section */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-8">
           {/* Hero Image */}
-          <div className="relative h-64 bg-gradient-to-br from-orange-500 to-orange-600 overflow-hidden">
+          <div className="relative h-64 bg-linear-to-br from-orange-500 to-orange-600 overflow-hidden">
             {strategy.profile_photo ? (
               <img
                 src={strategy.profile_photo}
@@ -212,7 +212,7 @@ const GTCFxStrategyDetail = () => {
                 <BarChart3 className="w-24 h-24 text-white/50" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent" />
 
             {/* Risk Badge */}
             <div className="absolute top-6 right-6">
@@ -369,7 +369,7 @@ const GTCFxStrategyDetail = () => {
 
             <div className="space-y-4">
               {/* Minimum Deposit */}
-              <div className="p-5 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
+              <div className="p-5 bg-linear-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
                 <p className="text-sm text-gray-600 font-medium mb-2">
                   Minimum Deposit
                 </p>
@@ -395,7 +395,7 @@ const GTCFxStrategyDetail = () => {
               {/* Subscribe Button */}
               <button
                 onClick={() => setShowSubscribeModal(true)}
-                className="w-full mt-6 px-4 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group"
+                className="w-full mt-6 px-4 py-4 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group"
               >
                 <Zap className="w-5 h-5 group-hover:scale-110 transition-transform" />
                 Subscribe to Strategy
@@ -524,7 +524,7 @@ const GTCFxStrategyDetail = () => {
                   <button
                     type="submit"
                     disabled={subscribing}
-                    className="w-full px-4 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                    className="w-full px-4 py-4 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                   >
                     {subscribing && <Loader className="w-5 h-5 animate-spin" />}
                     {subscribing ? "Subscribing..." : "Confirm Subscription"}

@@ -198,31 +198,31 @@ const Competition = () => {
     const getTierStyles = (color) => {
       const styles = {
         gold: {
-          bg: "bg-gradient-to-b from-amber-50 to-amber-100",
+          bg: "bg-linear-to-b from-amber-50 to-amber-100",
           border: "border-amber-400",
           text: "text-amber-900",
           icon: "text-amber-600",
         },
         silver: {
-          bg: "bg-gradient-to-b from-slate-50 to-slate-100",
+          bg: "bg-linear-to-b from-slate-50 to-slate-100",
           border: "border-slate-400",
           text: "text-slate-900",
           icon: "text-slate-600",
         },
         bronze: {
-          bg: "bg-gradient-to-b from-orange-50 to-orange-100",
+          bg: "bg-linear-to-b from-orange-50 to-orange-100",
           border: "border-orange-400",
           text: "text-orange-900",
           icon: "text-orange-600",
         },
         platinum: {
-          bg: "bg-gradient-to-b from-cyan-50 to-cyan-100",
+          bg: "bg-linear-to-b from-cyan-50 to-cyan-100",
           border: "border-cyan-400",
           text: "text-cyan-900",
           icon: "text-cyan-600",
         },
         blue: {
-          bg: "bg-gradient-to-b from-blue-50 to-blue-100",
+          bg: "bg-linear-to-b from-blue-50 to-blue-100",
           border: "border-blue-400",
           text: "text-blue-900",
           icon: "text-blue-600",
@@ -243,7 +243,7 @@ const Competition = () => {
             </p>
           </div>
           {userRank && (
-            <div className="text-right bg-gradient-to-b from-orange-50 to-orange-100 rounded-lg px-4 py-3 border border-orange-200">
+            <div className="text-right bg-linear-to-b from-orange-50 to-orange-100 rounded-lg px-4 py-3 border border-orange-200">
               <p className="text-xs text-gray-600 font-medium">Current Rank</p>
               <p className="text-2xl font-bold text-orange-600">
                 #{userRank.rank}
@@ -253,7 +253,7 @@ const Competition = () => {
         </div>
 
         {userRank && nextTarget && (
-          <div className="mb-4 p-3 bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+          <div className="mb-4 p-3 bg-linear-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
             <div className="flex items-center gap-2 text-sm">
               <Target className="w-4 h-4 text-blue-600" />
               <p className="text-blue-900">
@@ -267,7 +267,7 @@ const Competition = () => {
         <div className="relative pt-16 pb-12">
           <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
             <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-400 to-orange-500 transition-all duration-700"
+              className="absolute inset-y-0 left-0 bg-linear-to-r from-orange-400 to-orange-500 transition-all duration-700"
               style={{ width: `${userPosition}%` }}
             />
           </div>
@@ -336,10 +336,10 @@ const Competition = () => {
               }}
             >
               <div className="relative flex flex-col items-center">
-                <div className="bg-gradient-to-b from-orange-500 to-orange-600 text-white text-xs font-semibold px-3 py-1 rounded-full border-2 border-white mb-2 whitespace-nowrap">
+                <div className="bg-linear-to-b from-orange-500 to-orange-600 text-white text-xs font-semibold px-3 py-1 rounded-full border-2 border-white mb-2 whitespace-nowrap">
                   You
                 </div>
-                <div className="w-8 h-8 bg-gradient-to-b from-orange-500 to-orange-600 rounded-full border-4 border-white flex items-center justify-center">
+                <div className="w-8 h-8 bg-linear-to-b from-orange-500 to-orange-600 rounded-full border-4 border-white flex items-center justify-center">
                   <Star className="w-4 h-4 text-white fill-white" />
                 </div>
               </div>
@@ -348,7 +348,7 @@ const Competition = () => {
         </div>
 
         {userRank && achieved.length > 0 && (
-          <div className="mt-4 p-3 bg-gradient-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
+          <div className="mt-4 p-3 bg-linear-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
             <div className="flex items-center gap-2 text-sm text-green-900">
               <CheckCircle className="w-4 h-4 text-green-600" />
               <span className="font-medium">
@@ -491,7 +491,7 @@ const Competition = () => {
             return (
               <div
                 key={index}
-                className={`bg-gradient-to-b ${colors.bg} border ${colors.border} rounded-lg p-4`}
+                className={`bg-linear-to-b ${colors.bg} border ${colors.border} rounded-lg p-4`}
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -555,7 +555,7 @@ const Competition = () => {
 
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-b from-orange-500 to-orange-600 rounded-xl mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-b from-orange-500 to-orange-600 rounded-xl mb-6">
               <Trophy className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
@@ -566,7 +566,7 @@ const Competition = () => {
             </p>
           </div>
 
-          <div className="bg-gradient-to-b from-orange-500 to-orange-600 rounded-xl p-8 mb-8 text-white">
+          <div className="bg-linear-to-b from-orange-500 to-orange-600 rounded-xl p-8 mb-8 text-white">
             <div className="flex flex-col md:flex-row items-center gap-6">
               <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0">
                 <AlertCircle className="w-10 h-10 text-white" />
@@ -608,7 +608,7 @@ const Competition = () => {
                 return (
                   <div
                     key={idx}
-                    className={`bg-gradient-to-b ${bgColors[idx]} rounded-xl p-6 text-white`}
+                    className={`bg-linear-to-b ${bgColors[idx]} rounded-xl p-6 text-white`}
                   >
                     <Trophy className="w-12 h-12 mb-4" />
                     <h3 className="text-xl font-semibold mb-2">
@@ -627,7 +627,7 @@ const Competition = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded-xl p-6 border border-gray-200">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-b from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-linear-to-b from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                   <Target className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900">
@@ -664,7 +664,7 @@ const Competition = () => {
 
             <div className="bg-white rounded-xl p-6 border border-gray-200">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-b from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-linear-to-b from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
                   <BarChart3 className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900">Scoring</h3>
@@ -699,7 +699,7 @@ const Competition = () => {
                     return (
                       <div
                         key={key}
-                        className={`flex items-center justify-between p-3 bg-gradient-to-b ${
+                        className={`flex items-center justify-between p-3 bg-linear-to-b ${
                           bgColors[idx % 6]
                         } rounded-lg border`}
                       >
@@ -743,7 +743,7 @@ const Competition = () => {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-gradient-to-b from-red-50 to-red-100 rounded-xl flex items-center justify-center mx-auto mb-4 border border-red-200">
+          <div className="w-16 h-16 bg-linear-to-b from-red-50 to-red-100 rounded-xl flex items-center justify-center mx-auto mb-4 border border-red-200">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -752,7 +752,7 @@ const Competition = () => {
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => fetchCompetitionData()}
-            className="px-6 py-3 bg-gradient-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all"
+            className="px-6 py-3 bg-linear-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all"
           >
             Try Again
           </button>
@@ -772,7 +772,7 @@ const Competition = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-b from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+            <div className="w-16 h-16 bg-linear-to-b from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
               <Trophy className="w-8 h-8 text-white" />
             </div>
             <div>
@@ -840,7 +840,7 @@ const Competition = () => {
           {/* User Rank Card */}
           <div className="lg:col-span-1 space-y-6">
             {userRank && (
-              <div className="bg-gradient-to-b from-orange-500 to-orange-600 rounded-lg p-6 text-white border border-orange-400">
+              <div className="bg-linear-to-b from-orange-500 to-orange-600 rounded-lg p-6 text-white border border-orange-400">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-white/90 text-xs font-medium uppercase tracking-wide">
@@ -904,7 +904,7 @@ const Competition = () => {
                   Key Metrics
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-b from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+                  <div className="flex items-center justify-between p-3 bg-linear-to-b from-orange-50 to-orange-100 rounded-lg border border-orange-200">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-orange-600" />
                       <span className="text-sm text-gray-700">
@@ -915,7 +915,7 @@ const Competition = () => {
                       {userRank.metrics.directReferrals}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between p-3 bg-linear-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
                     <div className="flex items-center gap-2">
                       <DollarSign className="w-4 h-4 text-blue-600" />
                       <span className="text-sm text-gray-700">
@@ -928,7 +928,7 @@ const Competition = () => {
                         0}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between p-3 bg-linear-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
                     <div className="flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-green-600" />
                       <span className="text-sm text-gray-700">Win Rate</span>
@@ -937,7 +937,7 @@ const Competition = () => {
                       {userRank.metrics.winRate?.toFixed(1) || 0}%
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-b from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                  <div className="flex items-center justify-between p-3 bg-linear-to-b from-purple-50 to-purple-100 rounded-lg border border-purple-200">
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-purple-600" />
                       <span className="text-sm text-gray-700">Team Size</span>
@@ -954,7 +954,7 @@ const Competition = () => {
           {/* Leaderboard */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div className="p-5 bg-gradient-to-b from-orange-500 to-orange-600 text-white">
+              <div className="p-5 bg-linear-to-b from-orange-500 to-orange-600 text-white">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold flex items-center gap-2">
                     <Crown className="w-6 h-6" />
@@ -979,7 +979,7 @@ const Competition = () => {
                       key={entry.userId}
                       className={`transition-all ${
                         isCurrentUser
-                          ? "bg-gradient-to-b from-orange-50 to-orange-100 border-l-4 border-orange-500"
+                          ? "bg-linear-to-b from-orange-50 to-orange-100 border-l-4 border-orange-500"
                           : "hover:bg-gray-50"
                       }`}
                     >
@@ -1009,7 +1009,7 @@ const Competition = () => {
                                 <Award className="w-4 h-4 text-purple-600" />
                               )}
                               {isCurrentUser && (
-                                <span className="text-xs bg-gradient-to-b from-orange-500 to-orange-600 text-white px-2 py-0.5 rounded-full font-medium">
+                                <span className="text-xs bg-linear-to-b from-orange-500 to-orange-600 text-white px-2 py-0.5 rounded-full font-medium">
                                   You
                                 </span>
                               )}
@@ -1054,7 +1054,7 @@ const Competition = () => {
 
                       {isExpanded && (
                         <div className="px-4 pb-4">
-                          <div className="bg-gradient-to-b from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
+                          <div className="bg-linear-to-b from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                               <div className="bg-white p-3 rounded-lg border border-gray-200">
                                 <p className="text-xs text-gray-600 mb-1">

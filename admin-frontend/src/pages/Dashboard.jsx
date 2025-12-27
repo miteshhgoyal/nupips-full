@@ -120,7 +120,7 @@ const Dashboard = () => {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-2 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md flex items-center gap-2 disabled:opacity-50"
             >
               <RefreshCw
                 className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
@@ -141,7 +141,7 @@ const Dashboard = () => {
         {/* Main KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {/* Total Users */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                 <Users className="w-5 h-5 text-white" />
@@ -157,7 +157,7 @@ const Dashboard = () => {
           </div>
 
           {/* Total Wallet Balance */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+          <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
@@ -173,7 +173,7 @@ const Dashboard = () => {
           </div>
 
           {/* Net Revenue */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+          <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-white" />
@@ -189,7 +189,7 @@ const Dashboard = () => {
           </div>
 
           {/* Total Orders */}
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+          <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
                 <ShoppingCart className="w-5 h-5 text-white" />
@@ -211,7 +211,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Deposits */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 border-b border-green-200">
+            <div className="p-4 bg-linear-to-r from-green-50 to-green-100 border-b border-green-200">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-green-600" />
                 Deposits Overview
@@ -267,7 +267,7 @@ const Dashboard = () => {
 
           {/* Withdrawals */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-4 bg-gradient-to-r from-red-50 to-red-100 border-b border-red-200">
+            <div className="p-4 bg-linear-to-r from-red-50 to-red-100 border-b border-red-200">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <TrendingDown className="w-5 h-5 text-red-600" />
                 Withdrawals Overview
@@ -326,7 +326,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* User Stats */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 border-b border-blue-200">
+            <div className="p-4 bg-linear-to-r from-blue-50 to-blue-100 border-b border-blue-200">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <Users className="w-5 h-5 text-blue-600" />
                 User Statistics
@@ -373,7 +373,7 @@ const Dashboard = () => {
 
           {/* E-commerce Stats */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-4 bg-gradient-to-r from-purple-50 to-purple-100 border-b border-purple-200">
+            <div className="p-4 bg-linear-to-r from-purple-50 to-purple-100 border-b border-purple-200">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <Package className="w-5 h-5 text-purple-600" />
                 E-commerce Overview
@@ -423,7 +423,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Courses Stats */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+            <div className="p-4 bg-linear-to-r from-orange-50 to-orange-100 border-b border-orange-200">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <PlayCircle className="w-5 h-5 text-orange-600" />
                 Learning Platform
@@ -455,7 +455,7 @@ const Dashboard = () => {
 
           {/* Income/Expense Summary */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 border-b border-green-200">
+            <div className="p-4 bg-linear-to-r from-green-50 to-green-100 border-b border-green-200">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <Activity className="w-5 h-5 text-green-600" />
                 Financial Summary
@@ -499,7 +499,7 @@ const Dashboard = () => {
 
         {/* Recent Activity */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+          <div className="p-4 bg-linear-to-r from-orange-50 to-orange-100 border-b border-orange-200">
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
               <Clock className="w-5 h-5 text-orange-600" />
               Recent Activity

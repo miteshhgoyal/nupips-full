@@ -261,7 +261,7 @@ const GTCMembers = () => {
         <div
           className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
             isRoot
-              ? "bg-gradient-to-r from-blue-500 to-blue-600 border-blue-700 shadow-lg"
+              ? "bg-linear-to-r from-blue-500 to-blue-600 border-blue-700 shadow-lg"
               : "bg-white border-gray-200 hover:border-blue-300 hover:shadow-sm"
           } mb-2`}
         >
@@ -574,7 +574,7 @@ const GTCMembers = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                 <UsersIcon className="w-5 h-5 text-white" />
@@ -584,7 +584,7 @@ const GTCMembers = () => {
             <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+          <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                 <Network className="w-5 h-5 text-white" />
@@ -596,7 +596,7 @@ const GTCMembers = () => {
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+          <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
                 <Shield className="w-5 h-5 text-white" />
@@ -610,7 +610,7 @@ const GTCMembers = () => {
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+          <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
                 <Layers className="w-5 h-5 text-white" />
@@ -622,7 +622,7 @@ const GTCMembers = () => {
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-6 border border-pink-200">
+          <div className="bg-linear-to-br from-pink-50 to-pink-100 rounded-xl p-6 border border-pink-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-white" />
@@ -943,7 +943,7 @@ const GTCMembers = () => {
       {showDetailModal && selectedMember && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
+            <div className="p-6 border-b border-gray-200 bg-linear-to-r from-blue-50 to-blue-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center">
@@ -1042,7 +1042,7 @@ const GTCMembers = () => {
 
               {/* Hierarchy Info */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
                   <div className="flex items-center gap-2 mb-2">
                     <Network className="w-5 h-5 text-green-600" />
                     <p className="text-xs font-semibold text-green-900 uppercase">
@@ -1054,7 +1054,7 @@ const GTCMembers = () => {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
                   <div className="flex items-center gap-2 mb-2">
                     <Layers className="w-5 h-5 text-orange-600" />
                     <p className="text-xs font-semibold text-orange-900 uppercase">
@@ -1144,7 +1144,7 @@ const GTCMembers = () => {
             <div className="p-6 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md"
+                className="w-full py-3 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md"
               >
                 Close
               </button>
@@ -1157,7 +1157,7 @@ const GTCMembers = () => {
       {showTreeModal && treeData && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
+            <div className="p-6 border-b border-gray-200 bg-linear-to-r from-blue-50 to-blue-100">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">

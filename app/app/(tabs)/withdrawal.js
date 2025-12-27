@@ -268,7 +268,7 @@ const Withdrawal = ({ navigation }) => {
                             <View className="space-y-3">
                                 <TouchableOpacity
                                     onPress={() => navigation.navigate("Dashboard")}
-                                    className="w-full py-3 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
+                                    className="w-full py-3 bg-linear-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
                                 >
                                     <Text className="text-white text-center">Go to Dashboard</Text>
                                 </TouchableOpacity>
@@ -337,8 +337,8 @@ const Withdrawal = ({ navigation }) => {
                             <TouchableOpacity
                                 onPress={() => setWithdrawalMethod("crypto")}
                                 className={`p-6 border-2 rounded-xl text-left transition-all ${withdrawalMethod === "crypto"
-                                        ? "border-orange-500 bg-orange-900"
-                                        : "border-gray-700 hover:border-gray-600"
+                                    ? "border-orange-500 bg-orange-900"
+                                    : "border-gray-700 hover:border-gray-600"
                                     }`}
                             >
                                 <Bitcoin size={32} color="#f97316" />
@@ -352,8 +352,8 @@ const Withdrawal = ({ navigation }) => {
                                 <TouchableOpacity
                                     onPress={() => setWithdrawalMethod("bank_transfer")}
                                     className={`p-6 border-2 rounded-xl text-left transition-all ${withdrawalMethod === "bank_transfer"
-                                            ? "border-orange-500 bg-orange-900"
-                                            : "border-gray-700 hover:border-gray-600"
+                                        ? "border-orange-500 bg-orange-900"
+                                        : "border-gray-700 hover:border-gray-600"
                                         }`}
                                 >
                                     <Building2 size={32} color="#3b82f6" />
@@ -378,8 +378,8 @@ const Withdrawal = ({ navigation }) => {
                                     placeholder="Enter amount"
                                     keyboardType="decimal-pad"
                                     className={`w-full pl-12 pr-4 py-4 text-lg border rounded-xl ${amountError
-                                            ? "border-red-700 bg-red-900"
-                                            : "border-gray-700 bg-gray-900"
+                                        ? "border-red-700 bg-red-900"
+                                        : "border-gray-700 bg-gray-900"
                                         } text-white`}
                                 />
                             </View>
@@ -427,8 +427,8 @@ const Withdrawal = ({ navigation }) => {
                                                 setWalletNetwork(option.network);
                                             }}
                                             className={`p-4 border-2 rounded-xl text-left transition-all ${selectedCrypto === option.value
-                                                    ? "border-orange-500 bg-orange-900"
-                                                    : "border-gray-700 hover:border-gray-600"
+                                                ? "border-orange-500 bg-orange-900"
+                                                : "border-gray-700 hover:border-gray-600"
                                                 }`}
                                         >
                                             <Text className="font-semibold text-white text-sm mb-1">
@@ -510,7 +510,7 @@ const Withdrawal = ({ navigation }) => {
                     <TouchableOpacity
                         onPress={handleWithdraw}
                         disabled={loading || !amount || amountError}
-                        className="w-full py-4 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex flex-row items-center justify-center gap-2"
+                        className="w-full py-4 bg-linear-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex flex-row items-center justify-center gap-2"
                     >
                         {loading ? (
                             <>

@@ -228,7 +228,7 @@ const Users = () => {
         <div
           className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
             isRoot
-              ? "bg-gradient-to-r from-orange-500 to-orange-600 border-orange-700 shadow-lg"
+              ? "bg-linear-to-r from-orange-500 to-orange-600 border-orange-700 shadow-lg"
               : "bg-white border-gray-200 hover:border-orange-300 hover:shadow-sm"
           } mb-2`}
         >
@@ -517,7 +517,7 @@ const Users = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                 <UsersIcon className="w-5 h-5 text-white" />
@@ -527,7 +527,7 @@ const Users = () => {
             <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+          <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-5 h-5 text-white" />
@@ -537,7 +537,7 @@ const Users = () => {
             <p className="text-2xl font-bold text-green-900">{stats.active}</p>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+          <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
                 <Network className="w-5 h-5 text-white" />
@@ -547,7 +547,7 @@ const Users = () => {
             <p className="text-2xl font-bold text-purple-900">{stats.agents}</p>
           </div>
 
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+          <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
@@ -801,7 +801,7 @@ const Users = () => {
       {showDetailModal && selectedUser && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
+            <div className="p-6 border-b border-gray-200 bg-linear-to-r from-orange-50 to-orange-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center">
@@ -859,7 +859,7 @@ const Users = () => {
 
               {/* Financial Summary */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
                   <div className="flex items-center gap-2 mb-2">
                     <Wallet className="w-5 h-5 text-green-600" />
                     <p className="text-xs font-semibold text-green-900 uppercase">
@@ -871,7 +871,7 @@ const Users = () => {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+                <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                   <div className="flex items-center gap-2 mb-2">
                     <TrendingUp className="w-5 h-5 text-blue-600" />
                     <p className="text-xs font-semibold text-blue-900 uppercase">
@@ -883,7 +883,7 @@ const Users = () => {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+                <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
                   <div className="flex items-center gap-2 mb-2">
                     <Award className="w-5 h-5 text-purple-600" />
                     <p className="text-xs font-semibold text-purple-900 uppercase">
@@ -895,7 +895,7 @@ const Users = () => {
                   </p>
                 </div>
 
-                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
                   <div className="flex items-center gap-2 mb-2">
                     <Target className="w-5 h-5 text-orange-600" />
                     <p className="text-xs font-semibold text-orange-900 uppercase">
@@ -1073,7 +1073,7 @@ const Users = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <Loader className="w-5 h-5 animate-spin" />
@@ -1094,7 +1094,7 @@ const Users = () => {
       {showTreeModal && treeData && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
+            <div className="p-6 border-b border-gray-200 bg-linear-to-r from-orange-50 to-orange-100">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">

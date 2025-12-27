@@ -107,7 +107,7 @@ const GTCFxMySubscriptions = () => {
               setCurrentPage(1);
               fetchSubscriptions();
             }}
-            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
+            className="px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
           >
             Try Again
           </button>
@@ -170,7 +170,7 @@ const GTCFxMySubscriptions = () => {
             <div className="flex items-end">
               <button
                 onClick={handleApplyFilters}
-                className="w-full px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-xl transition-all shadow-md hover:shadow-lg"
+                className="w-full px-4 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-xl transition-all shadow-md hover:shadow-lg"
               >
                 Apply Filters
               </button>
@@ -372,7 +372,7 @@ const GTCFxMySubscriptions = () => {
               </p>
               <button
                 onClick={() => navigate("/gtcfx/strategies")}
-                className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
+                className="px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
               >
                 Browse Strategies
               </button>

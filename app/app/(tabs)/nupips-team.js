@@ -264,7 +264,7 @@ const NupipsTeam = () => {
                     </View>
 
                     {/* Total Commission Card */}
-                    <View className="mx-4 bg-gradient-to-r from-orange-600 to-orange-500 rounded-xl p-5 mb-6 shadow-lg">
+                    <View className="mx-4 bg-linear-to-r from-orange-600 to-orange-500 rounded-xl p-5 mb-6 shadow-lg">
                         <View className="flex-row items-center gap-2 mb-2">
                             <Wallet size={24} color="#fff" />
                             <Text className="text-lg font-semibold text-white">
@@ -309,8 +309,8 @@ const NupipsTeam = () => {
                                         key={type}
                                         onPress={() => setFilterType(type)}
                                         className={`px-4 py-2 rounded-xl ${filterType === type
-                                                ? 'bg-orange-600'
-                                                : 'bg-gray-800/40 border border-gray-700/30'
+                                            ? 'bg-orange-600'
+                                            : 'bg-gray-800/40 border border-gray-700/30'
                                             }`}
                                     >
                                         <Text
@@ -397,14 +397,14 @@ const NupipsTeam = () => {
                             <View className="flex-row gap-2 mb-6">
                                 <View
                                     className={`px-4 py-2 rounded-lg ${selectedUser?.status === 'active'
-                                            ? 'bg-green-500/20'
-                                            : 'bg-gray-700/50'
+                                        ? 'bg-green-500/20'
+                                        : 'bg-gray-700/50'
                                         }`}
                                 >
                                     <Text
                                         className={`font-semibold ${selectedUser?.status === 'active'
-                                                ? 'text-green-400'
-                                                : 'text-gray-400'
+                                            ? 'text-green-400'
+                                            : 'text-gray-400'
                                             }`}
                                     >
                                         {selectedUser?.status}

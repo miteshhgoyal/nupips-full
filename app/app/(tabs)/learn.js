@@ -192,7 +192,7 @@ const Learn = () => {
                                         setSearchTerm("");
                                         setCategoryFilter("all");
                                     }}
-                                    className="px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-500 rounded-xl"
+                                    className="px-6 py-3 bg-linear-to-r from-orange-600 to-orange-500 rounded-xl"
                                 >
                                     <Text className="text-white font-semibold">Clear Filters</Text>
                                 </TouchableOpacity>
@@ -213,7 +213,7 @@ const Learn = () => {
                                         onPress={() => router.push(`/learn/course/${course._id}`)}
                                         className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden hover:shadow-lg cursor-pointer"
                                     >
-                                        <View className="bg-gradient-to-br from-orange-900 to-orange-800 p-6 border-b border-orange-700">
+                                        <View className="bg-linear-to-br from-orange-900 to-orange-800 p-6 border-b border-orange-700">
                                             <Text className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white text-orange-600 mb-3">
                                                 {course.category}
                                             </Text>
@@ -238,7 +238,7 @@ const Learn = () => {
                                                 </View>
                                             </View>
 
-                                            <TouchableOpacity className="w-full py-3 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg flex flex-row items-center justify-center gap-2">
+                                            <TouchableOpacity className="w-full py-3 bg-linear-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg flex flex-row items-center justify-center gap-2">
                                                 <Text className="text-white">Start Learning</Text>
                                                 <ChevronRight size={20} color="#ffffff" />
                                             </TouchableOpacity>

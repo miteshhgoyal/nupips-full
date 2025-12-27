@@ -131,7 +131,7 @@ const GTCFxStrategies = () => {
               setCurrentPage(1);
               fetchStrategiesData();
             }}
-            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
+            className="px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
           >
             Try Again
           </button>
@@ -207,7 +207,7 @@ const GTCFxStrategies = () => {
             <div className="flex items-end">
               <button
                 onClick={handleApplyFilters}
-                className="w-full px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-xl transition-all shadow-md hover:shadow-lg"
+                className="w-full px-4 py-2 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-xl transition-all shadow-md hover:shadow-lg"
               >
                 Apply Filters
               </button>
@@ -224,7 +224,7 @@ const GTCFxStrategies = () => {
               className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden group"
             >
               {/* Header with Image */}
-              <div className="relative h-40 bg-gradient-to-br from-orange-500 to-orange-600 overflow-hidden">
+              <div className="relative h-40 bg-linear-to-br from-orange-500 to-orange-600 overflow-hidden">
                 {strategy.profile_photo ? (
                   <img
                     src={strategy.profile_photo}
@@ -236,7 +236,7 @@ const GTCFxStrategies = () => {
                     <BarChart3 className="w-16 h-16 text-white/50" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent" />
 
                 {/* Risk Level Badge */}
                 <div className="absolute top-3 right-3">
@@ -341,7 +341,7 @@ const GTCFxStrategies = () => {
                 {/* View Details Button */}
                 <button
                   onClick={() => handleStrategyClick(strategy.uuid)}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group"
+                  className="w-full px-4 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group"
                 >
                   <span>View Details</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

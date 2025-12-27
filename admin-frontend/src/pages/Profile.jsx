@@ -56,7 +56,7 @@ const Profile = () => {
         currentPassword: pwd.current,
         newPassword: pwd.next,
       });
-        
+
       setOk(res.data?.message || "Password updated successfully");
 
       // Reset form
@@ -222,7 +222,7 @@ const Profile = () => {
             <button
               onClick={changePassword}
               disabled={changingPassword}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {changingPassword ? (
                 <>

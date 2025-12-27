@@ -87,7 +87,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
 
                 {/* Logo and System Name */}
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all duration-300 hover:shadow-orange-500/50 hover:shadow-xl hover:scale-105">
+                  <div className="w-10 h-10 bg-linear-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all duration-300 hover:shadow-orange-500/50 hover:shadow-xl hover:scale-105">
                     <UserCheck className="w-6 h-6 text-white transition-transform duration-300" />
                   </div>
                   <div className="hidden sm:block transition-all duration-300">
@@ -119,7 +119,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                     }
                     className="flex items-center space-x-3 text-gray-700 hover:text-orange-600 px-3 py-2 rounded-full hover:bg-orange-50 transition-all duration-300 ease-out hover:shadow-md hover:scale-105 group"
                   >
-                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all duration-300 group-hover:shadow-orange-500/50 group-hover:shadow-xl group-hover:scale-105">
+                    <div className="w-8 h-8 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all duration-300 group-hover:shadow-orange-500/50 group-hover:shadow-xl group-hover:scale-105">
                       {user.avatar ? (
                         <img
                           src={user.avatar}
@@ -149,7 +149,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                         {/* User Info */}
                         <div className="px-5 py-4 border-b border-gray-100">
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
+                            <div className="w-10 h-10 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
                               {user.avatar ? (
                                 <img
                                   src={user.avatar}
@@ -239,7 +239,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                 {/* User Info - Mobile */}
                 <div className="px-4 py-4 border-b border-gray-100 mb-3 bg-orange-50 rounded-xl">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
+                    <div className="w-12 h-12 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
                       {user.avatar ? (
                         <img
                           src={user.avatar}

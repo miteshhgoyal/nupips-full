@@ -161,7 +161,7 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
     >
       <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden animate-slideUp border border-gray-100">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-orange-500 via-orange-600 to-orange-500 px-6 py-5 flex items-center justify-between z-10 shadow-lg">
+        <div className="sticky top-0 bg-linear-to-r from-orange-500 via-orange-600 to-orange-500 px-6 py-5 flex items-center justify-between z-10 shadow-lg">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shadow-lg border border-white/30">
               <TrendingUp className="w-6 h-6 text-white" />
@@ -222,7 +222,7 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
           ) : pammDetails ? (
             <>
               {/* PAMM Strategy Card */}
-              <div className="mb-6 p-5 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border-2 border-blue-200 shadow-sm">
+              <div className="mb-6 p-5 bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border-2 border-blue-200 shadow-sm">
                 <div className="flex items-start gap-5 mb-5">
                   {pammDetails.profile_photo && (
                     <div className="relative">
@@ -414,7 +414,7 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
                 </div>
 
                 {/* Info Box */}
-                <div className="p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
+                <div className="p-5 bg-linear-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl">
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Info className="w-5 h-5 text-blue-600" />
@@ -465,9 +465,9 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 group relative overflow-hidden"
+                    className="flex-1 px-6 py-4 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2 group relative overflow-hidden"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-orange-500 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                    <div className="absolute inset-0 bg-linear-to-r from-orange-400 to-orange-500 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                     {submitting ? (
                       <>
                         <Loader className="w-5 h-5 animate-spin relative z-10" />

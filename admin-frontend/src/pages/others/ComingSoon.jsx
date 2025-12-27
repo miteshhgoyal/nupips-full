@@ -5,10 +5,10 @@ import { Link } from "react-router-dom";
 
 const ComingSoon = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center p-6">
       <div className="max-w-2xl text-center">
         {/* Logo */}
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-8 animate-pulse">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-8 animate-pulse">
           <Rocket className="w-8 h-8 text-white" />
         </div>
 

@@ -109,7 +109,7 @@ const Shop = () => {
             <ScrollView className="flex-1">
                 <View className="mx-4 my-8">
                     {/* Header Section */}
-                    <View className="bg-gradient-to-r from-orange-900 to-orange-800 py-12 px-4">
+                    <View className="bg-linear-to-r from-orange-900 to-orange-800 py-12 px-4">
                         <View className="text-center">
                             <Text className="text-4xl font-bold text-white flex items-center justify-center gap-3">
                                 <ShoppingBag size={40} color="#f97316" />
@@ -276,7 +276,7 @@ const Shop = () => {
                                                 <Text>Bestseller</Text>
                                             </View>
                                         )}
-                                        <View className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <View className="absolute bottom-0 left-0 right-0 p-3 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                                             <TouchableOpacity
                                                 onPress={() => router.push(`/product/${product._id}`)}
                                                 className="w-full bg-white text-gray-900 py-2 rounded-lg font-medium flex flex-row items-center justify-center gap-2"

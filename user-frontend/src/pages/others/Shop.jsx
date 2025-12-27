@@ -103,7 +103,7 @@ const Shop = () => {
 
       <div className="min-h-screen bg-white">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-orange-50 to-orange-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="bg-linear-to-r from-orange-50 to-orange-100 py-12 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <div className="text-center">
               <h1 className="text-4xl font-bold text-gray-900 flex items-center justify-center gap-3">
@@ -296,7 +296,7 @@ const Shop = () => {
                     )}
 
                     {/* Quick Actions */}
-                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <button
                         onClick={() => navigate(`/product/${product._id}`)}
                         className="w-full bg-white text-gray-900 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"

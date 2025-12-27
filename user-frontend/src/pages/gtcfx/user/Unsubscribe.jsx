@@ -184,7 +184,7 @@ const GTCFxUnsubscribe = () => {
               setCurrentPage(1);
               fetchSubscriptionsData();
             }}
-            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
+            className="px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
           >
             Try Again
           </button>
@@ -384,7 +384,7 @@ const GTCFxUnsubscribe = () => {
               {selectedSubData ? (
                 <form onSubmit={handleRedeem} className="space-y-5">
                   {/* Selected Subscription Info */}
-                  <div className="p-5 bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl">
+                  <div className="p-5 bg-linear-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl">
                     <p className="text-sm text-orange-700 font-semibold mb-2">
                       Selected Strategy
                     </p>
@@ -497,7 +497,7 @@ const GTCFxUnsubscribe = () => {
                   <button
                     type="submit"
                     disabled={redeeming || !selectedSubData}
-                    className="w-full px-4 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                    className="w-full px-4 py-4 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
                   >
                     {redeeming && <Loader className="w-5 h-5 animate-spin" />}
                     {redeeming ? "Processing..." : "Confirm Withdrawal"}

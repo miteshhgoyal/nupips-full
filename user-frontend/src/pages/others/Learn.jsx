@@ -198,7 +198,7 @@ const Learn = () => {
                   setSearchTerm("");
                   setCategoryFilter("all");
                 }}
-                className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
+                className="px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
               >
                 Clear Filters
               </button>
@@ -219,7 +219,7 @@ const Learn = () => {
                   onClick={() => navigate(`/learn/course/${course._id}`)}
                   className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg cursor-pointer transition-all group"
                 >
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 border-b border-orange-200">
+                  <div className="bg-linear-to-br from-orange-50 to-orange-100 p-6 border-b border-orange-200">
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white text-orange-600 mb-3">
                       {course.category}
                     </span>
@@ -248,7 +248,7 @@ const Learn = () => {
                       </div>
                     </div>
 
-                    <button className="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group-hover:gap-3">
+                    <button className="w-full py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 group-hover:gap-3">
                       Start Learning
                       <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </button>

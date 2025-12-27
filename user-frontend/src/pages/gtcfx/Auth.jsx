@@ -200,7 +200,7 @@ const GTCFxAuth = () => {
             </div>
 
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
                 <TrendingUp className="w-10 h-10 text-white" />
               </div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -213,7 +213,7 @@ const GTCFxAuth = () => {
 
             <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border-2 border-green-200 mb-6">
               <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-gray-200">
-                <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-20 h-20 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
                   {gtcUser.avatar ? (
                     <img
                       src={gtcUser.avatar}
@@ -292,7 +292,7 @@ const GTCFxAuth = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Link
                   to="/gtcfx/dashboard"
-                  className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg group"
+                  className="flex items-center justify-center gap-2 w-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg group"
                 >
                   <span>Go to Dashboard</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -365,7 +365,7 @@ const GTCFxAuth = () => {
           </div>
 
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
               <TrendingUp className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -377,7 +377,7 @@ const GTCFxAuth = () => {
           </div>
 
           {uplinerReferralLink && (
-            <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl">
+            <div className="mb-6 p-5 bg-linear-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <UserPlus className="w-5 h-5 text-green-600" />
@@ -491,7 +491,7 @@ const GTCFxAuth = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <>

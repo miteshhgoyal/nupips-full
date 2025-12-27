@@ -375,7 +375,7 @@ const SystemConfiguration = () => {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center gap-2"
+                    className="px-6 py-2 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center gap-2"
                   >
                     {saving ? (
                       <Loader className="w-5 h-5 animate-spin" />
@@ -392,7 +392,7 @@ const SystemConfiguration = () => {
             {activeTab === "pamm" && (
               <div className="space-y-6">
                 {/* PAMM Enabled Toggle */}
-                <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                <div className="p-4 bg-linear-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
                   <div className="flex items-center justify-between">
                     <div>
                       <label className="block text-sm font-semibold text-gray-900 mb-1">
@@ -523,7 +523,7 @@ const SystemConfiguration = () => {
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* System Percentage */}
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+                  <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
                         <Percent className="w-6 h-6 text-white" />
@@ -556,7 +556,7 @@ const SystemConfiguration = () => {
                   </div>
 
                   {/* Trader Percentage */}
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                  <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                         <Users className="w-6 h-6 text-white" />
@@ -589,7 +589,7 @@ const SystemConfiguration = () => {
                   </div>
 
                   {/* Total Allocation */}
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                  <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
                     <p className="text-sm font-medium text-purple-900 mb-2">
                       Total Allocation
                     </p>

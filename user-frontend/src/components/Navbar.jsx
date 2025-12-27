@@ -103,7 +103,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                 </button>
 
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all duration-300 hover:shadow-orange-500/50 hover:shadow-xl hover:scale-105">
+                  <div className="w-10 h-10 bg-linear-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all duration-300 hover:shadow-orange-500/50 hover:shadow-xl hover:scale-105">
                     <UserCheck className="w-6 h-6 text-white transition-transform duration-300" />
                   </div>
                   <div className="hidden sm:block transition-all duration-300">
@@ -126,7 +126,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                 ) : !gtcAuthenticated ? (
                   <Link
                     to="/gtcfx/auth"
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border border-gray-300 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border border-gray-300 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 group"
                   >
                     <Lock className="w-4 h-4 text-gray-500 group-hover:text-gray-700 transition-colors" />
                     <span className="text-sm font-semibold text-gray-600 group-hover:text-gray-800 transition-colors">
@@ -134,7 +134,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                     </span>
                   </Link>
                 ) : isSubscribed ? (
-                  <div className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-sm">
+                  <div className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-sm">
                     <CheckCircle className="w-5 h-5 text-green-600" />
                     <span className="text-sm font-bold text-green-700">
                       PAMM Active
@@ -143,7 +143,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                 ) : (
                   <button
                     onClick={handleOpenSubscribeModal}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border border-green-400 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group relative overflow-hidden"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border border-green-400 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 group relative overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
                     <TrendingUp className="w-5 h-5 text-white group-hover:scale-110 transition-transform relative z-10" />
@@ -159,7 +159,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                 {/* Wallet Balance */}
                 <Link
                   to="/wallet"
-                  className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 px-3 md:px-4 py-2 rounded-xl border border-orange-200 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
+                  className="hidden sm:flex items-center gap-2 bg-linear-to-r from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 px-3 md:px-4 py-2 rounded-xl border border-orange-200 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer"
                 >
                   <Wallet className="w-4 h-4 text-orange-600 group-hover:scale-110 transition-transform" />
                   <p className="text-orange-600 font-semibold text-xs md:text-sm">
@@ -178,7 +178,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                     }
                     className="flex items-center space-x-2 text-gray-700 hover:text-orange-600 px-3 py-2 rounded-xl hover:bg-orange-50 transition-all duration-300 ease-out hover:shadow-md group border border-transparent hover:border-orange-200"
                   >
-                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all duration-300 group-hover:shadow-orange-500/50 group-hover:shadow-xl">
+                    <div className="w-8 h-8 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 transition-all duration-300 group-hover:shadow-orange-500/50 group-hover:shadow-xl">
                       {user.avatar ? (
                         <img
                           src={user.avatar}
@@ -206,7 +206,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                       <div className="relative">
                         <div className="px-5 py-4 border-b border-gray-100">
                           <div className="flex items-center space-x-3 mb-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
+                            <div className="w-10 h-10 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
                               {user.avatar ? (
                                 <img
                                   src={user.avatar}
@@ -312,7 +312,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
             <div className="relative">
               <div className="px-4 pt-4 pb-3 space-y-2">
                 {/* Subscribe Button - Mobile */}
-                <div className="px-2 py-3 mb-3 bg-gradient-to-br from-gray-50 to-white rounded-xl border border-gray-200">
+                <div className="px-2 py-3 mb-3 bg-linear-to-br from-gray-50 to-white rounded-xl border border-gray-200">
                   {gtcLoading ? (
                     <div className="flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 border border-gray-200 rounded-xl">
                       <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
@@ -323,7 +323,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                   ) : !gtcAuthenticated ? (
                     <Link
                       to="/gtcfx/auth"
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border border-gray-300 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-linear-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border border-gray-300 rounded-xl transition-all duration-300 shadow-sm hover:shadow-md"
                       onClick={() => setIsMobileMenuOpen(false)}
                     >
                       <Lock className="w-5 h-5 text-gray-600" />
@@ -332,7 +332,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                       </span>
                     </Link>
                   ) : isSubscribed ? (
-                    <div className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl">
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 bg-linear-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl">
                       <CheckCircle className="w-5 h-5 text-green-600" />
                       <span className="text-sm font-bold text-green-700">
                         PAMM Active
@@ -344,7 +344,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                         setShowSubscribeModal(true);
                         setIsMobileMenuOpen(false);
                       }}
-                      className="flex items-center justify-center gap-2 px-4 py-3.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border border-green-400 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 w-full group relative overflow-hidden"
+                      className="flex items-center justify-center gap-2 px-4 py-3.5 bg-linear-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 border border-green-400 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 w-full group relative overflow-hidden"
                     >
                       <div className="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
                       <TrendingUp className="w-5 h-5 text-white relative z-10" />
@@ -358,7 +358,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                 {/* User Info - Mobile */}
                 <div className="px-4 py-4 border-b border-gray-100 mb-3 bg-orange-50 rounded-xl">
                   <div className="flex items-center space-x-4 mb-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
+                    <div className="w-12 h-12 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
                       {user.avatar ? (
                         <img
                           src={user.avatar}
@@ -416,7 +416,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                       <Link
                         key={item.name}
                         to={item.href}
-                        className="text-gray-700 hover:bg-orange-50 hover:text-orange-600 block px-4 py-3 rounded-xl text-base font-medium transition-all duration-300 ease-out flex items-center space-x-4 group"
+                        className="text-gray-700 hover:bg-orange-50 hover:text-orange-600 px-4 py-3 rounded-xl text-base font-medium transition-all duration-300 ease-out flex items-center space-x-4 group"
                         onClick={() => setIsMobileMenuOpen(false)}
                       >
                         <Icon className="w-5 h-5 transition-all duration-300 group-hover:text-orange-600 group-hover:scale-110" />

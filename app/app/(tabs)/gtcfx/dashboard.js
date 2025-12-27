@@ -162,7 +162,7 @@ const GTCFxDashboard = () => {
                     <Text className="text-gray-400 mb-6">{error}</Text>
                     <TouchableOpacity
                         onPress={fetchDashboardData}
-                        className="px-6 py-3 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-xl font-medium"
+                        className="px-6 py-3 bg-linear-to-r from-orange-600 to-orange-500 text-white rounded-xl font-medium"
                     >
                         <Text>Try Again</Text>
                     </TouchableOpacity>

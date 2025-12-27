@@ -147,7 +147,7 @@ const GTCFxCommissionReport = () => {
               setCurrentPage(1);
               fetchCommissionReport();
             }}
-            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
+            className="px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
           >
             Try Again
           </button>
@@ -176,7 +176,7 @@ const GTCFxCommissionReport = () => {
           </div>
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
+            className="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
           >
             <Download className="w-5 h-5" />
             Export CSV
@@ -284,7 +284,7 @@ const GTCFxCommissionReport = () => {
             <div className="flex items-end">
               <button
                 onClick={handleApplyFilters}
-                className="w-full px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-xl transition-all shadow-md hover:shadow-lg"
+                className="w-full px-4 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-medium rounded-xl transition-all shadow-md hover:shadow-lg"
               >
                 Apply Filters
               </button>

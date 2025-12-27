@@ -98,7 +98,7 @@ const LessonView = () => {
           </h2>
           <button
             onClick={() => navigate(`/learn/course/${courseId}`)}
-            className="mt-4 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
+            className="mt-4 px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
           >
             Back to Course
           </button>
@@ -139,7 +139,7 @@ const LessonView = () => {
                   <div className="hidden sm:flex items-center gap-2">
                     <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all"
+                        className="h-full bg-linear-to-r from-orange-500 to-orange-600 rounded-full transition-all"
                         style={{ width: `${progressPercentage}%` }}
                       />
                     </div>
@@ -181,7 +181,7 @@ const LessonView = () => {
             <div className="border-b border-gray-200 bg-white">
               <div className="p-6">
                 <div className="flex items-center gap-3 mb-3 flex-wrap">
-                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md">
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-linear-to-r from-orange-500 to-orange-600 text-white shadow-md">
                     Lesson {currentLesson.order}
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-sm text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg">
@@ -210,7 +210,7 @@ const LessonView = () => {
                   </div>
                   <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all"
+                      className="h-full bg-linear-to-r from-orange-500 to-orange-600 rounded-full transition-all"
                       style={{ width: `${progressPercentage}%` }}
                     />
                   </div>
@@ -237,7 +237,7 @@ const LessonView = () => {
                   {nextLesson ? (
                     <button
                       onClick={() => goToLesson(nextLesson)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
                     >
                       Next Lesson
                       <ChevronRight className="w-5 h-5" />
@@ -245,7 +245,7 @@ const LessonView = () => {
                   ) : (
                     <button
                       onClick={() => navigate(`/learn/course/${courseId}`)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-linear-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold transition-all shadow-md hover:shadow-lg"
                     >
                       <Award className="w-5 h-5" />
                       Course Complete!
@@ -290,7 +290,7 @@ const LessonView = () => {
                     <div
                       className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
                         lesson._id === lessonId
-                          ? "bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-md"
+                          ? "bg-linear-to-br from-orange-500 to-orange-600 text-white shadow-md"
                           : "bg-gray-100 text-gray-600"
                       }`}
                     >

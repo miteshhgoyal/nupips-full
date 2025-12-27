@@ -359,7 +359,7 @@ const AdminWithdrawals = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                 <FileText className="w-5 h-5 text-white" />
@@ -371,7 +371,7 @@ const AdminWithdrawals = () => {
             <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
           </div>
 
-          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
+          <div className="bg-linear-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
                 <Clock className="w-5 h-5 text-white" />
@@ -383,7 +383,7 @@ const AdminWithdrawals = () => {
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+          <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-5 h-5 text-white" />
@@ -395,7 +395,7 @@ const AdminWithdrawals = () => {
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+          <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
                 <DollarSign className="w-5 h-5 text-white" />
@@ -663,7 +663,7 @@ const AdminWithdrawals = () => {
 
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
               {/* Amount */}
-              <div className="mb-6 text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+              <div className="mb-6 text-center p-4 bg-linear-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
                 <p className="text-xs text-gray-600 mb-1">Withdrawal Amount</p>
                 <p className="text-3xl font-bold text-red-600">
                   ${parseFloat(selectedWithdrawal.amount).toFixed(2)}
@@ -863,7 +863,7 @@ const AdminWithdrawals = () => {
             <div className="p-6 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md"
+                className="w-full py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md"
               >
                 Close
               </button>
@@ -983,7 +983,7 @@ const AdminWithdrawals = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <Loader className="w-5 h-5 animate-spin" />
@@ -1057,7 +1057,7 @@ const AdminWithdrawals = () => {
                   disabled={
                     loading || selectedWithdrawal.status === "completed"
                   }
-                  className="flex-1 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex-1 py-3 bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <Loader className="w-5 h-5 animate-spin" />

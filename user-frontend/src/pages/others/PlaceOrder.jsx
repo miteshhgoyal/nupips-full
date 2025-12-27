@@ -193,7 +193,7 @@ const PlaceOrder = () => {
 
       <div className="min-h-screen bg-white">
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-50 to-orange-100 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="bg-linear-to-r from-orange-50 to-orange-100 py-8 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <button
               onClick={() => navigate("/shop")}
@@ -259,7 +259,7 @@ const PlaceOrder = () => {
               <div className="lg:col-span-2 space-y-6">
                 {/* Order Item */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+                  <div className="p-4 bg-linear-to-r from-orange-50 to-orange-100 border-b border-orange-200">
                     <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                       <Package className="w-5 h-5 text-orange-600" />
                       Order Item
@@ -300,7 +300,7 @@ const PlaceOrder = () => {
 
                 {/* Delivery Address */}
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200 flex items-center justify-between">
+                  <div className="p-4 bg-linear-to-r from-orange-50 to-orange-100 border-b border-orange-200 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                       <MapPin className="w-5 h-5 text-orange-600" />
                       Delivery Address
@@ -500,7 +500,7 @@ const PlaceOrder = () => {
               {/* Right Column - Order Summary */}
               <div className="lg:col-span-1">
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden sticky top-24">
-                  <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+                  <div className="p-4 bg-linear-to-r from-orange-50 to-orange-100 border-b border-orange-200">
                     <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                       <DollarSign className="w-5 h-5 text-orange-600" />
                       Order Summary
@@ -537,7 +537,7 @@ const PlaceOrder = () => {
                     </div>
 
                     {/* Wallet Balance */}
-                    <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                    <div className="p-4 bg-linear-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                           <Wallet className="w-5 h-5 text-white" />

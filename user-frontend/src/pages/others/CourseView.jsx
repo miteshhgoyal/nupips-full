@@ -72,7 +72,7 @@ const CourseView = () => {
           </h2>
           <button
             onClick={() => navigate("/learn")}
-            className="mt-4 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
+            className="mt-4 px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
           >
             Back to Courses
           </button>
@@ -198,7 +198,7 @@ const CourseView = () => {
                     className="p-6 hover:bg-gray-50 cursor-pointer transition-all group"
                   >
                     <div className="flex items-start gap-5">
-                      <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 group-hover:from-orange-600 group-hover:to-orange-700 rounded-xl flex items-center justify-center flex-shrink-0 transition-all shadow-md group-hover:shadow-lg">
+                      <div className="w-14 h-14 bg-linear-to-br from-orange-500 to-orange-600 group-hover:from-orange-600 group-hover:to-orange-700 rounded-xl flex items-center justify-center flex-shrink-0 transition-all shadow-md group-hover:shadow-lg">
                         <span className="text-xl font-bold text-white">
                           {video.order}
                         </span>
@@ -221,7 +221,7 @@ const CourseView = () => {
                           </p>
                         )}
 
-                        <button className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl text-sm font-semibold transition-all shadow-md hover:shadow-lg">
+                        <button className="inline-flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl text-sm font-semibold transition-all shadow-md hover:shadow-lg">
                           <Play className="w-4 h-4" />
                           Start Lesson
                         </button>
@@ -235,7 +235,7 @@ const CourseView = () => {
 
         {/* CTA */}
         {course.videos.length > 0 && (
-          <div className="mt-8 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-8 text-center border border-orange-200">
+          <div className="mt-8 bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-8 text-center border border-orange-200">
             <h3 className="text-2xl font-bold text-gray-900 mb-3">
               Ready to Start Learning?
             </h3>
@@ -244,7 +244,7 @@ const CourseView = () => {
             </p>
             <button
               onClick={() => startLesson(course.videos[0])}
-              className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-bold text-lg transition-all shadow-md hover:shadow-lg inline-flex items-center gap-3"
+              className="px-8 py-4 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-bold text-lg transition-all shadow-md hover:shadow-lg inline-flex items-center gap-3"
             >
               <PlayCircle className="w-6 h-6" />
               Start First Lesson

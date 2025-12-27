@@ -256,7 +256,7 @@ const Sidebar = ({ isOpen, onToggle, navigationLinks, config }) => {
         {/* Toggle Button */}
         <button
           onClick={onToggle}
-          className={`absolute top-20 w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:shadow-xl transition-all duration-300 hover:scale-110 z-10 group ${
+          className={`absolute top-20 w-8 h-8 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:shadow-xl transition-all duration-300 hover:scale-110 z-10 group ${
             isMobile ? (isOpen ? "-right-3" : "right-4") : "-right-3"
           }`}
         >

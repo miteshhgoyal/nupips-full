@@ -120,7 +120,7 @@ const ProductItem = () => {
 
       <div className="min-h-screen bg-white">
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-50 to-orange-100 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="bg-linear-to-r from-orange-50 to-orange-100 py-8 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <button
               onClick={() => navigate("/shop")}

@@ -25,7 +25,7 @@ const GTCFxAuthRequired = () => {
         <div className="w-full max-w-md">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-md mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-orange-500 to-orange-600 rounded-2xl shadow-md mb-6">
               <TrendingUp className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -37,7 +37,7 @@ const GTCFxAuthRequired = () => {
           {/* User Info Card */}
           <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 mb-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-md">
+              <div className="w-16 h-16 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-md">
                 {gtcUser.avatar ? (
                   <img
                     src={gtcUser.avatar}
@@ -88,7 +88,7 @@ const GTCFxAuthRequired = () => {
             <div className="space-y-3">
               <Link
                 to="/gtcfx/dashboard"
-                className="block w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg text-center"
+                className="block w-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg text-center"
               >
                 Go to Dashboard
               </Link>
@@ -121,7 +121,7 @@ const GTCFxAuthRequired = () => {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-md mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-orange-500 to-orange-600 rounded-2xl shadow-md mb-6">
             <TrendingUp className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
@@ -174,7 +174,7 @@ const GTCFxAuthRequired = () => {
         <div className="space-y-3">
           <Link
             to="/gtcfx/auth"
-            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+            className="w-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-3 px-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
           >
             <LogIn className="w-5 h-5" />
             Login to GTC FX

@@ -283,7 +283,7 @@ const Products = () => {
 
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md flex items-center gap-2"
+              className="px-4 py-2 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
               Add Product
@@ -309,7 +309,7 @@ const Products = () => {
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+            <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                   <Package className="w-5 h-5 text-white" />
@@ -323,7 +323,7 @@ const Products = () => {
               </p>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+            <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
                   <Award className="w-5 h-5 text-white" />
@@ -337,7 +337,7 @@ const Products = () => {
               </p>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+            <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
                   <Tag className="w-5 h-5 text-white" />
@@ -351,7 +351,7 @@ const Products = () => {
               </p>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+            <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                   <DollarSign className="w-5 h-5 text-white" />
@@ -409,7 +409,7 @@ const Products = () => {
 
         {/* Products Table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+          <div className="p-4 bg-linear-to-r from-orange-50 to-orange-100 border-b border-orange-200">
             <h2 className="text-lg font-bold text-gray-900">
               Products ({products.length})
             </h2>
@@ -574,7 +574,7 @@ const Products = () => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             {/* Header */}
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-orange-50 to-orange-100">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-linear-to-r from-orange-50 to-orange-100">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">
                   {showAddModal ? "Add New Product" : "Edit Product"}
@@ -755,7 +755,7 @@ const Products = () => {
               <button
                 onClick={showAddModal ? handleAddProduct : handleEditProduct}
                 disabled={submitting}
-                className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <>

@@ -371,7 +371,7 @@ const Orders = () => {
 
         {/* Orders Table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-4 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+          <div className="p-4 bg-linear-to-r from-orange-50 to-orange-100 border-b border-orange-200">
             <h2 className="text-lg font-bold text-gray-900 flex items-center justify-between">
               <span>Orders ({orders.length})</span>
               <span className="text-sm font-medium text-gray-600">
@@ -437,7 +437,7 @@ const Orders = () => {
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
+                            <div className="w-8 h-8 bg-linear-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
                               <User className="w-4 h-4 text-white" />
                             </div>
                             <div className="min-w-0">
@@ -646,7 +646,7 @@ const StatCard = ({ title, value, icon: Icon, color }) => {
 
   return (
     <div
-      className={`bg-gradient-to-br ${colorClasses[color]} rounded-xl p-6 border`}
+      className={`bg-linear-to-br ${colorClasses[color]} rounded-xl p-6 border`}
     >
       <div className="flex items-center gap-3 mb-2">
         <div
@@ -676,7 +676,7 @@ const OrderDetailModal = ({
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200 p-6 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-linear-to-r from-orange-50 to-orange-100 border-b border-orange-200 p-6 flex items-center justify-between z-10">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Order Details</h2>
             <p className="text-sm text-gray-600 mt-1 font-mono">
@@ -892,7 +892,7 @@ const OrderDetailModal = ({
             )}
 
             {/* Payment Summary */}
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+            <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-orange-600" />
                 Payment Summary
@@ -1021,7 +1021,7 @@ const UpdateStatusModal = ({
             <button
               onClick={onUpdate}
               disabled={submitting || newStatus === order.status}
-              className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {submitting ? (
                 <>
