@@ -89,8 +89,8 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleOtpChange = (index, value) => {
-    // Allow only alphanumeric characters
-    const sanitizedValue = value.replace(/[^a-zA-Z0-9]/g, "");
+    // Allow only numeric characters (0-9)
+    const sanitizedValue = value.replace(/[^0-9]/g, "");
 
     // Take only the last character if multiple characters are entered
     const newValue = sanitizedValue.slice(-1);
@@ -145,7 +145,8 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
     const newOtp = [...formData.fund_password];
 
     for (let i = 0; i < pastedData.length && i < 6; i++) {
-      if (/[a-zA-Z0-9]/.test(pastedData[i])) {
+      // Only allow digits 0-9
+      if (/[0-9]/.test(pastedData[i])) {
         newOtp[i] = pastedData[i];
       }
     }
@@ -179,7 +180,7 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
 
     const fundPassword = formData.fund_password.join("");
     if (!fundPassword || fundPassword.length < 6) {
-      errors.fund_password = "Fund password must be 6 characters";
+      errors.fund_password = "Fund password must be 6 digits";
     }
 
     setFormErrors(errors);
@@ -470,7 +471,7 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
                         key={index}
                         ref={(el) => (inputRefs.current[index] = el)}
                         type="text"
-                        inputMode="text"
+                        inputMode="numeric"
                         maxLength={1}
                         value={digit}
                         onChange={(e) => handleOtpChange(index, e.target.value)}
@@ -494,8 +495,7 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
                   )}
                   <p className="mt-2 text-xs text-gray-500 flex items-center justify-center gap-1">
                     <Info className="w-3 h-3" />
-                    Enter your 6-character GTC FX fund password (letters &
-                    numbers)
+                    Enter your 6-digit GTC FX fund password (numbers only)
                   </p>
                 </div>
 
