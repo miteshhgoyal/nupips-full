@@ -731,4 +731,34 @@ router.get('/member/:gtcUserId/hierarchy', async (req, res) => {
     }
 });
 
+// GET /api/gtcfx/upliner-referral-link
+router.get('/upliner-referral-link', authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        const currentUser = await User.findById(userId)
+            .select('referralDetails.referredBy');
+
+        if (!currentUser?.referralDetails?.referredBy) {
+            return res.json({ success: true, referralLink: null });
+        }
+
+        const upliner = await User.findById(currentUser.referralDetails.referredBy)
+            .select('gtcfx.referralLink');
+
+        if (!upliner?.gtcfx?.referralLink) {
+            return res.json({ success: true, referralLink: null });
+        }
+
+        res.json({
+            success: true,
+            referralLink: upliner.gtcfx.referralLink
+        });
+
+    } catch (error) {
+        console.error('Error fetching upliner referral link:', error);
+        res.json({ success: true, referralLink: null });
+    }
+});
+
 export default router;

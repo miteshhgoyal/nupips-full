@@ -1,5 +1,5 @@
 // App.jsx
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -264,32 +264,48 @@ const LayoutWrapper = ({ children, competitionEnabled }) => {
   );
 };
 
-// Main App Component
-function App() {
-  const [competitionEnabled, setCompetitionEnabled] = useState(false);
+// Competition Status Checker - Only runs when authenticated
+const CompetitionStatusChecker = ({ onStatusChange }) => {
+  const { user } = useAuth();
+  const hasFetched = useRef(false);
 
-  // Fetch competition config to check if enabled
   useEffect(() => {
-    const checkCompetitionStatus = async () => {
+    // Only fetch if user is authenticated and hasn't fetched yet
+    if (!user || hasFetched.current) {
+      return;
+    }
+
+    hasFetched.current = true;
+
+    const checkStatus = async () => {
       try {
-        const response = await api.get(`/competition/status`);
-        const data = await response.data;
-        if (data.status) {
-          setCompetitionEnabled(data.status);
+        const response = await api.get("/competition/status");
+        if (response?.data?.status !== undefined) {
+          onStatusChange(response.data.status);
         }
       } catch (error) {
-        console.error("Failed to check competition status:", error);
-        setCompetitionEnabled(false);
+        console.log("Competition check failed - defaulting to disabled");
+        onStatusChange(false);
       }
     };
 
-    checkCompetitionStatus();
-  }, []);
+    checkStatus();
+  }, [user, onStatusChange]);
+
+  return null;
+};
+
+// Main App Component
+function App() {
+  const [competitionEnabled, setCompetitionEnabled] = useState(false);
 
   return (
     <Router>
       <AuthProvider>
         <GTCFxAuthProvider>
+          {/* Only check competition status after auth is ready */}
+          <CompetitionStatusChecker onStatusChange={setCompetitionEnabled} />
+
           <LayoutWrapper competitionEnabled={competitionEnabled}>
             <Routes>
               {/* Public routes - no authentication required */}

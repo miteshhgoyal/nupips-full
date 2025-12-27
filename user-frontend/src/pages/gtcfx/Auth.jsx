@@ -1,5 +1,5 @@
 // pages/gtcfx/Auth.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   User,
   Lock,
@@ -14,6 +14,8 @@ import {
   Calendar,
   Shield,
   ArrowLeft,
+  ExternalLink,
+  UserPlus,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useGTCFxAuth } from "../../contexts/GTCFxAuthContext";
@@ -31,7 +33,6 @@ const GTCFxAuth = () => {
   } = useGTCFxAuth();
   const navigate = useNavigate();
 
-  // Login form state
   const [formData, setFormData] = useState({
     account: "",
     password: "",
@@ -40,6 +41,26 @@ const GTCFxAuth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitError, setSubmitError] = useState("");
+  const [uplinerReferralLink, setUplinerReferralLink] = useState(null);
+
+  // Fetch upliner's referral link - silently handle all errors
+  useEffect(() => {
+    const fetchUplinerReferralLink = async () => {
+      try {
+        const response = await api.get("/gtcfx/upliner-referral-link");
+        if (response.data?.success && response.data?.referralLink) {
+          setUplinerReferralLink(response.data.referralLink);
+        }
+      } catch (error) {
+        // Silently ignore - no error shown to user
+        console.log("Upliner referral link not available");
+      }
+    };
+
+    if (!gtcAuthenticated) {
+      fetchUplinerReferralLink();
+    }
+  }, [gtcAuthenticated]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -96,7 +117,6 @@ const GTCFxAuth = () => {
 
         if (loginSuccess) {
           setFormData({ account: "", password: "" });
-          // Redirect to dashboard after successful login
           navigate("/gtcfx/dashboard");
         } else {
           setSubmitError("Failed to complete login. Please try again.");
@@ -127,10 +147,14 @@ const GTCFxAuth = () => {
   const handleLogout = async () => {
     await gtcLogout();
     setFormData({ account: "", password: "" });
-    // Stay on this page after logout
   };
 
-  // Loading state
+  const handleOpenReferralLink = () => {
+    if (uplinerReferralLink) {
+      window.open(uplinerReferralLink, "_blank", "noopener,noreferrer");
+    }
+  };
+
   if (gtcLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -142,12 +166,10 @@ const GTCFxAuth = () => {
     );
   }
 
-  // Authenticated state - Show account info and logout
   if (gtcAuthenticated && gtcUser) {
     return (
       <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
-          {/* Back Button */}
           <div className="mb-6">
             <Link
               to="/gtcfx/brokers"
@@ -160,7 +182,6 @@ const GTCFxAuth = () => {
             </Link>
           </div>
 
-          {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
               <TrendingUp className="w-10 h-10 text-white" />
@@ -173,9 +194,7 @@ const GTCFxAuth = () => {
             </p>
           </div>
 
-          {/* User Info Card */}
           <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border-2 border-green-200 mb-6">
-            {/* Profile Section */}
             <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-gray-200">
               <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
                 {gtcUser.avatar ? (
@@ -212,7 +231,6 @@ const GTCFxAuth = () => {
               </div>
             </div>
 
-            {/* Account Details Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
                 <div className="flex items-center gap-3 mb-2">
@@ -254,7 +272,6 @@ const GTCFxAuth = () => {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Link
                 to="/gtcfx/dashboard"
@@ -274,7 +291,6 @@ const GTCFxAuth = () => {
             </div>
           </div>
 
-          {/* Quick Access Links */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Link
               to="/gtcfx/dashboard"
@@ -308,11 +324,9 @@ const GTCFxAuth = () => {
     );
   }
 
-  // Not authenticated - Show login form
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Back Button */}
         <div className="mb-6">
           <Link
             to="/gtcfx/brokers"
@@ -325,7 +339,6 @@ const GTCFxAuth = () => {
           </Link>
         </div>
 
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
             <TrendingUp className="w-10 h-10 text-white" />
@@ -338,9 +351,34 @@ const GTCFxAuth = () => {
           </p>
         </div>
 
-        {/* Login Form Card */}
+        {/* Only show if referral link exists */}
+        {uplinerReferralLink && (
+          <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <UserPlus className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 mb-1">
+                  Don't have a GTC FX account?
+                </h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Create your account instantly using your upliner's referral
+                  link
+                </p>
+                <button
+                  onClick={handleOpenReferralLink}
+                  className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md hover:shadow-lg group"
+                >
+                  <span>Create GTC FX Account</span>
+                  <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
-          {/* Error Messages */}
           {submitError && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -356,7 +394,6 @@ const GTCFxAuth = () => {
           )}
 
           <form onSubmit={handleLogin} className="space-y-5">
-            {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
@@ -386,7 +423,6 @@ const GTCFxAuth = () => {
               )}
             </div>
 
-            {/* Password Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
@@ -428,7 +464,6 @@ const GTCFxAuth = () => {
               )}
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -449,7 +484,6 @@ const GTCFxAuth = () => {
           </form>
         </div>
 
-        {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-gray-500 text-sm">
             Need help?{" "}
