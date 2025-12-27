@@ -1,5 +1,5 @@
 // components/SubscribePammModal.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   TrendingUp,
@@ -26,16 +26,19 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
   const [pammUuid, setPammUuid] = useState(null);
   const [formData, setFormData] = useState({
     amount: "",
-    fund_password: "",
+    fund_password: ["", "", "", "", "", ""],
   });
   const [formErrors, setFormErrors] = useState({});
+
+  // Create refs for each OTP input box
+  const inputRefs = useRef([]);
 
   useEffect(() => {
     if (isOpen) {
       fetchPammDetails();
       document.body.style.overflow = "hidden";
     } else {
-      setFormData({ amount: "", fund_password: "" });
+      setFormData({ amount: "", fund_password: ["", "", "", "", "", ""] });
       setFormErrors({});
       setError("");
       document.body.style.overflow = "unset";
@@ -85,6 +88,82 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
     }
   };
 
+  const handleOtpChange = (index, value) => {
+    // Allow only alphanumeric characters
+    const sanitizedValue = value.replace(/[^a-zA-Z0-9]/g, "");
+
+    // Take only the last character if multiple characters are entered
+    const newValue = sanitizedValue.slice(-1);
+
+    const newOtp = [...formData.fund_password];
+    newOtp[index] = newValue;
+
+    setFormData((prev) => ({
+      ...prev,
+      fund_password: newOtp,
+    }));
+
+    // Clear error when user starts typing
+    if (formErrors.fund_password) {
+      setFormErrors((prev) => ({ ...prev, fund_password: "" }));
+    }
+    if (error) setError("");
+
+    // Auto-focus next input if value is entered
+    if (newValue && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    // Handle backspace
+    if (e.key === "Backspace") {
+      if (!formData.fund_password[index] && index > 0) {
+        // If current box is empty, focus previous and clear it
+        const newOtp = [...formData.fund_password];
+        newOtp[index - 1] = "";
+        setFormData((prev) => ({
+          ...prev,
+          fund_password: newOtp,
+        }));
+        inputRefs.current[index - 1]?.focus();
+      }
+    }
+    // Handle left arrow
+    else if (e.key === "ArrowLeft" && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+    // Handle right arrow
+    else if (e.key === "ArrowRight" && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").slice(0, 6);
+    const newOtp = [...formData.fund_password];
+
+    for (let i = 0; i < pastedData.length && i < 6; i++) {
+      if (/[a-zA-Z0-9]/.test(pastedData[i])) {
+        newOtp[i] = pastedData[i];
+      }
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      fund_password: newOtp,
+    }));
+
+    // Focus the next empty box or the last box
+    const nextEmptyIndex = newOtp.findIndex((val) => !val);
+    if (nextEmptyIndex !== -1) {
+      inputRefs.current[nextEmptyIndex]?.focus();
+    } else {
+      inputRefs.current[5]?.focus();
+    }
+  };
+
   const validateForm = () => {
     const errors = {};
     const amount = parseFloat(formData.amount);
@@ -98,8 +177,9 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
       }`;
     }
 
-    if (!formData.fund_password || formData.fund_password.length < 6) {
-      errors.fund_password = "Fund password must be at least 6 characters";
+    const fundPassword = formData.fund_password.join("");
+    if (!fundPassword || fundPassword.length < 6) {
+      errors.fund_password = "Fund password must be 6 characters";
     }
 
     setFormErrors(errors);
@@ -115,10 +195,11 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
     setError("");
 
     try {
+      const fundPassword = formData.fund_password.join("");
       const response = await gtcfxApi.post("/subscribe_pamm", {
         uuid: pammUuid,
         amount: parseFloat(formData.amount),
-        fund_password: formData.fund_password,
+        fund_password: fundPassword,
       });
 
       if (response.data.code === 200) {
@@ -378,38 +459,43 @@ const SubscribePammModal = ({ isOpen, onClose, onSuccess }) => {
                   </p>
                 </div>
 
-                {/* Fund Password Input */}
+                {/* Fund Password OTP Input */}
                 <div>
                   <label className="block text-sm font-bold text-gray-900 mb-2">
                     Fund Password
                   </label>
-                  <div className="relative group">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center group-focus-within:bg-purple-200 transition-colors">
-                      <Lock className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <input
-                      type="password"
-                      name="fund_password"
-                      value={formData.fund_password}
-                      onChange={handleInputChange}
-                      placeholder="Enter your GTC FX fund password"
-                      className={`w-full pl-16 pr-4 py-4 border-2 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all text-lg ${
-                        formErrors.fund_password
-                          ? "border-red-300 bg-red-50"
-                          : "border-gray-200 bg-gray-50 hover:border-gray-300"
-                      }`}
-                      disabled={submitting}
-                    />
+                  <div className="flex items-center justify-center gap-2 md:gap-3">
+                    {formData.fund_password.map((digit, index) => (
+                      <input
+                        key={index}
+                        ref={(el) => (inputRefs.current[index] = el)}
+                        type="text"
+                        inputMode="text"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(index, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                        onPaste={handleOtpPaste}
+                        className={`w-12 h-14 md:w-14 md:h-16 text-center text-2xl font-bold border-2 rounded-xl focus:ring-4 focus:ring-orange-200 focus:border-orange-500 transition-all ${
+                          formErrors.fund_password
+                            ? "border-red-300 bg-red-50"
+                            : "border-gray-300 bg-gray-50 hover:border-gray-400"
+                        } ${digit ? "border-purple-500 bg-purple-50" : ""}`}
+                        disabled={submitting}
+                        autoComplete="off"
+                      />
+                    ))}
                   </div>
                   {formErrors.fund_password && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center gap-2 font-medium">
+                    <p className="mt-2 text-sm text-red-600 flex items-center justify-center gap-2 font-medium">
                       <AlertCircle className="w-4 h-4" />
                       {formErrors.fund_password}
                     </p>
                   )}
-                  <p className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                  <p className="mt-2 text-xs text-gray-500 flex items-center justify-center gap-1">
                     <Info className="w-3 h-3" />
-                    Your secure GTC FX fund password (6+ characters)
+                    Enter your 6-character GTC FX fund password (letters &
+                    numbers)
                   </p>
                 </div>
 
