@@ -144,7 +144,7 @@ const GTCMembers = () => {
     setError(null);
 
     try {
-      const response = await api.post("/admin/gtc-members/sync", {
+      const response = await api.post("/gtcfx/sync-member-tree", {
         token: syncToken,
       });
 
