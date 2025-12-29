@@ -14,9 +14,9 @@ import mongoose from 'mongoose';
 const router = express.Router();
 
 // ==================== DASHBOARD ROUTE ====================
+
 router.get('/dashboard', authenticateToken, async (req, res) => {
     try {
-        // Parallel aggregation queries for better performance
         const [
             userStats,
             depositStats,
@@ -28,26 +28,17 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
             recentActivity,
             systemConfig
         ] = await Promise.all([
-            // User Statistics
             User.aggregate([
                 {
                     $facet: {
                         totalUsers: [{ $count: 'count' }],
-                        usersByType: [
-                            { $group: { _id: '$userType', count: { $sum: 1 } } }
-                        ],
-                        usersByStatus: [
-                            { $group: { _id: '$status', count: { $sum: 1 } } }
-                        ],
-                        totalWalletBalance: [
-                            { $group: { _id: null, total: { $sum: '$walletBalance' } } }
-                        ],
+                        usersByType: [{ $group: { _id: '$userType', count: { $sum: 1 } } }],
+                        usersByStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
+                        totalWalletBalance: [{ $group: { _id: null, total: { $sum: '$walletBalance' } } }],
                         newUsersToday: [
                             {
                                 $match: {
-                                    createdAt: {
-                                        $gte: new Date(new Date().setHours(0, 0, 0, 0))
-                                    }
+                                    createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
                                 }
                             },
                             { $count: 'count' }
@@ -55,9 +46,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                         newUsersThisMonth: [
                             {
                                 $match: {
-                                    createdAt: {
-                                        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-                                    }
+                                    createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
                                 }
                             },
                             { $count: 'count' }
@@ -66,7 +55,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 }
             ]),
 
-            // Deposit Statistics
             Deposit.aggregate([
                 {
                     $facet: {
@@ -95,9 +83,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                             {
                                 $match: {
                                     status: 'completed',
-                                    completedAt: {
-                                        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-                                    }
+                                    completedAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
                                 }
                             },
                             { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
@@ -106,9 +92,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                             {
                                 $match: {
                                     status: 'completed',
-                                    completedAt: {
-                                        $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                                    }
+                                    completedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
                                 }
                             },
                             {
@@ -124,7 +108,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 }
             ]),
 
-            // Withdrawal Statistics
             Withdrawal.aggregate([
                 {
                     $facet: {
@@ -153,9 +136,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                             {
                                 $match: {
                                     status: 'completed',
-                                    completedAt: {
-                                        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-                                    }
+                                    completedAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
                                 }
                             },
                             { $group: { _id: null, total: { $sum: '$netAmount' }, count: { $sum: 1 } } }
@@ -164,9 +145,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                             {
                                 $match: {
                                     status: 'completed',
-                                    completedAt: {
-                                        $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                                    }
+                                    completedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
                                 }
                             },
                             {
@@ -182,16 +161,11 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 }
             ]),
 
-            // Order Statistics
             Order.aggregate([
                 {
                     $facet: {
-                        totalOrders: [
-                            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
-                        ],
-                        ordersByStatus: [
-                            { $group: { _id: '$status', total: { $sum: '$amount' }, count: { $sum: 1 } } }
-                        ],
+                        totalOrders: [{ $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }],
+                        ordersByStatus: [{ $group: { _id: '$status', total: { $sum: '$amount' }, count: { $sum: 1 } } }],
                         ordersToday: [
                             {
                                 $match: {
@@ -203,9 +177,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                         ordersThisMonth: [
                             {
                                 $match: {
-                                    createdAt: {
-                                        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-                                    }
+                                    createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
                                 }
                             },
                             { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
@@ -213,9 +185,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                         last7DaysOrders: [
                             {
                                 $match: {
-                                    createdAt: {
-                                        $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                                    }
+                                    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
                                 }
                             },
                             {
@@ -231,46 +201,28 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 }
             ]),
 
-            // Product Statistics
             Product.aggregate([
                 {
                     $facet: {
                         totalProducts: [{ $count: 'count' }],
-                        productsByCategory: [
-                            { $group: { _id: '$category', count: { $sum: 1 } } }
-                        ],
-                        bestsellers: [
-                            { $match: { bestseller: true } },
-                            { $count: 'count' }
-                        ],
-                        averagePrice: [
-                            { $group: { _id: null, avg: { $avg: '$price' } } }
-                        ]
+                        productsByCategory: [{ $group: { _id: '$category', count: { $sum: 1 } } }],
+                        bestsellers: [{ $match: { bestseller: true } }, { $count: 'count' }],
+                        averagePrice: [{ $group: { _id: null, avg: { $avg: '$price' } } }]
                     }
                 }
             ]),
 
-            // Course Statistics
             Course.aggregate([
                 {
                     $facet: {
                         totalCourses: [{ $count: 'count' }],
-                        publishedCourses: [
-                            { $match: { isPublished: true } },
-                            { $count: 'count' }
-                        ],
-                        totalVideos: [
-                            { $unwind: '$videos' },
-                            { $count: 'count' }
-                        ],
-                        coursesByCategory: [
-                            { $group: { _id: '$category', count: { $sum: 1 } } }
-                        ]
+                        publishedCourses: [{ $match: { isPublished: true } }, { $count: 'count' }],
+                        totalVideos: [{ $unwind: '$videos' }, { $count: 'count' }],
+                        coursesByCategory: [{ $group: { _id: '$category', count: { $sum: 1 } } }]
                     }
                 }
             ]),
 
-            // Income/Expense Statistics
             IncomeExpense.aggregate([
                 {
                     $facet: {
@@ -324,7 +276,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 }
             ]),
 
-            // Recent Activity (last 10 actions)
             Promise.all([
                 Deposit.find({ status: { $in: ['pending', 'processing'] } })
                     .sort({ createdAt: -1 })
@@ -343,45 +294,33 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                     .populate('userId', 'name email')
             ]),
 
-            // System Configuration
             SystemConfig.getOrCreateConfig()
         ]);
 
-        // Format response
         const dashboardData = {
             success: true,
             timestamp: new Date(),
-
-            // Overview KPIs
             overview: {
                 totalUsers: userStats[0].totalUsers[0]?.count || 0,
                 totalWalletBalance: userStats[0].totalWalletBalance[0]?.total || 0,
                 newUsersToday: userStats[0].newUsersToday[0]?.count || 0,
                 newUsersThisMonth: userStats[0].newUsersThisMonth[0]?.count || 0,
-
                 totalDeposits: depositStats[0].totalDeposits[0]?.total || 0,
                 totalDepositCount: depositStats[0].totalDeposits[0]?.count || 0,
                 pendingDeposits: depositStats[0].pendingDeposits[0]?.total || 0,
                 pendingDepositCount: depositStats[0].pendingDeposits[0]?.count || 0,
-
                 totalWithdrawals: withdrawalStats[0].totalWithdrawals[0]?.total || 0,
                 totalWithdrawalCount: withdrawalStats[0].totalWithdrawals[0]?.count || 0,
                 pendingWithdrawals: withdrawalStats[0].pendingWithdrawals[0]?.total || 0,
                 pendingWithdrawalCount: withdrawalStats[0].pendingWithdrawals[0]?.count || 0,
-
                 totalOrders: orderStats[0].totalOrders[0]?.total || 0,
                 totalOrderCount: orderStats[0].totalOrders[0]?.count || 0,
-
                 netRevenue: (depositStats[0].totalDeposits[0]?.total || 0) - (withdrawalStats[0].totalWithdrawals[0]?.total || 0)
             },
-
-            // User Breakdown
             users: {
                 byType: userStats[0].usersByType,
                 byStatus: userStats[0].usersByStatus
             },
-
-            // Financial Metrics
             financial: {
                 deposits: {
                     today: depositStats[0].depositsToday[0] || { total: 0, count: 0 },
@@ -396,8 +335,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                     last7Days: withdrawalStats[0].last7DaysWithdrawals
                 }
             },
-
-            // E-commerce Metrics
             ecommerce: {
                 orders: {
                     today: orderStats[0].ordersToday[0] || { total: 0, count: 0 },
@@ -412,16 +349,12 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                     averagePrice: productStats[0].averagePrice[0]?.avg || 0
                 }
             },
-
-            // Course Metrics
             courses: {
                 total: courseStats[0].totalCourses[0]?.count || 0,
                 published: courseStats[0].publishedCourses[0]?.count || 0,
                 totalVideos: courseStats[0].totalVideos[0]?.count || 0,
                 byCategory: courseStats[0].coursesByCategory
             },
-
-            // Income/Expense Tracking
             incomeExpense: {
                 totalIncome: incomeExpenseStats[0].totalIncome[0]?.total || 0,
                 totalExpense: incomeExpenseStats[0].totalExpense[0]?.total || 0,
@@ -433,15 +366,11 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                     expense: incomeExpenseStats[0].last30DaysExpense
                 }
             },
-
-            // Recent Activity
             recentActivity: {
                 pendingDeposits: recentActivity[0],
                 pendingWithdrawals: recentActivity[1],
                 recentOrders: recentActivity[2]
             },
-
-            // System Config
             systemConfig: {
                 systemPercentage: systemConfig.systemPercentage,
                 traderPercentage: systemConfig.traderPercentage,
@@ -450,7 +379,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         };
 
         res.status(200).json(dashboardData);
-
     } catch (error) {
         console.error('Dashboard error:', error);
         res.status(500).json({
@@ -461,20 +389,16 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
     }
 });
 
-
 // ==================== DEPOSIT ROUTES ====================
 
-// 1. Get all deposits with basic filtering
 router.get('/deposits', authenticateToken, async (req, res) => {
     try {
         const { status, userId, page = 1, limit = 20 } = req.query;
 
-        // Build simple filter
         const filter = {};
         if (status) filter.status = status;
         if (userId) filter.userId = userId;
 
-        // Pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const [deposits, total] = await Promise.all([
@@ -507,7 +431,6 @@ router.get('/deposits', authenticateToken, async (req, res) => {
     }
 });
 
-// 2. Get single deposit
 router.get('/deposits/:id', authenticateToken, async (req, res) => {
     try {
         const deposit = await Deposit.findById(req.params.id)
@@ -535,7 +458,6 @@ router.get('/deposits/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// 3. Update deposit
 router.patch('/deposits/:id', authenticateToken, async (req, res) => {
     try {
         const { status, adminNotes } = req.body;
@@ -551,17 +473,14 @@ router.patch('/deposits/:id', authenticateToken, async (req, res) => {
 
         const previousStatus = deposit.status;
 
-        // Update fields
         if (status) deposit.status = status;
         if (adminNotes) deposit.adminNotes = adminNotes;
 
-        // Set processedBy if completing or processing
         if (status && ['completed', 'processing'].includes(status)) {
             deposit.processedBy = req.user.userId;
             deposit.processedAt = new Date();
         }
 
-        // If admin marks as completed, add money to user wallet
         if (status === 'completed' && previousStatus !== 'completed') {
             const user = await User.findById(deposit.userId);
 
@@ -572,10 +491,7 @@ router.patch('/deposits/:id', authenticateToken, async (req, res) => {
                 });
             }
 
-            // Add deposit amount to wallet
             user.walletBalance += deposit.amount;
-
-            // Record transaction in user's financials
             user.financials.totalDeposits += deposit.amount;
             user.financials.depositHistory.push({
                 amount: deposit.amount,
@@ -607,7 +523,6 @@ router.patch('/deposits/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// 4. Delete deposit
 router.delete('/deposits/:id', authenticateToken, async (req, res) => {
     try {
         const deposit = await Deposit.findById(req.params.id);
@@ -619,7 +534,6 @@ router.delete('/deposits/:id', authenticateToken, async (req, res) => {
             });
         }
 
-        // Prevent deletion of completed deposits
         if (deposit.status === 'completed') {
             return res.status(403).json({
                 success: false,
@@ -643,20 +557,16 @@ router.delete('/deposits/:id', authenticateToken, async (req, res) => {
     }
 });
 
-
 // ==================== WITHDRAWAL ROUTES ====================
 
-// 1. Get all withdrawals with basic filtering
 router.get('/withdrawals', authenticateToken, async (req, res) => {
     try {
         const { status, userId, page = 1, limit = 20 } = req.query;
 
-        // Build simple filter
         const filter = {};
         if (status) filter.status = status;
         if (userId) filter.userId = userId;
 
-        // Pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const [withdrawals, total] = await Promise.all([
@@ -689,7 +599,6 @@ router.get('/withdrawals', authenticateToken, async (req, res) => {
     }
 });
 
-// 2. Get single withdrawal
 router.get('/withdrawals/:id', authenticateToken, async (req, res) => {
     try {
         const withdrawal = await Withdrawal.findById(req.params.id)
@@ -717,7 +626,6 @@ router.get('/withdrawals/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// 3. Update withdrawal
 router.patch('/withdrawals/:id', authenticateToken, async (req, res) => {
     try {
         const { status, adminNotes, rejectionReason } = req.body;
@@ -731,12 +639,10 @@ router.patch('/withdrawals/:id', authenticateToken, async (req, res) => {
             });
         }
 
-        // Update fields
         if (status) withdrawal.status = status;
         if (adminNotes) withdrawal.adminNotes = adminNotes;
         if (rejectionReason) withdrawal.rejectionReason = rejectionReason;
 
-        // Set processedBy
         if (status && ['completed', 'processing', 'rejected'].includes(status)) {
             withdrawal.processedBy = req.user.userId;
             withdrawal.processedAt = new Date();
@@ -759,7 +665,6 @@ router.patch('/withdrawals/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// 4. Delete withdrawal
 router.delete('/withdrawals/:id', authenticateToken, async (req, res) => {
     try {
         const withdrawal = await Withdrawal.findById(req.params.id);
@@ -771,7 +676,6 @@ router.delete('/withdrawals/:id', authenticateToken, async (req, res) => {
             });
         }
 
-        // Prevent deletion of completed withdrawals
         if (withdrawal.status === 'completed') {
             return res.status(403).json({
                 success: false,
@@ -779,7 +683,6 @@ router.delete('/withdrawals/:id', authenticateToken, async (req, res) => {
             });
         }
 
-        // Refund to wallet if it was processing
         if (withdrawal.status === 'processing') {
             const user = await User.findById(withdrawal.userId);
             if (user) {
@@ -806,17 +709,14 @@ router.delete('/withdrawals/:id', authenticateToken, async (req, res) => {
 
 // ==================== USER ROUTES ====================
 
-// 1. Get all users with filtering
 router.get('/users', authenticateToken, async (req, res) => {
     try {
         const { status, userType, search, page = 1, limit = 20 } = req.query;
 
-        // Build filter
         const filter = { email: { $ne: process.env.ADMIN_EMAIL } };
         if (status) filter.status = status;
         if (userType) filter.userType = userType;
 
-        // Search filter
         if (search) {
             filter.$or = [
                 { name: { $regex: search, $options: 'i' } },
@@ -825,7 +725,6 @@ router.get('/users', authenticateToken, async (req, res) => {
             ];
         }
 
-        // Pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const [users, total, stats] = await Promise.all([
@@ -840,31 +739,16 @@ router.get('/users', authenticateToken, async (req, res) => {
                 {
                     $facet: {
                         totalUsers: [{ $count: 'count' }],
-                        activeUsers: [
-                            { $match: { status: 'active' } },
-                            { $count: 'count' }
-                        ],
-                        inactiveUsers: [
-                            { $match: { status: 'inactive' } },
-                            { $count: 'count' }
-                        ],
-                        agentUsers: [
-                            { $match: { userType: 'agent' } },
-                            { $count: 'count' }
-                        ],
-                        traderUsers: [
-                            { $match: { userType: 'trader' } },
-                            { $count: 'count' }
-                        ],
-                        totalWalletBalance: [
-                            { $group: { _id: null, total: { $sum: '$walletBalance' } } }
-                        ]
+                        activeUsers: [{ $match: { status: 'active' } }, { $count: 'count' }],
+                        inactiveUsers: [{ $match: { status: 'inactive' } }, { $count: 'count' }],
+                        agentUsers: [{ $match: { userType: 'agent' } }, { $count: 'count' }],
+                        traderUsers: [{ $match: { userType: 'trader' } }, { $count: 'count' }],
+                        totalWalletBalance: [{ $group: { _id: null, total: { $sum: '$walletBalance' } } }]
                     }
                 }
             ])
         ]);
 
-        // Format stats
         const formattedStats = {
             total: stats[0].totalUsers[0]?.count || 0,
             active: stats[0].activeUsers[0]?.count || 0,
@@ -895,7 +779,6 @@ router.get('/users', authenticateToken, async (req, res) => {
     }
 });
 
-// 2. Get single user with full details
 router.get('/users/:id', authenticateToken, async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
@@ -924,7 +807,6 @@ router.get('/users/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// 3. Update user (admin can only update basic details)
 router.patch('/users/:id', authenticateToken, async (req, res) => {
     try {
         const { name, email, phone, status, userType } = req.body;
@@ -938,7 +820,6 @@ router.patch('/users/:id', authenticateToken, async (req, res) => {
             });
         }
 
-        // Update only allowed fields
         if (name) user.name = name;
         if (email) user.email = email;
         if (phone) user.phone = phone;
@@ -962,7 +843,6 @@ router.patch('/users/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// 4. Get user's team tree
 router.get('/users/:id/tree', authenticateToken, async (req, res) => {
     try {
         const rootUser = await User.findById(req.params.id)
@@ -976,7 +856,6 @@ router.get('/users/:id/tree', authenticateToken, async (req, res) => {
             });
         }
 
-        // Recursive function to build tree
         async function buildTree(userId, level = 1, maxLevel = 10) {
             if (level > maxLevel) return [];
 
@@ -1018,16 +897,10 @@ router.get('/users/:id/tree', authenticateToken, async (req, res) => {
 
 // ==================== GTC MEMBERS ROUTES ====================
 
-// 1. Get all GTC members with filtering
 router.get('/gtc-members', authenticateToken, async (req, res) => {
     try {
-        console.log('='.repeat(80));
-        console.log('[GTC MEMBERS] Fetching all GTC members with filters');
-        console.log('[GTC MEMBERS] Query params:', req.query);
-
         const { level, hasParent, search, page = 1, limit = 20 } = req.query;
 
-        // Build filter
         const filter = {};
 
         if (level) filter.level = parseInt(level);
@@ -1038,7 +911,6 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
             filter.parentGtcUserId = null;
         }
 
-        // Search filter
         if (search) {
             filter.$or = [
                 { gtcUserId: { $regex: search, $options: 'i' } },
@@ -1048,11 +920,7 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
             ];
         }
 
-        console.log('[GTC MEMBERS] Applied filter:', JSON.stringify(filter, null, 2));
-
-        // Pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
-        console.log('[GTC MEMBERS] Pagination - Page:', page, 'Limit:', limit, 'Skip:', skip);
 
         const [members, total, stats] = await Promise.all([
             GTCMember.find(filter)
@@ -1065,28 +933,15 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
                 {
                     $facet: {
                         totalMembers: [{ $count: 'count' }],
-                        withParent: [
-                            { $match: { parentGtcUserId: { $ne: null } } },
-                            { $count: 'count' }
-                        ],
-                        rootMembers: [
-                            { $match: { parentGtcUserId: null } },
-                            { $count: 'count' }
-                        ],
-                        avgLevel: [
-                            { $group: { _id: null, avg: { $avg: '$level' } } }
-                        ],
-                        maxLevel: [
-                            { $group: { _id: null, max: { $max: '$level' } } }
-                        ]
+                        withParent: [{ $match: { parentGtcUserId: { $ne: null } } }, { $count: 'count' }],
+                        rootMembers: [{ $match: { parentGtcUserId: null } }, { $count: 'count' }],
+                        avgLevel: [{ $group: { _id: null, avg: { $avg: '$level' } } }],
+                        maxLevel: [{ $group: { _id: null, max: { $max: '$level' } } }]
                     }
                 }
             ])
         ]);
 
-        console.log('[GTC MEMBERS] Query completed - Found:', members.length, 'Total:', total);
-
-        // Format stats
         const formattedStats = {
             total: stats[0].totalMembers[0]?.count || 0,
             withParent: stats[0].withParent[0]?.count || 0,
@@ -1094,10 +949,6 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
             avgLevel: stats[0].avgLevel[0]?.avg || 0,
             maxLevel: stats[0].maxLevel[0]?.max || 0
         };
-
-        console.log('[GTC MEMBERS] Stats:', formattedStats);
-        console.log('[GTC MEMBERS] Request completed successfully');
-        console.log('='.repeat(80));
 
         res.status(200).json({
             success: true,
@@ -1111,12 +962,7 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('='.repeat(80));
-        console.error('[GTC MEMBERS] ERROR - Failed to fetch members');
-        console.error('[GTC MEMBERS] Error details:', error.message);
-        console.error('[GTC MEMBERS] Stack trace:', error.stack);
-        console.error('='.repeat(80));
-
+        console.error('Failed to fetch GTC members:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch GTC members',
@@ -1125,54 +971,30 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
     }
 });
 
-// 2. Get single GTC member (supports both MongoDB _id and gtcUserId)
 router.get('/gtc-members/:id', authenticateToken, async (req, res) => {
     try {
-        console.log('='.repeat(80));
-        console.log('[GTC MEMBER] Fetching single member');
-
         const { id } = req.params;
-        console.log('[GTC MEMBER] Requested ID:', id);
-
         let member;
-        let searchMethod;
 
-        // Check if it's a valid MongoDB ObjectId
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
-            searchMethod = 'MongoDB ObjectId';
-            console.log('[GTC MEMBER] Searching by MongoDB _id');
             member = await GTCMember.findById(id).lean();
         } else {
-            searchMethod = 'GTC User ID';
-            console.log('[GTC MEMBER] Searching by gtcUserId');
             member = await GTCMember.findOne({ gtcUserId: id }).lean();
         }
 
         if (!member) {
-            console.log('[GTC MEMBER] Member not found using:', searchMethod);
-            console.log('='.repeat(80));
             return res.status(404).json({
                 success: false,
                 message: 'GTC member not found'
             });
         }
 
-        console.log('[GTC MEMBER] Member found:', member.gtcUserId, '-', member.username);
-        console.log('[GTC MEMBER] Search method used:', searchMethod);
-        console.log('[GTC MEMBER] Request completed successfully');
-        console.log('='.repeat(80));
-
         res.status(200).json({
             success: true,
             data: member
         });
     } catch (error) {
-        console.error('='.repeat(80));
-        console.error('[GTC MEMBER] ERROR - Failed to fetch member');
-        console.error('[GTC MEMBER] Error details:', error.message);
-        console.error('[GTC MEMBER] Stack trace:', error.stack);
-        console.error('='.repeat(80));
-
+        console.error('Failed to fetch GTC member:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch GTC member',
@@ -1181,53 +1003,30 @@ router.get('/gtc-members/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// 3. Get GTC member's team tree (supports both MongoDB _id and gtcUserId)
 router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
     try {
-        console.log('='.repeat(80));
-        console.log('[GTC MEMBER TREE] Fetching member tree');
-
         const { id } = req.params;
-        console.log('[GTC MEMBER TREE] Root ID:', id);
-
         let rootMember;
-        let searchMethod;
 
-        // Check if it's a valid MongoDB ObjectId
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
-            searchMethod = 'MongoDB ObjectId';
-            console.log('[GTC MEMBER TREE] Searching root by MongoDB _id');
             rootMember = await GTCMember.findById(id).lean();
         } else {
-            searchMethod = 'GTC User ID';
-            console.log('[GTC MEMBER TREE] Searching root by gtcUserId');
             rootMember = await GTCMember.findOne({ gtcUserId: id }).lean();
         }
 
         if (!rootMember) {
-            console.log('[GTC MEMBER TREE] Root member not found using:', searchMethod);
-            console.log('='.repeat(80));
             return res.status(404).json({
                 success: false,
                 message: 'GTC member not found'
             });
         }
 
-        console.log('[GTC MEMBER TREE] Root member found:', rootMember.gtcUserId, '-', rootMember.username);
-        console.log('[GTC MEMBER TREE] Building tree structure...');
-
-        // Recursive function to build tree
         async function buildTree(gtcUserId, level = 1, maxLevel = 10) {
-            if (level > maxLevel) {
-                console.log('[GTC MEMBER TREE] Max level reached at level:', level);
-                return [];
-            }
+            if (level > maxLevel) return [];
 
             const children = await GTCMember.find({
                 parentGtcUserId: gtcUserId
             }).lean();
-
-            console.log('[GTC MEMBER TREE] Level', level, '- Found', children.length, 'children for gtcUserId:', gtcUserId);
 
             const tree = [];
             for (const child of children) {
@@ -1242,11 +1041,6 @@ router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
 
         const tree = await buildTree(rootMember.gtcUserId);
 
-        console.log('[GTC MEMBER TREE] Tree built successfully');
-        console.log('[GTC MEMBER TREE] Total direct children:', tree.length);
-        console.log('[GTC MEMBER TREE] Request completed successfully');
-        console.log('='.repeat(80));
-
         res.status(200).json({
             success: true,
             data: {
@@ -1255,12 +1049,7 @@ router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('='.repeat(80));
-        console.error('[GTC MEMBER TREE] ERROR - Failed to fetch member tree');
-        console.error('[GTC MEMBER TREE] Error details:', error.message);
-        console.error('[GTC MEMBER TREE] Stack trace:', error.stack);
-        console.error('='.repeat(80));
-
+        console.error('Failed to fetch GTC member tree:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch GTC member tree',
@@ -1269,41 +1058,25 @@ router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
     }
 });
 
-// 4. Get GTC member by GTC User ID (explicit lookup - kept for backward compatibility)
 router.get('/gtc-members/lookup/:gtcUserId', authenticateToken, async (req, res) => {
     try {
-        console.log('='.repeat(80));
-        console.log('[GTC MEMBER LOOKUP] Explicit gtcUserId lookup');
-        console.log('[GTC MEMBER LOOKUP] GTC User ID:', req.params.gtcUserId);
-
         const member = await GTCMember.findOne({
             gtcUserId: req.params.gtcUserId
         }).lean();
 
         if (!member) {
-            console.log('[GTC MEMBER LOOKUP] Member not found with gtcUserId:', req.params.gtcUserId);
-            console.log('='.repeat(80));
             return res.status(404).json({
                 success: false,
                 message: 'GTC member not found'
             });
         }
 
-        console.log('[GTC MEMBER LOOKUP] Member found:', member.username, '-', member.email);
-        console.log('[GTC MEMBER LOOKUP] Request completed successfully');
-        console.log('='.repeat(80));
-
         res.status(200).json({
             success: true,
             data: member
         });
     } catch (error) {
-        console.error('='.repeat(80));
-        console.error('[GTC MEMBER LOOKUP] ERROR - Failed to lookup member');
-        console.error('[GTC MEMBER LOOKUP] Error details:', error.message);
-        console.error('[GTC MEMBER LOOKUP] Stack trace:', error.stack);
-        console.error('='.repeat(80));
-
+        console.error('Failed to lookup GTC member:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to lookup GTC member',
@@ -1312,28 +1085,15 @@ router.get('/gtc-members/lookup/:gtcUserId', authenticateToken, async (req, res)
     }
 });
 
-// 5. Get GTC member statistics
 router.get('/gtc-members/stats/overview', authenticateToken, async (req, res) => {
     try {
-        console.log('='.repeat(80));
-        console.log('[GTC STATS] Fetching statistics overview');
-
         const stats = await GTCMember.aggregate([
             {
                 $facet: {
                     total: [{ $count: 'count' }],
-                    byLevel: [
-                        { $group: { _id: '$level', count: { $sum: 1 } } },
-                        { $sort: { _id: 1 } }
-                    ],
-                    withParent: [
-                        { $match: { parentGtcUserId: { $ne: null } } },
-                        { $count: 'count' }
-                    ],
-                    rootMembers: [
-                        { $match: { parentGtcUserId: null } },
-                        { $count: 'count' }
-                    ],
+                    byLevel: [{ $group: { _id: '$level', count: { $sum: 1 } } }, { $sort: { _id: 1 } }],
+                    withParent: [{ $match: { parentGtcUserId: { $ne: null } } }, { $count: 'count' }],
+                    rootMembers: [{ $match: { parentGtcUserId: null } }, { $count: 'count' }],
                     recentJoins: [
                         { $sort: { joinedAt: -1 } },
                         { $limit: 10 },
@@ -1351,24 +1111,12 @@ router.get('/gtc-members/stats/overview', authenticateToken, async (req, res) =>
             recentJoins: stats[0].recentJoins
         };
 
-        console.log('[GTC STATS] Total members:', formattedData.total);
-        console.log('[GTC STATS] Members with parent:', formattedData.withParent);
-        console.log('[GTC STATS] Root members:', formattedData.rootMembers);
-        console.log('[GTC STATS] Levels breakdown:', formattedData.byLevel);
-        console.log('[GTC STATS] Request completed successfully');
-        console.log('='.repeat(80));
-
         res.status(200).json({
             success: true,
             data: formattedData
         });
     } catch (error) {
-        console.error('='.repeat(80));
-        console.error('[GTC STATS] ERROR - Failed to fetch statistics');
-        console.error('[GTC STATS] Error details:', error.message);
-        console.error('[GTC STATS] Stack trace:', error.stack);
-        console.error('='.repeat(80));
-
+        console.error('Failed to fetch GTC statistics:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch GTC statistics',

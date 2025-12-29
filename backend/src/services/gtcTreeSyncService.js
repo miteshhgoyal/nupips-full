@@ -53,7 +53,7 @@ function flattenTreeRecursively(node, uplineChain = [], allMembers = []) {
 export async function syncMemberTreeFromAPI(apiResponse) {
     try {
         const startTime = Date.now();
-        console.log('🔄 Starting tree sync from GTC API...');
+        console.log('Starting tree sync from GTC API...');
 
         // Validate API response
         if (!apiResponse || !apiResponse.data || !Array.isArray(apiResponse.data.tree)) {
@@ -63,12 +63,12 @@ export async function syncMemberTreeFromAPI(apiResponse) {
         const { tree } = apiResponse.data;
 
         if (tree.length === 0) {
-            console.log('⚠️ No tree data received from API');
+            console.log('No tree data received from API');
             return { success: true, message: 'No data to sync', stats: { processed: 0 } };
         }
 
         // Step 1: Flatten the entire tree into a flat array
-        console.log(`📊 Flattening tree with ${tree.length} root node(s)...`);
+        console.log(`Flattening tree with ${tree.length} root node(s)...`);
         let allMembers = [];
 
         for (const rootNode of tree) {
@@ -76,7 +76,7 @@ export async function syncMemberTreeFromAPI(apiResponse) {
             allMembers = [...allMembers, ...membersFromBranch];
         }
 
-        console.log(`✅ Flattened ${allMembers.length} total members`);
+        console.log(`Flattened ${allMembers.length} total members`);
 
         // Step 2: Prepare bulk operations for efficient database insertion
         const bulkOps = allMembers.map(member => ({
@@ -92,13 +92,13 @@ export async function syncMemberTreeFromAPI(apiResponse) {
         let totalProcessed = 0;
         let totalBatches = Math.ceil(bulkOps.length / BATCH_SIZE);
 
-        console.log(`💾 Saving ${bulkOps.length} members in ${totalBatches} batch(es)...`);
+        console.log(`Saving ${bulkOps.length} members in ${totalBatches} batch(es)...`);
 
         for (let i = 0; i < bulkOps.length; i += BATCH_SIZE) {
             const batch = bulkOps.slice(i, i + BATCH_SIZE);
             const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
 
-            console.log(`   Batch ${batchNumber}/${totalBatches}: Processing ${batch.length} members...`);
+            console.log(`Batch ${batchNumber}/${totalBatches}: Processing ${batch.length} members...`);
 
             const result = await GTCMember.bulkWrite(batch, { ordered: false });
             totalProcessed += result.upsertedCount + result.modifiedCount;
@@ -113,13 +113,13 @@ export async function syncMemberTreeFromAPI(apiResponse) {
             timestamp: new Date().toISOString(),
         };
 
-        console.log(`✨ Tree sync completed successfully!`);
-        console.log(`   📈 Stats:`, stats);
+        console.log(`Tree sync completed successfully!`);
+        console.log(`Stats:`, stats);
 
         return { success: true, message: 'Tree synced successfully', stats };
 
     } catch (error) {
-        console.error('❌ Error syncing member tree:', error);
+        console.error('Error syncing member tree:', error);
         throw error;
     }
 }

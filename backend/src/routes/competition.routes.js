@@ -1,11 +1,31 @@
-// backend/src / routes / competition.routes.js
+// backend/src/routes/competition.routes.js
 import express from 'express';
 import axios from 'axios';
 import https from 'https';
 import User from '../models/User.js';
+import Competition from '../models/Competition.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
+
+// Admin middleware
+const requireAdmin = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user.userId);
+        if (!user || user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Admin access required'
+            });
+        }
+        next();
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Authorization failed'
+        });
+    }
+};
 
 // Create axios instance for GTC FX API calls
 const gtcAxios = axios.create({
@@ -21,7 +41,7 @@ const gtcAxios = axios.create({
     }),
 });
 
-// Add response interceptor for better error handling
+// Add response interceptor
 gtcAxios.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -34,79 +54,6 @@ gtcAxios.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-
-// Simplified Competition Configuration
-const COMPETITION_CONFIG = {
-    competitionEnabled: true,
-    rules: {
-        // Core metrics weights (total 100%)
-        directReferralsWeight: 25,      // 25% - New members introduced to Nupips
-        teamSizeWeight: 15,              // 15% - Total downline team size
-        tradingVolumeWeight: 20,         // 20% - Total trading volume from GTC
-        profitabilityWeight: 15,         // 15% - Profit/Loss ratio from GTC
-        accountBalanceWeight: 15,        // 15% - GTC account balance
-        kycCompletionWeight: 10,         // 10% - KYC verification status
-    },
-    rewards: [
-        {
-            rankRange: "1st",
-            minRank: 1,
-            maxRank: 1,
-            title: "Champion",
-            prize: "Moscow Russia Trip",
-            description: "Lifetime VIP status + exclusive training"
-        },
-        {
-            rankRange: "2nd",
-            minRank: 2,
-            maxRank: 2,
-            title: "Grand Master",
-            prize: "$5,000 Cash",
-            description: "Gold Benefits + premium features"
-        },
-        {
-            rankRange: "3rd",
-            minRank: 3,
-            maxRank: 3,
-            title: "Master",
-            prize: "$5,000 Cash",
-            description: "Gold Benefits + priority support"
-        },
-        {
-            rankRange: "4th",
-            minRank: 4,
-            maxRank: 4,
-            title: "Elite Platinum",
-            prize: "$2,500 Cash",
-            description: "Silver Benefits + trading tools"
-        },
-        {
-            rankRange: "5th-10th",
-            minRank: 5,
-            maxRank: 10,
-            title: "Top Performers",
-            prize: "$1,000 Cash",
-            description: "Bronze Benefits + recognition"
-        },
-        {
-            rankRange: "11th-25th",
-            minRank: 11,
-            maxRank: 25,
-            title: "Rising Stars",
-            prize: "$500 Credit",
-            description: "Special badges + community spotlight"
-        },
-    ],
-    period: {
-        active: true,
-        startDate: new Date('2025-01-01'),
-        endDate: new Date('2025-12-31'),
-        description: 'Annual Trading Championship 2025'
-    },
-    bonusMultipliers: {
-        kycVerified: 1.1,                // 10% bonus for KYC verified users
-    }
-};
 
 /**
  * Fetch GTC FX data for a user
@@ -133,7 +80,7 @@ async function fetchGTCData(user) {
 
         const accountData = accountResponse.data.data;
 
-        // Fetch Profit Logs for trading history
+        // Fetch Profit Logs
         let profitLogs = [];
         try {
             const profitResponse = await gtcAxios.post(
@@ -149,7 +96,7 @@ async function fetchGTCData(user) {
             console.warn('Could not fetch profit logs:', err.message);
         }
 
-        // Fetch Agent/Member data for team metrics
+        // Fetch Agent/Member data
         let memberData = null;
         try {
             const memberResponse = await gtcAxios.post(
@@ -175,7 +122,7 @@ async function fetchGTCData(user) {
         const profitPercent = balance > 0 ? (netProfit / balance) * 100 : 0;
         const winRate = totalProfit + totalLoss > 0 ? (totalProfit / (totalProfit + totalLoss)) * 100 : 0;
 
-        // Trading volume from profit logs
+        // Trading volume
         let totalVolumeLots = 0;
         profitLogs.forEach(log => {
             totalVolumeLots += parseFloat(log.volume || 0);
@@ -211,10 +158,10 @@ async function fetchGTCData(user) {
 }
 
 /**
- * Calculate competition score with simple normalization
+ * Calculate competition score using dynamic config
  */
-async function calculateCompetitionScore(user, gtcData) {
-    const { rules, bonusMultipliers } = COMPETITION_CONFIG;
+async function calculateCompetitionScore(user, gtcData, config) {
+    const { rules, bonusMultipliers, normalizationTargets } = config;
 
     let scores = {
         directReferrals: 0,
@@ -227,32 +174,44 @@ async function calculateCompetitionScore(user, gtcData) {
 
     let bonusMultiplier = 1.0;
 
-    // 1. Direct Referrals Score (25%)
+    // 1. Direct Referrals Score
     const directReferrals = user.referralDetails?.totalDirectReferrals || 0;
-    scores.directReferrals = Math.min(directReferrals / 10, 1) * rules.directReferralsWeight;
+    scores.directReferrals = Math.min(
+        directReferrals / normalizationTargets.directReferralsTarget,
+        1
+    ) * rules.directReferralsWeight;
 
-    // 2. Team Size Score (15%)
+    // 2. Team Size Score
     const nupipsTeamSize = user.referralDetails?.totalDownlineUsers || 0;
     const gtcTeamSize = gtcData?.gtcTeamSize || 0;
     const totalTeamSize = Math.max(nupipsTeamSize, gtcTeamSize);
-    scores.teamSize = Math.min(totalTeamSize / 50, 1) * rules.teamSizeWeight;
+    scores.teamSize = Math.min(
+        totalTeamSize / normalizationTargets.teamSizeTarget,
+        1
+    ) * rules.teamSizeWeight;
 
-    // 3. Trading Volume Score (20%)
+    // 3. Trading Volume Score
     const tradingVolume = gtcData?.totalVolumeLots || 0;
     const volumeInDollars = tradingVolume * 100000;
-    scores.tradingVolume = Math.min(volumeInDollars / 100000, 1) * rules.tradingVolumeWeight;
+    scores.tradingVolume = Math.min(
+        volumeInDollars / normalizationTargets.tradingVolumeTarget,
+        1
+    ) * rules.tradingVolumeWeight;
 
-    // 4. Profitability Score (15%)
+    // 4. Profitability Score
     const winRate = gtcData?.winRate || 0;
     const profitPercent = Math.max(gtcData?.profitPercent || 0, 0);
-    const profitabilityScore = (winRate / 100) * 0.5 + (Math.min(profitPercent / 100, 1)) * 0.5;
+    const profitabilityScore = (winRate / 100) * 0.5 + (Math.min(profitPercent / normalizationTargets.profitPercentTarget, 1)) * 0.5;
     scores.profitability = profitabilityScore * rules.profitabilityWeight;
 
-    // 5. Account Balance Score (15%)
+    // 5. Account Balance Score
     const accountBalance = gtcData?.accountBalance || 0;
-    scores.accountBalance = Math.min(accountBalance / 10000, 1) * rules.accountBalanceWeight;
+    scores.accountBalance = Math.min(
+        accountBalance / normalizationTargets.accountBalanceTarget,
+        1
+    ) * rules.accountBalanceWeight;
 
-    // 6. KYC Completion Score (10%)
+    // 6. KYC Completion Score
     const isKYCVerified = gtcData?.kycStatus === 1;
     scores.kycCompletion = isKYCVerified ? rules.kycCompletionWeight : 0;
 
@@ -293,11 +252,42 @@ async function calculateCompetitionScore(user, gtcData) {
     };
 }
 
+/**
+ * Helper function to determine reward for a given rank
+ */
+function getRewardForRank(rank, rewards) {
+    const reward = rewards.find(r => rank >= r.minRank && rank <= r.maxRank);
+    return reward || null;
+}
+
+// ==================== USER ROUTES ====================
+
+/**
+ * GET /competition/status
+ */
 router.get('/status', authenticateToken, async (req, res) => {
-    res.json({
-        status: COMPETITION_CONFIG.competitionEnabled,
-    })
-})
+    try {
+        const config = await Competition.getActiveConfig();
+
+        res.json({
+            success: true,
+            status: config.competitionEnabled && config.isActive(),
+            config: {
+                enabled: config.competitionEnabled,
+                periodActive: config.period.active,
+                startDate: config.period.startDate,
+                endDate: config.period.endDate,
+                description: config.period.description,
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching competition status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch competition status',
+        });
+    }
+});
 
 /**
  * GET /competition/leaderboard
@@ -306,6 +296,19 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
     try {
         const currentUserId = req.user.userId;
         const { limit = 100 } = req.query;
+
+        // Get active competition config
+        const config = await Competition.getActiveConfig();
+
+        if (!config.competitionEnabled || !config.isActive()) {
+            return res.json({
+                success: true,
+                active: false,
+                message: 'Competition is not currently active',
+                leaderboard: [],
+                userRank: null,
+            });
+        }
 
         const users = await User.find({
             'gtcfx.accessToken': { $ne: null },
@@ -319,9 +322,9 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
                 success: true,
                 leaderboard: [],
                 userRank: null,
-                rules: COMPETITION_CONFIG.rules,
-                rewards: COMPETITION_CONFIG.rewards,
-                period: COMPETITION_CONFIG.period,
+                rules: config.rules,
+                rewards: config.rewards,
+                period: config.period,
                 stats: { totalParticipants: 0 },
             });
         }
@@ -331,7 +334,7 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
                 const gtcData = await fetchGTCData(user);
                 if (!gtcData) return null;
 
-                const scoreData = await calculateCompetitionScore(user, gtcData);
+                const scoreData = await calculateCompetitionScore(user, gtcData, config);
 
                 return {
                     userId: user._id.toString(),
@@ -372,7 +375,10 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
         let userRank = userRankIndex >= 0 ? leaderboard[userRankIndex] : null;
 
         if (userRank) {
-            userRank = { ...userRank, eligibleReward: getRewardForRank(userRank.rank) };
+            userRank = {
+                ...userRank,
+                eligibleReward: getRewardForRank(userRank.rank, config.rewards)
+            };
         }
 
         const stats = {
@@ -387,9 +393,9 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
             success: true,
             leaderboard: limitedLeaderboard,
             userRank,
-            rules: COMPETITION_CONFIG.rules,
-            rewards: COMPETITION_CONFIG.rewards,
-            period: COMPETITION_CONFIG.period,
+            rules: config.rules,
+            rewards: config.rewards,
+            period: config.period,
             stats,
         });
 
@@ -409,6 +415,9 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
 router.get('/my-stats', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.userId;
+
+        // Get active competition config
+        const config = await Competition.getActiveConfig();
 
         const user = await User.findById(userId)
             .select('name username email gtcfx referralDetails userType')
@@ -440,27 +449,22 @@ router.get('/my-stats', authenticateToken, async (req, res) => {
             });
         }
 
-        const scoreData = await calculateCompetitionScore(user, gtcData);
+        const scoreData = await calculateCompetitionScore(user, gtcData, config);
 
+        // Calculate rank
         const allUsers = await User.find({
             'gtcfx.accessToken': { $ne: null },
             status: 'active',
-        })
-            .select('_id')
-            .lean();
+        }).select('_id gtcfx referralDetails').lean();
 
         let rank = 1;
         for (const otherUser of allUsers) {
             if (otherUser._id.toString() === userId) continue;
 
-            const otherUserData = await User.findById(otherUser._id)
-                .select('gtcfx referralDetails')
-                .lean();
-
-            const otherGtcData = await fetchGTCData(otherUserData);
+            const otherGtcData = await fetchGTCData(otherUser);
             if (!otherGtcData) continue;
 
-            const otherScore = await calculateCompetitionScore(otherUserData, otherGtcData);
+            const otherScore = await calculateCompetitionScore(otherUser, otherGtcData, config);
             if (otherScore.totalScore > scoreData.totalScore) {
                 rank++;
             }
@@ -479,7 +483,7 @@ router.get('/my-stats', authenticateToken, async (req, res) => {
                 score: scoreData.totalScore,
                 baseScore: scoreData.baseScore,
                 bonusMultiplier: scoreData.bonusMultiplier,
-                eligibleReward: getRewardForRank(rank),
+                eligibleReward: getRewardForRank(rank, config.rewards),
             },
             breakdown: scoreData.breakdown,
             metrics: scoreData.metrics,
@@ -507,9 +511,18 @@ router.get('/my-stats', authenticateToken, async (req, res) => {
  */
 router.get('/config', async (req, res) => {
     try {
+        const config = await Competition.getActiveConfig();
+
         res.json({
             success: true,
-            config: COMPETITION_CONFIG,
+            config: {
+                competitionEnabled: config.competitionEnabled,
+                rules: config.rules,
+                rewards: config.rewards,
+                period: config.period,
+                bonusMultipliers: config.bonusMultipliers,
+                isActive: config.isActive(),
+            },
         });
     } catch (error) {
         console.error('Config error:', error);
@@ -520,12 +533,637 @@ router.get('/config', async (req, res) => {
     }
 });
 
+// ==================== ADMIN ROUTES ====================
+
 /**
- * Helper function to determine reward for a given rank
+ * GET /competition/admin/leaderboard - Admin Top Rankers (Top 25 + Reward Eligible)
  */
-function getRewardForRank(rank) {
-    const reward = COMPETITION_CONFIG.rewards.find(r => rank >= r.minRank && rank <= r.maxRank);
-    return reward || null;
-}
+router.get('/admin/leaderboard', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { limit = 25, showRewards = 'true' } = req.query;
+
+        // Get active competition config
+        const config = await Competition.getActiveConfig();
+
+        if (!config.competitionEnabled || !config.isActive()) {
+            return res.json({
+                success: true,
+                active: false,
+                message: 'Competition is not currently active',
+                topRankers: [],
+                rewardEligible: [],
+                stats: { totalParticipants: 0 }
+            });
+        }
+
+        const users = await User.find({
+            'gtcfx.accessToken': { $ne: null },
+            status: 'active',
+        })
+        .select('name username email gtcfx referralDetails userType')
+        .lean();
+
+        if (users.length === 0) {
+            return res.json({
+                success: true,
+                topRankers: [],
+                rewardEligible: [],
+                rules: config.rules,
+                rewards: config.rewards,
+                stats: { totalParticipants: 0 },
+            });
+        }
+
+        const scorePromises = users.map(async (user) => {
+            try {
+                const gtcData = await fetchGTCData(user);
+                if (!gtcData) return null;
+
+                const scoreData = await calculateCompetitionScore(user, gtcData, config);
+
+                return {
+                    userId: user._id.toString(),
+                    name: user.name,
+                    username: user.username,
+                    email: user.email,
+                    userType: user.userType,
+                    score: scoreData.totalScore,
+                    baseScore: scoreData.baseScore,
+                    bonusMultiplier: scoreData.bonusMultiplier,
+                    breakdown: scoreData.breakdown,
+                    metrics: scoreData.metrics,
+                    isVerified: scoreData.metrics.isKYCVerified,
+                    isAgent: scoreData.metrics.isAgent,
+                    eligibleReward: getRewardForRank(currentRank, config.rewards), // Will be set later
+                };
+            } catch (error) {
+                console.error(`Error processing user ${user.username}:`, error.message);
+                return null;
+            }
+        });
+
+        const scoredUsersResults = await Promise.all(scorePromises);
+        const scoredUsers = scoredUsersResults.filter(u => u !== null);
+
+        scoredUsers.sort((a, b) => b.score - a.score);
+
+        let currentRank = 1;
+        const rankedUsers = scoredUsers.map((user, index) => {
+            if (index > 0 && user.score < scoredUsers[index - 1].score) {
+                currentRank = index + 1;
+            }
+            return { 
+                ...user, 
+                rank: currentRank,
+                eligibleReward: getRewardForRank(currentRank, config.rewards)
+            };
+        });
+
+        const topRankers = rankedUsers.slice(0, parseInt(limit));
+
+        // Filter reward-eligible users (those with valid rewards for their rank)
+        const rewardEligible = rankedUsers.filter(user => 
+            user.eligibleReward && user.rank <= 50 // Top 50 for rewards
+        ).slice(0, 25);
+
+        const stats = {
+            totalParticipants: rankedUsers.length,
+            averageScore: parseFloat((rankedUsers.reduce((sum, u) => sum + u.score, 0) / rankedUsers.length).toFixed(2)),
+            highestScore: rankedUsers[0]?.score || 0,
+            kycVerifiedCount: rankedUsers.filter(u => u.isVerified).length,
+            agentCount: rankedUsers.filter(u => u.isAgent).length,
+            rewardEligibleCount: rewardEligible.length,
+        };
+
+        res.json({
+            success: true,
+            topRankers,
+            rewardEligible,
+            rules: config.rules,
+            rewards: config.rewards,
+            period: config.period,
+            stats,
+        });
+
+    } catch (error) {
+        console.error('Admin leaderboard error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch admin leaderboard data',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * GET /competition/admin/config
+ */
+router.get('/admin/config', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const config = await Competition.getActiveConfig();
+
+        res.json({
+            success: true,
+            config,
+            isActive: config.isActive(),
+        });
+    } catch (error) {
+        console.error('Error fetching competition config:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch competition configuration',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * GET /competition/admin/history
+ */
+router.get('/admin/history', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { page = 1, limit = 10 } = req.query;
+
+        const configs = await Competition.find()
+            .sort({ createdAt: -1 })
+            .limit(limit * 1)
+            .skip((page - 1) * limit)
+            .populate('createdBy', 'name username email')
+            .populate('updatedBy', 'name username email')
+            .lean();
+
+        const total = await Competition.countDocuments();
+
+        res.json({
+            success: true,
+            configs,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit),
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching competition history:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch competition history',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * POST /competition/admin/config
+ */
+router.post('/admin/config', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const configData = req.body;
+
+        // Validate that weights sum to 100
+        const totalWeight =
+            (configData.rules?.directReferralsWeight || 0) +
+            (configData.rules?.teamSizeWeight || 0) +
+            (configData.rules?.tradingVolumeWeight || 0) +
+            (configData.rules?.profitabilityWeight || 0) +
+            (configData.rules?.accountBalanceWeight || 0) +
+            (configData.rules?.kycCompletionWeight || 0);
+
+        if (totalWeight !== 100) {
+            return res.status(400).json({
+                success: false,
+                message: `Total weight must equal 100%. Current total: ${totalWeight}%`,
+            });
+        }
+
+        // Create new configuration
+        const newConfig = new Competition({
+            ...configData,
+            createdBy: userId,
+            updatedBy: userId,
+            version: 1,
+        });
+
+        await newConfig.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Competition configuration created successfully',
+            config: newConfig,
+        });
+    } catch (error) {
+        console.error('Error creating competition config:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create competition configuration',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * PUT /competition/admin/config/:id
+ */
+router.put('/admin/config/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId;
+        const updateData = req.body;
+
+        // Validate that weights sum to 100 if rules are being updated
+        if (updateData.rules) {
+            const totalWeight =
+                (updateData.rules.directReferralsWeight || 0) +
+                (updateData.rules.teamSizeWeight || 0) +
+                (updateData.rules.tradingVolumeWeight || 0) +
+                (updateData.rules.profitabilityWeight || 0) +
+                (updateData.rules.accountBalanceWeight || 0) +
+                (updateData.rules.kycCompletionWeight || 0);
+
+            if (totalWeight !== 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Total weight must equal 100%. Current total: ${totalWeight}%`,
+                });
+            }
+        }
+
+        const config = await Competition.findById(id);
+
+        if (!config) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition configuration not found',
+            });
+        }
+
+        // Update fields
+        Object.keys(updateData).forEach(key => {
+            if (key !== '_id' && key !== 'createdAt' && key !== 'createdBy') {
+                config[key] = updateData[key];
+            }
+        });
+
+        config.updatedBy = userId;
+        config.version += 1;
+
+        await config.save();
+
+        res.json({
+            success: true,
+            message: 'Competition configuration updated successfully',
+            config,
+        });
+    } catch (error) {
+        console.error('Error updating competition config:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update competition configuration',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * PATCH /competition/admin/config/:id/toggle
+ */
+router.patch('/admin/config/:id/toggle', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId;
+
+        const config = await Competition.findById(id);
+
+        if (!config) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition configuration not found',
+            });
+        }
+
+        config.competitionEnabled = !config.competitionEnabled;
+        config.updatedBy = userId;
+        await config.save();
+
+        res.json({
+            success: true,
+            message: `Competition ${config.competitionEnabled ? 'enabled' : 'disabled'} successfully`,
+            config,
+        });
+    } catch (error) {
+        console.error('Error toggling competition status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to toggle competition status',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * PATCH /competition/admin/config/:id/rewards
+ */
+router.patch('/admin/config/:id/rewards', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rewards } = req.body;
+        const userId = req.user.userId;
+
+        if (!Array.isArray(rewards)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Rewards must be an array',
+            });
+        }
+
+        const config = await Competition.findById(id);
+
+        if (!config) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition configuration not found',
+            });
+        }
+
+        config.rewards = rewards;
+        config.updatedBy = userId;
+        config.version += 1;
+
+        await config.save();
+
+        res.json({
+            success: true,
+            message: 'Rewards updated successfully',
+            config,
+        });
+    } catch (error) {
+        console.error('Error updating rewards:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update rewards',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * PATCH /competition/admin/config/:id/rules
+ */
+router.patch('/admin/config/:id/rules', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rules } = req.body;
+        const userId = req.user.userId;
+
+        // Validate that weights sum to 100
+        const totalWeight =
+            (rules.directReferralsWeight || 0) +
+            (rules.teamSizeWeight || 0) +
+            (rules.tradingVolumeWeight || 0) +
+            (rules.profitabilityWeight || 0) +
+            (rules.accountBalanceWeight || 0) +
+            (rules.kycCompletionWeight || 0);
+
+        if (totalWeight !== 100) {
+            return res.status(400).json({
+                success: false,
+                message: `Total weight must equal 100%. Current total: ${totalWeight}%`,
+            });
+        }
+
+        const config = await Competition.findById(id);
+
+        if (!config) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition configuration not found',
+            });
+        }
+
+        config.rules = rules;
+        config.updatedBy = userId;
+        config.version += 1;
+
+        await config.save();
+
+        res.json({
+            success: true,
+            message: 'Scoring rules updated successfully',
+            config,
+        });
+    } catch (error) {
+        console.error('Error updating rules:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update scoring rules',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * PATCH /competition/admin/config/:id/period
+ */
+router.patch('/admin/config/:id/period', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { period } = req.body;
+        const userId = req.user.userId;
+
+        // Validate dates
+        if (period.startDate && period.endDate) {
+            const startDate = new Date(period.startDate);
+            const endDate = new Date(period.endDate);
+
+            if (endDate <= startDate) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'End date must be after start date',
+                });
+            }
+        }
+
+        const config = await Competition.findById(id);
+
+        if (!config) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition configuration not found',
+            });
+        }
+
+        config.period = { ...config.period, ...period };
+        config.updatedBy = userId;
+        config.version += 1;
+
+        await config.save();
+
+        res.json({
+            success: true,
+            message: 'Competition period updated successfully',
+            config,
+        });
+    } catch (error) {
+        console.error('Error updating period:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update competition period',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * DELETE /competition/admin/config/:id
+ */
+router.delete('/admin/config/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const config = await Competition.findById(id);
+
+        if (!config) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition configuration not found',
+            });
+        }
+
+        // Soft delete - just disable it
+        config.competitionEnabled = false;
+        config.period.active = false;
+        await config.save();
+
+        res.json({
+            success: true,
+            message: 'Competition configuration deleted successfully',
+        });
+    } catch (error) {
+        console.error('Error deleting competition config:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete competition configuration',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * GET /competition/admin/stats
+ */
+router.get('/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const totalConfigs = await Competition.countDocuments();
+        const activeConfigs = await Competition.countDocuments({
+            competitionEnabled: true,
+            'period.active': true
+        });
+
+        const latestConfig = await Competition.getActiveConfig();
+
+        res.json({
+            success: true,
+            stats: {
+                totalConfigs,
+                activeConfigs,
+                latestVersion: latestConfig?.version || 0,
+                isCurrentlyActive: latestConfig?.isActive() || false,
+            },
+            latestConfig,
+        });
+    } catch (error) {
+        console.error('Error fetching competition stats:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch competition statistics',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * POST /competition/admin/config/:id/duplicate
+ */
+router.post('/admin/config/:id/duplicate', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId;
+
+        const originalConfig = await Competition.findById(id).lean();
+
+        if (!originalConfig) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition configuration not found',
+            });
+        }
+
+        // Remove _id and timestamps
+        delete originalConfig._id;
+        delete originalConfig.createdAt;
+        delete originalConfig.updatedAt;
+
+        // Create new config based on original
+        const newConfig = new Competition({
+            ...originalConfig,
+            createdBy: userId,
+            updatedBy: userId,
+            version: 1,
+            period: {
+                ...originalConfig.period,
+                description: `${originalConfig.period.description} (Copy)`,
+            },
+        });
+
+        await newConfig.save();
+
+        res.status(201).json({
+            success: true,
+            message: 'Competition configuration duplicated successfully',
+            config: newConfig,
+        });
+    } catch (error) {
+        console.error('Error duplicating competition config:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to duplicate competition configuration',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * POST /competition/admin/seed
+ * Manually trigger seeding of default configuration
+ */
+router.post('/admin/seed', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const existingConfig = await Competition.findOne();
+
+        if (existingConfig) {
+            return res.status(400).json({
+                success: false,
+                message: 'Configuration already exists. Use duplicate or create new instead.',
+            });
+        }
+
+        const config = await Competition.seedDefaultConfig();
+
+        res.status(201).json({
+            success: true,
+            message: 'Default configuration seeded successfully',
+            config,
+        });
+    } catch (error) {
+        console.error('Error seeding configuration:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to seed default configuration',
+            error: error.message,
+        });
+    }
+});
 
 export default router;

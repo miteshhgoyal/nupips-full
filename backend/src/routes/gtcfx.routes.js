@@ -624,7 +624,7 @@ router.get('/members/:gtcUserId/children', authenticateToken, async (req, res) =
 // ====================== SYNC MEMBER TREE FROM GTC API ======================
 router.post('/sync-member-tree', async (req, res) => {
     try {
-        console.log('🚀 Manual tree sync initiated');
+        console.log('Manual tree sync initiated');
 
         const { token } = req.body;
 
@@ -636,7 +636,7 @@ router.post('/sync-member-tree', async (req, res) => {
         }
 
         // Step 1: Fetch tree data from GTC API
-        console.log('📡 Fetching tree from GTC API...');
+        console.log('Fetching tree from GTC API...');
 
         const response = await axios.post(
             'https://apiv1.mygtc.app/api/v3/agent/member_tree',
