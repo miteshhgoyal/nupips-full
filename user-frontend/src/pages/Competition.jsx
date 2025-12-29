@@ -80,13 +80,10 @@ const Competition = () => {
     }
   };
 
-  // Dynamic rank icon based on backend reward configuration
   const getRankIcon = (rank) => {
     if (!rewards || rewards.length === 0) {
       return { icon: Award, color: "text-gray-500" };
     }
-
-    const reward = rewards.find((r) => rank >= r.minRank && rank <= r.maxRank);
 
     if (rank === 1) return { icon: Trophy, color: "text-amber-500" };
     if (rank === 2) return { icon: Trophy, color: "text-slate-400" };
@@ -98,13 +95,13 @@ const Competition = () => {
   };
 
   const getRankBadgeColor = (rank) => {
-    if (rank === 1) return "bg-amber-100 text-amber-700 border-amber-300";
-    if (rank === 2) return "bg-slate-100 text-slate-700 border-slate-300";
-    if (rank === 3) return "bg-orange-100 text-orange-700 border-orange-300";
-    if (rank === 4) return "bg-cyan-100 text-cyan-700 border-cyan-300";
-    if (rank <= 10) return "bg-blue-100 text-blue-700 border-blue-300";
-    if (rank <= 25) return "bg-purple-100 text-purple-700 border-purple-300";
-    return "bg-gray-100 text-gray-700 border-gray-300";
+    if (rank === 1) return "bg-amber-50 text-amber-700 border-amber-300";
+    if (rank === 2) return "bg-slate-50 text-slate-700 border-slate-300";
+    if (rank === 3) return "bg-orange-50 text-orange-700 border-orange-300";
+    if (rank === 4) return "bg-cyan-50 text-cyan-700 border-cyan-300";
+    if (rank <= 10) return "bg-blue-50 text-blue-700 border-blue-300";
+    if (rank <= 25) return "bg-purple-50 text-purple-700 border-purple-300";
+    return "bg-gray-50 text-gray-700 border-gray-300";
   };
 
   const calculateProgress = () => {
@@ -141,99 +138,21 @@ const Competition = () => {
 
   const eligibleReward = getUserReward();
 
-  // Progress Bar Component
+  // IMPROVED Progress Bar Component - Reversed direction with rank 1 on the right
   const ProgressBar = () => {
-    const generateRankMilestones = () => {
-      if (!rewards || rewards.length === 0) return [];
-
-      const milestones = [];
-      const totalParticipants = stats?.totalParticipants || 100;
-
-      rewards.forEach((reward) => {
-        const rank = reward.minRank;
-        const position = ((totalParticipants - rank) / totalParticipants) * 100;
-
-        let tierColor = "blue";
-        if (rank === 1) tierColor = "gold";
-        else if (rank === 2) tierColor = "silver";
-        else if (rank === 3) tierColor = "bronze";
-        else if (rank === 4) tierColor = "platinum";
-
-        milestones.push({
-          position: Math.max(5, Math.min(95, position)),
-          rankRange: reward.rankRange,
-          prize: reward.prize,
-          rank: rank,
-          color: tierColor,
-        });
-      });
-
-      return milestones.sort((a, b) => a.rank - b.rank);
-    };
-
-    const milestones = generateRankMilestones();
-
     const totalParticipants = stats?.totalParticipants || 100;
+
+    // Calculate user's position percentage (rank 1 = 100% from LEFT, so bar fills RIGHT to LEFT)
     const userPosition = userRank
-      ? Math.max(
-          5,
-          Math.min(
-            95,
-            ((totalParticipants - userRank.rank) / totalParticipants) * 100
-          )
-        )
+      ? ((totalParticipants - userRank.rank) / totalParticipants) * 100
       : 0;
 
-    const getUserStatus = () => {
-      if (!userRank) return { achieved: [], nextTarget: null };
-
-      const achieved = milestones.filter((m) => userRank.rank <= m.rank);
-      const nextTarget = milestones.find((m) => userRank.rank > m.rank);
-
-      return { achieved, nextTarget };
-    };
-
-    const { achieved, nextTarget } = getUserStatus();
-
-    const getTierStyles = (color) => {
-      const styles = {
-        gold: {
-          bg: "bg-linear-to-b from-amber-50 to-amber-100",
-          border: "border-amber-400",
-          text: "text-amber-900",
-          icon: "text-amber-600",
-        },
-        silver: {
-          bg: "bg-linear-to-b from-slate-50 to-slate-100",
-          border: "border-slate-400",
-          text: "text-slate-900",
-          icon: "text-slate-600",
-        },
-        bronze: {
-          bg: "bg-linear-to-b from-orange-50 to-orange-100",
-          border: "border-orange-400",
-          text: "text-orange-900",
-          icon: "text-orange-600",
-        },
-        platinum: {
-          bg: "bg-linear-to-b from-cyan-50 to-cyan-100",
-          border: "border-cyan-400",
-          text: "text-cyan-900",
-          icon: "text-cyan-600",
-        },
-        blue: {
-          bg: "bg-linear-to-b from-blue-50 to-blue-100",
-          border: "border-blue-400",
-          text: "text-blue-900",
-          icon: "text-blue-600",
-        },
-      };
-      return styles[color] || styles.blue;
-    };
+    // Get major milestones (top rewards) - REVERSED
+    const majorMilestones = [...rewards].slice(0, 6).reverse(); // Reverse so rank 1 is on the right
 
     return (
-      <div className="bg-white rounded-lg p-6 border border-gray-200 mb-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
               Competition Progress
@@ -243,118 +162,127 @@ const Competition = () => {
             </p>
           </div>
           {userRank && (
-            <div className="text-right bg-linear-to-b from-orange-50 to-orange-100 rounded-lg px-4 py-3 border border-orange-200">
+            <div className="text-left sm:text-right bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl px-4 py-3 border-2 border-orange-300">
               <p className="text-xs text-gray-600 font-medium">Current Rank</p>
-              <p className="text-2xl font-bold text-orange-600">
+              <p className="text-3xl font-bold text-orange-600">
                 #{userRank.rank}
               </p>
             </div>
           )}
         </div>
 
-        {userRank && nextTarget && (
-          <div className="mb-4 p-3 bg-linear-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-            <div className="flex items-center gap-2 text-sm">
-              <Target className="w-4 h-4 text-blue-600" />
-              <p className="text-blue-900">
-                <span className="font-medium">Next milestone:</span> Reach rank{" "}
-                {nextTarget.rankRange} to win {nextTarget.prize}
-              </p>
+        {eligibleReward && (
+          <div className="mb-6 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border-2 border-green-300">
+            <div className="flex items-center gap-3">
+              <Gift className="w-6 h-6 text-green-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-gray-700">
+                  Your Current Prize Tier
+                </p>
+                <p className="text-lg font-bold text-gray-900">
+                  {eligibleReward.prize}
+                </p>
+              </div>
             </div>
           </div>
         )}
 
-        <div className="relative pt-16 pb-12">
-          <div className="relative h-2 bg-gray-200 rounded-full overflow-hidden">
+        {/* Progress Bar */}
+        <div className="mb-8">
+          <div className="relative h-3 bg-gray-200 rounded-full overflow-visible">
+            {/* Filled progress - now from RIGHT */}
             <div
-              className="absolute inset-y-0 left-0 bg-linear-to-r from-orange-400 to-orange-500 transition-all duration-700"
-              style={{ width: `${userPosition}%` }}
+              className="absolute inset-y-0 left-0 bg-gradient-to-l from-orange-500 to-orange-600 rounded-full transition-all duration-1000"
+              style={{ width: `${Math.min(100 - 2, 100 - userPosition)}%` }}
             />
-          </div>
 
-          <div className="absolute inset-x-0 top-0 bottom-0">
-            {milestones.map((milestone, index) => {
-              const tierStyles = getTierStyles(milestone.color);
-              const isAchieved = userRank && userRank.rank <= milestone.rank;
-              const { icon: TierIcon } = getRankIcon(milestone.rank);
+            {/* User position indicator */}
+            {userRank && (
+              <div
+                className="absolute top-[7px] -translate-y-1/2 translate-x-1/2 z-10"
+                style={{ right: `${Math.max(2, userPosition)}%` }}
+              >
+                <div className="flex flex-col items-center -mt-10">
+                  <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white text-xs font-bold px-2 py-1 rounded-full border-2 border-white shadow-lg mb-2 whitespace-nowrap">
+                    You
+                  </div>
+                  <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-3 border-white shadow-xl flex items-center justify-center">
+                    <Star className="w-4 h-4 text-white fill-white" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Prize Labels Below Bar - REVERSED */}
+        <div className="relative">
+          <div className="flex justify-between items-start">
+            {majorMilestones.map((reward, index) => {
+              const position =
+                ((totalParticipants - reward.minRank) / totalParticipants) *
+                100;
+              const isAchieved = userRank && userRank.rank <= reward.minRank;
+              const { icon: Icon } = getRankIcon(reward.minRank);
 
               return (
                 <div
                   key={index}
-                  className="absolute"
+                  className="flex flex-col items-center"
                   style={{
-                    left: `${milestone.position}%`,
-                    transform: "translateX(-50%)",
+                    width: "16.666%",
+                    maxWidth: "140px",
                   }}
                 >
-                  <div className="flex flex-col items-center">
-                    <div
-                      className={`${tierStyles.bg} border ${tierStyles.border} rounded-lg px-3 py-2 min-w-[90px] mb-2`}
-                    >
-                      <div className="flex items-center justify-center gap-1 mb-1">
-                        <TierIcon className={`w-4 h-4 ${tierStyles.icon}`} />
-                        <p className={`text-xs font-bold ${tierStyles.text}`}>
-                          {milestone.rankRange}
-                        </p>
-                      </div>
-                      <p className="text-xs text-gray-900 font-semibold text-center">
-                        {milestone.prize}
-                      </p>
-                      {isAchieved && (
-                        <div className="flex items-center justify-center mt-1">
-                          <CheckCircle className="w-3 h-3 text-green-600" />
-                        </div>
-                      )}
-                    </div>
+                  {/* Vertical line */}
+                  <div
+                    className={`w-0.5 rounded h-8 -mt-8 mb-2 ${
+                      isAchieved ? "bg-orange-500" : "bg-gray-300"
+                    }`}
+                  />
 
-                    <div
-                      className={`w-px h-10 ${
-                        isAchieved ? "bg-orange-500" : "bg-gray-300"
-                      }`}
-                    />
+                  {/* Icon */}
+                  <Icon
+                    className={`w-5 h-5 mb-2 ${
+                      isAchieved ? "text-orange-600" : "text-gray-400"
+                    }`}
+                  />
 
-                    <div
-                      className={`w-3 h-3 rounded-full border-2 ${
-                        isAchieved
-                          ? "bg-orange-500 border-orange-600"
-                          : "bg-white border-gray-300"
-                      }`}
-                    />
-                  </div>
+                  {/* Rank range */}
+                  <p className="text-xs font-bold text-gray-900 mb-1 text-center">
+                    {reward.rankRange}
+                  </p>
+
+                  {/* Prize */}
+                  <p className="text-[10px] text-gray-600 text-center line-clamp-2 leading-tight">
+                    {reward.prize}
+                  </p>
                 </div>
               );
             })}
           </div>
-
-          {userRank && (
-            <div
-              className="absolute"
-              style={{
-                left: `${userPosition}%`,
-                top: "50%",
-                transform: "translate(-50%, -50%)",
-              }}
-            >
-              <div className="relative flex flex-col items-center">
-                <div className="bg-linear-to-b from-orange-500 to-orange-600 text-white text-xs font-semibold px-3 py-1 rounded-full border-2 border-white mb-2 whitespace-nowrap">
-                  You
-                </div>
-                <div className="w-8 h-8 bg-linear-to-b from-orange-500 to-orange-600 rounded-full border-4 border-white flex items-center justify-center">
-                  <Star className="w-4 h-4 text-white fill-white" />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {userRank && achieved.length > 0 && (
-          <div className="mt-4 p-3 bg-linear-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
-            <div className="flex items-center gap-2 text-sm text-green-900">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <span className="font-medium">
-                {achieved.length} milestone{achieved.length !== 1 ? "s" : ""}{" "}
-                achieved
-              </span>
+        {/* Achievement summary */}
+        {userRank && (
+          <div className="mt-6 p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                <span className="text-blue-900 font-medium">
+                  {
+                    majorMilestones.filter((m) => userRank.rank <= m.minRank)
+                      .length
+                  }{" "}
+                  of {majorMilestones.length} milestones achieved
+                </span>
+              </div>
+              {userRank.rank > 1 && (
+                <span className="text-xs text-blue-700 font-medium">
+                  {userRank.rank - 1} rank{userRank.rank - 1 !== 1 ? "s" : ""}{" "}
+                  to next tier
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -362,11 +290,10 @@ const Competition = () => {
     );
   };
 
-  // Scoring Breakdown Component - Fully Dynamic
+  // Scoring Breakdown Component
   const ScoringBreakdown = () => {
     if (!userRank || !competitionRules) return null;
 
-    // Build scoring metrics dynamically from backend rules
     const scoringMetrics = [
       {
         name: "Direct Referrals",
@@ -433,37 +360,31 @@ const Competition = () => {
           bg: "from-orange-50 to-orange-100",
           border: "border-orange-200",
           text: "text-orange-700",
-          progress: "bg-orange-500",
         },
         blue: {
           bg: "from-blue-50 to-blue-100",
           border: "border-blue-200",
           text: "text-blue-700",
-          progress: "bg-blue-500",
         },
         green: {
           bg: "from-green-50 to-green-100",
           border: "border-green-200",
           text: "text-green-700",
-          progress: "bg-green-500",
         },
         purple: {
           bg: "from-purple-50 to-purple-100",
           border: "border-purple-200",
           text: "text-purple-700",
-          progress: "bg-purple-500",
         },
         indigo: {
           bg: "from-indigo-50 to-indigo-100",
           border: "border-indigo-200",
           text: "text-indigo-700",
-          progress: "bg-indigo-500",
         },
         pink: {
           bg: "from-pink-50 to-pink-100",
           border: "border-pink-200",
           text: "text-pink-700",
-          progress: "bg-pink-500",
         },
       };
       return colors[color] || colors.blue;
@@ -477,13 +398,13 @@ const Competition = () => {
     };
 
     return (
-      <div className="bg-white rounded-lg p-6 border border-gray-200 mb-6">
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200 mb-6">
         <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <BarChart3 className="w-5 h-5 text-orange-600" />
           Scoring Breakdown
         </h3>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {scoringMetrics.map((metric, index) => {
             const colors = getColorClasses(metric.color);
             const Icon = metric.icon;
@@ -491,22 +412,22 @@ const Competition = () => {
             return (
               <div
                 key={index}
-                className={`bg-linear-to-b ${colors.bg} border ${colors.border} rounded-lg p-4`}
+                className={`bg-gradient-to-br ${colors.bg} border ${colors.border} rounded-xl p-4`}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Icon className={`w-4 h-4 ${colors.text}`} />
-                    <span className="text-sm font-medium text-gray-900">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Icon className={`w-4 h-4 ${colors.text} flex-shrink-0`} />
+                    <span className="text-sm font-medium text-gray-900 truncate">
                       {metric.name}
                     </span>
                   </div>
-                  <span className="text-xs bg-white px-2 py-1 rounded border border-gray-200">
+                  <span className="text-xs bg-white px-2 py-1 rounded border border-gray-200 flex-shrink-0 ml-2">
                     {metric.weight}%
                   </span>
                 </div>
 
-                <div className="mb-2">
-                  <div className="flex items-baseline justify-between mb-1">
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between">
                     <span className="text-xs text-gray-600">Score</span>
                     <span className={`text-lg font-bold ${colors.text}`}>
                       {metric.score.toFixed(1)}
@@ -514,7 +435,7 @@ const Competition = () => {
                   </div>
                   <div className="flex items-baseline justify-between">
                     <span className="text-xs text-gray-600">Current</span>
-                    <span className="text-sm font-semibold text-gray-900">
+                    <span className="text-sm font-semibold text-gray-900 truncate ml-2 text-right">
                       {formatValue(metric.current, metric.format)} {metric.unit}
                     </span>
                   </div>
@@ -527,7 +448,7 @@ const Competition = () => {
         <div className="mt-6 pt-4 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Score</p>
+              <p className="text-sm text-gray-600 font-medium">Total Score</p>
               <p className="text-xs text-gray-500 mt-1">
                 Base: {userRank.baseScore.toFixed(1)} × Bonus:{" "}
                 {userRank.bonusMultiplier}x
@@ -553,12 +474,12 @@ const Competition = () => {
           <title>Trading Competition - Nupips</title>
         </Helmet>
 
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-b from-orange-500 to-orange-600 rounded-xl mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
               <Trophy className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
               {competitionPeriod?.description || "Trading Championship"}
             </h1>
             <p className="text-gray-600 text-lg">
@@ -566,22 +487,22 @@ const Competition = () => {
             </p>
           </div>
 
-          <div className="bg-linear-to-b from-orange-500 to-orange-600 rounded-xl p-8 mb-8 text-white">
+          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-xl p-6 sm:p-8 mb-8 text-white">
             <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0">
+              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner">
                 <AlertCircle className="w-10 h-10 text-white" />
               </div>
               <div className="flex-1 text-center md:text-left">
                 <h2 className="text-2xl sm:text-3xl font-bold mb-2">
                   Connect GTC FX to Start Competing
                 </h2>
-                <p className="text-orange-100 text-lg mb-4">
+                <p className="text-orange-100 text-base sm:text-lg mb-4">
                   Join {stats?.totalParticipants || "hundreds of"} traders
                   competing for amazing prizes
                 </p>
                 <button
                   onClick={() => navigate("/gtcfx/auth")}
-                  className="px-8 py-4 bg-white text-orange-600 font-semibold rounded-lg hover:bg-orange-50 transition-all inline-flex items-center gap-3 group"
+                  className="px-6 sm:px-8 py-3 sm:py-4 bg-white text-orange-600 font-semibold rounded-xl hover:bg-orange-50 transition-all inline-flex items-center gap-3 group shadow-lg hover:shadow-xl"
                 >
                   <span>Connect Broker Now</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -590,9 +511,8 @@ const Competition = () => {
             </div>
           </div>
 
-          {/* Top 3 Prizes from Backend */}
           {rewards.length >= 3 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
               {rewards.slice(0, 3).map((reward, idx) => {
                 const bgColors = [
                   "from-amber-400 to-amber-500",
@@ -608,7 +528,7 @@ const Competition = () => {
                 return (
                   <div
                     key={idx}
-                    className={`bg-linear-to-b ${bgColors[idx]} rounded-xl p-6 text-white`}
+                    className={`bg-gradient-to-br ${bgColors[idx]} rounded-2xl shadow-lg p-6 text-white`}
                   >
                     <Trophy className="w-12 h-12 mb-4" />
                     <h3 className="text-xl font-semibold mb-2">
@@ -624,10 +544,10 @@ const Competition = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-linear-to-b from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
                   <Target className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900">
@@ -662,9 +582,9 @@ const Competition = () => {
               </ul>
             </div>
 
-            <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-linear-to-b from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
                   <BarChart3 className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900">Scoring</h3>
@@ -699,7 +619,7 @@ const Competition = () => {
                     return (
                       <div
                         key={key}
-                        className={`flex items-center justify-between p-3 bg-linear-to-b ${
+                        className={`flex items-center justify-between p-3 bg-gradient-to-br ${
                           bgColors[idx % 6]
                         } rounded-lg border`}
                       >
@@ -743,7 +663,7 @@ const Competition = () => {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-linear-to-b from-red-50 to-red-100 rounded-xl flex items-center justify-center mx-auto mb-4 border border-red-200">
+          <div className="w-16 h-16 bg-gradient-to-br from-red-50 to-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-200 shadow-sm">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -752,7 +672,7 @@ const Competition = () => {
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => fetchCompetitionData()}
-            className="px-6 py-3 bg-linear-to-b from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all"
+            className="px-6 py-3 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl"
           >
             Try Again
           </button>
@@ -770,18 +690,18 @@ const Competition = () => {
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-linear-to-b from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
-              <Trophy className="w-8 h-8 text-white" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+              <Trophy className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+            <div className="min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
                 {competitionPeriod?.description || "Trading Championship"}
               </h1>
-              <p className="text-sm text-gray-600 flex items-center gap-2 mt-1">
-                <Clock className="w-4 h-4" />
-                Ends {endDate}
+              <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 mt-1">
+                <Clock className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Ends {endDate}</span>
               </p>
             </div>
           </div>
@@ -789,7 +709,7 @@ const Competition = () => {
           <button
             onClick={() => fetchCompetitionData(false)}
             disabled={refreshing}
-            className="px-4 py-2 bg-white border border-gray-200 hover:border-orange-500 rounded-lg font-medium text-gray-700 hover:text-orange-600 transition-all flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-white border border-gray-200 hover:border-orange-500 rounded-xl font-medium text-gray-700 hover:text-orange-600 transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm hover:shadow flex-shrink-0"
           >
             <RefreshCw
               className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -798,29 +718,31 @@ const Competition = () => {
           </button>
         </div>
 
-        {/* Prize Pool from Backend */}
+        {/* Prize Pool */}
         {rewards.length > 0 && (
-          <div className="bg-white rounded-lg p-6 border border-gray-200 mb-6">
+          <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-200 mb-6">
             <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Gift className="w-5 h-5 text-orange-600" />
               Prize Pool
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
               {rewards.map((reward, index) => {
                 const { icon: Icon, color } = getRankIcon(reward.minRank);
                 const badgeColor = getRankBadgeColor(reward.minRank);
                 return (
                   <div
                     key={index}
-                    className={`p-4 rounded-lg border ${badgeColor}`}
+                    className={`p-4 rounded-xl border ${badgeColor} hover:shadow-md transition-shadow`}
                   >
                     <div className="flex items-center gap-2 mb-2">
-                      <Icon className={`w-5 h-5 ${color}`} />
-                      <p className="text-xs font-semibold">
+                      <Icon
+                        className={`w-4 h-4 sm:w-5 sm:h-5 ${color} flex-shrink-0`}
+                      />
+                      <p className="text-xs font-semibold truncate">
                         {reward.rankRange}
                       </p>
                     </div>
-                    <p className="text-sm font-bold text-gray-900 mb-1">
+                    <p className="text-sm font-bold text-gray-900 mb-1 truncate">
                       {reward.prize}
                     </p>
                     <p className="text-xs text-gray-600 line-clamp-2">
@@ -840,13 +762,13 @@ const Competition = () => {
           {/* User Rank Card */}
           <div className="lg:col-span-1 space-y-6">
             {userRank && (
-              <div className="bg-linear-to-b from-orange-500 to-orange-600 rounded-lg p-6 text-white border border-orange-400">
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-xl p-6 text-white border border-orange-400">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="text-white/90 text-xs font-medium uppercase tracking-wide">
                       Your Rank
                     </p>
-                    <p className="text-4xl font-bold">#{userRank.rank}</p>
+                    <p className="text-4xl font-bold mt-1">#{userRank.rank}</p>
                   </div>
                   {(() => {
                     const { icon: Icon } = getRankIcon(userRank.rank);
@@ -854,7 +776,7 @@ const Competition = () => {
                   })()}
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 mb-4 border border-white/20">
+                <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 mb-4 border border-white/20">
                   <div className="flex items-baseline justify-between mb-2">
                     <span className="text-white/90 text-sm">Total Score</span>
                     <span className="text-3xl font-bold">
@@ -868,13 +790,15 @@ const Competition = () => {
                 </div>
 
                 {eligibleReward && (
-                  <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 border border-white/20">
+                  <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                     <div className="flex items-center gap-2 mb-2">
-                      <Gift className="w-5 h-5" />
+                      <Gift className="w-5 h-5 flex-shrink-0" />
                       <p className="text-sm font-medium">Current Prize Tier</p>
                     </div>
-                    <p className="text-lg font-bold">{eligibleReward.prize}</p>
-                    <p className="text-xs text-white/80 mt-1">
+                    <p className="text-lg font-bold truncate">
+                      {eligibleReward.prize}
+                    </p>
+                    <p className="text-xs text-white/80 mt-1 line-clamp-2">
                       {eligibleReward.description}
                     </p>
                   </div>
@@ -883,12 +807,12 @@ const Competition = () => {
                 <div className="mt-4 flex items-center gap-2 text-sm">
                   {userRank.isVerified ? (
                     <>
-                      <CheckCircle className="w-4 h-4" />
+                      <CheckCircle className="w-4 h-4 flex-shrink-0" />
                       <span>KYC Verified (Bonus Active)</span>
                     </>
                   ) : (
                     <>
-                      <AlertCircle className="w-4 h-4 text-yellow-300" />
+                      <AlertCircle className="w-4 h-4 text-yellow-300 flex-shrink-0" />
                       <span>Complete KYC for Bonus</span>
                     </>
                   )}
@@ -898,51 +822,55 @@ const Competition = () => {
 
             {/* Key Metrics */}
             {userRank && (
-              <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
                 <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Activity className="w-5 h-5 text-blue-600" />
                   Key Metrics
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-linear-to-b from-orange-50 to-orange-100 rounded-lg border border-orange-200">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-orange-600" />
-                      <span className="text-sm text-gray-700">
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Users className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 truncate">
                         Direct Referrals
                       </span>
                     </div>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 ml-2 flex-shrink-0">
                       {userRank.metrics.directReferrals}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-linear-to-b from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm text-gray-700">
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <DollarSign className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 truncate">
                         Trading Volume
                       </span>
                     </div>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 ml-2 flex-shrink-0 text-right">
                       $
                       {userRank.metrics.tradingVolumeDollars?.toLocaleString() ||
                         0}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-linear-to-b from-green-50 to-green-100 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                      <span className="text-sm text-gray-700">Win Rate</span>
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <TrendingUp className="w-4 h-4 text-green-600 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 truncate">
+                        Win Rate
+                      </span>
                     </div>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 ml-2 flex-shrink-0">
                       {userRank.metrics.winRate?.toFixed(1) || 0}%
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-linear-to-b from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm text-gray-700">Team Size</span>
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Users className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                      <span className="text-sm text-gray-700 truncate">
+                        Team Size
+                      </span>
                     </div>
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-gray-900 ml-2 flex-shrink-0">
                       {userRank.metrics.nupipsTeamSize}
                     </span>
                   </div>
@@ -953,14 +881,14 @@ const Competition = () => {
 
           {/* Leaderboard */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-              <div className="p-5 bg-linear-to-b from-orange-500 to-orange-600 text-white">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+              <div className="p-4 sm:p-5 bg-gradient-to-br from-orange-500 to-orange-600 text-white">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold flex items-center gap-2">
-                    <Crown className="w-6 h-6" />
+                  <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                    <Crown className="w-5 h-5 sm:w-6 sm:h-6" />
                     Leaderboard
                   </h2>
-                  <span className="text-sm bg-white/20 px-3 py-1 rounded-lg font-medium">
+                  <span className="text-xs sm:text-sm bg-white/20 px-3 py-1 rounded-lg font-medium">
                     Top {Math.min(leaderboard.length, 50)}
                   </span>
                 </div>
@@ -979,58 +907,61 @@ const Competition = () => {
                       key={entry.userId}
                       className={`transition-all ${
                         isCurrentUser
-                          ? "bg-linear-to-b from-orange-50 to-orange-100 border-l-4 border-orange-500"
+                          ? "bg-gradient-to-r from-orange-50 to-orange-100 border-l-4 border-orange-500"
                           : "hover:bg-gray-50"
                       }`}
                     >
-                      <div className="p-4">
-                        <div className="flex items-center gap-4">
+                      <div className="p-3 sm:p-4">
+                        <div className="flex items-center gap-3 sm:gap-4">
                           <div
-                            className={`flex items-center justify-center w-12 h-12 rounded-lg border ${badgeColor} flex-shrink-0`}
+                            className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl border ${badgeColor} flex-shrink-0`}
                           >
                             {entry.rank <= 3 ? (
-                              <RankIcon className={`w-6 h-6 ${color}`} />
+                              <RankIcon
+                                className={`w-5 h-5 sm:w-6 sm:h-6 ${color}`}
+                              />
                             ) : (
-                              <span className="text-sm font-semibold">
+                              <span className="text-xs sm:text-sm font-semibold">
                                 #{entry.rank}
                               </span>
                             )}
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <p className="font-semibold text-gray-900 truncate">
                                 {entry.username}
                               </p>
                               {entry.isVerified && (
-                                <CheckCircle className="w-4 h-4 text-blue-600" />
+                                <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
                               )}
                               {entry.isAgent && (
-                                <Award className="w-4 h-4 text-purple-600" />
+                                <Award className="w-4 h-4 text-purple-600 flex-shrink-0" />
                               )}
                               {isCurrentUser && (
-                                <span className="text-xs bg-linear-to-b from-orange-500 to-orange-600 text-white px-2 py-0.5 rounded-full font-medium">
+                                <span className="text-xs bg-gradient-to-br from-orange-500 to-orange-600 text-white px-2 py-0.5 rounded-full font-medium">
                                   You
                                 </span>
                               )}
                             </div>
                             <div className="flex flex-wrap gap-2 text-xs text-gray-600">
                               <span className="flex items-center gap-1">
-                                <Users className="w-3 h-3" />
+                                <Users className="w-3 h-3 flex-shrink-0" />
                                 {entry.metrics.directReferrals} refs
                               </span>
                               <span className="flex items-center gap-1">
-                                <DollarSign className="w-3 h-3" />$
+                                <DollarSign className="w-3 h-3 flex-shrink-0" />
+                                $
                                 {entry.metrics.tradingVolumeDollars?.toLocaleString() ||
                                   0}
                               </span>
                             </div>
                           </div>
 
-                          <div className="text-right flex items-center gap-3">
+                          <div className="text-right flex items-center gap-2 sm:gap-3 flex-shrink-0">
                             <div>
                               <p className="text-xs text-gray-600">Score</p>
-                              <p className="text-xl font-bold text-gray-900">
+                              <p className="text-lg sm:text-xl font-bold text-gray-900">
                                 {entry.score.toFixed(1)}
                               </p>
                             </div>
@@ -1040,12 +971,12 @@ const Competition = () => {
                                   isExpanded ? null : entry.userId
                                 )
                               }
-                              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
                             >
                               {isExpanded ? (
-                                <ChevronUp className="w-5 h-5 text-gray-600" />
+                                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                               ) : (
-                                <ChevronDown className="w-5 h-5 text-gray-600" />
+                                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
                               )}
                             </button>
                           </div>
@@ -1053,8 +984,8 @@ const Competition = () => {
                       </div>
 
                       {isExpanded && (
-                        <div className="px-4 pb-4">
-                          <div className="bg-linear-to-b from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
+                        <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                          <div className="bg-white rounded-xl p-4 border border-gray-200">
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                               <div className="bg-white p-3 rounded-lg border border-gray-200">
                                 <p className="text-xs text-gray-600 mb-1">
@@ -1072,7 +1003,7 @@ const Competition = () => {
                                   {entry.metrics.nupipsTeamSize}
                                 </p>
                               </div>
-                              <div className="bg-white p-3 rounded-lg border border-gray-200">
+                              <div className="bg-white p-3 rounded-lg border border-gray-200 col-span-2 sm:col-span-1">
                                 <p className="text-xs text-gray-600 mb-1">
                                   Win Rate
                                 </p>
