@@ -228,7 +228,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
 
   return (
     <>
-      {/* ✅ DESKTOP NAVBAR - EXACTLY FROM PREVIOUS VERSION */}
+      {/* DESKTOP NAVBAR - EXACTLY FROM PREVIOUS VERSION */}
       <nav className="fixed top-0 left-0 right-0 z-[9999] transition-all duration-500 ease-out md:top-4 md:left-4 md:right-4">
         <div className="bg-white/95 backdrop-blur-xl rounded-none md:rounded-2xl border border-gray-200 w-full mx-auto transition-all duration-300">
           <div className="relative px-4 lg:px-6">
@@ -253,7 +253,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
                   </div>
                 </div>
 
-                {/* ✅ GTC Button - Positioned near Logo (Desktop) */}
+                {/* GTC Button - Positioned near Logo (Desktop) */}
                 <div className="hidden md:flex items-center ml-2">
                   {gtcLoading ? (
                     <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl">
@@ -562,10 +562,10 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
         </div>
       </nav>
 
-      {/* ✅ MOBILE FLOATING MODAL - EXACTLY LIKE SCREENSHOT [file:9] */}
+      {/* MOBILE FLOATING MODAL */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[9998] md:hidden flex items-start pt-16 px-2 backdrop-blur-sm bg-black/20">
-          <div className="w-full max-w-md mx-auto bg-white/95 backdrop-blur-xl shadow-2xl border border-gray-200 rounded-3xl overflow-hidden mx-0.5 mt-2 animate-in slide-in-from-top-4 duration-300">
+          <div className="w-full max-w-md bg-white/95 backdrop-blur-xl shadow-2xl border border-gray-200 rounded-3xl overflow-hidden mx-0.5 mt-2 animate-in slide-in-from-top-4 duration-300">
             {/* User Profile Section */}
             <div className="p-5 border-b border-gray-100 bg-gradient-to-b from-orange-50/50 to-white">
               <div className="flex items-center space-x-3 mb-4">
