@@ -65,6 +65,7 @@ import CourseView from "./pages/others/CourseView";
 import LessonView from "./pages/others/LessonView";
 import NupipsIncomes from "./pages/user/NupipsIncomes";
 import Competition from "./pages/Competition";
+import Notifications from "./pages/user/Notifications";
 
 // Navigation configuration
 const navbarLinks = [
@@ -351,6 +352,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
                   </ProtectedRoute>
                 }
               />
