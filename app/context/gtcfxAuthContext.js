@@ -58,11 +58,11 @@ export const GTCFxAuthProvider = ({ children }) => {
                 };
 
                 setGtcUser(userInfo);
-                gtcfxTokenService.setUser(userInfo);
+                await gtcfxTokenService.setUser(userInfo);
 
                 // Update in backend
                 try {
-                    await gtcfxBackendAPI.post('/gtcfx/sync-user');
+                    await api.post('/gtcfx/sync-user');
                 } catch (err) {
                     console.warn('Failed to sync user to backend:', err);
                 }
@@ -88,12 +88,12 @@ export const GTCFxAuthProvider = ({ children }) => {
             if (response.data.authenticated && response.data.data) {
                 const { access_token, refresh_token, user } = response.data.data;
 
-                gtcfxTokenService.setToken(access_token);
-                gtcfxTokenService.setRefreshToken(refresh_token);
+                await gtcfxTokenService.setToken(access_token);
+                await gtcfxTokenService.setRefreshToken(refresh_token);
 
                 if (user) {
                     setGtcUser(user);
-                    gtcfxTokenService.setUser(user);
+                    await gtcfxTokenService.setUser(user);
                 }
 
                 setGtcAuthenticated(true);
@@ -104,7 +104,7 @@ export const GTCFxAuthProvider = ({ children }) => {
             }
         } catch (error) {
             console.error('GTC FX auth check failed:', error);
-            gtcfxTokenService.clearTokens();
+            await gtcfxTokenService.clearTokens();
             setGtcAuthenticated(false);
             setGtcUser(null);
         } finally {
@@ -120,15 +120,15 @@ export const GTCFxAuthProvider = ({ children }) => {
                 throw new Error('Missing GTC FX tokens in response');
             }
 
-            gtcfxTokenService.setToken(access_token);
-            gtcfxTokenService.setRefreshToken(refresh_token);
+            await gtcfxTokenService.setToken(access_token);
+            await gtcfxTokenService.setRefreshToken(refresh_token);
 
             setGtcAuthenticated(true);
             setGtcError(null);
 
             if (user) {
                 setGtcUser(user);
-                gtcfxTokenService.setUser(user);
+                await gtcfxTokenService.setUser(user);
             }
 
             await fetchGTCUserInfo();
@@ -148,13 +148,13 @@ export const GTCFxAuthProvider = ({ children }) => {
         } catch (error) {
             console.error('GTC FX logout error:', error);
         } finally {
-            gtcfxTokenService.clearTokens();
+            await gtcfxTokenService.clearTokens();
             setGtcUser(null);
             setGtcAuthenticated(false);
             setGtcError(null);
 
-            // Trigger navigation or event for logout (React Native)
-            // navigation.navigate('Login'); // If using React Navigation
+            // React Native navigation redirect would go here
+            // navigation.navigate('GTCFxAuth');
         }
     };
 

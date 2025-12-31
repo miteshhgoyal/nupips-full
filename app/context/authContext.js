@@ -62,6 +62,51 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const autoFetchPerformanceFees = async () => {
+        try {
+            // 1. Check GTC FX session (fast)
+            const sessionRes = await api.get('/gtcfx/session');
+            if (!sessionRes.data.authenticated) {
+                return;
+            }
+
+            // 2. Get user's last fetch timestamp FIRST
+            const userData = await api.get('/auth/verify');
+            const lastFetch = userData.data.user?.gtcfx?.lastPerformanceFeesFetch;
+
+            if (lastFetch) {
+                const daysSinceLastFetch = Math.floor(
+                    (new Date() - new Date(lastFetch)) / (1000 * 60 * 60 * 24)
+                );
+
+                // Skip if fetched today or yesterday
+                if (daysSinceLastFetch <= 1) {
+                    return;
+                }
+            }
+
+            // 3. Fetch last 7 days only (not 30) for login - faster + less overlap
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+            const response = await api.post('/gtcfx/fetch-performance-fees', {
+                startDate: sevenDaysAgo.toISOString().split('T')[0],
+                endDate: new Date().toISOString().split('T')[0],
+            });
+
+            if (response.data.wasSkipped) {
+                console.log('Performance fees fetch was skipped');
+            } else if (response.data.totalPerformanceFee > 0) {
+                console.log('Performance fees fetched successfully');
+            }
+        } catch (error) {
+            console.warn(
+                'Auto-fetch skipped:',
+                error.response?.data?.message || error.message
+            );
+        }
+    };
+
     const login = async (userData) => {
         const { token, user, rememberMe } = userData;
 
@@ -73,7 +118,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
 
         // Clear GTC FX tokens and user data on login
-        gtcfxTokenService.clearTokens();
+        await gtcfxTokenService.clearTokens();
     };
 
     const logout = async () => {
@@ -82,7 +127,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
 
         // Clear GTC FX tokens and user data on logout
-        gtcfxTokenService.clearTokens();
+        await gtcfxTokenService.clearTokens();
     };
 
     const value = {
@@ -93,6 +138,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         checkAuth,
         updateUser,
+        autoFetchPerformanceFees,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

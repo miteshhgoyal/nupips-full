@@ -2,8 +2,6 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tokenService } from './tokenService';
 
-// Use environment variable or fallback to localhost
-// const API_BASE_URL = 'http://192.168.1.66:8000/';
 const API_BASE_URL = 'https://api.nupips.com';
 
 const api = axios.create({
@@ -42,17 +40,5 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-
-// Auth API endpoints
-export const authAPI = {
-    register: (data) => api.post('/auth/register', data),
-    verifyOTP: (data) => api.post('/auth/verify-otp', data),
-    resendOTP: (data) => api.post('/auth/resend-otp', data),
-    login: (data) => api.post('/auth/login', data),
-    logout: () => api.post('/auth/logout'),
-    verifyToken: () => api.get('/auth/verify'),
-    forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
-    resetPassword: (data) => api.post('/auth/reset-password', data),
-};
 
 export default api;

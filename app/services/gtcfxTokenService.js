@@ -10,20 +10,20 @@ export const gtcfxTokenService = {
     setToken: async (token) => {
         gtcfxTokenService._accessToken = token;
         try {
-            await AsyncStorage.setItem('accessToken', token);
+            await AsyncStorage.setItem('gtcfx_accessToken', token);
         } catch (err) {
-            console.error('Error persisting access token:', err);
+            console.error('Error persisting GTC FX access token:', err);
         }
     },
 
     getToken: async () => {
         try {
             if (!gtcfxTokenService._accessToken) {
-                gtcfxTokenService._accessToken = await AsyncStorage.getItem('accessToken');
+                gtcfxTokenService._accessToken = await AsyncStorage.getItem('gtcfx_accessToken');
             }
             return gtcfxTokenService._accessToken;
         } catch (err) {
-            console.error('Error retrieving access token:', err);
+            console.error('Error retrieving GTC FX access token:', err);
             return null;
         }
     },
@@ -31,20 +31,20 @@ export const gtcfxTokenService = {
     setRefreshToken: async (token) => {
         gtcfxTokenService._refreshToken = token;
         try {
-            await AsyncStorage.setItem('refreshToken', token);
+            await AsyncStorage.setItem('gtcfx_refreshToken', token);
         } catch (err) {
-            console.error('Error persisting refresh token:', err);
+            console.error('Error persisting GTC FX refresh token:', err);
         }
     },
 
     getRefreshToken: async () => {
         try {
             if (!gtcfxTokenService._refreshToken) {
-                gtcfxTokenService._refreshToken = await AsyncStorage.getItem('refreshToken');
+                gtcfxTokenService._refreshToken = await AsyncStorage.getItem('gtcfx_refreshToken');
             }
             return gtcfxTokenService._refreshToken;
         } catch (err) {
-            console.error('Error retrieving refresh token:', err);
+            console.error('Error retrieving GTC FX refresh token:', err);
             return null;
         }
     },
@@ -52,21 +52,21 @@ export const gtcfxTokenService = {
     setUser: async (user) => {
         gtcfxTokenService._user = user;
         try {
-            await AsyncStorage.setItem('user', JSON.stringify(user));
+            await AsyncStorage.setItem('gtcfx_user', JSON.stringify(user));
         } catch (err) {
-            console.error('Error persisting user:', err);
+            console.error('Error persisting GTC FX user:', err);
         }
     },
 
     getUser: async () => {
         try {
             if (!gtcfxTokenService._user) {
-                const userStr = await AsyncStorage.getItem('user');
+                const userStr = await AsyncStorage.getItem('gtcfx_user');
                 gtcfxTokenService._user = userStr ? JSON.parse(userStr) : null;
             }
             return gtcfxTokenService._user;
         } catch (err) {
-            console.error('Error retrieving user:', err);
+            console.error('Error retrieving GTC FX user:', err);
             return null;
         }
     },
@@ -76,9 +76,13 @@ export const gtcfxTokenService = {
         gtcfxTokenService._refreshToken = null;
         gtcfxTokenService._user = null;
         try {
-            await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user']);
+            await AsyncStorage.multiRemove([
+                'gtcfx_accessToken',
+                'gtcfx_refreshToken',
+                'gtcfx_user'
+            ]);
         } catch (err) {
-            console.error('Error clearing tokens:', err);
+            console.error('Error clearing GTC FX tokens:', err);
         }
     },
 

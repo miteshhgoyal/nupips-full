@@ -1,24 +1,27 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { gtcfxTokenService } from './gtcfxTokenService';
+import { tokenService } from './tokenService';
 import localApi from './api';
 
-const API_BASE_URL = 'https://test.gtctrader1203.top/api/v3';
+const API_BASE_URL = 'https://api.nupips.com/api/v3';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 120000,
+    timeout: 300000, // 5 minutes for large tree data
     headers: {
         'Content-Type': 'application/json',
     },
+    maxContentLength: 100 * 1024 * 1024, // 100MB
+    maxBodyLength: 100 * 1024 * 1024,
 });
 
-// Request interceptor to add auth token
+// Send YOUR backend JWT token (NOT GTC token)
 api.interceptors.request.use(
     async (config) => {
         try {
-            const token = await gtcfxTokenService.getToken();
-            if (token) {
+            const token = await tokenService.getToken();
+            if (token && !tokenService.isTokenExpired(token)) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
             return config;
@@ -35,8 +38,15 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+        const responseData = error.response?.data;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Handle timeout errors
+        if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+            console.error('Request timeout:', originalRequest.url);
+            return Promise.reject(error);
+        }
+
+        if (responseData?.code === 401 && !responseData?.authenticated && !originalRequest._retry) {
             originalRequest._retry = true;
 
             try {
@@ -63,12 +73,12 @@ api.interceptors.response.use(
                                     refresh_token: newRefreshToken,
                                 }
                             );
+
+                            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                            return api(originalRequest);
                         } catch (backendError) {
                             console.warn('Failed to update tokens in backend:', backendError);
                         }
-
-                        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-                        return api(originalRequest);
                     }
                 }
             } catch (refreshError) {
