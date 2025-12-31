@@ -10,7 +10,15 @@ import {
     Users,
     Home,
     ShoppingBag,
-    Book
+    Book,
+    DollarSign,
+    ArrowLeftRight,
+    History,
+    User,
+    Package,
+    FileText,
+    PlayCircle,
+    Clock,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,19 +30,27 @@ const BAR_BORDER = '#374151';
 
 // layout config so you can tune it easily
 const TAB_BAR_CONFIG = {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     bottomInset: 8,
-    barHeight: 68,
+    barHeight: 72,
     borderRadius: 24,
-    itemMinWidth: 72,
-    itemGap: 8,
+    itemMinWidth: 64,
+    itemGap: 6,
 };
 
+// ALL TABS VISIBLE FOR TESTING
 const TAB_CONFIG = [
-    { name: 'dashboard', label: 'Dashboard', icon: Home },
+    { name: 'dashboard', label: 'Home', icon: Home },
     { name: 'nupips-team', label: 'Team', icon: Users },
+    { name: 'nupips-incomes', label: 'Income', icon: TrendingUp },
+    { name: 'deposit', label: 'Deposit', icon: DollarSign },
+    { name: 'withdrawal', label: 'Withdraw', icon: ArrowLeftRight },
+    { name: 'transfer', label: 'Transfer', icon: ArrowLeftRight },
+    { name: 'transaction-history', label: 'History', icon: History },
     { name: 'shop', label: 'Shop', icon: ShoppingBag },
+    { name: 'orders', label: 'Orders', icon: Package },
     { name: 'learn', label: 'Learn', icon: Book },
+    { name: 'profile', label: 'Profile', icon: User },
 ];
 
 function FloatingTabBar({ state, descriptors, navigation }) {
@@ -77,6 +93,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                         alignItems: 'center',
                         columnGap: itemGap,
                     }}
+                    bounces={false}
                 >
                     {state.routes.map((route, index) => {
                         const config = TAB_CONFIG.find((t) => t.name === route.name);
@@ -116,20 +133,32 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     minWidth: itemMinWidth,
+                                    paddingHorizontal: 8,
                                 }}
                             >
-                                <Icon
-                                    size={isFocused ? 26 : 22}
-                                    color={isFocused ? ACTIVE_TAB_COLOR : INACTIVE_TAB_COLOR}
-                                    strokeWidth={isFocused ? 2.5 : 2}
-                                />
+                                <View
+                                    style={{
+                                        backgroundColor: isFocused ? `${ACTIVE_TAB_COLOR}20` : 'transparent',
+                                        borderRadius: 16,
+                                        padding: isFocused ? 8 : 6,
+                                        margin: isFocused ? 2 : 0,
+                                    }}
+                                >
+                                    <Icon
+                                        size={isFocused ? 26 : 22}
+                                        color={isFocused ? ACTIVE_TAB_COLOR : INACTIVE_TAB_COLOR}
+                                        strokeWidth={isFocused ? 2.5 : 2}
+                                    />
+                                </View>
                                 <Text
                                     style={{
                                         marginTop: 4,
-                                        fontSize: 11,
-                                        fontWeight: isFocused ? '700' : '600',
+                                        fontSize: 10,
+                                        fontWeight: isFocused ? '800' : '600',
                                         color: isFocused ? ACTIVE_TAB_COLOR : INACTIVE_TAB_COLOR,
+                                        textAlign: 'center',
                                     }}
+                                    numberOfLines={1}
                                 >
                                     {config.label}
                                 </Text>
@@ -147,7 +176,7 @@ export default function TabsLayout() {
     const router = useRouter();
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-900">
+        <SafeAreaView className="flex-1 bg-gray-900" edges={['top']}>
             <Tabs
                 screenOptions={{
                     headerShown: false,
@@ -159,25 +188,20 @@ export default function TabsLayout() {
                 }}
                 tabBar={(props) => <FloatingTabBar {...props} />}
             >
-                {/* Main Tab Screens */}
-                <Tabs.Screen
-                    name="dashboard"
-                    options={{ title: 'Dashboard' }}
-                />
-                <Tabs.Screen
-                    name="nupips-team"
-                    options={{ title: 'Nupips Team' }}
-                />
-                <Tabs.Screen
-                    name="shop"
-                    options={{ title: 'Shop' }}
-                />
-                <Tabs.Screen
-                    name="learn"
-                    options={{ title: 'Learn' }}
-                />
+                {/* ALL MAIN TABS - VISIBLE FOR TESTING */}
+                <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
+                <Tabs.Screen name="nupips-team" options={{ title: 'Nupips Team' }} />
+                <Tabs.Screen name="nupips-incomes" options={{ title: 'Nupips Incomes' }} />
+                <Tabs.Screen name="deposit" options={{ title: 'Deposit' }} />
+                <Tabs.Screen name="withdrawal" options={{ title: 'Withdrawal' }} />
+                <Tabs.Screen name="transfer" options={{ title: 'Transfer' }} />
+                <Tabs.Screen name="transaction-history" options={{ title: 'Transaction History' }} />
+                <Tabs.Screen name="shop" options={{ title: 'Shop' }} />
+                <Tabs.Screen name="orders" options={{ title: 'Orders' }} />
+                <Tabs.Screen name="learn" options={{ title: 'Learn' }} />
+                <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
 
-                {/* GTC FX Folder - Group Layout */}
+                {/* HIDDEN SCREENS - Still accessible via navigation */}
                 <Tabs.Screen
                     name="gtcfx"
                     options={{
@@ -185,54 +209,6 @@ export default function TabsLayout() {
                         title: 'GTC FX'
                     }}
                 />
-
-                {/* Wallet/Finance Screens (Hidden from tab bar) */}
-                <Tabs.Screen
-                    name="nupips-incomes"
-                    options={{
-                        href: null,
-                        title: 'Nupips Incomes'
-                    }}
-                />
-                <Tabs.Screen
-                    name="deposit"
-                    options={{
-                        href: null,
-                        title: 'Deposit'
-                    }}
-                />
-                <Tabs.Screen
-                    name="withdrawal"
-                    options={{
-                        href: null,
-                        title: 'Withdrawal'
-                    }}
-                />
-                <Tabs.Screen
-                    name="transfer"
-                    options={{
-                        href: null,
-                        title: 'Internal Transfer'
-                    }}
-                />
-                <Tabs.Screen
-                    name="transaction-history"
-                    options={{
-                        href: null,
-                        title: 'Transaction History'
-                    }}
-                />
-
-                {/* Profile Screen */}
-                <Tabs.Screen
-                    name="profile"
-                    options={{
-                        href: null,
-                        title: 'Profile'
-                    }}
-                />
-
-                {/* Shop Related Screens (Hidden) */}
                 <Tabs.Screen
                     name="product-item"
                     options={{
@@ -248,15 +224,6 @@ export default function TabsLayout() {
                     }}
                 />
                 <Tabs.Screen
-                    name="orders"
-                    options={{
-                        href: null,
-                        title: 'My Orders'
-                    }}
-                />
-
-                {/* Learn Related Screens (Hidden) */}
-                <Tabs.Screen
                     name="course-view"
                     options={{
                         href: null,
@@ -270,8 +237,6 @@ export default function TabsLayout() {
                         title: 'Lesson View'
                     }}
                 />
-
-                {/* Coming Soon Screen */}
                 <Tabs.Screen
                     name="coming-soon"
                     options={{

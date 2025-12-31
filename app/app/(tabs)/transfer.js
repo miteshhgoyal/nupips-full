@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -18,7 +18,6 @@ import {
     User,
     CheckCircle,
     AlertCircle,
-    Loader,
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -152,73 +151,74 @@ const Transfer = () => {
         setReceiverIdentifier('');
         setNote('');
         setError(null);
+        setSearchResults([]);
     };
 
+    // Success Screen
     if (success && transferResult) {
         return (
             <SafeAreaView className="flex-1 bg-gray-900">
                 <StatusBar style="light" />
-                <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
-                    <Text className="text-3xl text-white">Transfer Successful</Text>
+                <View className="bg-gradient-to-r from-green-600/20 to-green-500/20 border-b border-green-600/30 px-6 py-5">
+                    <View className="flex-row items-center gap-3 mb-2">
+                        <CheckCircle size={28} color="#22c55e" />
+                        <Text className="text-3xl font-bold text-white flex-1">Transfer Successful</Text>
+                    </View>
+                    <Text className="text-green-300 text-lg font-medium">Funds sent successfully</Text>
                 </View>
-                <ScrollView className="flex-1">
-                    <View className="py-4 pb-24 px-4">
-                        <View className="bg-gray-800/40 rounded-xl p-6 border border-gray-700/30">
-                            <View className="items-center mb-6">
-                                <View className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
-                                    <CheckCircle size={40} color="#22c55e" />
-                                </View>
-                                <Text className="text-2xl font-bold text-white mb-2">
-                                    Transfer Successful!
-                                </Text>
-                                <Text className="text-gray-400 text-center">
-                                    You sent ${transferResult.amount.toFixed(2)} to{' '}
-                                    {transferResult.receiver.username}
-                                </Text>
-                            </View>
 
-                            <View className="p-4 bg-gray-900 rounded-xl mb-6 border border-gray-700">
-                                <View className="gap-2">
-                                    <View className="flex-row justify-between">
-                                        <Text className="text-gray-400">Amount</Text>
-                                        <Text className="text-white font-semibold">
-                                            ${transferResult.amount.toFixed(2)}
-                                        </Text>
-                                    </View>
-                                    <View className="flex-row justify-between">
-                                        <Text className="text-gray-400">To</Text>
-                                        <Text className="text-white font-semibold">
-                                            @{transferResult.receiver.username}
-                                        </Text>
-                                    </View>
-                                    <View className="h-px bg-gray-700 my-2" />
-                                    <View className="flex-row justify-between">
-                                        <Text className="text-gray-400">New Balance</Text>
-                                        <Text className="text-green-400 font-bold">
-                                            ${transferResult.newBalance.toFixed(2)}
-                                        </Text>
-                                    </View>
+                <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+                    <View className="px-6 py-8 pb-24">
+                        <View className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-3xl p-8 border border-green-500/30 items-center mb-8">
+                            <View className="w-24 h-24 bg-green-500/20 rounded-3xl items-center justify-center mb-6 border border-green-500/40">
+                                <CheckCircle size={52} color="#22c55e" />
+                            </View>
+                            <Text className="text-4xl font-bold text-white mb-4 text-center">
+                                Transfer Successful!
+                            </Text>
+                            <Text className="text-gray-300 text-xl text-center mb-8">
+                                You sent <Text className="font-bold text-green-400">${transferResult.amount.toFixed(2)}</Text>{' '}
+                                to <Text className="font-bold text-white">@{transferResult.receiver.username}</Text>
+                            </Text>
+                        </View>
+
+                        <View className="bg-gray-900/50 rounded-3xl p-8 mb-10 border border-gray-700/50">
+                            <View className="space-y-5">
+                                <View className="flex-row justify-between items-center py-4 border-b border-gray-700">
+                                    <Text className="text-gray-400 text-lg font-semibold">Amount</Text>
+                                    <Text className="text-3xl font-bold text-white">
+                                        ${transferResult.amount.toFixed(2)}
+                                    </Text>
+                                </View>
+                                <View className="flex-row justify-between items-center py-4 border-b border-gray-700">
+                                    <Text className="text-gray-400 text-lg font-semibold">To</Text>
+                                    <Text className="text-2xl font-bold text-blue-400">
+                                        @{transferResult.receiver.username}
+                                    </Text>
+                                </View>
+                                <View className="h-px bg-gradient-to-r from-orange-500/50 to-transparent my-4" />
+                                <View className="flex-row justify-between items-center py-4">
+                                    <Text className="text-gray-400 text-xl font-semibold">New Balance</Text>
+                                    <Text className="text-3xl font-bold text-green-400">
+                                        ${transferResult.newBalance.toFixed(2)}
+                                    </Text>
                                 </View>
                             </View>
+                        </View>
 
-                            <View className="gap-3">
-                                <TouchableOpacity
-                                    onPress={() => router.push('/dashboard')}
-                                    className="bg-orange-600 rounded-xl py-4 items-center"
-                                >
-                                    <Text className="text-white font-bold text-base">
-                                        Go to Dashboard
-                                    </Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={resetTransfer}
-                                    className="bg-gray-700 rounded-xl py-4 items-center"
-                                >
-                                    <Text className="text-white font-bold text-base">
-                                        Make Another Transfer
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
+                        <View className="gap-4">
+                            <TouchableOpacity
+                                onPress={() => router.push('/(tabs)/dashboard')}
+                                className="bg-gradient-to-r from-orange-600 to-orange-500 rounded-3xl py-6 items-center shadow-2xl shadow-orange-500/30"
+                            >
+                                <Text className="text-white font-bold text-xl">Go to Dashboard</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={resetTransfer}
+                                className="border-2 border-gray-700/50 rounded-3xl py-6 items-center bg-gray-900/30 backdrop-blur-sm"
+                            >
+                                <Text className="text-white font-bold text-xl">Make Another Transfer</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </ScrollView>
@@ -231,55 +231,64 @@ const Transfer = () => {
             <StatusBar style="light" />
 
             {/* Header */}
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
-                <Text className="text-3xl text-white">Transfer Funds</Text>
+            <View className="bg-gray-800/40 border-b border-gray-800 px-6 py-5">
+                <View className="flex-row items-center gap-4 mb-2">
+                    <Send size={32} color="#ea580c" />
+                    <Text className="text-3xl font-bold text-white flex-1">Transfer Funds</Text>
+                </View>
+                <Text className="text-gray-400 text-lg">Send money to other users</Text>
             </View>
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 className="flex-1"
             >
-                <ScrollView className="flex-1">
-                    <View className="py-4 pb-24 px-4">
+                <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+                    <View className="px-6 py-8 pb-24">
                         {/* Current Balance */}
                         {user && (
-                            <View className="bg-linear-to-r from-orange-600 to-orange-500 rounded-xl p-5 mb-6">
-                                <View className="flex-row items-center gap-2 mb-2">
-                                    <Send size={20} color="#fff" />
-                                    <Text className="text-sm font-semibold text-white">
-                                        Available Balance
-                                    </Text>
+                            <View className="bg-gradient-to-r from-orange-600/20 to-orange-500/20 rounded-3xl p-8 mb-8 border border-orange-600/40">
+                                <View className="flex-row items-center gap-4 mb-4">
+                                    <View className="w-16 h-16 bg-orange-500/30 rounded-2xl items-center justify-center">
+                                        <DollarSign size={24} color="#ffffff" />
+                                    </View>
+                                    <View>
+                                        <Text className="text-xl font-bold text-white mb-1">Available Balance</Text>
+                                        <Text className="text-4xl font-bold text-orange-400">
+                                            ${parseFloat(user.walletBalance || 0).toFixed(2)}
+                                        </Text>
+                                    </View>
                                 </View>
-                                <Text className="text-3xl font-bold text-white">
-                                    ${parseFloat(user.walletBalance || 0).toFixed(2)}
-                                </Text>
                             </View>
                         )}
 
                         {/* Error Alert */}
                         {error && (
-                            <View className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start gap-3">
-                                <AlertCircle size={20} color="#ef4444" />
-                                <Text className="text-red-400 text-sm flex-1">{error}</Text>
+                            <View className="mb-8 p-5 bg-red-500/20 border border-red-500/40 rounded-3xl flex-row items-start gap-4">
+                                <AlertCircle size={24} color="#ef4444" />
+                                <Text className="text-red-400 text-lg flex-1">{error}</Text>
+                                <TouchableOpacity onPress={() => setError(null)}>
+                                    <X size={24} color="#ef4444" />
+                                </TouchableOpacity>
                             </View>
                         )}
 
                         {/* Receiver */}
-                        <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
-                            <Text className="text-xl font-light text-white mb-4">Recipient</Text>
+                        <View className="bg-gray-900/30 rounded-3xl p-8 mb-8 border border-gray-700/50 backdrop-blur-sm">
+                            <Text className="text-2xl font-bold text-white mb-6">Recipient</Text>
 
-                            <View className="mb-4">
-                                <Text className="text-sm font-medium text-gray-400 mb-2">
+                            <View className="mb-6">
+                                <Text className="text-gray-400 text-lg font-semibold mb-4">
                                     Username or Email
                                 </Text>
                                 <View className="relative">
                                     <User
-                                        size={20}
+                                        size={24}
                                         color="#9ca3af"
                                         style={{
                                             position: 'absolute',
-                                            left: 16,
-                                            top: 16,
+                                            left: 20,
+                                            top: 20,
                                             zIndex: 1,
                                         }}
                                     />
@@ -288,16 +297,16 @@ const Transfer = () => {
                                         onChangeText={handleReceiverChange}
                                         placeholder="Enter username or email"
                                         placeholderTextColor="#6b7280"
-                                        className="pl-12 pr-12 py-4 text-white bg-gray-900 border-2 border-gray-700 rounded-xl"
+                                        className="pl-16 pr-16 py-5 text-white bg-gray-950 border-2 border-gray-800 rounded-3xl text-lg"
                                     />
                                     {searching && (
                                         <ActivityIndicator
                                             size="small"
-                                            color="#9ca3af"
+                                            color="#ea580c"
                                             style={{
                                                 position: 'absolute',
-                                                right: 16,
-                                                top: 16,
+                                                right: 20,
+                                                top: 20,
                                             }}
                                         />
                                     )}
@@ -306,46 +315,49 @@ const Transfer = () => {
 
                             {/* Search Results */}
                             {searchResults.length > 0 && (
-                                <View className="bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
-                                    <ScrollView style={{ maxHeight: 240 }}>
-                                        {searchResults.map((u) => (
+                                <View className="bg-gray-950/80 border border-gray-700/50 rounded-3xl overflow-hidden max-h-60">
+                                    <FlatList
+                                        data={searchResults}
+                                        keyExtractor={(item) => item.id}
+                                        renderItem={({ item }) => (
                                             <TouchableOpacity
-                                                key={u.id}
-                                                onPress={() => selectUser(u)}
-                                                className="p-3 border-b border-gray-700 last:border-b-0"
+                                                onPress={() => selectUser(item)}
+                                                className="p-5 border-b border-gray-800/50 last:border-b-0 active:bg-gray-800/50"
+                                                activeOpacity={0.7}
                                             >
-                                                <Text className="font-semibold text-white">
-                                                    {u.name}
+                                                <Text className="text-xl font-bold text-white mb-1">
+                                                    {item.name}
                                                 </Text>
-                                                <Text className="text-sm text-gray-400">
-                                                    @{u.username}
+                                                <Text className="text-lg text-blue-400 font-semibold mb-1">
+                                                    @{item.username}
                                                 </Text>
-                                                <Text className="text-xs text-gray-500">
-                                                    {u.email}
+                                                <Text className="text-sm text-gray-500">
+                                                    {item.email}
                                                 </Text>
                                             </TouchableOpacity>
-                                        ))}
-                                    </ScrollView>
+                                        )}
+                                        showsVerticalScrollIndicator={false}
+                                    />
                                 </View>
                             )}
                         </View>
 
                         {/* Amount */}
-                        <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
-                            <Text className="text-xl font-light text-white mb-4">Amount</Text>
+                        <View className="bg-gray-900/30 rounded-3xl p-8 mb-8 border border-gray-700/50 backdrop-blur-sm">
+                            <Text className="text-2xl font-bold text-white mb-6">Amount</Text>
 
-                            <View className="mb-4">
-                                <Text className="text-sm font-medium text-gray-400 mb-2">
+                            <View className="mb-8">
+                                <Text className="text-gray-400 text-lg font-semibold mb-4">
                                     Amount (USD)
                                 </Text>
                                 <View className="relative">
                                     <DollarSign
-                                        size={20}
+                                        size={24}
                                         color="#9ca3af"
                                         style={{
                                             position: 'absolute',
-                                            left: 16,
-                                            top: 16,
+                                            left: 20,
+                                            top: 20,
                                             zIndex: 1,
                                         }}
                                     />
@@ -355,22 +367,22 @@ const Transfer = () => {
                                         placeholder="Enter amount"
                                         placeholderTextColor="#6b7280"
                                         keyboardType="decimal-pad"
-                                        className={`pl-12 pr-4 py-4 text-lg text-white rounded-xl ${amountError
-                                            ? 'bg-red-500/20 border-2 border-red-500/30'
-                                            : 'bg-gray-900 border-2 border-gray-700'
+                                        className={`pl-16 pr-6 py-5 text-xl text-white rounded-3xl ${amountError
+                                                ? 'bg-red-500/20 border-2 border-red-500/40'
+                                                : 'bg-gray-950 border-2 border-gray-800'
                                             }`}
                                     />
                                 </View>
                                 {amountError && (
-                                    <View className="flex-row items-center gap-1 mt-2">
-                                        <AlertCircle size={14} color="#ef4444" />
-                                        <Text className="text-sm text-red-400">{amountError}</Text>
+                                    <View className="flex-row items-center gap-3 mt-4">
+                                        <AlertCircle size={20} color="#ef4444" />
+                                        <Text className="text-lg text-red-400 font-semibold">{amountError}</Text>
                                     </View>
                                 )}
                             </View>
 
                             {/* Quick amounts */}
-                            <View className="flex-row flex-wrap gap-2">
+                            <View className="flex-row flex-wrap gap-3">
                                 {[10, 50, 100, 500, 1000].map((quickAmount) => (
                                     <TouchableOpacity
                                         key={quickAmount}
@@ -378,59 +390,52 @@ const Transfer = () => {
                                             setAmount(quickAmount.toString());
                                             validateAmount(quickAmount.toString());
                                         }}
-                                        className="px-4 py-2 bg-gray-700/50 rounded-lg"
+                                        className="flex-1 px-8 py-5 bg-gray-800/50 border border-gray-700 rounded-2xl items-center active:bg-gray-700/50"
+                                        activeOpacity={0.8}
                                     >
-                                        <Text className="text-white font-semibold">
-                                            ${quickAmount}
-                                        </Text>
+                                        <Text className="text-xl font-bold text-white">${quickAmount}</Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
                         {/* Note */}
-                        <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
-                            <Text className="text-xl font-light text-white mb-4">
-                                Note (Optional)
-                            </Text>
+                        <View className="bg-gray-900/30 rounded-3xl p-8 mb-10 border border-gray-700/50 backdrop-blur-sm">
+                            <Text className="text-2xl font-bold text-white mb-6">Note (Optional)</Text>
                             <TextInput
                                 value={note}
                                 onChangeText={setNote}
-                                placeholder="Add a note..."
+                                placeholder="Add a note for the recipient..."
                                 placeholderTextColor="#6b7280"
                                 maxLength={200}
                                 multiline
-                                numberOfLines={3}
-                                className="px-4 py-3 text-white bg-gray-900 border border-gray-700 rounded-xl"
-                                style={{ textAlignVertical: 'top', minHeight: 80 }}
+                                numberOfLines={4}
+                                className="px-6 py-5 text-white bg-gray-950 border border-gray-800 rounded-3xl text-lg"
+                                style={{ textAlignVertical: 'top', minHeight: 100 }}
                             />
-                            <Text className="text-xs text-gray-500 mt-2">
+                            <Text className="text-sm text-gray-500 mt-3 text-right">
                                 {note.length}/200 characters
                             </Text>
                         </View>
 
-                        {/* Submit */}
+                        {/* Submit Button */}
                         <TouchableOpacity
                             onPress={handleTransfer}
-                            disabled={
-                                loading || !amount || amountError || !receiverIdentifier
-                            }
-                            className={`rounded-xl py-4 items-center ${loading || !amount || amountError || !receiverIdentifier
-                                ? 'bg-gray-700/50'
-                                : 'bg-orange-600'
+                            disabled={loading || !amount || amountError || !receiverIdentifier.trim()}
+                            className={`rounded-3xl py-6 items-center shadow-2xl ${loading || !amount || amountError || !receiverIdentifier.trim()
+                                    ? 'bg-gray-700/50 shadow-none'
+                                    : 'bg-gradient-to-r from-orange-600 to-orange-500 shadow-orange-500/40'
                                 }`}
                         >
                             {loading ? (
-                                <View className="flex-row items-center gap-2">
-                                    <ActivityIndicator color="#fff" />
-                                    <Text className="text-white font-bold">Processing...</Text>
+                                <View className="flex-row items-center gap-4">
+                                    <ActivityIndicator size="large" color="#ffffff" />
+                                    <Text className="text-white font-bold text-xl">Processing Transfer...</Text>
                                 </View>
                             ) : (
-                                <View className="flex-row items-center gap-2">
-                                    <Send size={20} color="#fff" />
-                                    <Text className="text-white font-bold text-base">
-                                        Transfer Money
-                                    </Text>
+                                <View className="flex-row items-center gap-4">
+                                    <Send size={28} color="#ffffff" />
+                                    <Text className="text-white font-bold text-xl">Transfer Money</Text>
                                 </View>
                             )}
                         </TouchableOpacity>

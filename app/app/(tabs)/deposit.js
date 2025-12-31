@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -7,11 +7,11 @@ import {
     ActivityIndicator,
     TouchableOpacity,
     TextInput,
-    Modal,
     Image,
-} from 'react-native';
+} from "react-native";
 import { useAuth } from '@/context/authContext';
 import api from '@/services/api';
+import * as Clipboard from 'expo-clipboard';
 import {
     Wallet,
     DollarSign,
@@ -22,10 +22,8 @@ import {
     Clock,
     CheckCircle,
     AlertCircle,
-    Loader,
-} from 'lucide-react-native';
+} from "lucide-react-native";
 import { StatusBar } from 'expo-status-bar';
-import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 
 const Deposit = () => {
@@ -56,7 +54,7 @@ const Deposit = () => {
             label: 'USDT (BEP20)',
             network: 'Binance Smart Chain',
             fee: '0%',
-            minDeposit: '$10',
+            minDeposit: 10,
             processingTime: '5-15 minutes',
         },
         {
@@ -64,7 +62,7 @@ const Deposit = () => {
             label: 'USDT (TRC20)',
             network: 'TRON',
             fee: '0%',
-            minDeposit: '$10',
+            minDeposit: 10,
             processingTime: '5-10 minutes',
         },
     ];
@@ -78,9 +76,8 @@ const Deposit = () => {
             return false;
         }
 
-        const minAmount = parseFloat(selectedOption.minDeposit.replace('$', ''));
-        if (numValue < minAmount) {
-            setAmountError(`Minimum deposit is ${selectedOption.minDeposit}`);
+        if (numValue < selectedOption.minDeposit) {
+            setAmountError(`Minimum deposit is $${selectedOption.minDeposit}`);
             return false;
         }
 
@@ -121,7 +118,6 @@ const Deposit = () => {
                 setError(response.data.message || 'Failed to create deposit');
             }
         } catch (err) {
-            console.error('Create deposit error:', err);
             setError(
                 err.response?.data?.message ||
                 err.response?.data?.error ||
@@ -161,7 +157,6 @@ const Deposit = () => {
                 }
             }
         } catch (err) {
-            console.error('Check payment error:', err);
             setError(err.response?.data?.message || 'Failed to check payment status');
         } finally {
             setCheckingPayment(false);
@@ -189,22 +184,24 @@ const Deposit = () => {
             <StatusBar style="light" />
 
             {/* Header */}
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
-                <Text className="text-3xl text-white">Deposit Funds</Text>
+            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-4">
+                <View className="flex-row items-center gap-3 mb-2">
+                    <Wallet size={28} color="#ea580c" />
+                    <Text className="text-2xl font-bold text-white flex-1">Deposit Funds</Text>
+                </View>
+                <Text className="text-gray-400 text-sm">Add funds to your wallet</Text>
             </View>
 
-            <ScrollView className="flex-1">
-                <View className="py-4 pb-24 px-4">
+            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+                <View className="px-4 py-6 pb-24">
                     {/* Current Balance */}
                     {user && (
-                        <View className="bg-linear-to-r from-orange-600 to-orange-500 rounded-xl p-5 mb-6">
-                            <View className="flex-row items-center gap-2 mb-2">
-                                <Wallet size={20} color="#fff" />
-                                <Text className="text-sm font-semibold text-white">
-                                    Current Balance
-                                </Text>
+                        <View className="bg-gradient-to-r from-orange-600/20 to-orange-500/20 rounded-2xl p-6 mb-8 border border-orange-600/30">
+                            <View className="flex-row items-center gap-3 mb-3">
+                                <Wallet size={24} color="#ffffff" />
+                                <Text className="text-lg font-semibold text-white">Current Balance</Text>
                             </View>
-                            <Text className="text-3xl font-bold text-white">
+                            <Text className="text-4xl font-bold text-white">
                                 ${parseFloat(user.walletBalance || 0).toFixed(2)}
                             </Text>
                         </View>
@@ -215,6 +212,9 @@ const Deposit = () => {
                         <View className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start gap-3">
                             <AlertCircle size={20} color="#ef4444" />
                             <Text className="text-red-400 text-sm flex-1">{error}</Text>
+                            <TouchableOpacity onPress={() => setError(null)}>
+                                <X size={20} color="#ef4444" />
+                            </TouchableOpacity>
                         </View>
                     )}
 
@@ -222,15 +222,11 @@ const Deposit = () => {
                     {step === 1 && (
                         <>
                             {/* Amount Input */}
-                            <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
-                                <Text className="text-xl font-light text-white mb-4">
-                                    Deposit Amount
-                                </Text>
+                            <View className="bg-gray-800/40 rounded-2xl p-6 mb-6 border border-gray-700/30">
+                                <Text className="text-xl font-semibold text-white mb-6">Deposit Amount</Text>
 
-                                <View className="mb-4">
-                                    <Text className="text-sm font-medium text-gray-400 mb-2">
-                                        Amount (USD)
-                                    </Text>
+                                <View className="mb-6">
+                                    <Text className="text-gray-400 text-sm font-medium mb-3">Amount (USD)</Text>
                                     <View className="relative">
                                         <DollarSign
                                             size={20}
@@ -248,24 +244,22 @@ const Deposit = () => {
                                             placeholder="Enter amount"
                                             placeholderTextColor="#6b7280"
                                             keyboardType="decimal-pad"
-                                            className={`pl-12 pr-4 py-4 text-lg text-white rounded-xl ${amountError
-                                                ? 'bg-red-500/20 border-2 border-red-500/30'
-                                                : 'bg-gray-900 border-2 border-gray-700'
+                                            className={`pl-12 pr-4 py-4 text-lg text-white rounded-2xl ${amountError
+                                                    ? 'bg-red-500/20 border-2 border-red-500/30'
+                                                    : 'bg-gray-900 border-2 border-gray-700'
                                                 }`}
                                         />
                                     </View>
                                     {amountError && (
-                                        <View className="flex-row items-center gap-1 mt-2">
-                                            <AlertCircle size={14} color="#ef4444" />
-                                            <Text className="text-sm text-red-400">
-                                                {amountError}
-                                            </Text>
+                                        <View className="flex-row items-center gap-2 mt-3">
+                                            <AlertCircle size={16} color="#ef4444" />
+                                            <Text className="text-sm text-red-400">{amountError}</Text>
                                         </View>
                                     )}
                                 </View>
 
                                 {/* Quick amount buttons */}
-                                <View className="flex-row flex-wrap gap-2">
+                                <View className="flex-row flex-wrap gap-3">
                                     {[10, 50, 100, 500, 1000].map((quickAmount) => (
                                         <TouchableOpacity
                                             key={quickAmount}
@@ -273,90 +267,72 @@ const Deposit = () => {
                                                 setAmount(quickAmount.toString());
                                                 validateAmount(quickAmount.toString());
                                             }}
-                                            className="px-4 py-2 bg-gray-700/50 rounded-lg"
+                                            className="flex-1 px-6 py-4 bg-gray-800/50 border border-gray-700 rounded-xl items-center"
                                         >
-                                            <Text className="text-white font-semibold">
-                                                ${quickAmount}
-                                            </Text>
+                                            <Text className="text-white font-semibold text-lg">${quickAmount}</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
                             </View>
 
                             {/* Crypto Selection */}
-                            <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
-                                <Text className="text-xl font-light text-white mb-4">
-                                    Select Cryptocurrency
-                                </Text>
+                            <View className="bg-gray-800/40 rounded-2xl p-6 mb-8 border border-gray-700/30">
+                                <Text className="text-xl font-semibold text-white mb-6">Select Cryptocurrency</Text>
 
-                                <View className="gap-4">
+                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-4">
                                     {cryptoOptions.map((option) => (
                                         <TouchableOpacity
                                             key={option.value}
                                             onPress={() => setSelectedCrypto(option.value)}
-                                            className={`p-4 rounded-xl border-2 ${selectedCrypto === option.value
-                                                ? 'border-orange-500 bg-orange-500/10'
-                                                : 'border-gray-700'
+                                            className={`p-6 rounded-2xl border-2 w-72 min-w-[280px] ${selectedCrypto === option.value
+                                                    ? 'border-orange-500 bg-orange-500/10'
+                                                    : 'border-gray-700 bg-gray-800/30'
                                                 }`}
                                         >
-                                            <View className="mb-3">
-                                                <Text className="font-bold text-white text-base">
-                                                    {option.label}
-                                                </Text>
-                                                <Text className="text-sm text-gray-400">
-                                                    {option.network}
-                                                </Text>
-                                            </View>
+                                            <Text className="font-bold text-white text-lg mb-2">{option.label}</Text>
+                                            <Text className="text-gray-400 mb-4">{option.network}</Text>
 
-                                            <View className="gap-1">
+                                            <View className="space-y-2">
                                                 <View className="flex-row justify-between">
-                                                    <Text className="text-xs text-gray-400">
-                                                        Fee:
-                                                    </Text>
-                                                    <Text className="text-xs font-semibold text-green-400">
+                                                    <Text className="text-xs text-gray-400">Fee:</Text>
+                                                    <Text className="text-sm font-semibold text-green-400">
                                                         {option.fee}
                                                     </Text>
                                                 </View>
                                                 <View className="flex-row justify-between">
-                                                    <Text className="text-xs text-gray-400">
-                                                        Min deposit:
-                                                    </Text>
-                                                    <Text className="text-xs font-semibold text-white">
-                                                        {option.minDeposit}
+                                                    <Text className="text-xs text-gray-400">Min deposit:</Text>
+                                                    <Text className="text-sm font-semibold text-white">
+                                                        ${option.minDeposit}
                                                     </Text>
                                                 </View>
                                                 <View className="flex-row justify-between">
-                                                    <Text className="text-xs text-gray-400">
-                                                        Processing:
-                                                    </Text>
-                                                    <Text className="text-xs font-semibold text-white">
+                                                    <Text className="text-xs text-gray-400">Processing:</Text>
+                                                    <Text className="text-sm font-semibold text-white">
                                                         {option.processingTime}
                                                     </Text>
                                                 </View>
                                             </View>
                                         </TouchableOpacity>
                                     ))}
-                                </View>
+                                </ScrollView>
                             </View>
 
                             {/* Continue Button */}
                             <TouchableOpacity
                                 onPress={handleContinue}
                                 disabled={loading || !amount || amountError}
-                                className={`rounded-xl py-4 items-center ${loading || !amount || amountError
-                                    ? 'bg-gray-700/50'
-                                    : 'bg-orange-600'
+                                className={`rounded-2xl py-5 items-center ${loading || !amount || amountError
+                                        ? 'bg-gray-700/50'
+                                        : 'bg-gradient-to-r from-orange-600 to-orange-500 shadow-lg'
                                     }`}
                             >
                                 {loading ? (
-                                    <View className="flex-row items-center gap-2">
-                                        <ActivityIndicator color="#fff" />
-                                        <Text className="text-white font-bold">Processing...</Text>
+                                    <View className="flex-row items-center gap-3">
+                                        <ActivityIndicator size="small" color="#ffffff" />
+                                        <Text className="text-white font-bold text-lg">Processing...</Text>
                                     </View>
                                 ) : (
-                                    <Text className="text-white font-bold text-base">
-                                        Continue to Payment
-                                    </Text>
+                                    <Text className="text-white font-bold text-lg">Continue to Payment</Text>
                                 )}
                             </TouchableOpacity>
                         </>
@@ -364,31 +340,25 @@ const Deposit = () => {
 
                     {/* Step 2: Payment Details */}
                     {step === 2 && paymentAddress && (
-                        <View className="bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
-                            <View className="items-center mb-6">
-                                <View className="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mb-4">
-                                    <Clock size={32} color="#ea580c" />
+                        <View className="bg-gray-800/40 rounded-2xl p-6 border border-gray-700/30">
+                            <View className="items-center mb-8">
+                                <View className="w-20 h-20 bg-orange-500/20 rounded-2xl items-center justify-center mb-4">
+                                    <Clock size={36} color="#ea580c" />
                                 </View>
-                                <Text className="text-2xl font-bold text-white mb-2">
-                                    Send Payment
-                                </Text>
-                                <Text className="text-gray-400 text-center">
-                                    Send exactly{' '}
-                                    <Text className="font-bold text-white">{amount} USD</Text> worth
-                                    of{' '}
-                                    <Text className="font-bold text-white">
-                                        {selectedOption.label}
-                                    </Text>
+                                <Text className="text-3xl font-bold text-white mb-3">Send Payment</Text>
+                                <Text className="text-gray-400 text-center text-lg">
+                                    Send exactly <Text className="font-bold text-white">{amount} USD</Text> worth of{' '}
+                                    <Text className="font-bold text-white">{selectedOption.label}</Text>
                                 </Text>
                             </View>
 
                             {/* QR Code */}
                             {qrCodeUrl && (
-                                <View className="items-center mb-6">
-                                    <View className="p-4 bg-white rounded-xl">
+                                <View className="items-center mb-8">
+                                    <View className="p-6 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
                                         <Image
                                             source={{ uri: qrCodeUrl }}
-                                            style={{ width: 200, height: 200 }}
+                                            style={{ width: 240, height: 240 }}
                                             resizeMode="contain"
                                         />
                                     </View>
@@ -396,12 +366,10 @@ const Deposit = () => {
                             )}
 
                             {/* Payment Address */}
-                            <View className="mb-6">
-                                <Text className="text-sm font-medium text-gray-400 mb-2">
-                                    Payment Address
-                                </Text>
-                                <View className="flex-row gap-2">
-                                    <View className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl">
+                            <View className="mb-8">
+                                <Text className="text-gray-400 text-sm font-medium mb-4">Payment Address</Text>
+                                <View className="flex-row gap-3">
+                                    <View className="flex-1 px-4 py-4 bg-gray-900 border border-gray-700 rounded-2xl">
                                         <Text
                                             className="text-white text-xs font-mono"
                                             numberOfLines={2}
@@ -411,37 +379,33 @@ const Deposit = () => {
                                     </View>
                                     <TouchableOpacity
                                         onPress={() => copyToClipboard(paymentAddress)}
-                                        className="px-4 py-3 bg-gray-700 rounded-xl"
+                                        className="w-16 h-16 bg-gray-700/50 border border-gray-600 rounded-2xl items-center justify-center"
                                     >
                                         {copied ? (
-                                            <Check size={20} color="#22c55e" />
+                                            <Check size={24} color="#22c55e" />
                                         ) : (
-                                            <Copy size={20} color="#9ca3af" />
+                                            <Copy size={24} color="#9ca3af" />
                                         )}
                                     </TouchableOpacity>
                                 </View>
                             </View>
 
                             {/* Transaction ID */}
-                            <View className="mb-6 p-4 bg-gray-900 rounded-xl border border-gray-700">
-                                <Text className="text-sm text-gray-400 mb-1">Transaction ID</Text>
-                                <Text className="font-mono text-xs text-white">
-                                    {transactionId}
-                                </Text>
+                            <View className="mb-8 p-5 bg-gray-900/50 rounded-2xl border border-gray-700">
+                                <Text className="text-gray-400 text-sm mb-2">Transaction ID</Text>
+                                <Text className="font-mono text-xs text-white">{transactionId}</Text>
                             </View>
 
                             {/* Info Alert */}
-                            <View className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl flex-row items-start gap-3 mb-6">
+                            <View className="p-5 bg-blue-500/10 border border-blue-500/30 rounded-2xl mb-8 flex-row items-start gap-3">
                                 <Info size={20} color="#3b82f6" />
                                 <View className="flex-1">
-                                    <Text className="text-sm font-semibold text-blue-400 mb-2">
-                                        Important:
-                                    </Text>
+                                    <Text className="text-sm font-semibold text-blue-400 mb-3">Important:</Text>
                                     <Text className="text-xs text-blue-400 leading-5">
-                                        • Send exactly the amount specified{'\n'}• Use the{' '}
-                                        {selectedOption.network} network{'\n'}• Payment will be
-                                        confirmed in {selectedOption.processingTime}
-                                        {'\n'}• Do not send from an exchange directly
+                                        • Send exactly the amount specified{'\n'}
+                                        • Use the {selectedOption.network} network{'\n'}
+                                        • Payment will be confirmed in {selectedOption.processingTime}{'\n'}
+                                        • Do not send from an exchange directly
                                     </Text>
                                 </View>
                             </View>
@@ -450,27 +414,25 @@ const Deposit = () => {
                             <TouchableOpacity
                                 onPress={handleCheckPayment}
                                 disabled={checkingPayment}
-                                className={`rounded-xl py-4 items-center ${checkingPayment ? 'bg-gray-700/50' : 'bg-orange-600'
+                                className={`rounded-2xl py-5 items-center ${checkingPayment ? 'bg-gray-700/50' : 'bg-gradient-to-r from-orange-600 to-orange-500 shadow-lg'
                                     }`}
                             >
                                 {checkingPayment ? (
-                                    <View className="flex-row items-center gap-2">
-                                        <ActivityIndicator color="#fff" />
-                                        <Text className="text-white font-bold">Checking...</Text>
+                                    <View className="flex-row items-center gap-3">
+                                        <ActivityIndicator size="small" color="#ffffff" />
+                                        <Text className="text-white font-bold text-lg">Checking...</Text>
                                     </View>
                                 ) : (
-                                    <View className="flex-row items-center gap-2">
-                                        <RefreshCw size={20} color="#fff" />
-                                        <Text className="text-white font-bold text-base">
-                                            Check Payment Status
-                                        </Text>
+                                    <View className="flex-row items-center gap-3">
+                                        <RefreshCw size={24} color="#ffffff" />
+                                        <Text className="text-white font-bold text-lg">Check Payment Status</Text>
                                     </View>
                                 )}
                             </TouchableOpacity>
 
                             {/* Status Info */}
                             {depositDetails && (
-                                <View className="mt-4 items-center">
+                                <View className="mt-6 items-center">
                                     <Text className="text-sm text-gray-400">
                                         Status:{' '}
                                         <Text className="font-semibold capitalize text-white">
@@ -478,7 +440,7 @@ const Deposit = () => {
                                         </Text>
                                     </Text>
                                     {depositDetails.confirmations > 0 && (
-                                        <Text className="text-sm text-gray-400 mt-1">
+                                        <Text className="text-sm text-gray-400 mt-2">
                                             Confirmations: {depositDetails.confirmations}/3
                                         </Text>
                                     )}
@@ -489,56 +451,46 @@ const Deposit = () => {
 
                     {/* Step 3: Success */}
                     {step === 3 && (
-                        <View className="bg-gray-800/40 rounded-xl p-6 border border-gray-700/30">
-                            <View className="items-center mb-6">
-                                <View className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
-                                    <CheckCircle size={40} color="#22c55e" />
-                                </View>
-                                <Text className="text-2xl font-bold text-white mb-2">
-                                    Deposit Successful!
-                                </Text>
-                                <Text className="text-gray-400 text-center">
-                                    Your deposit of ${amount} has been confirmed
-                                </Text>
+                        <View className="bg-gray-800/40 rounded-2xl p-8 items-center border border-gray-700/30">
+                            <View className="w-24 h-24 bg-green-500/20 rounded-2xl items-center justify-center mb-6">
+                                <CheckCircle size={48} color="#22c55e" />
                             </View>
+                            <Text className="text-3xl font-bold text-white mb-4">Deposit Successful!</Text>
+                            <Text className="text-gray-400 text-center text-lg mb-8">
+                                Your deposit of <Text className="font-bold text-white">${amount}</Text> has been confirmed
+                            </Text>
 
-                            <View className="p-4 bg-gray-900 rounded-xl mb-6 border border-gray-700">
-                                <View className="gap-2">
+                            <View className="w-full p-6 bg-gray-900/50 rounded-2xl mb-8 border border-gray-700">
+                                <View className="space-y-3">
                                     <View className="flex-row justify-between">
                                         <Text className="text-gray-400">Amount:</Text>
-                                        <Text className="text-white font-semibold">${amount}</Text>
+                                        <Text className="text-white font-bold text-xl">${amount}</Text>
                                     </View>
                                     <View className="flex-row justify-between">
                                         <Text className="text-gray-400">Method:</Text>
-                                        <Text className="text-white font-semibold">
-                                            {selectedOption.label}
-                                        </Text>
+                                        <Text className="text-white font-bold">{selectedOption.label}</Text>
                                     </View>
                                     <View className="flex-row justify-between">
                                         <Text className="text-gray-400">New Balance:</Text>
-                                        <Text className="text-green-400 font-bold">
+                                        <Text className="text-green-400 font-bold text-xl">
                                             ${parseFloat(user?.walletBalance || 0).toFixed(2)}
                                         </Text>
                                     </View>
                                 </View>
                             </View>
 
-                            <View className="gap-3">
+                            <View className="gap-4 w-full">
                                 <TouchableOpacity
-                                    onPress={() => router.push('/dashboard')}
-                                    className="bg-orange-600 rounded-xl py-4 items-center"
+                                    onPress={() => router.push('/(tabs)/dashboard')}
+                                    className="bg-gradient-to-r from-orange-600 to-orange-500 rounded-2xl py-5 items-center shadow-lg"
                                 >
-                                    <Text className="text-white font-bold text-base">
-                                        Go to Dashboard
-                                    </Text>
+                                    <Text className="text-white font-bold text-lg">Go to Dashboard</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={resetDeposit}
-                                    className="bg-gray-700 rounded-xl py-4 items-center"
+                                    className="border-2 border-gray-700 rounded-2xl py-5 items-center bg-gray-800/50"
                                 >
-                                    <Text className="text-white font-bold text-base">
-                                        Make Another Deposit
-                                    </Text>
+                                    <Text className="text-white font-bold text-lg">Make Another Deposit</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>

@@ -7,27 +7,106 @@ import {
     TouchableOpacity,
     TextInput,
     ActivityIndicator,
-    Alert,
     Image,
+    RefreshControl,
+    FlatList,
 } from "react-native";
 import { useRouter } from 'expo-router';
 import api from "@/services/api";
+import { LinearGradient } from 'expo-linear-gradient';
 import {
     ShoppingBag,
     Search,
     Filter,
     AlertCircle,
     X,
-    ChevronDown,
     Star,
-    Heart,
-    ShoppingCart,
     Eye,
+    Package,
+    TrendingUp,
+    DollarSign,
 } from "lucide-react-native";
+import { StatusBar } from 'expo-status-bar';
+
+// Stats Card Component (similar to team page)
+const StatsCard = ({ title, value, subtitle, icon, colors }) => (
+    <View className={`rounded-xl p-5 border ${colors.bg} ${colors.border}`}>
+        <View className="flex-row items-center gap-3 mb-2">
+            <View className={`w-10 h-10 rounded-full items-center justify-center ${colors.iconBg}`}>
+                {icon}
+            </View>
+            <Text className={`text-sm font-semibold ${colors.text}`}>{title}</Text>
+        </View>
+        <Text className={`text-2xl font-bold ${colors.text}`}>{value}</Text>
+        <Text className={`text-xs ${colors.subText} mt-1`}>{subtitle}</Text>
+    </View>
+);
+
+// Product Card Component
+const ProductCard = ({ product, onPress }) => {
+    return (
+        <TouchableOpacity
+            onPress={onPress}
+            className="bg-gray-800/40 rounded-xl overflow-hidden border border-gray-700/30 mb-3"
+            activeOpacity={0.7}
+        >
+            {/* Product Image */}
+            <View className="relative bg-gray-700" style={{ aspectRatio: 1 }}>
+                <Image
+                    source={{ uri: product.image?.[0] || "https://via.placeholder.com/400" }}
+                    style={{ width: "100%", height: "100%", resizeMode: "cover" }}
+                />
+                {product.bestseller && (
+                    <View className="absolute top-3 left-3 bg-orange-600 px-3 py-1 rounded-full flex-row items-center gap-1">
+                        <Star size={12} color="#ffffff" fill="#ffffff" />
+                        <Text className="text-white text-xs font-semibold">Bestseller</Text>
+                    </View>
+                )}
+
+                {/* Quick View Button */}
+                <View className="absolute bottom-3 right-3">
+                    <TouchableOpacity
+                        className="bg-white/90 w-10 h-10 rounded-full items-center justify-center"
+                        onPress={onPress}
+                    >
+                        <Eye size={18} color="#1f2937" />
+                    </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Product Info */}
+            <View className="p-4">
+                <View className="mb-2">
+                    <View className="bg-orange-500/20 self-start px-2 py-0.5 rounded-full">
+                        <Text className="text-xs text-orange-400 font-medium uppercase">
+                            {product.category}
+                        </Text>
+                    </View>
+                </View>
+
+                <Text className="text-white font-semibold text-base mb-2" numberOfLines={2}>
+                    {product.name}
+                </Text>
+
+                <Text className="text-gray-400 text-sm mb-3" numberOfLines={2}>
+                    {product.description}
+                </Text>
+
+                <View className="flex-row items-center justify-between pt-3 border-t border-gray-700/30">
+                    <Text className="text-2xl font-bold text-white">${product.price}</Text>
+                    {product.sizes?.length > 0 && (
+                        <Text className="text-sm text-gray-400">{product.sizes.length} sizes</Text>
+                    )}
+                </View>
+            </View>
+        </TouchableOpacity>
+    );
+};
 
 const Shop = () => {
     const router = useRouter();
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState("");
     const [products, setProducts] = useState([]);
 
@@ -43,11 +122,19 @@ const Shop = () => {
     const [totalPages, setTotalPages] = useState(1);
     const [totalProducts, setTotalProducts] = useState(0);
 
+    // Shop Stats
+    const [shopStats, setShopStats] = useState({
+        totalProducts: 0,
+        categories: 0,
+        bestsellers: 0,
+        avgPrice: 0,
+    });
+
     const categories = ["Men", "Women", "Kids", "Unisex"];
 
     useEffect(() => {
         loadProducts();
-    }, [currentPage, categoryFilter, showBestsellers, searchTerm, priceRange]);
+    }, [currentPage, categoryFilter, showBestsellers, searchTerm]);
 
     const loadProducts = async () => {
         setLoading(true);
@@ -68,11 +155,28 @@ const Shop = () => {
             setProducts(response.data.products);
             setTotalPages(response.data.pagination.pages);
             setTotalProducts(response.data.total);
+
+            // Calculate stats
+            const bestsellersCount = response.data.products.filter(p => p.bestseller).length;
+            const avgPrice = response.data.products.reduce((acc, p) => acc + p.price, 0) / response.data.products.length || 0;
+
+            setShopStats({
+                totalProducts: response.data.total,
+                categories: new Set(response.data.products.map(p => p.category)).size,
+                bestsellers: bestsellersCount,
+                avgPrice: avgPrice.toFixed(2),
+            });
         } catch (e) {
             setError(e.response?.data?.message || "Failed to load products");
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
+    };
+
+    const handleRefresh = () => {
+        setRefreshing(true);
+        loadProducts();
     };
 
     const handleSearch = (value) => {
@@ -83,6 +187,7 @@ const Shop = () => {
     const handlePriceFilter = () => {
         setCurrentPage(1);
         setShowFilters(false);
+        loadProducts();
     };
 
     const clearFilters = () => {
@@ -96,121 +201,221 @@ const Shop = () => {
     if (loading && products.length === 0) {
         return (
             <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
-                <View className="flex flex-col items-center gap-4">
-                    <ActivityIndicator size="large" color="#f97316" />
-                    <Text className="text-gray-400 font-medium">Loading products...</Text>
-                </View>
+                <StatusBar style="light" />
+                <ActivityIndicator size="large" color="#ea580c" />
+                <Text className="text-gray-400 mt-4 font-medium">Loading products...</Text>
             </SafeAreaView>
         );
     }
 
     return (
         <SafeAreaView className="flex-1 bg-gray-900">
-            <ScrollView className="flex-1">
-                <View className="mx-4 my-8">
-                    {/* Header Section */}
-                    <View className="bg-linear-to-r from-orange-900 to-orange-800 py-12 px-4">
-                        <View className="text-center">
-                            <Text className="text-4xl font-bold text-white flex items-center justify-center gap-3">
-                                <ShoppingBag size={40} color="#f97316" />
-                                Our Collection
-                            </Text>
-                            <Text className="text-gray-400 mt-3 text-lg">
-                                Discover amazing products at great prices
-                            </Text>
-                        </View>
-                    </View>
+            <StatusBar style="light" />
 
+            {/* Header */}
+            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                <Text className="text-3xl text-white">Shop</Text>
+            </View>
+
+            <ScrollView
+                className="flex-1"
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        tintColor="#ea580c"
+                    />
+                }
+            >
+                <View className="py-4 pb-24">
                     {/* Error Alert */}
                     {error && (
-                        <View className="mb-6 p-4 bg-red-900 border border-red-700 rounded-xl flex flex-row items-start gap-3">
+                        <View className="mx-4 mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start gap-3">
                             <AlertCircle size={20} color="#ef4444" />
-                            <Text className="text-sm text-red-400 flex-1">{error}</Text>
+                            <Text className="text-red-400 text-sm flex-1">{error}</Text>
                             <TouchableOpacity onPress={() => setError("")}>
                                 <X size={20} color="#ef4444" />
                             </TouchableOpacity>
                         </View>
                     )}
 
-                    {/* Search and Filters */}
-                    <View className="mb-8 space-y-4">
+                    {/* Stats Cards (like team page) */}
+                    <View className="mx-4 mb-6">
+                        <Text className="text-lg font-light text-white mb-3">Shop Overview</Text>
+                        <View className="gap-3">
+                            <StatsCard
+                                title="Total Products"
+                                value={shopStats.totalProducts}
+                                subtitle="Available items"
+                                icon={<Package size={20} color="#3b82f6" />}
+                                colors={{
+                                    bg: "bg-blue-500/10",
+                                    border: "border-blue-500/30",
+                                    iconBg: "bg-blue-500/20",
+                                    text: "text-white",
+                                    subText: "text-gray-400",
+                                }}
+                            />
+
+                            <StatsCard
+                                title="Categories"
+                                value={shopStats.categories}
+                                subtitle="Product types"
+                                icon={<Filter size={20} color="#a855f7" />}
+                                colors={{
+                                    bg: "bg-purple-500/10",
+                                    border: "border-purple-500/30",
+                                    iconBg: "bg-purple-500/20",
+                                    text: "text-white",
+                                    subText: "text-gray-400",
+                                }}
+                            />
+
+                            <StatsCard
+                                title="Bestsellers"
+                                value={shopStats.bestsellers}
+                                subtitle="Top rated items"
+                                icon={<Star size={20} color="#f59e0b" />}
+                                colors={{
+                                    bg: "bg-amber-500/10",
+                                    border: "border-amber-500/30",
+                                    iconBg: "bg-amber-500/20",
+                                    text: "text-white",
+                                    subText: "text-gray-400",
+                                }}
+                            />
+
+                            <StatsCard
+                                title="Average Price"
+                                value={`$${shopStats.avgPrice}`}
+                                subtitle="Per product"
+                                icon={<DollarSign size={20} color="#22c55e" />}
+                                colors={{
+                                    bg: "bg-green-500/10",
+                                    border: "border-green-500/30",
+                                    iconBg: "bg-green-500/20",
+                                    text: "text-white",
+                                    subText: "text-gray-400",
+                                }}
+                            />
+                        </View>
+                    </View>
+
+                    {/* Filters Section */}
+                    <View className="mx-4 mb-4">
                         {/* Search Bar */}
-                        <View className="relative">
-                            <Search size={20} color="#9ca3af" className="absolute left-4 top-1/2 -translate-y-1/2" />
+                        <View className="relative mb-3">
+                            <Search
+                                size={18}
+                                color="#9ca3af"
+                                style={{ position: "absolute", left: 12, top: 12, zIndex: 1 }}
+                            />
                             <TextInput
                                 placeholder="Search products..."
+                                placeholderTextColor="#6b7280"
                                 value={searchTerm}
                                 onChangeText={handleSearch}
-                                className="w-full pl-12 pr-4 py-3 border border-gray-700 rounded-xl bg-gray-900 text-white"
+                                className="bg-gray-800/40 border border-gray-700/30 rounded-xl pl-10 pr-4 py-3 text-white"
                             />
                         </View>
 
-                        {/* Filter Row */}
-                        <View className="flex flex-wrap items-center gap-3">
-                            {/* Category Filter */}
-                            <View className="border border-gray-700 rounded-xl bg-gray-900">
-                                <TouchableOpacity onPress={() => setCategoryFilter("all")}>
-                                    <Text className={`px-4 py-2 ${categoryFilter === "all" ? "bg-orange-900 text-white" : "text-white"}`}>
-                                        All Categories
+                        {/* Category Filter */}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
+                            <View className="flex-row gap-2">
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        setCategoryFilter("all");
+                                        setCurrentPage(1);
+                                    }}
+                                    className={`px-4 py-2 rounded-xl ${categoryFilter === "all"
+                                            ? "bg-orange-600"
+                                            : "bg-gray-800/40 border border-gray-700/30"
+                                        }`}
+                                >
+                                    <Text
+                                        className={`font-semibold ${categoryFilter === "all" ? "text-white" : "text-gray-400"
+                                            }`}
+                                    >
+                                        All
                                     </Text>
                                 </TouchableOpacity>
+
                                 {categories.map((cat) => (
-                                    <TouchableOpacity key={cat} onPress={() => setCategoryFilter(cat)}>
-                                        <Text className={`px-4 py-2 ${categoryFilter === cat ? "bg-orange-900 text-white" : "text-white"}`}>
+                                    <TouchableOpacity
+                                        key={cat}
+                                        onPress={() => {
+                                            setCategoryFilter(cat);
+                                            setCurrentPage(1);
+                                        }}
+                                        className={`px-4 py-2 rounded-xl ${categoryFilter === cat
+                                                ? "bg-orange-600"
+                                                : "bg-gray-800/40 border border-gray-700/30"
+                                            }`}
+                                    >
+                                        <Text
+                                            className={`font-semibold ${categoryFilter === cat ? "text-white" : "text-gray-400"
+                                                }`}
+                                        >
                                             {cat}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
+                        </ScrollView>
 
-                            {/* Bestsellers Toggle */}
+                        {/* Bestsellers & Price Filter Row */}
+                        <View className="flex-row gap-2 mb-3">
                             <TouchableOpacity
                                 onPress={() => {
                                     setShowBestsellers(!showBestsellers);
                                     setCurrentPage(1);
                                 }}
-                                className={`px-4 py-2 rounded-xl font-medium transition-colors flex flex-row items-center gap-2 ${showBestsellers ? "bg-orange-600 text-white" : "bg-gray-700 text-gray-400"
+                                className={`px-4 py-2 rounded-xl flex-row items-center gap-2 ${showBestsellers
+                                        ? "bg-orange-600"
+                                        : "bg-gray-800/40 border border-gray-700/30"
                                     }`}
                             >
-                                <Star size={16} color={showBestsellers ? "#ffffff" : "#9ca3af"} />
-                                <Text>Bestsellers</Text>
+                                <Star
+                                    size={16}
+                                    color={showBestsellers ? "#ffffff" : "#9ca3af"}
+                                    fill={showBestsellers ? "#ffffff" : "transparent"}
+                                />
+                                <Text
+                                    className={`font-semibold ${showBestsellers ? "text-white" : "text-gray-400"
+                                        }`}
+                                >
+                                    Bestsellers
+                                </Text>
                             </TouchableOpacity>
 
-                            {/* Price Filter Toggle */}
                             <TouchableOpacity
                                 onPress={() => setShowFilters(!showFilters)}
-                                className="px-4 py-2 bg-gray-700 text-gray-400 rounded-xl font-medium flex flex-row items-center gap-2"
+                                className="px-4 py-2 bg-gray-800/40 border border-gray-700/30 rounded-xl flex-row items-center gap-2"
                             >
                                 <Filter size={16} color="#9ca3af" />
-                                <Text>Price Filter</Text>
-                                <ChevronDown
-                                    size={16}
-                                    color="#9ca3af"
-                                    style={{ transform: [{ rotate: showFilters ? "180deg" : "0deg" }] }}
-                                />
+                                <Text className="text-gray-400 font-semibold">Price</Text>
                             </TouchableOpacity>
 
                             {/* Clear Filters */}
                             {(categoryFilter !== "all" || showBestsellers || priceRange.min || priceRange.max || searchTerm) && (
                                 <TouchableOpacity
                                     onPress={clearFilters}
-                                    className="px-4 py-2 text-red-500 font-medium flex flex-row items-center gap-2"
+                                    className="px-4 py-2 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-center gap-2"
                                 >
                                     <X size={16} color="#ef4444" />
-                                    <Text>Clear Filters</Text>
+                                    <Text className="text-red-400 font-semibold">Clear</Text>
                                 </TouchableOpacity>
                             )}
-
-                            <Text className="ml-auto text-sm text-gray-400 font-medium">{totalProducts} Products</Text>
                         </View>
 
                         {/* Price Range Filter */}
                         {showFilters && (
-                            <View className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+                            <View className="bg-gray-800/40 rounded-xl p-4 border border-gray-700/30 mb-3">
                                 <Text className="font-semibold text-white mb-3">Filter by Price</Text>
-                                <View className="flex flex-row items-center gap-3">
+                                <View className="flex-row items-center gap-3">
                                     <TextInput
                                         placeholder="Min"
+                                        placeholderTextColor="#6b7280"
                                         value={priceRange.min}
                                         onChangeText={(value) =>
                                             setPriceRange((prev) => ({
@@ -224,6 +429,7 @@ const Shop = () => {
                                     <Text className="text-gray-500">-</Text>
                                     <TextInput
                                         placeholder="Max"
+                                        placeholderTextColor="#6b7280"
                                         value={priceRange.max}
                                         onChangeText={(value) =>
                                             setPriceRange((prev) => ({
@@ -236,129 +442,75 @@ const Shop = () => {
                                     />
                                     <TouchableOpacity
                                         onPress={handlePriceFilter}
-                                        className="px-6 py-2 bg-orange-600 text-white rounded-lg font-medium"
+                                        className="px-6 py-2 bg-orange-600 rounded-lg"
                                     >
-                                        <Text>Apply</Text>
+                                        <Text className="text-white font-medium">Apply</Text>
                                     </TouchableOpacity>
                                 </View>
                             </View>
                         )}
+
+                        <Text className="text-sm text-gray-400 font-medium">
+                            {totalProducts} Products Found
+                        </Text>
                     </View>
 
-                    {/* Products Grid */}
-                    {loading ? (
-                        <View className="flex justify-center items-center py-20">
-                            <ActivityIndicator size="large" color="#f97316" />
-                        </View>
-                    ) : products.length === 0 ? (
-                        <View className="text-center py-20">
-                            <ShoppingBag size={80} color="#6b7280" />
-                            <Text className="text-xl font-semibold text-white mb-2">No Products Found</Text>
-                            <Text className="text-gray-400">Try adjusting your filters or search terms</Text>
-                        </View>
-                    ) : (
-                        <View className="grid grid-cols-1 gap-6">
-                            {products.map((product) => (
-                                <TouchableOpacity
-                                    key={product._id}
-                                    onPress={() => router.push(`/product/${product._id}`)}
-                                    className="group bg-gray-800 border border-gray-700 rounded-xl overflow-hidden"
-                                >
-                                    {/* Product Image */}
-                                    <View className="relative overflow-hidden bg-gray-700 aspect-square">
-                                        <Image
-                                            source={{ uri: product.image?.[0] || "/placeholder.jpg" }}
-                                            style={{ width: "100%", height: "100%", resizeMode: "cover" }}
-                                        />
-                                        {product.bestseller && (
-                                            <View className="absolute top-3 left-3 bg-orange-600 text-white px-3 py-1 rounded-full text-xs font-semibold flex flex-row items-center gap-1">
-                                                <Star size={12} color="#ffffff" />
-                                                <Text>Bestseller</Text>
-                                            </View>
-                                        )}
-                                        <View className="absolute bottom-0 left-0 right-0 p-3 bg-linear-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <TouchableOpacity
-                                                onPress={() => router.push(`/product/${product._id}`)}
-                                                className="w-full bg-white text-gray-900 py-2 rounded-lg font-medium flex flex-row items-center justify-center gap-2"
-                                            >
-                                                <Eye size={16} color="#1f2937" />
-                                                <Text>View Details</Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    </View>
+                    {/* Products List */}
+                    <View className="mx-4">
+                        <Text className="text-lg font-light text-white mb-3">
+                            Products ({products.length})
+                        </Text>
 
-                                    {/* Product Info */}
-                                    <View className="p-4">
-                                        <View className="mb-2">
-                                            <Text className="text-xs text-orange-500 py-0.5 px-2 rounded-full bg-orange-100 font-medium uppercase">
-                                                {product.category}
-                                            </Text>
-                                        </View>
-                                        <TouchableOpacity onPress={() => router.push(`/product/${product._id}`)}>
-                                            <Text className="font-semibold text-white mb-2 line-clamp-2">
-                                                {product.name}
-                                            </Text>
-                                        </TouchableOpacity>
-                                        <Text className="text-sm text-gray-400 mb-3 line-clamp-2">
-                                            {product.description}
-                                        </Text>
-                                        <View className="flex flex-row items-center justify-between mb-3">
-                                            <Text className="text-2xl font-bold text-white">${product.price}</Text>
-                                            {product.sizes?.length > 0 && (
-                                                <Text className="text-sm text-gray-400">{product.sizes.length} sizes</Text>
-                                            )}
-                                        </View>
-                                    </View>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    )}
+                        {loading ? (
+                            <View className="items-center py-20">
+                                <ActivityIndicator size="large" color="#ea580c" />
+                            </View>
+                        ) : products.length === 0 ? (
+                            <View className="bg-gray-800/40 rounded-xl p-8 items-center border border-gray-700/30">
+                                <ShoppingBag size={48} color="#6b7280" />
+                                <Text className="text-gray-400 mt-4 font-medium">
+                                    No Products Found
+                                </Text>
+                                <Text className="text-gray-500 text-sm mt-2" style={{ textAlign: "center" }}>
+                                    Try adjusting your filters or search terms
+                                </Text>
+                            </View>
+                        ) : (
+                            <>
+                                {products.map((product) => (
+                                    <ProductCard
+                                        key={product._id}
+                                        product={product}
+                                        onPress={() => router.push(`/(tabs)/product-item?id=${product._id}`)}
+                                    />
+                                ))}
+                            </>
+                        )}
+                    </View>
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <View className="mt-12 flex justify-center items-center gap-2">
+                        <View className="mx-4 mt-6 flex-row justify-center items-center gap-2">
                             <TouchableOpacity
                                 onPress={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                                 disabled={currentPage === 1}
-                                className="px-4 py-2 border border-gray-700 rounded-lg font-medium disabled:opacity-50"
+                                className={`px-4 py-2 border border-gray-700 rounded-lg ${currentPage === 1 ? "opacity-50" : ""
+                                    }`}
                             >
-                                <Text>Previous</Text>
+                                <Text className="text-white font-medium">Previous</Text>
                             </TouchableOpacity>
-                            <View className="flex flex-row items-center gap-2">
-                                {[...Array(totalPages)].map((_, index) => {
-                                    const pageNum = index + 1;
-                                    if (
-                                        pageNum === 1 ||
-                                        pageNum === totalPages ||
-                                        (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                                    ) {
-                                        return (
-                                            <TouchableOpacity
-                                                key={pageNum}
-                                                onPress={() => setCurrentPage(pageNum)}
-                                                className={`w-10 h-10 rounded-lg font-medium ${currentPage === pageNum
-                                                    ? "bg-orange-600 text-white"
-                                                    : "border border-gray-700"
-                                                    }`}
-                                            >
-                                                <Text>{pageNum}</Text>
-                                            </TouchableOpacity>
-                                        );
-                                    } else if (
-                                        pageNum === currentPage - 2 ||
-                                        pageNum === currentPage + 2
-                                    ) {
-                                        return <Text key={pageNum}>...</Text>;
-                                    }
-                                    return null;
-                                })}
-                            </View>
+
+                            <Text className="text-gray-400 px-4">
+                                Page {currentPage} of {totalPages}
+                            </Text>
+
                             <TouchableOpacity
                                 onPress={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                                 disabled={currentPage === totalPages}
-                                className="px-4 py-2 border border-gray-700 rounded-lg font-medium disabled:opacity-50"
+                                className={`px-4 py-2 border border-gray-700 rounded-lg ${currentPage === totalPages ? "opacity-50" : ""
+                                    }`}
                             >
-                                <Text>Next</Text>
+                                <Text className="text-white font-medium">Next</Text>
                             </TouchableOpacity>
                         </View>
                     )}

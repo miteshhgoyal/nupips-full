@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tokenService } from './tokenService';
 
 // Use environment variable or fallback to localhost
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://192.168.1.66:8000/';
+// const API_BASE_URL = 'http://192.168.1.66:8000/';
+const API_BASE_URL = 'https://api.nupips.com';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
