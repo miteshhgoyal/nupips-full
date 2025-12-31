@@ -202,7 +202,7 @@ const GTCFxDashboard = () => {
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="py-4 pb-24 px-4">
+                <View className="py-4 pb-24 px-0">
                     {/* Welcome Header */}
                     <View className="mx-4 mb-6">
                         <Text className="text-2xl font-bold text-white mb-2">
@@ -439,63 +439,6 @@ const GTCFxDashboard = () => {
                                     <Text className="text-white font-semibold text-base">{displayInfo.phone || "Not set"}</Text>
                                 </View>
                             </View>
-                        </View>
-                    </View>
-
-                    {/* Quick Actions */}
-                    <View className="mx-4 mb-6">
-                        <Text className="text-xl font-bold text-white mb-6">Quick Actions</Text>
-                        <View className="space-y-4">
-                            <TouchableOpacity
-                                onPress={() => router.push("/gtcfx/strategies")}
-                                className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 active:bg-gray-800/60"
-                                activeOpacity={0.9}
-                            >
-                                <View className="flex-row items-center mb-3">
-                                    <View className="w-14 h-14 bg-orange-500/20 border border-orange-500/50 rounded-xl items-center justify-center mr-4">
-                                        <TrendingUp size={24} color="#ea580c" />
-                                    </View>
-                                    <View className="flex-1">
-                                        <Text className="font-semibold text-white text-lg mb-1">Explore Strategies</Text>
-                                        <Text className="text-gray-400 text-sm">Browse and subscribe to trading strategies</Text>
-                                    </View>
-                                    <ArrowRight size={20} color="#9ca3af" />
-                                </View>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                onPress={() => router.push("/gtcfx/subscriptions")}
-                                className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 active:bg-gray-800/60"
-                                activeOpacity={0.9}
-                            >
-                                <View className="flex-row items-center mb-3">
-                                    <View className="w-14 h-14 bg-green-500/20 border border-green-500/50 rounded-xl items-center justify-center mr-4">
-                                        <Wallet size={24} color="#22c55e" />
-                                    </View>
-                                    <View className="flex-1">
-                                        <Text className="font-semibold text-white text-lg mb-1">My Subscriptions</Text>
-                                        <Text className="text-gray-400 text-sm">View your active investments</Text>
-                                    </View>
-                                    <ArrowRight size={20} color="#9ca3af" />
-                                </View>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                onPress={() => router.push("/gtcfx/profit-logs")}
-                                className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 active:bg-gray-800/60"
-                                activeOpacity={0.9}
-                            >
-                                <View className="flex-row items-center mb-3">
-                                    <View className="w-14 h-14 bg-purple-500/20 border border-purple-500/50 rounded-xl items-center justify-center mr-4">
-                                        <DollarSign size={24} color="#a855f7" />
-                                    </View>
-                                    <View className="flex-1">
-                                        <Text className="font-semibold text-white text-lg mb-1">Profit Logs</Text>
-                                        <Text className="text-gray-400 text-sm">Check your earnings history</Text>
-                                    </View>
-                                    <ArrowRight size={20} color="#9ca3af" />
-                                </View>
-                            </TouchableOpacity>
                         </View>
                     </View>
                 </View>

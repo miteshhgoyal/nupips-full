@@ -2,11 +2,10 @@ import React from 'react';
 import { View, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/context/authContext';
+import { useGTCFxAuth } from '@/context/gtcfxAuthContext'; // 👈 GTC FX Context
 import {
-    LogOut,
     LayoutDashboard,
     TrendingUp,
-    Wallet,
     Users,
     Home,
     ShoppingBag,
@@ -16,12 +15,9 @@ import {
     History,
     User,
     Package,
-    FileText,
-    PlayCircle,
-    Clock,
     Badge,
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ACTIVE_TAB_COLOR = '#ea580c';
@@ -29,7 +25,6 @@ const INACTIVE_TAB_COLOR = '#9ca3af';
 const BAR_BG = '#111827';
 const BAR_BORDER = '#374151';
 
-// layout config so you can tune it easily
 const TAB_BAR_CONFIG = {
     paddingHorizontal: 12,
     bottomInset: 8,
@@ -39,23 +34,42 @@ const TAB_BAR_CONFIG = {
     itemGap: 6,
 };
 
-// ALL TABS VISIBLE FOR TESTING
-const TAB_CONFIG = [
-    { name: 'dashboard', label: 'Home', icon: Home },
-    { name: 'nupips-team', label: 'Team', icon: Users },
-    { name: 'nupips-incomes', label: 'Income', icon: TrendingUp },
-    { name: 'deposit', label: 'Deposit', icon: DollarSign },
-    { name: 'withdrawal', label: 'Withdraw', icon: ArrowLeftRight },
-    { name: 'transfer', label: 'Transfer', icon: ArrowLeftRight },
-    { name: 'transaction-history', label: 'History', icon: History },
-    { name: 'shop', label: 'Shop', icon: ShoppingBag },
-    { name: 'orders', label: 'Orders', icon: Package },
-    { name: 'broker-selection', label: 'Broker Selection', icon: Badge },
-    { name: 'learn', label: 'Learn', icon: Book },
-    { name: 'profile', label: 'Profile', icon: User },
-];
+// Dynamic TAB_CONFIG based on GTC FX auth
+function getTabConfig(gtcAuthenticated, gtcLoading) {
+    const baseTabs = [
+        { name: 'dashboard', label: 'Home', icon: Home },
+        { name: 'nupips-team', label: 'Team', icon: Users },
+        { name: 'nupips-incomes', label: 'Income', icon: TrendingUp },
+        { name: 'deposit', label: 'Deposit', icon: DollarSign },
+        { name: 'withdrawal', label: 'Withdraw', icon: ArrowLeftRight },
+        { name: 'transfer', label: 'Transfer', icon: ArrowLeftRight },
+        { name: 'transaction-history', label: 'History', icon: History },
+        { name: 'shop', label: 'Shop', icon: ShoppingBag },
+        { name: 'orders', label: 'Orders', icon: Package },
+        { name: 'broker-selection', label: 'Broker Selection', icon: Badge },
+        { name: 'learn', label: 'Learn', icon: Book },
+        { name: 'profile', label: 'Profile', icon: User },
+    ];
+
+    // Add GTC FX only if authenticated and not loading
+    if (gtcAuthenticated && !gtcLoading) {
+        baseTabs.splice(3, 0, { name: 'gtcfx', label: 'GTC FX', icon: LayoutDashboard });
+    }
+
+    return baseTabs;
+}
 
 function FloatingTabBar({ state, descriptors, navigation }) {
+    const segments = useSegments();
+    const { gtcAuthenticated, gtcLoading } = useGTCFxAuth();
+
+    // Hide main tabs when inside GTC FX
+    const isGtcfxActive = segments[0] === 'gtcfx';
+    if (isGtcfxActive) {
+        return null;
+    }
+
+    const TAB_CONFIG = getTabConfig(gtcAuthenticated, gtcLoading);
     const { paddingHorizontal, bottomInset, barHeight, borderRadius, itemMinWidth, itemGap } =
         TAB_BAR_CONFIG;
 
@@ -116,20 +130,12 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                             }
                         };
 
-                        const onLongPress = () => {
-                            navigation.emit({
-                                type: 'tabLongPress',
-                                target: route.key,
-                            });
-                        };
-
                         return (
                             <TouchableOpacity
                                 key={route.key}
                                 accessibilityRole="button"
                                 accessibilityState={isFocused ? { selected: true } : {}}
                                 onPress={onPress}
-                                onLongPress={onLongPress}
                                 activeOpacity={0.85}
                                 style={{
                                     alignItems: 'center',
@@ -162,14 +168,15 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                     })}
                 </ScrollView>
             </View>
-        </View >
+        </View>
     );
 }
 
 export default function TabsLayout() {
     const { user, logout } = useAuth();
-    const router = useRouter();
+    const { gtcAuthenticated, gtcLoading } = useGTCFxAuth();
 
+    // Always include GTC FX screen (conditional rendering handled in tab bar)
     return (
         <SafeAreaView className="flex-1 bg-gray-900" edges={['top']}>
             <Tabs
@@ -183,68 +190,25 @@ export default function TabsLayout() {
                 }}
                 tabBar={(props) => <FloatingTabBar {...props} />}
             >
-                {/* ALL MAIN TABS - VISIBLE FOR TESTING */}
                 <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
                 <Tabs.Screen name="nupips-team" options={{ title: 'Nupips Team' }} />
                 <Tabs.Screen name="nupips-incomes" options={{ title: 'Nupips Incomes' }} />
+                <Tabs.Screen name="gtcfx" options={{ title: 'GTC FX' }} />
                 <Tabs.Screen name="deposit" options={{ title: 'Deposit' }} />
                 <Tabs.Screen name="withdrawal" options={{ title: 'Withdrawal' }} />
                 <Tabs.Screen name="transfer" options={{ title: 'Transfer' }} />
                 <Tabs.Screen name="transaction-history" options={{ title: 'Transaction History' }} />
                 <Tabs.Screen name="shop" options={{ title: 'Shop' }} />
                 <Tabs.Screen name="orders" options={{ title: 'Orders' }} />
+                <Tabs.Screen name="broker-selection" options={{ title: 'Broker Selection' }} />
                 <Tabs.Screen name="learn" options={{ title: 'Learn' }} />
                 <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
 
-                {/* HIDDEN SCREENS - Still accessible via navigation */}
-                <Tabs.Screen
-                    name="gtcfx"
-                    options={{
-                        href: null,
-                        title: 'GTC FX'
-                    }}
-                />
-                <Tabs.Screen
-                    name="product-item"
-                    options={{
-                        href: null,
-                        title: 'Product Details'
-                    }}
-                />
-                <Tabs.Screen
-                    name="place-order"
-                    options={{
-                        href: null,
-                        title: 'Place Order'
-                    }}
-                />
-                <Tabs.Screen
-                    name="course-view"
-                    options={{
-                        href: null,
-                        title: 'Course Details'
-                    }}
-                />
-                <Tabs.Screen
-                    name="lesson-view"
-                    options={{
-                        href: null,
-                        title: 'Lesson View'
-                    }}
-                />
-
-                <Tabs.Screen
-                    name="broker-selection"
-                    options={{ href: null, title: 'Broker Selection' }}
-                />
-
-                <Tabs.Screen
-                    name="coming-soon"
-                    options={{
-                        href: null,
-                        title: 'Coming Soon'
-                    }}
-                />
+                <Tabs.Screen name="product-item" options={{ href: null }} />
+                <Tabs.Screen name="place-order" options={{ href: null }} />
+                <Tabs.Screen name="course-view" options={{ href: null }} />
+                <Tabs.Screen name="lesson-view" options={{ href: null }} />
+                <Tabs.Screen name="coming-soon" options={{ href: null }} />
             </Tabs>
         </SafeAreaView>
     );

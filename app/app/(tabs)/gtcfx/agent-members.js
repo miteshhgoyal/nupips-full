@@ -340,7 +340,7 @@ const GTCFxAgentMembers = () => {
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="py-4 pb-24 px-4">
+                <View className="py-4 pb-24">
                     {/* Stats Cards */}
                     <View className="mx-4 mb-6">
                         <Text className="text-lg font-light text-white mb-3">Team Overview</Text>

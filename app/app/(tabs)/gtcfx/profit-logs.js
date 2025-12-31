@@ -171,7 +171,7 @@ const GTCFxProfitLogs = () => {
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="py-4 pb-24 px-4">
+                <View className="py-4 pb-24">
                     {/* Header & Export */}
                     <View className="mx-4 mb-6">
                         <View className="flex-row items-center mb-3">

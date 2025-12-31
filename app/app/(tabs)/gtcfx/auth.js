@@ -162,7 +162,7 @@ const GTCFxAuth = () => {
                 <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
                     <View className="py-4 pb-24">
                         {/* Profile Card */}
-                        <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                        <View className="mx-2 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
                             <View className="items-center mb-6">
                                 <View className="w-20 h-20 bg-orange-500/20 border border-orange-500/50 rounded-xl items-center justify-center mb-4">
                                     {gtcUser.avatar ? (
