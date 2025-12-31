@@ -24,13 +24,9 @@ import {
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 
-// ============================================
-// FEATURE FLAGS - Toggle features here
-// ============================================
 const FEATURES = {
-    BANK_TRANSFER_ENABLED: false, // Set to true to enable bank transfer
+    BANK_TRANSFER_ENABLED: false,
 };
-// ============================================
 
 const Withdrawal = () => {
     const router = useRouter();
@@ -47,12 +43,6 @@ const Withdrawal = () => {
     // Crypto details
     const [walletAddress, setWalletAddress] = useState('');
     const [walletNetwork, setWalletNetwork] = useState('');
-
-    // Bank details (only used when BANK_TRANSFER_ENABLED is true)
-    const [bankName, setBankName] = useState('');
-    const [accountNumber, setAccountNumber] = useState('');
-    const [accountHolder, setAccountHolder] = useState('');
-    const [ifscCode, setIfscCode] = useState('');
 
     // Success state
     const [withdrawalSuccess, setWithdrawalSuccess] = useState(false);
@@ -90,58 +80,47 @@ const Withdrawal = () => {
         return parseFloat(amount) - calculateFee();
     };
 
-    const validateAmount = (value) => {
-        const numValue = parseFloat(value);
-
-        if (!value || numValue <= 0) {
+    // FIXED: Proper validation with state sync
+    const validateAmount = (testAmount) => {
+        const numValue = parseFloat(testAmount);
+        if (!testAmount || numValue <= 0 || isNaN(numValue)) {
             setAmountError('Please enter a valid amount');
             return false;
         }
-
         if (numValue > (user?.walletBalance || 0)) {
             setAmountError('Insufficient balance');
             return false;
         }
-
-        if (selectedOption) {
-            if (numValue < selectedOption.minWithdrawal) {
-                setAmountError(`Minimum withdrawal is $${selectedOption.minWithdrawal}`);
-                return false;
-            }
+        if (selectedOption && numValue < selectedOption.minWithdrawal) {
+            setAmountError(`Minimum withdrawal is $${selectedOption.minWithdrawal}`);
+            return false;
         }
-
         setAmountError('');
         return true;
     };
 
     const handleAmountChange = (value) => {
         setAmount(value);
-        if (value) {
-            validateAmount(value);
-        } else {
-            setAmountError('');
-        }
+        setTimeout(() => {
+            if (value) validateAmount(value);
+            else setAmountError('');
+        }, 0);
+    };
+
+    // FIXED: Quick amount with proper state sync
+    const handleQuickAmount = (quickAmount) => {
+        const value = quickAmount.toString();
+        setAmount(value);
+        setAmountError('');
+        setTimeout(() => validateAmount(value), 50);
     };
 
     const handleWithdraw = async () => {
         if (!validateAmount(amount)) return;
 
-        // Validate crypto details
         if (withdrawalMethod === 'crypto') {
             if (!walletAddress.trim()) {
                 setError('Please enter your wallet address');
-                return;
-            }
-            if (!walletNetwork.trim()) {
-                setError('Please select network');
-                return;
-            }
-        }
-
-        // Validate bank details (only if feature enabled)
-        if (FEATURES.BANK_TRANSFER_ENABLED && withdrawalMethod === 'bank_transfer') {
-            if (!bankName.trim() || !accountNumber.trim() || !accountHolder.trim()) {
-                setError('Please fill in all bank details');
                 return;
             }
         }
@@ -153,20 +132,13 @@ const Withdrawal = () => {
             const payload = {
                 amount: parseFloat(amount),
                 currency: 'USD',
-                withdrawalMethod: withdrawalMethod === 'crypto' ? 'blockbee-crypto' : 'bank_transfer',
+                withdrawalMethod: 'blockbee-crypto',
             };
 
             if (withdrawalMethod === 'crypto') {
                 payload.crypto = selectedCrypto;
                 payload.walletAddress = walletAddress;
                 payload.network = walletNetwork;
-            } else if (FEATURES.BANK_TRANSFER_ENABLED) {
-                payload.bankDetails = {
-                    bankName,
-                    accountNumber,
-                    accountHolderName: accountHolder,
-                    ifscCode,
-                };
             }
 
             const response = await api.post('/withdrawal/create', payload);
@@ -179,7 +151,6 @@ const Withdrawal = () => {
                 setError(response.data.message || 'Failed to create withdrawal');
             }
         } catch (err) {
-            console.error('Withdrawal error:', err);
             setError(err.response?.data?.message || 'Failed to process withdrawal');
         } finally {
             setLoading(false);
@@ -195,105 +166,58 @@ const Withdrawal = () => {
         setError(null);
     };
 
-    // Success Screen
+    // Success Screen - FIXED layout
     if (withdrawalSuccess && withdrawalDetails) {
         return (
             <SafeAreaView className="flex-1 bg-gray-900">
                 <StatusBar style="light" />
-                <View className="bg-gradient-to-r from-green-600/20 to-green-500/20 border-b border-green-600/30 px-6 py-5">
-                    <View className="flex-row items-center gap-3 mb-2">
-                        <CheckCircle size={28} color="#22c55e" />
-                        <Text className="text-3xl font-bold text-white flex-1">Withdrawal Submitted!</Text>
-                    </View>
-                    <Text className="text-green-300 text-lg font-medium">Your request is being processed</Text>
+                <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                    <Text className="text-2xl font-bold text-white">Withdrawal Submitted</Text>
                 </View>
-
                 <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                    <View className="px-6 py-10 pb-24">
-                        <View className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-3xl p-10 border border-green-500/30 items-center mb-12">
-                            <View className="w-28 h-28 bg-green-500/20 rounded-3xl items-center justify-center mb-8 border border-green-500/40">
-                                <CheckCircle size={64} color="#22c55e" />
+                    <View className="py-4 pb-24">
+                        <View className="mx-4 mb-6 bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl p-5 border border-green-500/30 items-center">
+                            <View className="w-16 h-16 bg-green-500/20 rounded-xl items-center justify-center mb-4 border border-green-500/30">
+                                <CheckCircle size={24} color="#22c55e" />
                             </View>
-                            <Text className="text-4xl font-bold text-white mb-4 text-center">
-                                Withdrawal Submitted!
-                            </Text>
-                            <Text className="text-gray-300 text-xl text-center mb-2">
-                                Your withdrawal request of{' '}
-                                <Text className="font-bold text-green-400">${amount}</Text>
-                            </Text>
-                            <Text className="text-green-300 text-lg font-semibold text-center">
-                                has been submitted for processing
+                            <Text className="text-xl font-bold text-white mb-2 text-center">Withdrawal Submitted!</Text>
+                            <Text className="text-green-400 text-sm text-center">
+                                ${amount} - {selectedOption?.processingTime}
                             </Text>
                         </View>
 
-                        <View className="bg-gray-900/50 rounded-3xl p-10 mb-12 border border-gray-700/50">
-                            <View className="space-y-6">
-                                <View className="flex-row justify-between items-center py-6 border-b border-gray-700">
-                                    <Text className="text-gray-400 text-xl font-semibold">Amount</Text>
-                                    <Text className="text-4xl font-bold text-white">${amount}</Text>
+                        <View className="mx-4 mb-6 p-4 bg-gray-900/50 rounded-xl border border-gray-700">
+                            <View style={{ marginBottom: 12 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                                    <Text className="text-gray-400 text-xs">Amount</Text>
+                                    <Text className="text-white font-bold text-lg">${amount}</Text>
                                 </View>
-                                <View className="flex-row justify-between items-center py-6 border-b border-gray-700">
-                                    <Text className="text-gray-400 text-xl font-semibold">Fee ({selectedOption?.fee})</Text>
-                                    <Text className="text-3xl font-bold text-red-400">
-                                        -${calculateFee().toFixed(2)}
-                                    </Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                                    <Text className="text-gray-400 text-xs">Fee</Text>
+                                    <Text className="text-red-400 font-semibold">-${calculateFee().toFixed(2)}</Text>
                                 </View>
-                                <View className="flex-row justify-between items-center py-6">
-                                    <Text className="text-gray-400 text-2xl font-semibold">Net Amount</Text>
-                                    <Text className="text-4xl font-bold text-green-400">
-                                        ${calculateNetAmount().toFixed(2)}
-                                    </Text>
-                                </View>
-                                <View className="flex-row justify-between items-center py-6 border-t border-gray-700 pt-6">
-                                    <Text className="text-gray-400 text-xl font-semibold">Method</Text>
-                                    <Text className="text-2xl font-bold text-orange-400 capitalize">
-                                        {selectedOption?.label || 'Crypto'}
-                                    </Text>
-                                </View>
-                                <View className="flex-row justify-between items-center py-6">
-                                    <Text className="text-gray-400 text-xl font-semibold">Status</Text>
-                                    <View className="flex-row items-center gap-2 px-6 py-3 bg-yellow-500/20 border border-yellow-500/40 rounded-2xl">
-                                        <View className="w-3 h-3 bg-yellow-400 rounded-full" />
-                                        <Text className="text-lg font-bold text-yellow-400">Pending</Text>
-                                    </View>
-                                </View>
-                                <View className="flex-row justify-between items-center pt-6">
-                                    <Text className="text-gray-400 text-lg font-semibold">Transaction ID</Text>
-                                    <Text className="text-xl font-mono text-white font-semibold">
-                                        {withdrawalDetails.transactionId}
-                                    </Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <Text className="text-gray-400 text-xs font-semibold">Net Amount</Text>
+                                    <Text className="text-green-400 font-bold text-lg">${calculateNetAmount().toFixed(2)}</Text>
                                 </View>
                             </View>
+                            <Text className="text-xs text-gray-500 text-center">
+                                Transaction ID: {withdrawalDetails.transactionId}
+                            </Text>
                         </View>
 
-                        <View className="bg-blue-500/10 border border-blue-500/30 rounded-3xl p-8 mb-12">
-                            <View className="flex-row items-start gap-4">
-                                <Info size={28} color="#60a5fa" />
-                                <View className="flex-1">
-                                    <Text className="text-xl font-bold text-blue-300 mb-3">Processing Time</Text>
-                                    <Text className="text-lg text-blue-200 leading-relaxed">
-                                        Your withdrawal will be processed within{' '}
-                                        <Text className="font-bold text-white">
-                                            {selectedOption?.processingTime || '24-48 hours'}
-                                        </Text>
-                                        . You'll be notified once it's completed.
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        <View className="gap-4">
+                        <View className="mx-4 gap-3">
                             <TouchableOpacity
                                 onPress={() => router.push('/(tabs)/dashboard')}
-                                className="bg-gradient-to-r from-orange-600 to-orange-500 rounded-3xl py-6 items-center shadow-2xl shadow-orange-500/40"
+                                className="bg-gradient-to-r from-orange-600 to-orange-500 rounded-xl py-4 items-center shadow-lg"
                             >
-                                <Text className="text-white font-bold text-xl">Go to Dashboard</Text>
+                                <Text className="text-white font-bold text-base">Go to Dashboard</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={resetWithdrawal}
-                                className="border-2 border-gray-700/50 rounded-3xl py-6 items-center bg-gray-900/30 backdrop-blur-sm"
+                                className="border-2 border-gray-700 rounded-xl py-4 items-center bg-gray-800/50"
                             >
-                                <Text className="text-white font-bold text-xl">Make Another Withdrawal</Text>
+                                <Text className="text-white font-bold text-base">Make Another Withdrawal</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -305,103 +229,78 @@ const Withdrawal = () => {
     return (
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
+
+            {/* Header - EXACT NupipsTeam: px-4 py-3 */}
+            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                <Text className="text-2xl font-bold text-white">Withdraw Funds</Text>
+            </View>
+
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="px-6 py-8 pb-24">
-                    {/* Back Button */}
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="flex-row items-center gap-3 mb-8 p-4 bg-gray-800/50 rounded-2xl w-fit"
-                    >
-                        <ArrowLeft size={24} color="#ea580c" />
-                        <Text className="text-xl font-bold text-white">Back</Text>
-                    </TouchableOpacity>
-
-                    {/* Header */}
-                    <View className="flex-row justify-between items-center mb-10">
-                        <View className="flex-1">
-                            <Text className="text-4xl font-bold text-white mb-2 flex-row items-center gap-4">
-                                <Wallet size={36} color="#ea580c" />
-                                Withdraw Funds
-                            </Text>
-                            <Text className="text-gray-400 text-xl">Withdraw from your wallet</Text>
-                        </View>
-                        {user && (
-                            <View className="items-end">
-                                <Text className="text-gray-500 text-lg mb-1">Available Balance</Text>
-                                <Text className="text-3xl font-bold text-white">
-                                    ${parseFloat(user.walletBalance || 0).toFixed(2)}
-                                </Text>
+                <View className="py-4 pb-24">
+                    {/* Balance - EXACT Team stats */}
+                    {user && (
+                        <View className="mx-4 mb-6 bg-gradient-to-r from-orange-600/20 to-orange-500/20 rounded-xl p-5 border border-orange-500/30">
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                <View className="w-10 h-10 bg-orange-500/20 rounded-full items-center justify-center mr-3">
+                                    <Wallet size={20} color="#ffffff" />
+                                </View>
+                                <Text className="text-sm font-semibold text-white">Available Balance</Text>
                             </View>
-                        )}
-                    </View>
+                            <Text className="text-2xl font-bold text-white">
+                                ${parseFloat(user.walletBalance || 0).toFixed(2)}
+                            </Text>
+                        </View>
+                    )}
 
-                    {/* Error Alert */}
+                    {/* Error Alert - EXACT Team */}
                     {error && (
-                        <View className="mb-8 p-6 bg-red-500/20 border border-red-500/40 rounded-3xl flex-row items-start gap-4">
-                            <AlertCircle size={28} color="#ef4444" />
+                        <View className="mx-4 mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start" style={{ marginRight: 12 }}>
+                            <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
                             <View className="flex-1">
-                                <Text className="text-xl font-bold text-red-300 mb-2">{error}</Text>
-                                <TouchableOpacity onPress={() => setError(null)}>
-                                    <Text className="text-red-400 text-lg font-semibold underline">Dismiss</Text>
-                                </TouchableOpacity>
+                                <Text className="text-red-400 text-sm font-semibold">{error}</Text>
                             </View>
                             <TouchableOpacity onPress={() => setError(null)}>
-                                <X size={28} color="#ef4444" />
+                                <X size={20} color="#ef4444" />
                             </TouchableOpacity>
                         </View>
                     )}
 
-                    {/* Withdrawal Method */}
-                    <View className="bg-gray-900/30 rounded-3xl p-8 mb-10 border border-gray-700/50 backdrop-blur-sm">
-                        <Text className="text-2xl font-bold text-white mb-8">Withdrawal Method</Text>
-                        <View className="flex-row gap-4">
+                    {/* Method Selection - EXACT Team filters */}
+                    <View className="mx-4 mb-6 bg-gray-800/40 rounded-xl p-4 border border-gray-700/30">
+                        <Text className="text-lg font-light text-white mb-4">Withdrawal Method</Text>
+                        <View style={{ flexDirection: 'row' }}>
                             <TouchableOpacity
                                 onPress={() => setWithdrawalMethod('crypto')}
-                                className={`flex-1 p-8 rounded-3xl border-2 items-center justify-center ${withdrawalMethod === 'crypto'
-                                        ? 'bg-gradient-to-br from-orange-500/20 to-orange-400/20 border-orange-500 shadow-lg shadow-orange-500/25'
-                                        : 'bg-gray-900/30 border-gray-700/50 hover:border-gray-600'
-                                    }`}
+                                style={{
+                                    flex: 1,
+                                    padding: 16,
+                                    borderRadius: 12,
+                                    borderWidth: 2,
+                                    marginRight: 12,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderColor: withdrawalMethod === 'crypto' ? '#ea580c' : '#374151',
+                                    backgroundColor: withdrawalMethod === 'crypto' ? 'rgba(234,88,12,0.1)' : 'rgba(31,41,55,0.3)'
+                                }}
                             >
-                                <Bitcoin size={48} color="#f97316" />
-                                <Text className="text-2xl font-bold text-white mt-4 mb-2">Cryptocurrency</Text>
-                                <Text className="text-lg text-gray-400 text-center">
-                                    Fast and secure crypto withdrawal
-                                </Text>
+                                <Bitcoin size={24} color="#f97316" style={{ marginBottom: 8 }} />
+                                <Text className="font-bold text-white text-base mb-1">Cryptocurrency</Text>
+                                <Text className="text-gray-400 text-xs text-center">Fast & secure</Text>
                             </TouchableOpacity>
-
-                            {FEATURES.BANK_TRANSFER_ENABLED && (
-                                <TouchableOpacity
-                                    onPress={() => setWithdrawalMethod('bank_transfer')}
-                                    className={`flex-1 p-8 rounded-3xl border-2 items-center justify-center ${withdrawalMethod === 'bank_transfer'
-                                            ? 'bg-gradient-to-br from-blue-500/20 to-blue-400/20 border-blue-500 shadow-lg shadow-blue-500/25'
-                                            : 'bg-gray-900/30 border-gray-700/50 hover:border-gray-600'
-                                        }`}
-                                >
-                                    <Building2 size={48} color="#3b82f6" />
-                                    <Text className="text-2xl font-bold text-white mt-4 mb-2">Bank Transfer</Text>
-                                    <Text className="text-lg text-gray-400 text-center">
-                                        Direct bank account transfer
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
                         </View>
                     </View>
 
-                    {/* Amount */}
-                    <View className="bg-gray-900/30 rounded-3xl p-8 mb-10 border border-gray-700/50 backdrop-blur-sm">
-                        <Text className="text-2xl font-bold text-white mb-8">Withdrawal Amount</Text>
-                        <View className="mb-8">
-                            <Text className="text-gray-400 text-xl font-semibold mb-4">Amount (USD)</Text>
+                    {/* Amount Input - FIXED validation + EXACT Team input */}
+                    <View className="mx-4 mb-6 bg-gray-800/40 rounded-xl p-4 border border-gray-700/30">
+                        <Text className="text-lg font-light text-white mb-4">Withdrawal Amount</Text>
+
+                        <View className="mb-4">
+                            <Text className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Amount (USD)</Text>
                             <View className="relative">
                                 <DollarSign
-                                    size={28}
+                                    size={18}
                                     color="#9ca3af"
-                                    style={{
-                                        position: 'absolute',
-                                        left: 24,
-                                        top: 24,
-                                        zIndex: 1,
-                                    }}
+                                    style={{ position: 'absolute', left: 12, top: 12, zIndex: 1 }}
                                 />
                                 <TextInput
                                     value={amount}
@@ -409,112 +308,140 @@ const Withdrawal = () => {
                                     placeholder="Enter withdrawal amount"
                                     placeholderTextColor="#6b7280"
                                     keyboardType="decimal-pad"
-                                    className={`pl-20 pr-8 py-6 text-2xl text-white rounded-3xl ${amountError
-                                            ? 'bg-red-500/20 border-3 border-red-500/50'
-                                            : 'bg-gray-950 border-3 border-gray-800/50'
-                                        }`}
+                                    className="pl-10 pr-4 py-3 text-white rounded-xl border"
+                                    style={{
+                                        borderColor: amountError ? '#ef4444' : '#374151',
+                                        borderWidth: 1,
+                                        backgroundColor: amountError ? 'rgba(239,68,68,0.1)' : 'rgba(31,41,55,0.4)'
+                                    }}
                                 />
                             </View>
-                            {amountError && (
-                                <View className="flex-row items-center gap-3 mt-6">
-                                    <AlertCircle size={24} color="#ef4444" />
-                                    <Text className="text-xl text-red-400 font-bold">{amountError}</Text>
+                            {amountError ? (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                                    <AlertCircle size={16} color="#ef4444" style={{ marginRight: 6 }} />
+                                    <Text className="text-xs text-red-400">{amountError}</Text>
                                 </View>
-                            )}
+                            ) : null}
+                        </View>
+
+                        {/* Quick Amounts - FIXED */}
+                        <Text className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Quick Amounts</Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
+                            {[10, 50, 100, 500].map((quickAmount) => (
+                                <TouchableOpacity
+                                    key={quickAmount}
+                                    onPress={() => handleQuickAmount(quickAmount)}
+                                    style={{
+                                        flex: 1,
+                                        minWidth: 70,
+                                        paddingHorizontal: 16,
+                                        paddingVertical: 8,
+                                        margin: 2,
+                                        borderRadius: 12,
+                                        borderWidth: 1,
+                                        alignItems: 'center',
+                                        borderColor: parseFloat(amount) === quickAmount ? '#ea580c' : '#374151',
+                                        backgroundColor: parseFloat(amount) === quickAmount ? '#ea580c' : 'rgba(31,41,55,0.4)'
+                                    }}
+                                >
+                                    <Text style={{
+                                        fontWeight: '600',
+                                        fontSize: 12,
+                                        color: parseFloat(amount) === quickAmount ? '#ffffff' : '#9ca3af',
+                                        textAlign: 'center'
+                                    }}>
+                                        ${quickAmount}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
                         </View>
 
                         {/* Fee Preview */}
                         {amount && !amountError && selectedOption && (
-                            <View className="p-8 bg-gray-950/50 rounded-3xl border border-gray-700 space-y-4">
-                                <View className="flex-row justify-between py-4 border-b border-gray-700">
-                                    <Text className="text-gray-400 text-2xl font-semibold">Withdrawal Amount</Text>
-                                    <Text className="text-3xl font-bold text-white">${amount}</Text>
+                            <View className="p-4 bg-gray-900/50 rounded-xl border border-gray-700">
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                                    <Text className="text-gray-400 text-xs">Amount</Text>
+                                    <Text className="text-white font-semibold text-sm">${amount}</Text>
                                 </View>
-                                <View className="flex-row justify-between py-4 border-b border-gray-700">
-                                    <Text className="text-gray-400 text-2xl font-semibold">Fee ({selectedOption.fee})</Text>
-                                    <Text className="text-3xl font-bold text-red-400">
-                                        -${calculateFee().toFixed(2)}
-                                    </Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                                    <Text className="text-gray-400 text-xs">Fee ({selectedOption.fee})</Text>
+                                    <Text className="text-red-400 font-semibold text-sm">-${calculateFee().toFixed(2)}</Text>
                                 </View>
-                                <View className="flex-row justify-between py-6 border-t border-gray-700 pt-6">
-                                    <Text className="text-gray-400 text-3xl font-bold">You'll Receive</Text>
-                                    <Text className="text-4xl font-bold text-green-400">
-                                        ${calculateNetAmount().toFixed(2)}
-                                    </Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <Text className="text-gray-400 text-xs font-semibold">You'll Receive</Text>
+                                    <Text className="text-green-400 font-bold text-sm">${calculateNetAmount().toFixed(2)}</Text>
                                 </View>
                             </View>
                         )}
                     </View>
 
-                    {/* Crypto Details */}
+                    {/* Crypto Selection & Details */}
                     {withdrawalMethod === 'crypto' && (
-                        <View className="bg-gray-900/30 rounded-3xl p-8 mb-10 border border-gray-700/50 backdrop-blur-sm">
-                            <Text className="text-2xl font-bold text-white mb-8">Cryptocurrency Details</Text>
+                        <View className="mx-4 mb-6 bg-gray-800/40 rounded-xl p-4 border border-gray-700/30">
+                            <Text className="text-lg font-light text-white mb-4">Cryptocurrency Details</Text>
 
                             {/* Crypto Selection */}
-                            <View className="mb-8">
-                                <Text className="text-gray-400 text-xl font-semibold mb-6">Select Cryptocurrency</Text>
-                                <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-4">
-                                    {cryptoOptions.map((option) => (
-                                        <TouchableOpacity
-                                            key={option.value}
-                                            onPress={() => {
-                                                setSelectedCrypto(option.value);
-                                                setWalletNetwork(option.network);
-                                            }}
-                                            className={`p-8 rounded-3xl border-2 w-72 min-w-[280px] items-center justify-center ${selectedCrypto === option.value
-                                                    ? 'bg-gradient-to-br from-orange-500/20 to-orange-400/20 border-orange-500 shadow-lg shadow-orange-500/25'
-                                                    : 'bg-gray-900/30 border-gray-700/50 hover:border-gray-600'
-                                                }`}
-                                        >
-                                            <Text className="text-3xl font-bold text-white mb-3">{option.label}</Text>
-                                            <Text className="text-xl text-gray-400 mb-2">{option.network}</Text>
-                                            <Text className="text-lg text-gray-500">Min: ${option.minWithdrawal}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </ScrollView>
-                            </View>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ paddingHorizontal: 12 }}>
+                                {cryptoOptions.map((option, index) => (
+                                    <TouchableOpacity
+                                        key={option.value}
+                                        onPress={() => {
+                                            setSelectedCrypto(option.value);
+                                            setWalletNetwork(option.network);
+                                        }}
+                                        style={{
+                                            padding: 16,
+                                            borderRadius: 12,
+                                            borderWidth: 2,
+                                            width: 280,
+                                            marginRight: index < cryptoOptions.length - 1 ? 12 : 0,
+                                            borderColor: selectedCrypto === option.value ? '#ea580c' : '#374151',
+                                            backgroundColor: selectedCrypto === option.value ? 'rgba(234,88,12,0.1)' : 'rgba(31,41,55,0.3)'
+                                        }}
+                                    >
+                                        <Text style={{ fontWeight: '600', color: '#ffffff', fontSize: 14, marginBottom: 4 }}>
+                                            {option.label}
+                                        </Text>
+                                        <Text style={{ color: '#9ca3af', fontSize: 12, marginBottom: 8 }}>
+                                            {option.network}
+                                        </Text>
+                                        <Text style={{ fontSize: 12, color: '#6b7280' }}>Min: ${option.minWithdrawal}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
 
                             {/* Wallet Address */}
-                            <View className="mb-6">
-                                <Text className="text-gray-400 text-xl font-semibold mb-4">Wallet Address</Text>
+                            <View className="mb-4">
+                                <Text className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Wallet Address</Text>
                                 <TextInput
                                     value={walletAddress}
                                     onChangeText={setWalletAddress}
                                     placeholder="Enter your wallet address"
                                     placeholderTextColor="#6b7280"
-                                    className="px-6 py-6 text-xl text-white bg-gray-950 border-2 border-gray-800 rounded-3xl"
+                                    className="px-4 py-3 text-white bg-gray-900 border border-gray-700 rounded-xl"
                                 />
                             </View>
 
-                            {/* Network */}
-                            <View>
-                                <Text className="text-gray-400 text-xl font-semibold mb-4">Network</Text>
-                                <TextInput
-                                    value={walletNetwork}
-                                    editable={false}
-                                    className="px-6 py-6 text-xl text-white bg-gray-950/70 border-2 border-gray-700 rounded-3xl"
-                                />
-                            </View>
+                            <Text className="text-xs text-gray-500">Network: {walletNetwork || selectedOption?.network}</Text>
                         </View>
                     )}
 
-                    {/* Submit Button */}
+                    {/* Submit Button - EXACT Team primary */}
                     <TouchableOpacity
                         onPress={handleWithdraw}
-                        disabled={loading || !amount || amountError}
-                        className={`rounded-3xl py-8 items-center shadow-2xl ${loading || !amount || amountError
-                                ? 'bg-gray-700/50 shadow-none'
-                                : 'bg-gradient-to-r from-orange-600 to-orange-500 shadow-orange-500/40'
+                        disabled={loading || !amount || !!amountError || !walletAddress.trim()}
+                        className={`mx-4 rounded-xl py-4 items-center ${loading || !amount || !!amountError || !walletAddress.trim()
+                                ? 'bg-gray-700/50'
+                                : 'bg-gradient-to-r from-orange-600 to-orange-500 shadow-lg'
                             }`}
                     >
                         {loading ? (
-                            <View className="flex-row items-center gap-4">
-                                <ActivityIndicator size="large" color="#ffffff" />
-                                <Text className="text-white font-bold text-2xl">Processing...</Text>
+                            <View className="flex-row items-center gap-3">
+                                <ActivityIndicator size="small" color="#ffffff" />
+                                <Text className="text-white font-bold text-base">Processing...</Text>
                             </View>
                         ) : (
-                            <Text className="text-white font-bold text-2xl">Submit Withdrawal Request</Text>
+                            <Text className="text-white font-bold text-base">Submit Withdrawal</Text>
                         )}
                     </TouchableOpacity>
                 </View>

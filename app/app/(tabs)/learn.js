@@ -11,7 +11,6 @@ import {
 } from "react-native";
 import { useRouter } from 'expo-router';
 import api from "../../services/api";
-import { LinearGradient } from 'expo-linear-gradient';
 import {
     PlayCircle,
     Search,
@@ -24,18 +23,18 @@ import {
 } from "lucide-react-native";
 import { StatusBar } from 'expo-status-bar';
 
-// Duration formatter (used by both StatsCard and CourseCard)
+// Duration formatter
 const formatDuration = (seconds) => {
     if (!seconds) return "0m";
     const mins = Math.floor(seconds / 60);
     return `${mins}m`;
 };
 
-// Stats Card Component (team page style)
+// Stats Card Component - Matching nupips-team style
 const StatsCard = ({ title, value, subtitle, icon, colors }) => (
-    <View className={`rounded-xl p-6 border ${colors.bg} ${colors.border}`}>
-        <View className="flex-row items-center gap-3 mb-3">
-            <View className={`w-12 h-12 rounded-xl items-center justify-center ${colors.iconBg}`}>
+    <View className={`rounded-xl p-5 border ${colors.bg} ${colors.border} mb-3`}>
+        <View className="flex-row items-center mb-2">
+            <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${colors.iconBg}`}>
                 {icon}
             </View>
             <Text className={`text-sm font-semibold ${colors.text}`}>{title}</Text>
@@ -50,18 +49,13 @@ const CourseCard = ({ course, onPress }) => {
     return (
         <TouchableOpacity
             onPress={onPress}
-            className="bg-gray-800/40 rounded-xl overflow-hidden border border-gray-700/30 mb-4"
-            activeOpacity={0.7}
+            className="bg-gray-800/40 border border-gray-700/30 rounded-xl overflow-hidden mb-3 active:bg-gray-800/60"
+            activeOpacity={0.95}
         >
             {/* Course Header */}
-            <LinearGradient
-                colors={['#ea580c', '#c2410c']}
-                className="p-6 border-b border-orange-700/50"
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-            >
-                <View className="flex-row items-center gap-2 mb-3">
-                    <View className="bg-white/20 px-3 py-1 rounded-full">
+            <View className="p-5 bg-orange-600/20 border-b border-orange-600/30">
+                <View className="flex-row items-center mb-3">
+                    <View className="bg-white/20 px-3 py-1.5 border border-white/30 rounded-full">
                         <Text className="text-xs text-white font-semibold uppercase">
                             {course.category}
                         </Text>
@@ -70,29 +64,33 @@ const CourseCard = ({ course, onPress }) => {
                 <Text className="text-xl font-bold text-white" numberOfLines={2}>
                     {course.name}
                 </Text>
-            </LinearGradient>
+            </View>
 
             {/* Course Info */}
-            <View className="p-6">
-                <Text className="text-gray-400 text-sm mb-5" numberOfLines={3}>
+            <View className="p-5">
+                <Text className="text-gray-400 text-sm mb-4" numberOfLines={3}>
                     {course.description}
                 </Text>
 
-                <View className="flex-row gap-3 mb-5">
-                    <View className="flex-row items-center gap-2 bg-gray-800/50 px-4 py-2 rounded-xl flex-1">
+                <View className="mb-4">
+                    <View className="flex-row items-center bg-gray-800/50 border border-gray-700/30 px-4 py-2.5 rounded-lg mb-3">
                         <Video size={16} color="#9ca3af" />
-                        <Text className="text-white font-medium">{course.videos?.length || 0} lessons</Text>
+                        <Text className="text-white font-medium ml-2">{course.videos?.length || 0} lessons</Text>
                     </View>
-                    <View className="flex-row items-center gap-2 bg-gray-800/50 px-4 py-2 rounded-xl flex-1">
+                    <View className="flex-row items-center bg-gray-800/50 border border-gray-700/30 px-4 py-2.5 rounded-lg">
                         <Clock size={16} color="#9ca3af" />
-                        <Text className="text-white font-medium">
+                        <Text className="text-white font-medium ml-2">
                             {formatDuration(course.totalDuration)}
                         </Text>
                     </View>
                 </View>
 
-                <TouchableOpacity className="w-full py-4 bg-gradient-to-r from-orange-600 to-orange-500 rounded-xl flex-row items-center justify-center gap-2">
-                    <Text className="text-white font-semibold">Start Learning</Text>
+                {/* CTA Button */}
+                <TouchableOpacity
+                    className="w-full py-4 bg-orange-600 rounded-xl flex-row items-center justify-center active:bg-orange-700"
+                    activeOpacity={0.9}
+                >
+                    <Text className="text-white font-semibold text-base mr-2">Start Learning</Text>
                     <ChevronRight size={20} color="#ffffff" />
                 </TouchableOpacity>
             </View>
@@ -157,15 +155,9 @@ const Learn = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            {/* Header */}
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-4">
-                <View className="flex-row items-center gap-3 mb-2">
-                    <View className="w-12 h-12 bg-orange-500 rounded-xl items-center justify-center">
-                        <BookOpen size={24} color="#ffffff" />
-                    </View>
-                    <Text className="text-2xl font-bold text-white flex-1">Learning Center</Text>
-                </View>
-                <Text className="text-gray-400 text-sm">Expand your knowledge with expert-led courses</Text>
+            {/* Header - Matching nupips-team */}
+            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                <Text className="text-3xl text-white">Learning Center</Text>
             </View>
 
             <ScrollView
@@ -177,23 +169,24 @@ const Learn = () => {
                         tintColor="#ea580c"
                     />
                 }
+                showsVerticalScrollIndicator={false}
             >
                 <View className="py-4 pb-24">
                     {/* Error Alert */}
                     {error && (
-                        <View className="mx-4 mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start gap-3">
-                            <AlertCircle size={20} color="#ef4444" />
+                        <View className="mx-4 mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start">
+                            <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
                             <Text className="text-red-400 text-sm flex-1">{error}</Text>
-                            <TouchableOpacity onPress={() => setError("")} className="p-1 rounded-lg">
+                            <TouchableOpacity onPress={() => setError("")} className="p-1" activeOpacity={0.7}>
                                 <X size={20} color="#ef4444" />
                             </TouchableOpacity>
                         </View>
                     )}
 
-                    {/* Stats Cards */}
-                    <View className="mx-4 mb-8">
-                        <Text className="text-lg font-light text-white mb-4">Overview</Text>
-                        <View className="gap-4">
+                    {/* Stats Cards - Matching nupips-team gap-3 style */}
+                    <View className="mx-4 mb-6">
+                        <Text className="text-lg font-light text-white mb-3">Overview</Text>
+                        <View>
                             <StatsCard
                                 title="Available Courses"
                                 value={courses.length}
@@ -224,7 +217,7 @@ const Learn = () => {
                                 title="Total Duration"
                                 value={formatDuration(courses.reduce((sum, c) => sum + (c.totalDuration || 0), 0))}
                                 subtitle="Learning time"
-                                icon={<Clock size={20} color="#f97316" />}
+                                icon={<Clock size={20} color="#ea580c" />}
                                 colors={{
                                     bg: "bg-orange-500/10",
                                     border: "border-orange-500/30",
@@ -237,34 +230,34 @@ const Learn = () => {
                     </View>
 
                     {/* Filters */}
-                    <View className="mx-4 mb-6">
-                        <Text className="text-lg font-light text-white mb-4">Find Your Course</Text>
-
-                        {/* Search */}
-                        <View className="relative mb-4">
-                            <Search
-                                size={20}
-                                color="#9ca3af"
-                                style={{ position: 'absolute', left: 12, top: 14, zIndex: 1 }}
-                            />
-                            <TextInput
-                                placeholder="Search courses..."
-                                placeholderTextColor="#6b7280"
-                                value={searchTerm}
-                                onChangeText={setSearchTerm}
-                                className="bg-gray-800/40 border border-gray-700/30 rounded-xl pl-12 pr-4 py-3 text-white"
-                            />
+                    <View className="mx-4 mb-4">
+                        <View className="mb-3">
+                            <View className="flex-1 relative">
+                                <Search
+                                    size={18}
+                                    color="#9ca3af"
+                                    style={{ position: 'absolute', left: 12, top: 12, zIndex: 1 }}
+                                />
+                                <TextInput
+                                    placeholder="Search courses..."
+                                    placeholderTextColor="#6b7280"
+                                    value={searchTerm}
+                                    onChangeText={setSearchTerm}
+                                    className="bg-gray-800/40 border border-gray-700/30 rounded-xl pl-10 pr-4 py-3 text-white"
+                                />
+                            </View>
                         </View>
 
                         {/* Category Filter */}
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-                            <View className="flex-row gap-2">
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
+                            <View className="flex-row">
                                 <TouchableOpacity
                                     onPress={() => setCategoryFilter("all")}
-                                    className={`px-5 py-3 rounded-xl ${categoryFilter === "all"
+                                    className={`px-4 py-2 rounded-xl mr-2 ${categoryFilter === "all"
                                             ? "bg-orange-600"
                                             : "bg-gray-800/40 border border-gray-700/30"
                                         }`}
+                                    activeOpacity={0.9}
                                 >
                                     <Text className={`font-semibold ${categoryFilter === "all" ? "text-white" : "text-gray-400"
                                         }`}>
@@ -275,10 +268,11 @@ const Learn = () => {
                                     <TouchableOpacity
                                         key={cat}
                                         onPress={() => setCategoryFilter(cat)}
-                                        className={`px-5 py-3 rounded-xl ${categoryFilter === cat
+                                        className={`px-4 py-2 rounded-xl mr-2 ${categoryFilter === cat
                                                 ? "bg-orange-600"
                                                 : "bg-gray-800/40 border border-gray-700/30"
                                             }`}
+                                        activeOpacity={0.9}
                                     >
                                         <Text className={`font-semibold ${categoryFilter === cat ? "text-white" : "text-gray-400"
                                             }`}>
@@ -292,32 +286,32 @@ const Learn = () => {
                         {(searchTerm || categoryFilter !== "all") && (
                             <TouchableOpacity
                                 onPress={clearFilters}
-                                className="mx-auto px-6 py-3 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-center gap-2"
+                                className="flex-row items-center bg-red-500/20 border border-red-500/30 rounded-xl py-3 px-4"
+                                activeOpacity={0.9}
                             >
-                                <X size={16} color="#ef4444" />
-                                <Text className="text-red-400 font-semibold">Clear Filters</Text>
+                                <X size={18} color="#ef4444" />
+                                <Text className="text-red-400 font-semibold ml-2">Clear Filters</Text>
                             </TouchableOpacity>
                         )}
                     </View>
 
                     {/* Courses List */}
                     <View className="mx-4">
-                        <Text className="text-lg font-light text-white mb-4">
+                        <Text className="text-lg font-light text-white mb-3">
                             Courses ({courses.length})
                         </Text>
 
                         {courses.length === 0 ? (
-                            <View className="bg-gray-800/40 rounded-xl p-12 items-center border border-gray-700/30">
-                                <View className="w-20 h-20 bg-gray-700 rounded-full items-center justify-center mb-6">
-                                    <PlayCircle size={40} color="#6b7280" />
-                                </View>
-                                <Text className="text-xl font-semibold text-gray-300 mb-2">
+                            <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-8 items-center">
+                                <PlayCircle size={48} color="#6b7280" />
+                                <Text className="text-gray-400 mt-4 font-medium text-center">
                                     {searchTerm || categoryFilter !== "all" ? "No Courses Found" : "No Courses Available"}
                                 </Text>
-                                <Text className="text-gray-500 text-sm text-center mb-6">
+                                <Text className="text-gray-500 text-sm mt-2 text-center">
                                     {searchTerm || categoryFilter !== "all"
                                         ? "Try adjusting your filters"
-                                        : "Check back soon for new content"}
+                                        : "Check back soon for new content"
+                                    }
                                 </Text>
                             </View>
                         ) : (

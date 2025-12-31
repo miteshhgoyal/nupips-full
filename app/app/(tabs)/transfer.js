@@ -9,6 +9,7 @@ import {
     TextInput,
     KeyboardAvoidingView,
     Platform,
+    FlatList,
 } from 'react-native';
 import { useAuth } from '@/context/authContext';
 import api from '@/services/api';
@@ -18,6 +19,7 @@ import {
     User,
     CheckCircle,
     AlertCircle,
+    X,
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -43,41 +45,41 @@ const Transfer = () => {
     // Result
     const [transferResult, setTransferResult] = useState(null);
 
-    // Validate amount
-    const validateAmount = (value) => {
-        const numValue = parseFloat(value);
-
-        if (!value || numValue <= 0) {
+    // FIXED: Proper validation with state sync
+    const validateAmount = (testAmount) => {
+        const numValue = parseFloat(testAmount);
+        if (!testAmount || numValue <= 0 || isNaN(numValue)) {
             setAmountError('Please enter a valid amount');
             return false;
         }
-
         if (numValue > (user?.walletBalance || 0)) {
-            setAmountError(
-                `Insufficient balance. Available: $${(user?.walletBalance || 0).toFixed(2)}`
-            );
+            setAmountError(`Insufficient balance. Available: $${(user?.walletBalance || 0).toFixed(2)}`);
             return false;
         }
-
         if (numValue < 1) {
             setAmountError('Minimum transfer is $1');
             return false;
         }
-
         setAmountError('');
         return true;
     };
 
     const handleAmountChange = (value) => {
         setAmount(value);
-        if (value) {
-            validateAmount(value);
-        } else {
-            setAmountError('');
-        }
+        setTimeout(() => {
+            if (value) validateAmount(value);
+            else setAmountError('');
+        }, 0);
     };
 
-    // Search users
+    // FIXED: Quick amount with proper state sync
+    const handleQuickAmount = (quickAmount) => {
+        const value = quickAmount.toString();
+        setAmount(value);
+        setAmountError('');
+        setTimeout(() => validateAmount(value), 50);
+    };
+
     const handleSearchUsers = async (query) => {
         if (query.length < 2) {
             setSearchResults([]);
@@ -86,9 +88,7 @@ const Transfer = () => {
 
         setSearching(true);
         try {
-            const response = await api.get(
-                `/transfer/search/users?query=${encodeURIComponent(query)}`
-            );
+            const response = await api.get(`/transfer/search/users?query=${encodeURIComponent(query)}`);
             if (response.data.success) {
                 setSearchResults(response.data.data);
             }
@@ -110,10 +110,8 @@ const Transfer = () => {
         setSearchResults([]);
     };
 
-    // Submit
     const handleTransfer = async () => {
         if (!validateAmount(amount)) return;
-
         if (!receiverIdentifier.trim()) {
             setError('Please enter receiver username or email');
             return;
@@ -137,7 +135,6 @@ const Transfer = () => {
                 setError(response.data.message || 'Transfer failed');
             }
         } catch (err) {
-            console.error('Transfer error:', err);
             setError(err.response?.data?.message || 'Failed to process transfer');
         } finally {
             setLoading(false);
@@ -154,70 +151,55 @@ const Transfer = () => {
         setSearchResults([]);
     };
 
-    // Success Screen
+    // Success Screen - FIXED layout
     if (success && transferResult) {
         return (
             <SafeAreaView className="flex-1 bg-gray-900">
                 <StatusBar style="light" />
-                <View className="bg-gradient-to-r from-green-600/20 to-green-500/20 border-b border-green-600/30 px-6 py-5">
-                    <View className="flex-row items-center gap-3 mb-2">
-                        <CheckCircle size={28} color="#22c55e" />
-                        <Text className="text-3xl font-bold text-white flex-1">Transfer Successful</Text>
-                    </View>
-                    <Text className="text-green-300 text-lg font-medium">Funds sent successfully</Text>
+                <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                    <Text className="text-2xl font-bold text-white">Transfer Successful</Text>
                 </View>
-
                 <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                    <View className="px-6 py-8 pb-24">
-                        <View className="bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-3xl p-8 border border-green-500/30 items-center mb-8">
-                            <View className="w-24 h-24 bg-green-500/20 rounded-3xl items-center justify-center mb-6 border border-green-500/40">
-                                <CheckCircle size={52} color="#22c55e" />
+                    <View className="py-4 pb-24">
+                        <View className="mx-4 mb-6 bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl p-5 border border-green-500/30 items-center">
+                            <View className="w-16 h-16 bg-green-500/20 rounded-xl items-center justify-center mb-4 border border-green-500/30">
+                                <CheckCircle size={24} color="#22c55e" />
                             </View>
-                            <Text className="text-4xl font-bold text-white mb-4 text-center">
-                                Transfer Successful!
-                            </Text>
-                            <Text className="text-gray-300 text-xl text-center mb-8">
-                                You sent <Text className="font-bold text-green-400">${transferResult.amount.toFixed(2)}</Text>{' '}
-                                to <Text className="font-bold text-white">@{transferResult.receiver.username}</Text>
+                            <Text className="text-xl font-bold text-white mb-2 text-center">Transfer Successful!</Text>
+                            <Text className="text-green-400 text-sm text-center">
+                                ${transferResult.amount.toFixed(2)} to @{transferResult.receiver.username}
                             </Text>
                         </View>
 
-                        <View className="bg-gray-900/50 rounded-3xl p-8 mb-10 border border-gray-700/50">
-                            <View className="space-y-5">
-                                <View className="flex-row justify-between items-center py-4 border-b border-gray-700">
-                                    <Text className="text-gray-400 text-lg font-semibold">Amount</Text>
-                                    <Text className="text-3xl font-bold text-white">
-                                        ${transferResult.amount.toFixed(2)}
-                                    </Text>
+                        <View className="mx-4 mb-6 p-4 bg-gray-900/50 rounded-xl border border-gray-700">
+                            <View style={{ marginBottom: 12 }}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                                    <Text className="text-gray-400 text-xs">Amount</Text>
+                                    <Text className="text-white font-bold text-lg">${transferResult.amount.toFixed(2)}</Text>
                                 </View>
-                                <View className="flex-row justify-between items-center py-4 border-b border-gray-700">
-                                    <Text className="text-gray-400 text-lg font-semibold">To</Text>
-                                    <Text className="text-2xl font-bold text-blue-400">
-                                        @{transferResult.receiver.username}
-                                    </Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                                    <Text className="text-gray-400 text-xs">To</Text>
+                                    <Text className="text-blue-400 font-semibold text-sm">@{transferResult.receiver.username}</Text>
                                 </View>
-                                <View className="h-px bg-gradient-to-r from-orange-500/50 to-transparent my-4" />
-                                <View className="flex-row justify-between items-center py-4">
-                                    <Text className="text-gray-400 text-xl font-semibold">New Balance</Text>
-                                    <Text className="text-3xl font-bold text-green-400">
-                                        ${transferResult.newBalance.toFixed(2)}
-                                    </Text>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                    <Text className="text-gray-400 text-xs font-semibold">New Balance</Text>
+                                    <Text className="text-green-400 font-bold text-lg">${transferResult.newBalance.toFixed(2)}</Text>
                                 </View>
                             </View>
                         </View>
 
-                        <View className="gap-4">
+                        <View className="mx-4" style={{ gap: 12 }}>
                             <TouchableOpacity
                                 onPress={() => router.push('/(tabs)/dashboard')}
-                                className="bg-gradient-to-r from-orange-600 to-orange-500 rounded-3xl py-6 items-center shadow-2xl shadow-orange-500/30"
+                                className="bg-gradient-to-r from-orange-600 to-orange-500 rounded-xl py-4 items-center shadow-lg"
                             >
-                                <Text className="text-white font-bold text-xl">Go to Dashboard</Text>
+                                <Text className="text-white font-bold text-base">Go to Dashboard</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 onPress={resetTransfer}
-                                className="border-2 border-gray-700/50 rounded-3xl py-6 items-center bg-gray-900/30 backdrop-blur-sm"
+                                className="border-2 border-gray-700 rounded-xl py-4 items-center bg-gray-800/50"
                             >
-                                <Text className="text-white font-bold text-xl">Make Another Transfer</Text>
+                                <Text className="text-white font-bold text-base">Make Another Transfer</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -230,13 +212,9 @@ const Transfer = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            {/* Header */}
-            <View className="bg-gray-800/40 border-b border-gray-800 px-6 py-5">
-                <View className="flex-row items-center gap-4 mb-2">
-                    <Send size={32} color="#ea580c" />
-                    <Text className="text-3xl font-bold text-white flex-1">Transfer Funds</Text>
-                </View>
-                <Text className="text-gray-400 text-lg">Send money to other users</Text>
+            {/* Header - EXACT NupipsTeam: px-4 py-3 */}
+            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                <Text className="text-2xl font-bold text-white">Transfer Funds</Text>
             </View>
 
             <KeyboardAvoidingView
@@ -244,17 +222,17 @@ const Transfer = () => {
                 className="flex-1"
             >
                 <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                    <View className="px-6 py-8 pb-24">
-                        {/* Current Balance */}
+                    <View className="py-4 pb-24">
+                        {/* Balance - EXACT Team stats */}
                         {user && (
-                            <View className="bg-gradient-to-r from-orange-600/20 to-orange-500/20 rounded-3xl p-8 mb-8 border border-orange-600/40">
-                                <View className="flex-row items-center gap-4 mb-4">
-                                    <View className="w-16 h-16 bg-orange-500/30 rounded-2xl items-center justify-center">
-                                        <DollarSign size={24} color="#ffffff" />
+                            <View className="mx-4 mb-6 bg-gradient-to-r from-orange-600/20 to-orange-500/20 rounded-xl p-5 border border-orange-500/30">
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                    <View className="w-10 h-10 bg-orange-500/20 rounded-full items-center justify-center mr-3">
+                                        <DollarSign size={20} color="#ffffff" />
                                     </View>
                                     <View>
-                                        <Text className="text-xl font-bold text-white mb-1">Available Balance</Text>
-                                        <Text className="text-4xl font-bold text-orange-400">
+                                        <Text className="text-sm font-semibold text-white">Available Balance</Text>
+                                        <Text className="text-lg font-bold text-orange-400">
                                             ${parseFloat(user.walletBalance || 0).toFixed(2)}
                                         </Text>
                                     </View>
@@ -262,76 +240,70 @@ const Transfer = () => {
                             </View>
                         )}
 
-                        {/* Error Alert */}
+                        {/* Error Alert - EXACT Team */}
                         {error && (
-                            <View className="mb-8 p-5 bg-red-500/20 border border-red-500/40 rounded-3xl flex-row items-start gap-4">
-                                <AlertCircle size={24} color="#ef4444" />
-                                <Text className="text-red-400 text-lg flex-1">{error}</Text>
+                            <View className="mx-4 mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start" style={{ marginRight: 12 }}>
+                                <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
+                                <View className="flex-1">
+                                    <Text className="text-red-400 text-sm font-semibold">{error}</Text>
+                                </View>
                                 <TouchableOpacity onPress={() => setError(null)}>
-                                    <X size={24} color="#ef4444" />
+                                    <X size={20} color="#ef4444" />
                                 </TouchableOpacity>
                             </View>
                         )}
 
-                        {/* Receiver */}
-                        <View className="bg-gray-900/30 rounded-3xl p-8 mb-8 border border-gray-700/50 backdrop-blur-sm">
-                            <Text className="text-2xl font-bold text-white mb-6">Recipient</Text>
-
-                            <View className="mb-6">
-                                <Text className="text-gray-400 text-lg font-semibold mb-4">
-                                    Username or Email
-                                </Text>
+                        {/* Receiver Input - EXACT Team input */}
+                        <View className="mx-4 mb-6 bg-gray-800/40 rounded-xl p-4 border border-gray-700/30">
+                            <Text className="text-lg font-light text-white mb-4">Recipient</Text>
+                            <View className="mb-4">
+                                <Text className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Username or Email</Text>
                                 <View className="relative">
                                     <User
-                                        size={24}
+                                        size={18}
                                         color="#9ca3af"
-                                        style={{
-                                            position: 'absolute',
-                                            left: 20,
-                                            top: 20,
-                                            zIndex: 1,
-                                        }}
-                                    />
-                                    <TextInput
-                                        value={receiverIdentifier}
-                                        onChangeText={handleReceiverChange}
-                                        placeholder="Enter username or email"
-                                        placeholderTextColor="#6b7280"
-                                        className="pl-16 pr-16 py-5 text-white bg-gray-950 border-2 border-gray-800 rounded-3xl text-lg"
+                                        style={{ position: 'absolute', left: 12, top: 12, zIndex: 1 }}
                                     />
                                     {searching && (
                                         <ActivityIndicator
                                             size="small"
                                             color="#ea580c"
-                                            style={{
-                                                position: 'absolute',
-                                                right: 20,
-                                                top: 20,
-                                            }}
+                                            style={{ position: 'absolute', right: 12, top: 12 }}
                                         />
                                     )}
+                                    <TextInput
+                                        value={receiverIdentifier}
+                                        onChangeText={handleReceiverChange}
+                                        placeholder="Enter username or email"
+                                        placeholderTextColor="#6b7280"
+                                        className="pl-10 pr-12 py-3 text-white rounded-xl border bg-gray-800/40 border-gray-700"
+                                    />
                                 </View>
                             </View>
 
                             {/* Search Results */}
                             {searchResults.length > 0 && (
-                                <View className="bg-gray-950/80 border border-gray-700/50 rounded-3xl overflow-hidden max-h-60">
+                                <View className="bg-gray-950/80 border border-gray-700/50 rounded-xl overflow-hidden" style={{ maxHeight: 240 }}>
                                     <FlatList
                                         data={searchResults}
                                         keyExtractor={(item) => item.id}
                                         renderItem={({ item }) => (
                                             <TouchableOpacity
                                                 onPress={() => selectUser(item)}
-                                                className="p-5 border-b border-gray-800/50 last:border-b-0 active:bg-gray-800/50"
+                                                style={{
+                                                    padding: 16,
+                                                    borderBottomWidth: 1,
+                                                    borderBottomColor: 'rgba(75,85,99,0.5)',
+                                                }}
                                                 activeOpacity={0.7}
                                             >
-                                                <Text className="text-xl font-bold text-white mb-1">
+                                                <Text style={{ fontWeight: '600', color: '#ffffff', fontSize: 16, marginBottom: 4 }}>
                                                     {item.name}
                                                 </Text>
-                                                <Text className="text-lg text-blue-400 font-semibold mb-1">
+                                                <Text style={{ color: '#60a5fa', fontWeight: '600', fontSize: 14, marginBottom: 2 }}>
                                                     @{item.username}
                                                 </Text>
-                                                <Text className="text-sm text-gray-500">
+                                                <Text style={{ fontSize: 12, color: '#6b7280' }}>
                                                     {item.email}
                                                 </Text>
                                             </TouchableOpacity>
@@ -342,24 +314,17 @@ const Transfer = () => {
                             )}
                         </View>
 
-                        {/* Amount */}
-                        <View className="bg-gray-900/30 rounded-3xl p-8 mb-8 border border-gray-700/50 backdrop-blur-sm">
-                            <Text className="text-2xl font-bold text-white mb-6">Amount</Text>
+                        {/* Amount Input - FIXED validation + quick amounts */}
+                        <View className="mx-4 mb-6 bg-gray-800/40 rounded-xl p-4 border border-gray-700/30">
+                            <Text className="text-lg font-light text-white mb-4">Amount</Text>
 
-                            <View className="mb-8">
-                                <Text className="text-gray-400 text-lg font-semibold mb-4">
-                                    Amount (USD)
-                                </Text>
+                            <View className="mb-4">
+                                <Text className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Amount (USD)</Text>
                                 <View className="relative">
                                     <DollarSign
-                                        size={24}
+                                        size={18}
                                         color="#9ca3af"
-                                        style={{
-                                            position: 'absolute',
-                                            left: 20,
-                                            top: 20,
-                                            zIndex: 1,
-                                        }}
+                                        style={{ position: 'absolute', left: 12, top: 12, zIndex: 1 }}
                                     />
                                     <TextInput
                                         value={amount}
@@ -367,41 +332,58 @@ const Transfer = () => {
                                         placeholder="Enter amount"
                                         placeholderTextColor="#6b7280"
                                         keyboardType="decimal-pad"
-                                        className={`pl-16 pr-6 py-5 text-xl text-white rounded-3xl ${amountError
-                                                ? 'bg-red-500/20 border-2 border-red-500/40'
-                                                : 'bg-gray-950 border-2 border-gray-800'
-                                            }`}
+                                        className="pl-10 pr-4 py-3 text-white rounded-xl border"
+                                        style={{
+                                            borderColor: amountError ? '#ef4444' : '#374151',
+                                            borderWidth: 1,
+                                            backgroundColor: amountError ? 'rgba(239,68,68,0.1)' : 'rgba(31,41,55,0.4)'
+                                        }}
                                     />
                                 </View>
-                                {amountError && (
-                                    <View className="flex-row items-center gap-3 mt-4">
-                                        <AlertCircle size={20} color="#ef4444" />
-                                        <Text className="text-lg text-red-400 font-semibold">{amountError}</Text>
+                                {amountError ? (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                                        <AlertCircle size={16} color="#ef4444" style={{ marginRight: 6 }} />
+                                        <Text className="text-xs text-red-400">{amountError}</Text>
                                     </View>
-                                )}
+                                ) : null}
                             </View>
 
-                            {/* Quick amounts */}
-                            <View className="flex-row flex-wrap gap-3">
+                            {/* Quick Amounts - FIXED */}
+                            <Text className="text-xs font-semibold text-gray-400 uppercase mb-3 tracking-wide">Quick Amounts</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 }}>
                                 {[10, 50, 100, 500, 1000].map((quickAmount) => (
                                     <TouchableOpacity
                                         key={quickAmount}
-                                        onPress={() => {
-                                            setAmount(quickAmount.toString());
-                                            validateAmount(quickAmount.toString());
+                                        onPress={() => handleQuickAmount(quickAmount)}
+                                        style={{
+                                            flex: 1,
+                                            minWidth: 70,
+                                            paddingHorizontal: 16,
+                                            paddingVertical: 8,
+                                            margin: 2,
+                                            borderRadius: 12,
+                                            borderWidth: 1,
+                                            alignItems: 'center',
+                                            borderColor: parseFloat(amount) === quickAmount ? '#ea580c' : '#374151',
+                                            backgroundColor: parseFloat(amount) === quickAmount ? '#ea580c' : 'rgba(31,41,55,0.4)'
                                         }}
-                                        className="flex-1 px-8 py-5 bg-gray-800/50 border border-gray-700 rounded-2xl items-center active:bg-gray-700/50"
-                                        activeOpacity={0.8}
                                     >
-                                        <Text className="text-xl font-bold text-white">${quickAmount}</Text>
+                                        <Text style={{
+                                            fontWeight: '600',
+                                            fontSize: 12,
+                                            color: parseFloat(amount) === quickAmount ? '#ffffff' : '#9ca3af',
+                                            textAlign: 'center'
+                                        }}>
+                                            ${quickAmount}
+                                        </Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
                         {/* Note */}
-                        <View className="bg-gray-900/30 rounded-3xl p-8 mb-10 border border-gray-700/50 backdrop-blur-sm">
-                            <Text className="text-2xl font-bold text-white mb-6">Note (Optional)</Text>
+                        <View className="mx-4 mb-6 bg-gray-800/40 rounded-xl p-4 border border-gray-700/30">
+                            <Text className="text-lg font-light text-white mb-4">Note (Optional)</Text>
                             <TextInput
                                 value={note}
                                 onChangeText={setNote}
@@ -410,32 +392,32 @@ const Transfer = () => {
                                 maxLength={200}
                                 multiline
                                 numberOfLines={4}
-                                className="px-6 py-5 text-white bg-gray-950 border border-gray-800 rounded-3xl text-lg"
+                                className="px-4 py-3 text-white bg-gray-900 border border-gray-700 rounded-xl"
                                 style={{ textAlignVertical: 'top', minHeight: 100 }}
                             />
-                            <Text className="text-sm text-gray-500 mt-3 text-right">
+                            <Text className="text-xs text-gray-500 mt-2 text-right">
                                 {note.length}/200 characters
                             </Text>
                         </View>
 
-                        {/* Submit Button */}
+                        {/* Submit Button - EXACT Team primary */}
                         <TouchableOpacity
                             onPress={handleTransfer}
-                            disabled={loading || !amount || amountError || !receiverIdentifier.trim()}
-                            className={`rounded-3xl py-6 items-center shadow-2xl ${loading || !amount || amountError || !receiverIdentifier.trim()
-                                    ? 'bg-gray-700/50 shadow-none'
-                                    : 'bg-gradient-to-r from-orange-600 to-orange-500 shadow-orange-500/40'
+                            disabled={loading || !amount || !!amountError || !receiverIdentifier.trim()}
+                            className={`mx-4 rounded-xl py-4 items-center ${loading || !amount || !!amountError || !receiverIdentifier.trim()
+                                    ? 'bg-gray-700/50'
+                                    : 'bg-gradient-to-r from-orange-600 to-orange-500 shadow-lg'
                                 }`}
                         >
                             {loading ? (
-                                <View className="flex-row items-center gap-4">
-                                    <ActivityIndicator size="large" color="#ffffff" />
-                                    <Text className="text-white font-bold text-xl">Processing Transfer...</Text>
+                                <View className="flex-row items-center" style={{ gap: 12 }}>
+                                    <ActivityIndicator size="small" color="#ffffff" />
+                                    <Text className="text-white font-bold text-base">Processing...</Text>
                                 </View>
                             ) : (
-                                <View className="flex-row items-center gap-4">
-                                    <Send size={28} color="#ffffff" />
-                                    <Text className="text-white font-bold text-xl">Transfer Money</Text>
+                                <View className="flex-row items-center" style={{ gap: 12 }}>
+                                    <Send size={20} color="#ffffff" />
+                                    <Text className="text-white font-bold text-base">Transfer Money</Text>
                                 </View>
                             )}
                         </TouchableOpacity>

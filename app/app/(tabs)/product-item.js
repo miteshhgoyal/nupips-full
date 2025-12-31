@@ -185,7 +185,7 @@ const ProductItem = () => {
                         {/* Image Gallery */}
                         <View className="flex-1">
                             {/* Main Image */}
-                            <View className="bg-gray-800 rounded-2xl overflow-hidden mb-4" style={{ aspectRatio: 1 }}>
+                            <View className="bg-gray-800 rounded-2xl overflow-hidden mb-0" style={{ aspectRatio: 1 }}>
                                 <Image
                                     source={{ uri: product.image?.[selectedImage] || "https://via.placeholder.com/400" }}
                                     style={{ flex: 1, width: '100%' }}
@@ -219,16 +219,16 @@ const ProductItem = () => {
                         </View>
 
                         {/* Product Info */}
-                        <View className="flex-1 space-y-6">
+                        <View className="flex-1">
                             {/* Category */}
-                            <View className="bg-orange-500/20 px-4 py-2 rounded-full self-start">
+                            <View className="bg-orange-500/20 px-4 py-2 rounded-full self-start mb-3">
                                 <Text className="text-orange-400 text-sm font-semibold uppercase">
                                     {product.category}
                                 </Text>
                             </View>
 
                             {/* Title & Description */}
-                            <View>
+                            <View className='mb-2'>
                                 <Text className="text-2xl font-bold text-white mb-3" numberOfLines={2}>
                                     {product.name}
                                 </Text>
@@ -248,7 +248,7 @@ const ProductItem = () => {
                             </View>
 
                             {/* Product Stats */}
-                            <View className="flex-row gap-3">
+                            <View className="flex-row gap-3 mb-3">
                                 <StatsCard
                                     title="Free Shipping"
                                     value="✓"
@@ -279,7 +279,7 @@ const ProductItem = () => {
 
                             {/* Size Selection */}
                             {product.sizes && product.sizes.length > 0 && (
-                                <View>
+                                <View className="mb-3">
                                     <Text className="text-white font-semibold mb-4">Select Size</Text>
                                     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                                         <View className="flex-row gap-3">
@@ -331,7 +331,7 @@ const ProductItem = () => {
                             {/* Buy Now Button */}
                             <TouchableOpacity
                                 onPress={handleBuyNow}
-                                className="w-full py-5 bg-gradient-to-r from-orange-600 to-orange-500 rounded-2xl flex-row items-center justify-center gap-3 shadow-lg"
+                                className="w-full py-5 bg-orange-600 rounded-2xl flex-row items-center justify-center gap-3 shadow-lg mt-3 mb-4"
                                 activeOpacity={0.9}
                             >
                                 <ShoppingBag size={24} color="#ffffff" />

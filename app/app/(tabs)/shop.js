@@ -240,7 +240,7 @@ const Shop = () => {
                     )}
 
                     {/* Stats Cards (like team page) */}
-                    <View className="mx-4 mb-6">
+                    {/* <View className="mx-4 mb-6">
                         <Text className="text-lg font-light text-white mb-3">Shop Overview</Text>
                         <View className="gap-3">
                             <StatsCard
@@ -299,7 +299,7 @@ const Shop = () => {
                                 }}
                             />
                         </View>
-                    </View>
+                    </View> */}
 
                     {/* Filters Section */}
                     <View className="mx-4 mb-4">
@@ -328,8 +328,8 @@ const Shop = () => {
                                         setCurrentPage(1);
                                     }}
                                     className={`px-4 py-2 rounded-xl ${categoryFilter === "all"
-                                            ? "bg-orange-600"
-                                            : "bg-gray-800/40 border border-gray-700/30"
+                                        ? "bg-orange-600"
+                                        : "bg-gray-800/40 border border-gray-700/30"
                                         }`}
                                 >
                                     <Text
@@ -348,8 +348,8 @@ const Shop = () => {
                                             setCurrentPage(1);
                                         }}
                                         className={`px-4 py-2 rounded-xl ${categoryFilter === cat
-                                                ? "bg-orange-600"
-                                                : "bg-gray-800/40 border border-gray-700/30"
+                                            ? "bg-orange-600"
+                                            : "bg-gray-800/40 border border-gray-700/30"
                                             }`}
                                     >
                                         <Text
@@ -371,8 +371,8 @@ const Shop = () => {
                                     setCurrentPage(1);
                                 }}
                                 className={`px-4 py-2 rounded-xl flex-row items-center gap-2 ${showBestsellers
-                                        ? "bg-orange-600"
-                                        : "bg-gray-800/40 border border-gray-700/30"
+                                    ? "bg-orange-600"
+                                    : "bg-gray-800/40 border border-gray-700/30"
                                     }`}
                             >
                                 <Star

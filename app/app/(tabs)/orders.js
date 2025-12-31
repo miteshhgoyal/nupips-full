@@ -65,13 +65,13 @@ const Orders = () => {
     });
 
     const statusOptions = [
-        { value: "all", label: "All Orders", icon: Package, color: "gray" },
-        { value: "Order Placed", label: "Order Placed", icon: Clock, color: "blue" },
-        { value: "Processing", label: "Processing", icon: RefreshCw, color: "yellow" },
-        { value: "Shipped", label: "Shipped", icon: Truck, color: "purple" },
-        { value: "Out for Delivery", label: "Out for Delivery", icon: Truck, color: "indigo" },
-        { value: "Delivered", label: "Delivered", icon: CheckCircle, color: "green" },
-        { value: "Cancelled", label: "Cancelled", icon: XCircle, color: "red" },
+        { value: "all", label: "All Orders", icon: Package, color: "#6b7280" },
+        { value: "Order Placed", label: "Order Placed", icon: Clock, color: "#3b82f6" },
+        { value: "Processing", label: "Processing", icon: RefreshCw, color: "#eab308" },
+        { value: "Shipped", label: "Shipped", icon: Truck, color: "#a855f7" },
+        { value: "Out for Delivery", label: "Out for Delivery", icon: Truck, color: "#6366f1" },
+        { value: "Delivered", label: "Delivered", icon: CheckCircle, color: "#22c55e" },
+        { value: "Cancelled", label: "Cancelled", icon: XCircle, color: "#ef4444" },
     ];
 
     useEffect(() => {
@@ -160,6 +160,13 @@ const Orders = () => {
         }
     };
 
+    const clearAllFilters = () => {
+        setStatusFilter("all");
+        setSearchTerm("");
+        setDateRange({ start: "", end: "" });
+        setShowFilters(false);
+    };
+
     const formatDate = (date) => {
         return new Date(date).toLocaleDateString("en-IN", {
             day: "2-digit",
@@ -184,9 +191,9 @@ const Orders = () => {
         const Icon = config.icon;
 
         return (
-            <View className={`flex-row items-center gap-1.5 px-3 py-1.5 rounded-full ${config.bg} ${config.text}`}>
-                <Icon size={14} />
-                <Text className="font-semibold text-sm">{status}</Text>
+            <View className={`flex-row items-center px-3 py-2 border border-gray-700/30 rounded-xl ${config.bg}`}>
+                <Icon size={14} color={config.text.replace('text-', '').replace('text-', '')} />
+                <Text className={`font-semibold text-sm ml-2 ${config.text}`}>{status}</Text>
             </View>
         );
     };
@@ -205,164 +212,169 @@ const Orders = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            {/* Header */}
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-6">
-                <View className="flex-row items-center gap-3">
-                    <Package size={32} color="#ea580c" />
-                    <View>
-                        <Text className="text-3xl font-bold text-white">My Orders</Text>
-                        <Text className="text-gray-400 text-lg mt-1">Complete order history</Text>
-                    </View>
-                </View>
+            {/* Header - nupips-team style */}
+            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                <Text className="text-3xl text-white font-light">My Orders</Text>
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="px-4 py-6 pb-24">
-                    {/* Alerts */}
+                <View className="py-4 pb-24">
+                    {/* Error Alert */}
                     {error && (
-                        <View className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start gap-3">
-                            <AlertCircle size={20} color="#ef4444" />
+                        <View className="mx-4 mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start">
+                            <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
                             <Text className="text-red-400 text-sm flex-1">{error}</Text>
-                            <TouchableOpacity onPress={() => setError("")}>
+                            <TouchableOpacity onPress={() => setError("")} className="p-1" activeOpacity={0.7}>
                                 <X size={20} color="#ef4444" />
                             </TouchableOpacity>
                         </View>
                     )}
 
                     {/* Stats Cards */}
-                    <View className="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                        <View className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6">
-                            <View className="flex-row items-center justify-between">
+                    <View className="mx-4 mb-6">
+                        <Text className="text-lg font-light text-white mb-3">Order Overview</Text>
+
+                        {/* Total Orders Card */}
+                        <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-4">
+                            <View className="flex-row items-center justify-between mb-3">
                                 <View>
-                                    <Text className="text-blue-400 text-sm font-medium">Total Orders</Text>
-                                    <Text className="text-3xl font-bold text-white mt-2">{stats.total}</Text>
-                                    <Text className="text-blue-400 text-xs mt-2">
-                                        {stats.pending} Pending • {stats.completed} Completed
-                                    </Text>
+                                    <Text className="text-gray-400 text-sm mb-1">Total Orders</Text>
+                                    <Text className="text-2xl font-bold text-white">{stats.total}</Text>
                                 </View>
-                                <Package size={32} color="#3b82f6" />
+                                <View className="w-14 h-14 bg-blue-500/20 border border-blue-500/40 rounded-xl items-center justify-center">
+                                    <Package size={24} color="#3b82f6" />
+                                </View>
+                            </View>
+                            <View className="flex-row justify-between">
+                                <View>
+                                    <Text className="text-gray-400 text-xs mb-1">Pending</Text>
+                                    <Text className="text-blue-400 font-semibold">{stats.pending}</Text>
+                                </View>
+                                <View>
+                                    <Text className="text-gray-400 text-xs mb-1">Completed</Text>
+                                    <Text className="text-green-400 font-semibold">{stats.completed}</Text>
+                                </View>
+                                <View>
+                                    <Text className="text-gray-400 text-xs mb-1">Cancelled</Text>
+                                    <Text className="text-red-400 font-semibold">{stats.cancelled}</Text>
+                                </View>
                             </View>
                         </View>
 
-                        <View className="bg-green-500/10 border border-green-500/30 rounded-xl p-6">
-                            <View className="flex-row items-center justify-between">
-                                <View>
-                                    <Text className="text-green-400 text-sm font-medium">Total Spent</Text>
-                                    <Text className="text-3xl font-bold text-white mt-2">
-                                        ${stats.totalSpent.toFixed(2)}
-                                    </Text>
-                                    <Text className="text-green-400 text-xs mt-2">
-                                        Across {stats.completed} delivered orders
-                                    </Text>
+                        {/* Financial Stats */}
+                        <View className="flex-row">
+                            <View className="flex-1 bg-green-500/10 border border-green-500/30 rounded-xl p-5 mr-3">
+                                <View className="flex-row items-center mb-2">
+                                    <TrendingUp size={18} color="#22c55e" />
+                                    <Text className="text-sm font-medium text-green-400 ml-2">Total Spent</Text>
                                 </View>
-                                <TrendingUp size={32} color="#22c55e" />
+                                <Text className="text-xl font-bold text-white">${stats.totalSpent.toFixed(2)}</Text>
                             </View>
-                        </View>
-
-                        <View className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
-                            <View className="flex-row items-center justify-between">
-                                <View>
-                                    <Text className="text-red-400 text-sm font-medium">Cancelled & Refunded</Text>
-                                    <Text className="text-3xl font-bold text-white mt-2">
-                                        ${stats.totalRefunds.toFixed(2)}
-                                    </Text>
-                                    <Text className="text-red-400 text-xs mt-2">
-                                        {stats.cancelled} cancelled orders
-                                    </Text>
+                            <View className="flex-1 bg-red-500/10 border border-red-500/30 rounded-xl p-5 ml-3">
+                                <View className="flex-row items-center mb-2">
+                                    <DollarSign size={18} color="#ef4444" />
+                                    <Text className="text-sm font-medium text-red-400 ml-2">Refunds</Text>
                                 </View>
-                                <XCircle size={32} color="#ef4444" />
+                                <Text className="text-xl font-bold text-white">${stats.totalRefunds.toFixed(2)}</Text>
                             </View>
                         </View>
                     </View>
 
                     {/* Filters */}
-                    <View className="mb-8 space-y-4">
+                    <View className="mx-4 mb-6">
                         {/* Search */}
-                        <View className="relative">
+                        <View className="relative mb-4">
                             <Search
-                                size={20}
+                                size={18}
                                 color="#9ca3af"
-                                style={{ position: 'absolute', left: 12, top: 14, zIndex: 1 }}
+                                style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}
                             />
                             <TextInput
                                 placeholder="Search by order ID or product name..."
                                 value={searchTerm}
                                 onChangeText={setSearchTerm}
-                                className="bg-gray-800/40 border border-gray-700/30 rounded-xl pl-12 pr-4 py-3 text-white"
+                                placeholderTextColor="#6b7280"
+                                className="bg-gray-800/40 border border-gray-700/30 rounded-xl pl-12 pr-5 py-3.5 text-white"
                             />
                         </View>
 
-                        {/* Filter Row */}
-                        <View className="flex-row flex-wrap items-center gap-3">
-                            <View className="flex-1 min-w-[150px]">
-                                <TextInput
-                                    placeholder="Status"
-                                    value={statusFilter}
-                                    onChangeText={setStatusFilter}
-                                    className="bg-gray-800/40 border border-gray-700/30 rounded-xl px-4 py-3 text-white"
-                                />
-                            </View>
+                        {/* Filter Buttons */}
+                        <View className="flex-row">
+                            <TouchableOpacity
+                                onPress={() => {
+                                    // Toggle status filter picker logic here if needed
+                                }}
+                                className="flex-1 flex-row items-center justify-between bg-gray-800/40 border border-gray-700/30 rounded-xl px-5 py-4 mr-3 active:bg-gray-800/60"
+                                activeOpacity={0.9}
+                            >
+                                <View className="flex-row items-center">
+                                    <Filter size={18} color="#9ca3af" />
+                                    <Text className="text-white font-medium ml-3">
+                                        {statusOptions.find(s => s.value === statusFilter)?.label || 'All Status'}
+                                    </Text>
+                                </View>
+                                <ChevronDown size={18} color="#9ca3af" />
+                            </TouchableOpacity>
 
                             <TouchableOpacity
                                 onPress={() => setShowFilters(!showFilters)}
-                                className="flex-row items-center gap-2 px-4 py-3 bg-gray-800/40 border border-gray-700/30 rounded-xl"
+                                className="flex-1 flex-row items-center justify-center bg-gray-800/40 border border-gray-700/30 rounded-xl py-4 ml-3 active:bg-gray-800/60"
+                                activeOpacity={0.9}
                             >
-                                <Filter size={16} color="#9ca3af" />
-                                <Text className="text-gray-400 font-semibold">Date</Text>
+                                <Calendar size={18} color="#9ca3af" />
+                                <Text className="text-gray-400 font-medium ml-3">Date Range</Text>
                                 <ChevronDown
-                                    size={16}
+                                    size={18}
                                     color="#9ca3af"
                                     style={{ transform: [{ rotate: showFilters ? '180deg' : '0deg' }] }}
                                 />
                             </TouchableOpacity>
-
-                            {(statusFilter !== "all" || searchTerm || dateRange.start || dateRange.end) && (
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        setStatusFilter("all");
-                                        setSearchTerm("");
-                                        setDateRange({ start: "", end: "" });
-                                    }}
-                                    className="flex-row items-center gap-2 px-4 py-3 bg-red-500/20 border border-red-500/30 rounded-xl"
-                                >
-                                    <X size={16} color="#ef4444" />
-                                    <Text className="text-red-400 font-semibold">Clear</Text>
-                                </TouchableOpacity>
-                            )}
-
-                            <Text className="ml-auto text-sm text-gray-400 font-medium">
-                                {filteredOrders.length} Orders
-                            </Text>
                         </View>
 
+                        {(statusFilter !== "all" || searchTerm || dateRange.start || dateRange.end) && (
+                            <TouchableOpacity
+                                onPress={clearAllFilters}
+                                className="flex-row items-center justify-center bg-red-500/20 border border-red-500/30 rounded-xl py-4 px-6 mt-4 mx-auto"
+                                activeOpacity={0.9}
+                            >
+                                <X size={18} color="#ef4444" />
+                                <Text className="text-red-400 font-semibold ml-2">Clear Filters</Text>
+                            </TouchableOpacity>
+                        )}
+
                         {showFilters && (
-                            <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-4">
-                                <Text className="font-semibold text-white mb-3">Date Range</Text>
-                                <View className="flex-row items-center gap-3">
+                            <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mt-4">
+                                <Text className="text-white font-semibold mb-4">Date Range</Text>
+                                <View className="flex-row">
                                     <TextInput
                                         placeholder="Start Date"
                                         value={dateRange.start}
                                         onChangeText={(text) => setDateRange(prev => ({ ...prev, start: text }))}
-                                        className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white"
+                                        placeholderTextColor="#6b7280"
+                                        className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl px-5 py-4 mr-3 text-white"
                                     />
-                                    <Text className="text-gray-500">to</Text>
                                     <TextInput
                                         placeholder="End Date"
                                         value={dateRange.end}
                                         onChangeText={(text) => setDateRange(prev => ({ ...prev, end: text }))}
-                                        className="flex-1 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white"
+                                        placeholderTextColor="#6b7280"
+                                        className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl px-5 py-4 ml-3 text-white"
                                     />
                                 </View>
                             </View>
                         )}
+
+                        <Text className="text-sm text-gray-400 font-medium mt-4">
+                            {filteredOrders.length} Orders Found
+                        </Text>
                     </View>
 
                     {/* Orders List */}
-                    <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl overflow-hidden">
+                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl overflow-hidden">
                         {filteredOrders.length === 0 ? (
                             <View className="p-16 items-center">
                                 <Package size={64} color="#6b7280" />
-                                <Text className="text-gray-400 mt-4 font-medium text-lg">
+                                <Text className="text-gray-400 mt-6 font-medium text-lg text-center">
                                     {orders.length === 0 ? "No orders found" : "Try adjusting your filters"}
                                 </Text>
                             </View>
@@ -385,7 +397,6 @@ const Orders = () => {
                 </View>
             </ScrollView>
 
-            {/* Order Detail Modal */}
             <OrderDetailModal
                 visible={showDetailModal}
                 order={selectedOrder}
@@ -399,33 +410,37 @@ const Orders = () => {
     );
 };
 
-// Order Row Component
+// Order Row Component - nupips-team style
 const OrderRow = ({ order, onViewDetails, formatDate, getStatusBadge }) => (
     <TouchableOpacity
         onPress={onViewDetails}
-        className="p-6 border-b border-gray-700/30 last:border-b-0 hover:bg-gray-800/50 active:bg-gray-800/20"
-        activeOpacity={0.7}
+        className="p-6 border-b border-gray-700/30 last:border-b-0 bg-gray-800/30 active:bg-gray-800/60"
+        activeOpacity={0.95}
     >
         <View className="flex-row items-center justify-between mb-3">
-            <Text className="font-mono text-lg font-bold text-white">
+            <Text className="font-mono text-base font-bold text-white">
                 #{order._id.slice(-8).toUpperCase()}
             </Text>
-            <TouchableOpacity onPress={onViewDetails} className="p-2 rounded-lg bg-blue-500/20">
-                <Eye size={18} color="#3b82f6" />
+            <TouchableOpacity
+                onPress={onViewDetails}
+                className="w-12 h-12 bg-blue-500/20 border border-blue-500/40 rounded-xl items-center justify-center active:bg-blue-500/30"
+                activeOpacity={0.9}
+            >
+                <Eye size={20} color="#3b82f6" />
             </TouchableOpacity>
         </View>
 
-        <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center gap-2">
+        <View className="flex-row items-center justify-between mb-4">
+            <View className="flex-row items-center">
                 <Calendar size={16} color="#9ca3af" />
-                <Text className="text-gray-400 text-sm">{formatDate(order.createdAt)}</Text>
+                <Text className="text-gray-400 text-sm ml-3">{formatDate(order.createdAt)}</Text>
             </View>
-            <View className="flex-row items-center gap-2">
-                <Text className="text-2xl font-bold text-white">${order.amount.toFixed(2)}</Text>
+            <View className="items-end">
+                <Text className="text-xl font-bold text-white">${order.amount.toFixed(2)}</Text>
                 {order.status === "Cancelled" && order.refundAmount > 0 && (
-                    <View className="flex-row items-center gap-1 bg-green-500/20 px-2 py-1 rounded-full">
-                        <CheckCircle size={12} color="#22c55e" />
-                        <Text className="text-xs text-green-400 font-medium">
+                    <View className="flex-row items-center mt-2 bg-green-500/20 border border-green-500/40 px-3 py-2 rounded-xl">
+                        <CheckCircle size={14} color="#22c55e" />
+                        <Text className="text-xs text-green-400 font-semibold ml-2">
                             ${order.refundAmount.toFixed(2)}
                         </Text>
                     </View>
@@ -434,87 +449,83 @@ const OrderRow = ({ order, onViewDetails, formatDate, getStatusBadge }) => (
         </View>
 
         <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-2 bg-gray-800/50 px-3 py-1.5 rounded-xl">
-                <Text className="text-white font-medium">{order.items.length} items</Text>
+            <View className="flex-row items-center bg-gray-800/60 border border-gray-700/30 px-4 py-3 rounded-xl">
+                <Text className="text-white font-semibold text-base">{order.items.length} items</Text>
             </View>
             {getStatusBadge(order.status)}
         </View>
     </TouchableOpacity>
 );
 
-// Order Detail Modal Component
+// Order Detail Modal Component - nupips-team style
 const OrderDetailModal = ({ visible, order, onClose, formatDate }) => {
     if (!visible || !order) return null;
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
-            <View className="flex-1 bg-black/50 justify-end p-4">
-                <View className="bg-gray-900 rounded-2xl max-h-[90%]">
+            <View className="flex-1 bg-black/50 justify-end">
+                <View className="bg-gray-900 border border-gray-800 rounded-t-3xl max-h-[90%]">
                     {/* Modal Header */}
                     <View className="p-6 border-b border-gray-800 flex-row items-center justify-between">
                         <View>
-                            <Text className="text-2xl font-bold text-white">Order Details</Text>
+                            <Text className="text-xl font-bold text-white">Order Details</Text>
                             <Text className="text-gray-400 text-sm mt-1">Complete order information</Text>
                         </View>
-                        <TouchableOpacity onPress={onClose} className="p-2 rounded-lg">
-                            <X size={24} color="#9ca3af" />
+                        <TouchableOpacity onPress={onClose} className="w-12 h-12 bg-gray-800 rounded-xl items-center justify-center active:bg-gray-800/70" activeOpacity={0.9}>
+                            <X size={20} color="#9ca3af" />
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView className="p-6">
+                    <ScrollView className="p-6" showsVerticalScrollIndicator={false}>
                         {/* Order Summary */}
-                        <View className="bg-gradient-to-r from-orange-500/10 to-orange-600/10 rounded-xl p-6 border border-orange-500/30 mb-6">
-                            <Text className="font-bold text-white text-lg mb-4 flex-row items-center gap-2">
+                        <View className="bg-orange-600/20 border border-orange-600/40 rounded-xl p-6 mb-6">
+                            <View className="flex-row items-center mb-5">
                                 <Package size={20} color="#ea580c" />
-                                Order Summary
-                            </Text>
-                            <View className="grid grid-cols-2 gap-4">
-                                <InfoItem label="Order ID" value={`#${order._id.slice(-8).toUpperCase()}`} />
-                                <InfoItem label="Order Date" value={formatDate(order.createdAt)} />
-                                <InfoItem label="Status" value={order.status} highlighted />
-                                <InfoItem label="Payment" value={order.payment ? "Paid" : "Unpaid"} />
-                                <InfoItem label="Total Amount" value={`$${order.amount.toFixed(2)}`} bold />
-                                {order.refundAmount > 0 && (
-                                    <InfoItem label="Refund" value={`$${order.refundAmount.toFixed(2)}`} bold green />
-                                )}
+                                <Text className="text-lg font-bold text-white ml-3">Order Summary</Text>
                             </View>
+                            <InfoItem label="Order ID" value={`#${order._id.slice(-8).toUpperCase()}`} />
+                            <InfoItem label="Order Date" value={formatDate(order.createdAt)} />
+                            <InfoItem label="Status" value={order.status} highlighted />
+                            <InfoItem label="Payment" value={order.payment ? "Paid" : "Unpaid"} />
+                            <InfoItem label="Total Amount" value={`$${order.amount.toFixed(2)}`} bold />
+                            {order.refundAmount > 0 && (
+                                <InfoItem label="Refund Amount" value={`$${order.refundAmount.toFixed(2)}`} green />
+                            )}
                         </View>
 
                         {/* Order Items */}
                         <View className="mb-6">
-                            <Text className="font-bold text-white text-lg mb-4 flex-row items-center gap-2">
+                            <View className="flex-row items-center mb-5">
                                 <Package size={20} color="#ea580c" />
-                                Order Items
-                            </Text>
+                                <Text className="text-lg font-bold text-white ml-3">Order Items ({order.items.length})</Text>
+                            </View>
                             {order.items.map((item, idx) => (
-                                <View key={idx} className="flex-row items-center gap-4 p-4 bg-gray-800/50 rounded-xl mb-3">
+                                <View key={idx} className="flex-row items-center p-5 bg-gray-800/50 border border-gray-700/30 rounded-xl mb-4">
                                     {item.image && (
                                         <Image
-                                            source={{ uri: item.image }}
-                                            style={{ width: 80, height: 80 }}
-                                            className="rounded-xl"
+                                            source={{ uri: item.image || "https://via.placeholder.com/80" }}
+                                            style={{ width: 72, height: 72, borderRadius: 16 }}
+                                            resizeMode="cover"
                                         />
                                     )}
-                                    <View className="flex-1">
-                                        <Text className="text-white font-semibold text-lg mb-1" numberOfLines={2}>
+                                    <View className="flex-1 ml-4">
+                                        <Text className="text-white font-semibold mb-3" numberOfLines={2}>
                                             {item.name}
                                         </Text>
-                                        <View className="flex-row items-center gap-3">
-                                            <View className="bg-gray-700 px-3 py-1 rounded-lg">
-                                                <Text className="text-gray-300 text-sm">Qty: {item.quantity}</Text>
+                                        <View className="flex-row mb-3">
+                                            <View className="bg-gray-700/50 px-4 py-2.5 border border-gray-600 rounded-xl mr-3">
+                                                <Text className="text-gray-300 text-sm font-medium">Qty: {item.quantity}</Text>
                                             </View>
                                             {item.size && (
-                                                <View className="bg-gray-700 px-3 py-1 rounded-lg">
-                                                    <Text className="text-gray-300 text-sm">Size: {item.size}</Text>
+                                                <View className="bg-gray-700/50 px-4 py-2.5 border border-gray-600 rounded-xl">
+                                                    <Text className="text-gray-300 text-sm font-medium">Size: {item.size}</Text>
                                                 </View>
                                             )}
                                         </View>
                                     </View>
-                                    <View className="items-end">
-                                        <Text className="text-orange-400 font-bold text-xl">
-                                            ${(item.price * item.quantity).toFixed(2)}
-                                        </Text>
-                                    </View>
+                                    <Text className="text-orange-400 font-bold text-xl">
+                                        ${(item.price * item.quantity).toFixed(2)}
+                                    </Text>
                                 </View>
                             ))}
                         </View>
@@ -522,22 +533,22 @@ const OrderDetailModal = ({ visible, order, onClose, formatDate }) => {
                         {/* Shipping Address */}
                         {order.address && (
                             <View className="mb-6">
-                                <Text className="font-bold text-white text-lg mb-4 flex-row items-center gap-2">
+                                <View className="flex-row items-center mb-5">
                                     <MapPin size={20} color="#ea580c" />
-                                    Shipping Address
-                                </Text>
-                                <View className="bg-gray-800/50 p-5 rounded-xl border border-gray-700/30">
-                                    <Text className="text-white font-semibold text-lg mb-2">
+                                    <Text className="text-lg font-bold text-white ml-3">Shipping Address</Text>
+                                </View>
+                                <View className="bg-gray-800/50 border border-gray-700/30 p-6 rounded-xl">
+                                    <Text className="text-white font-bold mb-4">
                                         {order.address.firstName} {order.address.lastName}
                                     </Text>
-                                    <Text className="text-gray-400 mb-1">{order.address.street}</Text>
-                                    <Text className="text-gray-400 mb-2">
+                                    <Text className="text-gray-400 mb-3">{order.address.street}</Text>
+                                    <Text className="text-gray-400 mb-3">
                                         {order.address.city}, {order.address.state} {order.address.zipcode}
                                     </Text>
-                                    <Text className="text-gray-400 mb-3">{order.address.country}</Text>
-                                    <View className="flex-row items-center gap-2">
-                                        <Phone size={16} color="#9ca3af" />
-                                        <Text className="text-gray-400 text-sm">{order.address.phone}</Text>
+                                    <Text className="text-gray-400 mb-4">{order.address.country}</Text>
+                                    <View className="flex-row items-center">
+                                        <Phone size={18} color="#9ca3af" />
+                                        <Text className="text-gray-400 text-base ml-3">{order.address.phone}</Text>
                                     </View>
                                 </View>
                             </View>
@@ -548,10 +559,11 @@ const OrderDetailModal = ({ visible, order, onClose, formatDate }) => {
                     <View className="p-6 border-t border-gray-800 bg-gray-900/50">
                         <TouchableOpacity
                             onPress={onClose}
-                            className="w-full bg-gradient-to-r from-orange-600 to-orange-500 py-4 rounded-xl flex-row items-center justify-center gap-2"
+                            className="w-full bg-orange-600 py-5 rounded-xl flex-row items-center justify-center active:bg-orange-700"
+                            activeOpacity={0.9}
                         >
-                            <ArrowLeft size={20} color="#ffffff" />
-                            <Text className="text-white font-bold text-lg">Close Details</Text>
+                            <X size={20} color="#ffffff" />
+                            <Text className="text-white font-bold text-lg ml-3">Close Details</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -562,10 +574,10 @@ const OrderDetailModal = ({ visible, order, onClose, formatDate }) => {
 
 // Info Item Component
 const InfoItem = ({ label, value, bold = false, highlighted = false, green = false }) => (
-    <View>
-        <Text className="text-gray-500 text-sm mb-1">{label}</Text>
+    <View className="mb-4">
+        <Text className="text-gray-500 text-xs font-medium mb-2 uppercase">{label}</Text>
         <Text
-            className={`font-semibold ${bold ? 'text-xl font-bold' : 'text-base'} ${highlighted ? 'text-orange-400' : green ? 'text-green-400' : 'text-white'
+            className={`font-semibold ${bold ? 'text-xl font-bold' : 'text-lg'} ${highlighted ? 'text-orange-400' : green ? 'text-green-400' : 'text-white'
                 }`}
             numberOfLines={1}
         >

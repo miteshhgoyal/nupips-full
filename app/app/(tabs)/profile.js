@@ -26,12 +26,7 @@ import {
     RefreshCw,
     Wallet,
     TrendingUp,
-    TrendingDown,
     Calendar,
-    Info,
-    Link2,
-    Copy,
-    Check,
     ArrowLeft,
     CheckCircle,
     AlertCircle,
@@ -154,12 +149,10 @@ const Profile = () => {
 
     if (loading) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-900">
+            <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
                 <StatusBar style="light" />
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#f97316" />
-                    <Text className="text-white mt-4 text-lg">Loading profile...</Text>
-                </View>
+                <ActivityIndicator size="large" color="#ea580c" />
+                <Text className="text-gray-400 mt-4 font-medium">Loading profile...</Text>
             </SafeAreaView>
         );
     }
@@ -168,264 +161,289 @@ const Profile = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            {/* Header */}
-            <View className="bg-gray-800/40 border-b border-gray-700 px-6 py-5">
-                <TouchableOpacity onPress={() => router.back()} className="flex-row items-center gap-3 mb-4">
-                    <ArrowLeft size={28} color="#f97316" />
-                    <Text className="text-2xl font-bold text-white">Profile</Text>
+            {/* Header - nupips-team style */}
+            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    className="flex-row items-center p-3 bg-gray-800/50 rounded-xl active:bg-gray-800/70"
+                    activeOpacity={0.9}
+                >
+                    <ArrowLeft size={24} color="#ea580c" />
+                    <Text className="text-white font-semibold text-base ml-3">Profile</Text>
                 </TouchableOpacity>
-                <View className="flex-row items-center gap-4">
-                    <View className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl items-center justify-center">
-                        <User size={32} color="white" />
-                    </View>
-                    <View className="flex-1">
-                        <Text className="text-2xl font-bold text-white">{basic.name || user?.name}</Text>
-                        <Text className="text-lg text-gray-400">@{basic.username || user?.username}</Text>
-                    </View>
-                </View>
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="px-6 py-8 pb-24">
-                    {/* Balance Cards */}
-                    <View className="grid grid-cols-2 gap-6 mb-10">
-                        <View className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 rounded-3xl p-8 border border-orange-500/40">
-                            <View className="flex-row items-center gap-3 mb-4">
-                                <View className="w-14 h-14 bg-orange-500/80 rounded-2xl items-center justify-center">
-                                    <Wallet size={24} color="white" />
+                <View className="py-4 pb-24">
+                    {/* Profile Header */}
+                    <View className="mx-4 items-center mb-6">
+                        <View className="w-24 h-24 bg-orange-600/30 border border-orange-600/50 rounded-xl items-center justify-center mb-4">
+                            <User size={48} color="#ea580c" />
+                        </View>
+                        <Text className="text-2xl font-bold text-white mb-1 text-center">
+                            {basic.name || user?.name || 'User'}
+                        </Text>
+                        <Text className="text-lg text-gray-400 text-center">
+                            @{basic.username || user?.username || 'username'}
+                        </Text>
+                    </View>
+
+                    {/* Balance Cards - VERTICAL */}
+                    <View className="mx-4 mb-6">
+                        <View className="bg-orange-600/20 border border-orange-600/40 rounded-xl p-6 mb-4">
+                            <View className="flex-row items-center">
+                                <View className="w-14 h-14 bg-orange-600/50 border border-orange-600 rounded-xl items-center justify-center mr-4">
+                                    <Wallet size={24} color="#ffffff" />
                                 </View>
-                                <Text className="text-xl font-bold text-white">Balance</Text>
+                                <View>
+                                    <Text className="text-gray-400 text-sm font-medium mb-1">Wallet Balance</Text>
+                                    <Text className="text-2xl font-bold text-orange-400">
+                                        ${user?.walletBalance?.toFixed(2) || '0.00'}
+                                    </Text>
+                                </View>
                             </View>
-                            <Text className="text-3xl font-bold text-orange-100">
-                                ${user?.walletBalance?.toFixed(2) || '0.00'}
-                            </Text>
                         </View>
 
-                        <View className="bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 rounded-3xl p-8 border border-emerald-500/40">
-                            <View className="flex-row items-center gap-3 mb-4">
-                                <View className="w-14 h-14 bg-emerald-500/80 rounded-2xl items-center justify-center">
-                                    <TrendingUp size={24} color="white" />
+                        <View className="bg-green-500/20 border border-green-500/40 rounded-xl p-6">
+                            <View className="flex-row items-center">
+                                <View className="w-14 h-14 bg-green-500/50 border border-green-500 rounded-xl items-center justify-center mr-4">
+                                    <TrendingUp size={24} color="#ffffff" />
                                 </View>
-                                <Text className="text-xl font-bold text-white">Total Deposits</Text>
+                                <View>
+                                    <Text className="text-gray-400 text-sm font-medium mb-1">Total Deposits</Text>
+                                    <Text className="text-2xl font-bold text-green-400">
+                                        ${user?.financials?.totalDeposits?.toFixed(2) || '0.00'}
+                                    </Text>
+                                </View>
                             </View>
-                            <Text className="text-3xl font-bold text-emerald-100">
-                                ${user?.financials?.totalDeposits?.toFixed(2) || '0.00'}
-                            </Text>
                         </View>
                     </View>
 
                     {/* Alerts */}
                     {error && (
-                        <View className="mb-6 p-6 bg-red-500/20 border border-red-500/40 rounded-3xl flex-row items-start gap-4">
-                            <AlertCircle size={28} color="#ef4444" />
-                            <View className="flex-1">
-                                <Text className="text-xl font-bold text-red-300 mb-2">{error}</Text>
-                                <TouchableOpacity onPress={() => setError('')}>
-                                    <Text className="text-red-400 text-lg font-semibold">Dismiss</Text>
-                                </TouchableOpacity>
-                            </View>
+                        <View className="mx-4 mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start">
+                            <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
+                            <Text className="text-red-400 text-sm flex-1">{error}</Text>
+                            <TouchableOpacity onPress={() => setError('')} className="p-1" activeOpacity={0.7}>
+                                <X size={20} color="#ef4444" />
+                            </TouchableOpacity>
                         </View>
                     )}
 
                     {success && (
-                        <View className="mb-6 p-6 bg-green-500/20 border border-green-500/40 rounded-3xl flex-row items-start gap-4">
-                            <CheckCircle size={28} color="#22c55e" />
-                            <Text className="text-xl font-bold text-green-300">{success}</Text>
+                        <View className="mx-4 mb-4 p-4 bg-green-500/20 border border-green-500/30 rounded-xl flex-row items-start">
+                            <CheckCircle size={20} color="#22c55e" style={{ marginRight: 12 }} />
+                            <Text className="text-green-400 text-sm flex-1">{success}</Text>
+                            <TouchableOpacity onPress={() => setSuccess('')} className="p-1" activeOpacity={0.7}>
+                                <X size={20} color="#22c55e" />
+                            </TouchableOpacity>
                         </View>
                     )}
 
                     {/* Basic Info */}
-                    <View className="bg-gray-800/50 rounded-3xl p-8 mb-8 border border-gray-700/50 backdrop-blur-sm">
-                        <View className="flex-row justify-between items-center mb-6">
-                            <Text className="text-2xl font-bold text-white">Basic Information</Text>
+                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                        <View className="flex-row items-center justify-between mb-5">
+                            <Text className="text-xl font-bold text-white">Basic Information</Text>
                             {editing ? (
-                                <View className="flex-row gap-3">
+                                <View className="flex-row">
                                     <TouchableOpacity
                                         onPress={() => {
                                             setEditing(false);
                                             setBasic({ name: user?.name || '', username: user?.username || '' });
                                         }}
-                                        className="p-3 bg-gray-700/50 rounded-2xl"
+                                        className="w-12 h-12 bg-gray-800/50 border border-gray-700/30 rounded-xl items-center justify-center mr-3 active:bg-gray-800/70"
+                                        activeOpacity={0.9}
                                     >
-                                        <X size={24} color="#9ca3af" />
+                                        <X size={20} color="#9ca3af" />
                                     </TouchableOpacity>
                                     <TouchableOpacity
                                         onPress={saveBasic}
                                         disabled={saving}
-                                        className="p-3 bg-orange-600 rounded-2xl items-center justify-center"
+                                        className="w-12 h-12 bg-orange-600 rounded-xl items-center justify-center active:bg-orange-700"
+                                        activeOpacity={0.9}
                                     >
                                         {saving ? (
-                                            <ActivityIndicator color="white" size={20} />
+                                            <ActivityIndicator size="small" color="#ffffff" />
                                         ) : (
-                                            <Save size={24} color="white" />
+                                            <Save size={20} color="#ffffff" />
                                         )}
                                     </TouchableOpacity>
                                 </View>
                             ) : (
                                 <TouchableOpacity
                                     onPress={() => setEditing(true)}
-                                    className="p-3 bg-gray-700/50 rounded-2xl"
+                                    className="w-12 h-12 bg-gray-800/50 border border-gray-700/30 rounded-xl items-center justify-center active:bg-gray-800/70"
+                                    activeOpacity={0.9}
                                 >
-                                    <Edit3 size={24} color="#f97316" />
+                                    <Edit3 size={20} color="#ea580c" />
                                 </TouchableOpacity>
                             )}
                         </View>
 
-                        <View className="space-y-6">
-                            <View>
-                                <Text className="text-gray-400 text-lg font-semibold mb-4">Full Name</Text>
-                                <View className="relative">
-                                    <User size={24} color="#9ca3af" style={{ position: 'absolute', left: 20, top: 20, zIndex: 1 }} />
-                                    <TextInput
-                                        value={editing ? basic.name : user?.name || ''}
-                                        onChangeText={(text) => setBasic({ ...basic, name: text })}
-                                        editable={editing}
-                                        className={`pl-16 pr-6 py-6 text-2xl text-white rounded-3xl border-2 ${editing
-                                                ? 'border-orange-500/50 bg-gray-900/70'
-                                                : 'border-gray-700/50 bg-gray-900/50'
-                                            }`}
-                                    />
-                                </View>
+                        <View>
+                            <Text className="text-gray-400 text-sm font-medium mb-4">Full Name</Text>
+                            <View className="relative mb-5">
+                                <User size={20} color="#9ca3af" style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }} />
+                                <TextInput
+                                    value={editing ? basic.name : user?.name || ''}
+                                    onChangeText={(text) => setBasic({ ...basic, name: text })}
+                                    editable={editing}
+                                    placeholder="Enter your name"
+                                    placeholderTextColor="#6b7280"
+                                    className={`pl-12 pr-5 py-4 text-white text-base rounded-xl border ${editing
+                                            ? 'border-orange-600/50 bg-gray-900/70'
+                                            : 'border-gray-700/30 bg-gray-900/50'
+                                        }`}
+                                />
                             </View>
 
-                            <View>
-                                <Text className="text-gray-400 text-lg font-semibold mb-4">@Username</Text>
-                                <View className="relative">
-                                    <Users size={24} color="#9ca3af" style={{ position: 'absolute', left: 20, top: 20, zIndex: 1 }} />
-                                    <TextInput
-                                        value={editing ? basic.username : user?.username || ''}
-                                        onChangeText={(text) => setBasic({ ...basic, username: text })}
-                                        editable={editing}
-                                        className={`pl-16 pr-6 py-6 text-2xl text-white rounded-3xl border-2 ${editing
-                                                ? 'border-orange-500/50 bg-gray-900/70'
-                                                : 'border-gray-700/50 bg-gray-900/50'
-                                            }`}
-                                    />
-                                </View>
-                                <Text className="text-sm text-gray-500 mt-2">Must be unique and at least 3 characters</Text>
+                            <Text className="text-gray-400 text-sm font-medium mb-4">@Username</Text>
+                            <View className="relative">
+                                <Users size={20} color="#9ca3af" style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }} />
+                                <TextInput
+                                    value={editing ? basic.username : user?.username || ''}
+                                    onChangeText={(text) => setBasic({ ...basic, username: text })}
+                                    editable={editing}
+                                    placeholder="Enter username"
+                                    placeholderTextColor="#6b7280"
+                                    className={`pl-12 pr-5 py-4 text-white text-base rounded-xl border ${editing
+                                            ? 'border-orange-600/50 bg-gray-900/70'
+                                            : 'border-gray-700/30 bg-gray-900/50'
+                                        }`}
+                                />
                             </View>
+                            <Text className="text-xs text-gray-500 mt-3">Must be unique and at least 3 characters</Text>
                         </View>
                     </View>
 
                     {/* Security */}
-                    <View className="bg-gray-800/50 rounded-3xl p-8 mb-8 border border-gray-700/50 backdrop-blur-sm">
-                        <Text className="text-2xl font-bold text-white mb-6">Security</Text>
+                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                        <Text className="text-xl font-bold text-white mb-5">Security</Text>
 
-                        <View className="space-y-6">
-                            <View>
-                                <Text className="text-gray-400 text-lg font-semibold mb-4">Current Password</Text>
-                                <View className="relative">
-                                    <Lock size={24} color="#9ca3af" style={{ position: 'absolute', left: 20, top: 20, zIndex: 1 }} />
-                                    <TextInput
-                                        value={pwd.current}
-                                        onChangeText={(text) => setPwd({ ...pwd, current: text })}
-                                        secureTextEntry={!pwd.showCurrent}
-                                        className="pl-16 pr-16 py-6 text-xl text-white bg-gray-900/70 border-2 border-gray-700 rounded-3xl"
-                                    />
-                                    <TouchableOpacity
-                                        onPress={() => setPwd({ ...pwd, showCurrent: !pwd.showCurrent })}
-                                        style={{ position: 'absolute', right: 20, top: 20, zIndex: 1 }}
-                                    >
-                                        {pwd.showCurrent ? (
-                                            <EyeOff size={24} color="#9ca3af" />
-                                        ) : (
-                                            <Eye size={24} color="#9ca3af" />
-                                        )}
-                                    </TouchableOpacity>
-                                </View>
+                        <View>
+                            <Text className="text-gray-400 text-sm font-medium mb-4">Current Password</Text>
+                            <View className="relative mb-5">
+                                <Lock size={20} color="#9ca3af" style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }} />
+                                <TextInput
+                                    value={pwd.current}
+                                    onChangeText={(text) => setPwd({ ...pwd, current: text })}
+                                    secureTextEntry={!pwd.showCurrent}
+                                    placeholder="Enter current password"
+                                    placeholderTextColor="#6b7280"
+                                    className="pl-12 pr-12 py-4 text-white text-base bg-gray-900/70 border border-gray-700/30 rounded-xl"
+                                />
+                                <TouchableOpacity
+                                    onPress={() => setPwd({ ...pwd, showCurrent: !pwd.showCurrent })}
+                                    className="absolute right-5 top-5"
+                                >
+                                    {pwd.showCurrent ? (
+                                        <EyeOff size={20} color="#9ca3af" />
+                                    ) : (
+                                        <Eye size={20} color="#9ca3af" />
+                                    )}
+                                </TouchableOpacity>
                             </View>
 
-                            <View>
-                                <Text className="text-gray-400 text-lg font-semibold mb-4">New Password</Text>
-                                <View className="relative">
-                                    <Lock size={24} color="#9ca3af" style={{ position: 'absolute', left: 20, top: 20, zIndex: 1 }} />
-                                    <TextInput
-                                        value={pwd.next}
-                                        onChangeText={(text) => setPwd({ ...pwd, next: text })}
-                                        secureTextEntry={!pwd.showNext}
-                                        className="pl-16 pr-16 py-6 text-xl text-white bg-gray-900/70 border-2 border-gray-700 rounded-3xl"
-                                    />
-                                    <TouchableOpacity
-                                        onPress={() => setPwd({ ...pwd, showNext: !pwd.showNext })}
-                                        style={{ position: 'absolute', right: 20, top: 20, zIndex: 1 }}
-                                    >
-                                        {pwd.showNext ? (
-                                            <EyeOff size={24} color="#9ca3af" />
-                                        ) : (
-                                            <Eye size={24} color="#9ca3af" />
-                                        )}
-                                    </TouchableOpacity>
-                                </View>
-                                <Text className="text-sm text-gray-500 mt-2">Minimum 8 characters</Text>
+                            <Text className="text-gray-400 text-sm font-medium mb-4">New Password</Text>
+                            <View className="relative mb-5">
+                                <Lock size={20} color="#9ca3af" style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }} />
+                                <TextInput
+                                    value={pwd.next}
+                                    onChangeText={(text) => setPwd({ ...pwd, next: text })}
+                                    secureTextEntry={!pwd.showNext}
+                                    placeholder="Enter new password (min 8 chars)"
+                                    placeholderTextColor="#6b7280"
+                                    className="pl-12 pr-12 py-4 text-white text-base bg-gray-900/70 border border-gray-700/30 rounded-xl"
+                                />
+                                <TouchableOpacity
+                                    onPress={() => setPwd({ ...pwd, showNext: !pwd.showNext })}
+                                    className="absolute right-5 top-5"
+                                >
+                                    {pwd.showNext ? (
+                                        <EyeOff size={20} color="#9ca3af" />
+                                    ) : (
+                                        <Eye size={20} color="#9ca3af" />
+                                    )}
+                                </TouchableOpacity>
                             </View>
 
-                            <View>
-                                <Text className="text-gray-400 text-lg font-semibold mb-4">Confirm Password</Text>
-                                <View className="relative">
-                                    <Lock size={24} color="#9ca3af" style={{ position: 'absolute', left: 20, top: 20, zIndex: 1 }} />
-                                    <TextInput
-                                        value={pwd.confirm}
-                                        onChangeText={(text) => setPwd({ ...pwd, confirm: text })}
-                                        secureTextEntry={!pwd.showConfirm}
-                                        className="pl-16 pr-16 py-6 text-xl text-white bg-gray-900/70 border-2 border-gray-700 rounded-3xl"
-                                    />
-                                    <TouchableOpacity
-                                        onPress={() => setPwd({ ...pwd, showConfirm: !pwd.showConfirm })}
-                                        style={{ position: 'absolute', right: 20, top: 20, zIndex: 1 }}
-                                    >
-                                        {pwd.showConfirm ? (
-                                            <EyeOff size={24} color="#9ca3af" />
-                                        ) : (
-                                            <Eye size={24} color="#9ca3af" />
-                                        )}
-                                    </TouchableOpacity>
-                                </View>
+                            <Text className="text-gray-400 text-sm font-medium mb-4">Confirm Password</Text>
+                            <View className="relative mb-5">
+                                <Lock size={20} color="#9ca3af" style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }} />
+                                <TextInput
+                                    value={pwd.confirm}
+                                    onChangeText={(text) => setPwd({ ...pwd, confirm: text })}
+                                    secureTextEntry={!pwd.showConfirm}
+                                    placeholder="Confirm new password"
+                                    placeholderTextColor="#6b7280"
+                                    className="pl-12 pr-12 py-4 text-white text-base bg-gray-900/70 border border-gray-700/30 rounded-xl"
+                                />
+                                <TouchableOpacity
+                                    onPress={() => setPwd({ ...pwd, showConfirm: !pwd.showConfirm })}
+                                    className="absolute right-5 top-5"
+                                >
+                                    {pwd.showConfirm ? (
+                                        <EyeOff size={20} color="#9ca3af" />
+                                    ) : (
+                                        <Eye size={20} color="#9ca3af" />
+                                    )}
+                                </TouchableOpacity>
                             </View>
 
                             <TouchableOpacity
                                 onPress={changePassword}
                                 disabled={changingPassword}
-                                className={`rounded-3xl py-6 items-center ${changingPassword
+                                className={`w-full py-5 rounded-xl flex-row items-center justify-center ${changingPassword
                                         ? 'bg-gray-700/50'
-                                        : 'bg-gradient-to-r from-orange-600 to-orange-500 shadow-2xl shadow-orange-500/40'
+                                        : 'bg-orange-600 active:bg-orange-700'
                                     }`}
+                                activeOpacity={0.9}
                             >
                                 {changingPassword ? (
-                                    <View className="flex-row items-center gap-3">
-                                        <ActivityIndicator color="white" />
-                                        <Text className="text-white font-bold text-xl">Updating...</Text>
-                                    </View>
+                                    <>
+                                        <ActivityIndicator size="small" color="#ffffff" />
+                                        <Text className="text-white font-bold text-lg ml-3">Updating...</Text>
+                                    </>
                                 ) : (
-                                    <View className="flex-row items-center gap-3">
-                                        <RefreshCw size={24} color="white" />
-                                        <Text className="text-white font-bold text-xl">Update Password</Text>
-                                    </View>
+                                    <>
+                                        <RefreshCw size={20} color="#ffffff" />
+                                        <Text className="text-white font-bold text-lg ml-3">Update Password</Text>
+                                    </>
                                 )}
                             </TouchableOpacity>
                         </View>
                     </View>
 
                     {/* Account Info */}
-                    <View className="bg-gray-800/50 rounded-3xl p-8 border border-gray-700/50 backdrop-blur-sm">
-                        <Text className="text-2xl font-bold text-white mb-6">Account Info</Text>
-                        <View className="space-y-6">
-                            <View className="flex-row justify-between py-4 border-b border-gray-700 pb-4">
-                                <Text className="text-gray-400 text-lg">Email</Text>
-                                <Text className="text-xl font-bold text-white">{user?.email}</Text>
+                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6">
+                        <Text className="text-xl font-bold text-white mb-5">Account Info</Text>
+                        <View>
+                            <View className="flex-row items-center justify-between py-5 border-b border-gray-700/30 mb-5">
+                                <View className="flex-row items-center">
+                                    <Mail size={20} color="#9ca3af" />
+                                    <Text className="text-gray-400 text-sm font-medium ml-4">Email</Text>
+                                </View>
+                                <Text className="text-lg font-semibold text-white">{user?.email}</Text>
                             </View>
-                            <View className="flex-row justify-between py-4 border-b border-gray-700 pb-4">
-                                <Text className="text-gray-400 text-lg">Member Since</Text>
-                                <Text className="text-xl font-bold text-white">
+                            <View className="flex-row items-center justify-between py-5 border-b border-gray-700/30 mb-5">
+                                <View className="flex-row items-center">
+                                    <Calendar size={20} color="#9ca3af" />
+                                    <Text className="text-gray-400 text-sm font-medium ml-4">Member Since</Text>
+                                </View>
+                                <Text className="text-lg font-semibold text-white">
                                     {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                                 </Text>
                             </View>
-                            <View className="flex-row justify-between py-4">
-                                <Text className="text-gray-400 text-lg">Status</Text>
-                                <View className={`px-6 py-3 rounded-2xl ${user?.status === 'active'
+                            <View className="flex-row items-center justify-between">
+                                <View className="flex-row items-center">
+                                    <ShieldCheck size={20} color="#9ca3af" />
+                                    <Text className="text-gray-400 text-sm font-medium ml-4">Status</Text>
+                                </View>
+                                <View className={`px-5 py-3 rounded-xl ${user?.status === 'active'
                                         ? 'bg-green-500/20 border border-green-500/40'
                                         : 'bg-gray-700/50 border border-gray-600'
                                     }`}>
-                                    <Text className={`font-bold ${user?.status === 'active' ? 'text-green-400' : 'text-gray-400'
+                                    <Text className={`font-semibold ${user?.status === 'active' ? 'text-green-400' : 'text-gray-400'
                                         }`}>
                                         {user?.status?.charAt(0).toUpperCase() + user?.status?.slice(1) || 'Active'}
                                     </Text>

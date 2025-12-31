@@ -216,14 +216,14 @@ const PlaceOrder = () => {
             <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-4">
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    className="flex-row items-center gap-3 mb-2"
+                    className="flex-row items-center mb-3 p-3 bg-gray-800/30 rounded-xl"
                 >
                     <ArrowLeft size={24} color="#ea580c" />
-                    <Text className="text-white font-semibold text-lg">Back</Text>
+                    <Text className="text-white font-semibold text-lg ml-3">Back</Text>
                 </TouchableOpacity>
-                <View className="flex-row items-center gap-3">
+                <View className="flex-row items-center mb-1">
                     <ShoppingBag size={28} color="#ea580c" />
-                    <Text className="text-2xl font-bold text-white">Checkout</Text>
+                    <Text className="text-2xl font-bold text-white ml-3">Checkout</Text>
                 </View>
                 <Text className="text-gray-400 text-sm">Review and place your order</Text>
             </View>
@@ -232,20 +232,24 @@ const PlaceOrder = () => {
                 <View className="px-4 py-6 pb-24">
                     {/* Alerts */}
                     {error && (
-                        <View className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start gap-3">
-                            <AlertCircle size={20} color="#ef4444" />
-                            <Text className="text-red-400 text-sm flex-1">{error}</Text>
-                            <TouchableOpacity onPress={() => setError("")}>
+                        <View className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start">
+                            <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
+                            <View className="flex-1">
+                                <Text className="text-red-400 text-sm font-medium">{error}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setError("")} className="p-2">
                                 <X size={20} color="#ef4444" />
                             </TouchableOpacity>
                         </View>
                     )}
 
                     {success && (
-                        <View className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-xl flex-row items-start gap-3">
-                            <CheckCircle size={20} color="#22c55e" />
-                            <Text className="text-green-400 text-sm flex-1">{success}</Text>
-                            <TouchableOpacity onPress={() => setSuccess("")}>
+                        <View className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-xl flex-row items-start">
+                            <CheckCircle size={20} color="#22c55e" style={{ marginRight: 12 }} />
+                            <View className="flex-1">
+                                <Text className="text-green-400 text-sm font-medium">{success}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setSuccess("")} className="p-2">
                                 <X size={20} color="#22c55e" />
                             </TouchableOpacity>
                         </View>
@@ -258,7 +262,7 @@ const PlaceOrder = () => {
                             <Text className="text-xl font-semibold text-white mt-4 mb-2 text-center">
                                 No product selected
                             </Text>
-                            <Text className="text-gray-400 text-center mb-8">
+                            <Text className="text-gray-400 text-center mb-8 px-8">
                                 Please select a product to continue
                             </Text>
                             <TouchableOpacity
@@ -269,309 +273,316 @@ const PlaceOrder = () => {
                             </TouchableOpacity>
                         </View>
                     ) : (
-                        <View className="flex-col lg:flex-row gap-6">
-                            {/* Order Item & Address */}
-                            <View className="flex-1">
-                                {/* Order Item */}
-                                <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl overflow-hidden mb-6">
-                                    <View className="bg-gradient-to-r from-orange-600/20 to-orange-500/20 p-4 border-b border-orange-600/30">
-                                        <Text className="text-lg font-bold text-white flex-row items-center gap-2">
-                                            <Package size={20} color="#ea580c" />
-                                            Order Item
-                                        </Text>
+                        <>
+                            {/* Order Item */}
+                            <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl mb-6 overflow-hidden">
+                                <View className="p-4 bg-orange-600/20 border-b border-orange-600/30">
+                                    <View className="flex-row items-center">
+                                        <Package size={20} color="#ea580c" />
+                                        <Text className="text-lg font-bold text-white ml-2">Order Item</Text>
                                     </View>
-
-                                    <View className="p-4">
-                                        <View className="flex-row items-center gap-4 bg-gray-800/50 rounded-xl p-4">
-                                            <Image
-                                                source={{ uri: orderItem.image || "https://via.placeholder.com/80" }}
-                                                style={{ width: 80, height: 80 }}
-                                                className="rounded-lg"
-                                            />
-                                            <View className="flex-1">
-                                                <Text className="text-white font-semibold" numberOfLines={2}>
-                                                    {orderItem.name}
+                                </View>
+                                <View className="p-5">
+                                    <View className="flex-row items-center bg-gray-800/50 rounded-xl p-4">
+                                        <Image
+                                            source={{ uri: orderItem.image || "https://via.placeholder.com/80" }}
+                                            style={{ width: 80, height: 80, borderRadius: 12 }}
+                                        />
+                                        <View className="flex-1 ml-4">
+                                            <Text className="text-white font-semibold mb-2" numberOfLines={2}>
+                                                {orderItem.name}
+                                            </Text>
+                                            <Text className="text-gray-400 text-sm mb-1">
+                                                Quantity: {orderItem.quantity}
+                                            </Text>
+                                            {orderItem.size && (
+                                                <Text className="text-gray-400 text-sm mb-3">
+                                                    Size: {orderItem.size}
                                                 </Text>
-                                                <Text className="text-gray-400 text-sm mt-1">
-                                                    Quantity: {orderItem.quantity}
-                                                </Text>
-                                                {orderItem.size && (
-                                                    <Text className="text-gray-400 text-sm">
-                                                        Size: {orderItem.size}
-                                                    </Text>
-                                                )}
-                                            </View>
-                                            <View className="items-end">
-                                                <Text className="text-white font-bold text-lg">
-                                                    ${(orderItem.price * orderItem.quantity).toFixed(2)}
-                                                </Text>
-                                                <Text className="text-gray-400 text-xs">
-                                                    ${orderItem.price} each
-                                                </Text>
-                                            </View>
+                                            )}
+                                        </View>
+                                        <View className="items-end">
+                                            <Text className="text-white font-bold text-xl">
+                                                ${(orderItem.price * orderItem.quantity).toFixed(2)}
+                                            </Text>
+                                            <Text className="text-gray-400 text-xs mt-1">
+                                                ${orderItem.price} each
+                                            </Text>
                                         </View>
                                     </View>
                                 </View>
+                            </View>
 
-                                {/* Delivery Address */}
-                                <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl overflow-hidden">
-                                    <View className="p-4 bg-gradient-to-r from-orange-600/20 to-orange-500/20 border-b border-orange-600/30 flex-row items-center justify-between">
-                                        <Text className="text-lg font-bold text-white flex-row items-center gap-2">
-                                            <MapPin size={20} color="#ea580c" />
-                                            Delivery Address
-                                        </Text>
-                                        <TouchableOpacity
-                                            onPress={() => setShowAddressForm(!showAddressForm)}
-                                            className="flex-row items-center gap-2 bg-orange-600 px-4 py-2 rounded-xl"
-                                        >
-                                            <Plus size={16} color="#ffffff" />
-                                            <Text className="text-white text-sm font-semibold">Add New</Text>
-                                        </TouchableOpacity>
+                            {/* Delivery Address */}
+                            <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl mb-6 overflow-hidden">
+                                <View className="p-4 bg-orange-600/20 border-b border-orange-600/30 flex-row items-center justify-between">
+                                    <View className="flex-row items-center">
+                                        <MapPin size={20} color="#ea580c" />
+                                        <Text className="text-lg font-bold text-white ml-2">Delivery Address</Text>
                                     </View>
+                                    <TouchableOpacity
+                                        onPress={() => setShowAddressForm(true)}
+                                        className="flex-row items-center bg-orange-600 px-4 py-2 rounded-xl text-nowrap"
+                                    >
+                                        <Plus size={16} color="#ffffff" />
+                                        <Text className="text-white text-sm font-semibold ml-1 text-nowrap">Add New</Text>
+                                    </TouchableOpacity>
+                                </View>
 
-                                    <View className="p-4">
-                                        {/* Add Address Form (Modal) */}
-                                        <Modal visible={showAddressForm} animationType="slide" transparent>
-                                            <View className="flex-1 bg-black/50 justify-end p-4">
-                                                <View className="bg-gray-900 rounded-2xl p-6">
-                                                    <View className="flex-row items-center justify-between mb-6">
-                                                        <Text className="text-2xl font-bold text-white">New Address</Text>
-                                                        <TouchableOpacity onPress={() => setShowAddressForm(false)}>
-                                                            <X size={24} color="#9ca3af" />
+                                <View className="p-5">
+                                    {/* Saved Addresses */}
+                                    {addresses.length === 0 ? (
+                                        <Text className="text-center text-gray-400 py-12 text-sm">
+                                            No saved addresses. Add one above.
+                                        </Text>
+                                    ) : (
+                                        <View>
+                                            {addresses.map((address) => (
+                                                <TouchableOpacity
+                                                    key={address._id}
+                                                    onPress={() => setSelectedAddress(address._id)}
+                                                    className={`p-4 border-2 rounded-xl mb-3 ${selectedAddress === address._id
+                                                        ? "border-orange-600 bg-orange-500/10"
+                                                        : "border-gray-700/50 bg-gray-800/30"
+                                                        }`}
+                                                >
+                                                    <View className="flex-row items-start justify-between">
+                                                        <View className="flex-1">
+                                                            <Text className="text-white font-semibold mb-2">
+                                                                {address.firstName} {address.lastName}
+                                                            </Text>
+                                                            <Text className="text-gray-400 text-sm mb-1">
+                                                                {address.street}
+                                                            </Text>
+                                                            <Text className="text-gray-400 text-sm mb-1">
+                                                                {address.city}, {address.state} - {address.zipcode}
+                                                            </Text>
+                                                            <Text className="text-gray-400 text-sm mb-2">
+                                                                {address.country}
+                                                            </Text>
+                                                            <Text className="text-gray-400 text-xs mb-1">
+                                                                Phone: {address.phone}
+                                                            </Text>
+                                                            <Text className="text-gray-400 text-xs">
+                                                                Email: {address.email}
+                                                            </Text>
+                                                        </View>
+                                                        <TouchableOpacity
+                                                            onPress={() => handleDeleteAddress(address._id)}
+                                                            className="w-10 h-10 bg-red-500/20 rounded-xl items-center justify-center ml-4"
+                                                        >
+                                                            <Trash2 size={18} color="#ef4444" />
                                                         </TouchableOpacity>
                                                     </View>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    )}
+                                </View>
+                            </View>
 
-                                                    <View className="space-y-3">
-                                                        <View className="flex-row gap-3">
-                                                            <TextInput
-                                                                placeholder="First Name"
-                                                                value={addressForm.firstName}
-                                                                onChangeText={(text) => setAddressForm(prev => ({ ...prev, firstName: text }))}
-                                                                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
-                                                            />
-                                                            <TextInput
-                                                                placeholder="Last Name"
-                                                                value={addressForm.lastName}
-                                                                onChangeText={(text) => setAddressForm(prev => ({ ...prev, lastName: text }))}
-                                                                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
-                                                            />
-                                                        </View>
+                            {/* Order Summary - Sticky */}
+                            <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl overflow-hidden">
+                                <View className="p-4 bg-orange-600/20 border-b border-orange-600/30">
+                                    <View className="flex-row items-center">
+                                        <DollarSign size={20} color="#ea580c" />
+                                        <Text className="text-lg font-bold text-white ml-2">Order Summary</Text>
+                                    </View>
+                                </View>
 
-                                                        <TextInput
-                                                            placeholder="Email"
-                                                            value={addressForm.email}
-                                                            onChangeText={(text) => setAddressForm(prev => ({ ...prev, email: text }))}
-                                                            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
-                                                            keyboardType="email-address"
-                                                        />
-
-                                                        <TextInput
-                                                            placeholder="Street Address"
-                                                            value={addressForm.street}
-                                                            onChangeText={(text) => setAddressForm(prev => ({ ...prev, street: text }))}
-                                                            className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
-                                                        />
-
-                                                        <View className="flex-row gap-3">
-                                                            <TextInput
-                                                                placeholder="City"
-                                                                value={addressForm.city}
-                                                                onChangeText={(text) => setAddressForm(prev => ({ ...prev, city: text }))}
-                                                                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
-                                                            />
-                                                            <TextInput
-                                                                placeholder="State"
-                                                                value={addressForm.state}
-                                                                onChangeText={(text) => setAddressForm(prev => ({ ...prev, state: text }))}
-                                                                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
-                                                            />
-                                                        </View>
-
-                                                        <View className="flex-row gap-3">
-                                                            <TextInput
-                                                                placeholder="Zipcode"
-                                                                value={addressForm.zipcode}
-                                                                onChangeText={(text) => setAddressForm(prev => ({ ...prev, zipcode: text }))}
-                                                                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
-                                                                keyboardType="numeric"
-                                                            />
-                                                            <TextInput
-                                                                placeholder="Phone"
-                                                                value={addressForm.phone}
-                                                                onChangeText={(text) => setAddressForm(prev => ({ ...prev, phone: text }))}
-                                                                className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
-                                                                keyboardType="phone-pad"
-                                                            />
-                                                        </View>
-
-                                                        <View className="flex-row gap-3 pt-3">
-                                                            <TouchableOpacity
-                                                                onPress={handleAddAddress}
-                                                                className="flex-1 bg-orange-600 py-4 rounded-xl items-center"
-                                                            >
-                                                                <Text className="text-white font-semibold text-sm">Save Address</Text>
-                                                            </TouchableOpacity>
-                                                            <TouchableOpacity
-                                                                onPress={() => setShowAddressForm(false)}
-                                                                className="flex-1 border border-gray-700 py-4 rounded-xl items-center"
-                                                            >
-                                                                <Text className="text-gray-400 font-semibold text-sm">Cancel</Text>
-                                                            </TouchableOpacity>
-                                                        </View>
-                                                    </View>
-                                                </View>
-                                            </View>
-                                        </Modal>
-
-                                        {/* Saved Addresses */}
-                                        {addresses.length === 0 ? (
-                                            <Text className="text-center text-gray-400 py-8 text-sm">
-                                                No saved addresses. Add one above.
+                                <View className="p-6">
+                                    {/* Price Breakdown */}
+                                    <View>
+                                        <View className="flex-row justify-between mb-3">
+                                            <Text className="text-gray-400 text-sm">Subtotal</Text>
+                                            <Text className="text-white font-semibold text-base">
+                                                ${total.toFixed(2)}
                                             </Text>
-                                        ) : (
-                                            <View className="space-y-3">
-                                                {addresses.map((address) => (
-                                                    <TouchableOpacity
-                                                        key={address._id}
-                                                        onPress={() => setSelectedAddress(address._id)}
-                                                        className={`p-4 border-2 rounded-xl ${selectedAddress === address._id
-                                                                ? "border-orange-600 bg-orange-500/10"
-                                                                : "border-gray-700/50 bg-gray-800/30"
-                                                            }`}
-                                                    >
-                                                        <View className="flex-row items-start justify-between">
-                                                            <View className="flex-1">
-                                                                <Text className="text-white font-semibold mb-1">
-                                                                    {address.firstName} {address.lastName}
-                                                                </Text>
-                                                                <Text className="text-gray-400 text-sm mb-1">
-                                                                    {address.street}
-                                                                </Text>
-                                                                <Text className="text-gray-400 text-sm mb-1">
-                                                                    {address.city}, {address.state} - {address.zipcode}
-                                                                </Text>
-                                                                <Text className="text-gray-400 text-sm mb-2">
-                                                                    {address.country}
-                                                                </Text>
-                                                                <Text className="text-gray-400 text-xs">
-                                                                    Phone: {address.phone}
-                                                                </Text>
-                                                                <Text className="text-gray-400 text-xs">
-                                                                    Email: {address.email}
-                                                                </Text>
-                                                            </View>
-                                                            <TouchableOpacity
-                                                                onPress={() => handleDeleteAddress(address._id)}
-                                                                className="w-10 h-10 bg-red-500/20 rounded-xl items-center justify-center ml-4"
-                                                            >
-                                                                <Trash2 size={18} color="#ef4444" />
-                                                            </TouchableOpacity>
-                                                        </View>
-                                                    </TouchableOpacity>
-                                                ))}
+                                        </View>
+                                        <View className="flex-row justify-between mb-3">
+                                            <Text className="text-gray-400 text-sm">Delivery</Text>
+                                            <Text className="text-green-400 font-semibold text-base">FREE</Text>
+                                        </View>
+                                        <View className="flex-row justify-between mb-4">
+                                            <Text className="text-gray-400 text-sm">Tax</Text>
+                                            <Text className="text-white font-semibold text-base">$0.00</Text>
+                                        </View>
+                                        <View className="pt-4 border-t border-gray-700 flex-row justify-between items-center mb-6">
+                                            <Text className="text-xl font-bold text-white">Total</Text>
+                                            <Text className="text-2xl font-bold text-orange-500">
+                                                ${total.toFixed(2)}
+                                            </Text>
+                                        </View>
+                                    </View>
+
+                                    {/* Wallet Balance */}
+                                    <View className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl mb-6">
+                                        <View className="flex-row items-center mb-3">
+                                            <View className="w-12 h-12 bg-blue-500/20 rounded-xl items-center justify-center mr-4">
+                                                <Wallet size={20} color="#3b82f6" />
                                             </View>
+                                            <View>
+                                                <Text className="text-sm font-medium text-blue-400 mb-1">
+                                                    Wallet Balance
+                                                </Text>
+                                                <Text className="text-xl font-bold text-blue-300">
+                                                    ${walletBalance.toFixed(2)}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        {walletBalance < total && (
+                                            <Text className="text-xs text-red-400 font-medium">
+                                                Insufficient balance. Please add funds.
+                                            </Text>
                                         )}
                                     </View>
+
+                                    {/* Place Order Button */}
+                                    <TouchableOpacity
+                                        onPress={handlePlaceOrder}
+                                        disabled={
+                                            placingOrder ||
+                                            !selectedAddress ||
+                                            !orderItem ||
+                                            walletBalance < total
+                                        }
+                                        className={`w-full py-5 rounded-2xl flex-row items-center justify-center mb-4 ${placingOrder ||
+                                            !selectedAddress ||
+                                            !orderItem ||
+                                            walletBalance < total
+                                            ? "bg-gray-700"
+                                            : "bg-orange-600"
+                                            }`}
+                                    >
+                                        {placingOrder ? (
+                                            <>
+                                                <ActivityIndicator size="small" color="#ffffff" />
+                                                <Text className="text-white font-bold text-lg ml-2">Placing Order...</Text>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle size={24} color="#ffffff" />
+                                                <Text className="text-white font-bold text-lg ml-2">Place Order</Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+
+                                    <Text className="text-xs text-center text-gray-500">
+                                        By placing this order, you agree to our terms and conditions
+                                    </Text>
                                 </View>
                             </View>
-
-                            {/* Order Summary */}
-                            <View className="flex-1 min-h-[300px]">
-                                <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl overflow-hidden sticky top-24">
-                                    <View className="bg-gradient-to-r from-orange-600/20 to-orange-500/20 p-4 border-b border-orange-600/30">
-                                        <Text className="text-lg font-bold text-white flex-row items-center gap-2">
-                                            <DollarSign size={20} color="#ea580c" />
-                                            Order Summary
-                                        </Text>
-                                    </View>
-
-                                    <View className="p-6 space-y-4">
-                                        {/* Price Breakdown */}
-                                        <View className="space-y-3">
-                                            <View className="flex-row justify-between">
-                                                <Text className="text-gray-400">Subtotal</Text>
-                                                <Text className="text-white font-semibold">
-                                                    ${total.toFixed(2)}
-                                                </Text>
-                                            </View>
-                                            <View className="flex-row justify-between">
-                                                <Text className="text-gray-400">Delivery</Text>
-                                                <Text className="text-green-400 font-semibold">FREE</Text>
-                                            </View>
-                                            <View className="flex-row justify-between">
-                                                <Text className="text-gray-400">Tax</Text>
-                                                <Text className="text-white font-semibold">$0.00</Text>
-                                            </View>
-                                            <View className="pt-3 border-t border-gray-700 flex-row justify-between items-center">
-                                                <Text className="text-xl font-bold text-white">Total</Text>
-                                                <Text className="text-2xl font-bold text-orange-500">
-                                                    ${total.toFixed(2)}
-                                                </Text>
-                                            </View>
-                                        </View>
-
-                                        {/* Wallet Balance */}
-                                        <View className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                                            <View className="flex-row items-center gap-3 mb-2">
-                                                <View className="w-12 h-12 bg-blue-500/20 rounded-xl items-center justify-center">
-                                                    <Wallet size={20} color="#3b82f6" />
-                                                </View>
-                                                <View>
-                                                    <Text className="text-sm font-medium text-blue-400">
-                                                        Wallet Balance
-                                                    </Text>
-                                                    <Text className="text-xl font-bold text-blue-300">
-                                                        ${walletBalance.toFixed(2)}
-                                                    </Text>
-                                                </View>
-                                            </View>
-                                            {walletBalance < total && (
-                                                <Text className="text-xs text-red-400 mt-2">
-                                                    Insufficient balance. Please add funds.
-                                                </Text>
-                                            )}
-                                        </View>
-
-                                        {/* Place Order Button */}
-                                        <TouchableOpacity
-                                            onPress={handlePlaceOrder}
-                                            disabled={
-                                                placingOrder ||
-                                                !selectedAddress ||
-                                                !orderItem ||
-                                                walletBalance < total
-                                            }
-                                            className={`w-full py-5 rounded-2xl flex-row items-center justify-center gap-3 shadow-lg ${placingOrder ||
-                                                    !selectedAddress ||
-                                                    !orderItem ||
-                                                    walletBalance < total
-                                                    ? "bg-gray-700"
-                                                    : "bg-gradient-to-r from-orange-600 to-orange-500"
-                                                }`}
-                                        >
-                                            {placingOrder ? (
-                                                <>
-                                                    <ActivityIndicator size="small" color="#ffffff" />
-                                                    <Text className="text-white font-bold text-lg">Placing Order...</Text>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <CheckCircle size={24} color="#ffffff" />
-                                                    <Text className="text-white font-bold text-lg">Place Order</Text>
-                                                </>
-                                            )}
-                                        </TouchableOpacity>
-
-                                        <Text className="text-xs text-center text-gray-500">
-                                            By placing this order, you agree to our terms and conditions
-                                        </Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
+                        </>
                     )}
                 </View>
             </ScrollView>
+
+            {/* Address Form Modal */}
+            <Modal visible={showAddressForm} animationType="slide" transparent>
+                <View className="flex-1 bg-black/50 justify-end p-4">
+                    <View className="bg-gray-900 rounded-2xl p-6 w-full">
+                        <View className="flex-row items-center justify-between mb-6">
+                            <Text className="text-2xl font-bold text-white">New Address</Text>
+                            <TouchableOpacity
+                                onPress={() => setShowAddressForm(false)}
+                                className="p-2"
+                            >
+                                <X size={24} color="#9ca3af" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false} className="mb-6">
+                            <View className="mb-4">
+                                <View className="flex-row">
+                                    <TextInput
+                                        placeholder="First Name"
+                                        value={addressForm.firstName}
+                                        onChangeText={(text) => setAddressForm(prev => ({ ...prev, firstName: text }))}
+                                        placeholderTextColor={'gray'}
+                                        className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm mr-2"
+                                    />
+                                    <TextInput
+                                        placeholder="Last Name"
+                                        value={addressForm.lastName}
+                                        onChangeText={(text) => setAddressForm(prev => ({ ...prev, lastName: text }))}
+                                        placeholderTextColor={'gray'}
+                                        className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
+                                    />
+                                </View>
+                            </View>
+
+                            <TextInput
+                                placeholder="Email"
+                                value={addressForm.email}
+                                onChangeText={(text) => setAddressForm(prev => ({ ...prev, email: text }))}
+                                placeholderTextColor={'gray'}
+                                className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm mb-4"
+                                keyboardType="email-address"
+                            />
+
+                            <TextInput
+                                placeholder="Street Address"
+                                value={addressForm.street}
+                                onChangeText={(text) => setAddressForm(prev => ({ ...prev, street: text }))}
+                                placeholderTextColor={'gray'}
+                                className="bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm mb-4"
+                            />
+
+                            <View className="flex-row mb-4">
+                                <TextInput
+                                    placeholder="City"
+                                    value={addressForm.city}
+                                    onChangeText={(text) => setAddressForm(prev => ({ ...prev, city: text }))}
+                                    placeholderTextColor={'gray'}
+                                    className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm mr-2"
+                                />
+                                <TextInput
+                                    placeholder="State"
+                                    value={addressForm.state}
+                                    onChangeText={(text) => setAddressForm(prev => ({ ...prev, state: text }))}
+                                    placeholderTextColor={'gray'}
+                                    className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
+                                />
+                            </View>
+
+                            <View className="flex-row mb-6">
+                                <TextInput
+                                    placeholder="Zipcode"
+                                    value={addressForm.zipcode}
+                                    onChangeText={(text) => setAddressForm(prev => ({ ...prev, zipcode: text }))}
+                                    placeholderTextColor={'gray'}
+                                    className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm mr-2"
+                                    keyboardType="numeric"
+                                />
+                                <TextInput
+                                    placeholder="Phone"
+                                    value={addressForm.phone}
+                                    onChangeText={(text) => setAddressForm(prev => ({ ...prev, phone: text }))}
+                                    placeholderTextColor={'gray'}
+                                    className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm"
+                                    keyboardType="phone-pad"
+                                />
+                            </View>
+                        </ScrollView>
+
+                        <View className="flex-row">
+                            <TouchableOpacity
+                                onPress={handleAddAddress}
+                                className="flex-1 bg-orange-600 py-4 rounded-xl items-center mr-2"
+                                disabled={placingOrder}
+                            >
+                                <Text className="text-white font-semibold text-base">Save Address</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => setShowAddressForm(false)}
+                                className="flex-1 border border-gray-700 py-4 rounded-xl items-center ml-2"
+                            >
+                                <Text className="text-gray-400 font-semibold text-base">Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 };

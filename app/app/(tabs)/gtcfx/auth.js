@@ -26,7 +26,9 @@ import {
     DollarSign,
     Calendar,
     Shield,
+    ArrowLeft,
 } from "lucide-react-native";
+import { StatusBar } from 'expo-status-bar';
 
 const GTCFxAuth = () => {
     const {
@@ -40,7 +42,6 @@ const GTCFxAuth = () => {
     } = useGTCFxAuth();
     const router = useRouter();
 
-    // Login form state
     const [formData, setFormData] = useState({
         account: "",
         password: "",
@@ -132,101 +133,96 @@ const GTCFxAuth = () => {
         setFormData({ account: "", password: "" });
     };
 
-    // Loading state
     if (gtcLoading) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center p-4">
-                <View className="text-center">
-                    <View className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <Text className="text-gray-400 text-lg">Loading GTC FX...</Text>
-                </View>
+            <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center px-6">
+                <StatusBar style="light" />
+                <ActivityIndicator size="large" color="#ea580c" />
+                <Text className="text-gray-400 mt-4 font-medium text-center">Loading GTC FX...</Text>
             </SafeAreaView>
         );
     }
 
-    // Authenticated state - Show account info and logout
     if (gtcAuthenticated && gtcUser) {
         return (
             <SafeAreaView className="flex-1 bg-gray-900">
-                <ScrollView className="flex-1">
-                    <View className="mx-4 my-8">
-                        {/* Header */}
-                        <View className="text-center mb-8">
-                            <View className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-br from-orange-600 to-orange-500 rounded-2xl shadow-lg mb-6">
-                                <TrendingUp size={40} color="#ffffff" />
-                            </View>
-                            <Text className="text-3xl font-bold text-white mb-2">GTC FX Account</Text>
-                            <Text className="text-gray-400">Manage your GTC FX authentication</Text>
-                        </View>
+                <StatusBar style="light" />
+                {/* Header - nupips-team style */}
+                <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="flex-row items-center p-2 bg-gray-800/50 rounded-xl active:bg-gray-800/70"
+                        activeOpacity={0.9}
+                    >
+                        <ArrowLeft size={24} color="#ea580c" />
+                        <Text className="text-white font-semibold text-base ml-3">GTC FX Account</Text>
+                    </TouchableOpacity>
+                </View>
 
-                        {/* User Info Card */}
-                        <View className="bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-700 mb-6">
-                            {/* Profile Section */}
-                            <View className="flex flex-col items-center gap-6 mb-8 pb-8 border-b border-gray-700">
-                                <View className="w-20 h-20 bg-linear-to-br from-orange-600 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+                    <View className="py-4 pb-24">
+                        {/* Profile Card */}
+                        <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                            <View className="items-center mb-6">
+                                <View className="w-20 h-20 bg-orange-500/20 border border-orange-500/50 rounded-xl items-center justify-center mb-4">
                                     {gtcUser.avatar ? (
                                         <Image
                                             source={{ uri: gtcUser.avatar }}
-                                            style={{ width: 80, height: 80, borderRadius: 40 }}
+                                            className="w-20 h-20 rounded-2xl"
                                         />
                                     ) : (
-                                        <User size={40} color="#ffffff" />
+                                        <User size={32} color="#ea580c" />
                                     )}
                                 </View>
-                                <View className="text-center flex-1">
-                                    <Text className="text-2xl font-bold text-white mb-1">
-                                        {gtcUser.nickname || gtcUser.realname || "User"}
+                                <Text className="text-xl font-bold text-white mb-2 text-center">{gtcUser.nickname || gtcUser.realname || "User"}</Text>
+                                <Text className="text-gray-400 text-sm text-center">{gtcUser.email}</Text>
+                            </View>
+
+                            {/* Status Badges */}
+                            <View className="flex-row mb-6">
+                                <View className={`flex-1 px-4 py-2 rounded-xl text-xs font-semibold mr-3 border ${gtcUser.status === 1
+                                    ? "bg-green-500/20 border-green-500/30"
+                                    : "bg-red-500/20 border-red-500/30"
+                                    }`}>
+                                    <Shield size={16} color={gtcUser.status === 1 ? "#22c55e" : "#ef4444"} style={{ marginRight: 6 }} />
+                                    <Text className={`font-semibold ${gtcUser.status === 1 ? "text-green-400" : "text-red-400"}`}>
+                                        {gtcUser.status === 1 ? "Active" : "Inactive"}
                                     </Text>
-                                    <Text className="text-gray-400 mb-2">{gtcUser.email}</Text>
-                                    <View className="flex flex-wrap gap-2 justify-center">
-                                        <View
-                                            className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${gtcUser.status === 1
-                                                ? "bg-green-900 text-green-300"
-                                                : "bg-red-900 text-red-300"
-                                                }`}
-                                        >
-                                            <Shield size={12} color="#ffffff" />
-                                            <Text>{gtcUser.status === 1 ? "Active" : "Inactive"}</Text>
-                                        </View>
-                                        <View className="inline-flex items-center gap-1 px-3 py-1 bg-blue-900 text-blue-300 rounded-full text-xs font-semibold">
-                                            <Activity size={12} color="#ffffff" />
-                                            <Text>{gtcUser.userType === 1 ? "Agent" : "User"}</Text>
-                                        </View>
-                                    </View>
+                                </View>
+                                <View className="flex-1 px-4 py-2 bg-blue-500/20 border border-blue-500/30 rounded-xl">
+                                    <Activity size={16} color="#3b82f6" style={{ marginRight: 6 }} />
+                                    <Text className="text-blue-400 text-xs font-semibold">{gtcUser.userType === 1 ? "Agent" : "User"}</Text>
                                 </View>
                             </View>
 
-                            {/* Account Details Grid */}
-                            <View className="grid grid-cols-1 gap-4 mb-8">
-                                <View className="p-4 bg-gray-900 rounded-xl">
-                                    <View className="flex flex-row items-center gap-3 mb-2">
-                                        <View className="w-10 h-10 bg-orange-900 rounded-lg flex items-center justify-center">
-                                            <DollarSign size={20} color="#f97316" />
+                            {/* Stats Cards */}
+                            <View className="mb-6">
+                                <View className="p-5 bg-gray-900/50 border border-gray-800 rounded-xl mb-4">
+                                    <View className="flex-row items-center">
+                                        <View className="w-12 h-12 bg-orange-500/20 border border-orange-500/50 rounded-xl items-center justify-center mr-4">
+                                            <DollarSign size={20} color="#ea580c" />
                                         </View>
-                                        <View>
-                                            <Text className="text-sm text-gray-400 font-medium">Account Balance</Text>
-                                            <Text className="text-xl font-bold text-white">
+                                        <View className="flex-1">
+                                            <Text className="text-gray-400 text-xs font-medium mb-1">Account Balance</Text>
+                                            <Text className="text-3xl font-bold text-white">
                                                 ${parseFloat(gtcUser.amount || 0).toFixed(2)}
                                             </Text>
                                         </View>
                                     </View>
                                 </View>
 
-                                <View className="p-4 bg-gray-900 rounded-xl">
-                                    <View className="flex flex-row items-center gap-3 mb-2">
-                                        <View className="w-10 h-10 bg-blue-900 rounded-lg flex items-center justify-center">
+                                <View className="p-5 bg-gray-900/50 border border-gray-800 rounded-xl">
+                                    <View className="flex-row items-center">
+                                        <View className="w-12 h-12 bg-blue-500/20 border border-blue-500/50 rounded-xl items-center justify-center mr-4">
                                             <Calendar size={20} color="#3b82f6" />
                                         </View>
-                                        <View>
-                                            <Text className="text-sm text-gray-400 font-medium">Member Since</Text>
-                                            <Text className="text-xl font-bold text-white">
+                                        <View className="flex-1">
+                                            <Text className="text-gray-400 text-xs font-medium mb-1">Member Since</Text>
+                                            <Text className="text-2xl font-bold text-white">
                                                 {gtcUser.create_time
                                                     ? new Date(parseInt(gtcUser.create_time) * 1000).toLocaleDateString(
                                                         "en-US",
-                                                        {
-                                                            month: "short",
-                                                            year: "numeric",
-                                                        }
+                                                        { month: "short", year: "numeric" }
                                                     )
                                                     : "N/A"}
                                             </Text>
@@ -235,24 +231,28 @@ const GTCFxAuth = () => {
                                 </View>
                             </View>
 
-                            {/* Action Buttons */}
-                            <View className="grid grid-cols-1 gap-4">
-                                <TouchableOpacity
-                                    onPress={() => router.push("/gtcfx/dashboard")}
-                                    className="flex flex-row items-center justify-center gap-2 w-full bg-linear-to-r from-orange-600 to-orange-500 text-white py-4 px-6 rounded-xl font-semibold"
-                                >
-                                    <Text>Go to Dashboard</Text>
+                            {/* Actions */}
+                            <TouchableOpacity
+                                onPress={() => router.push("/gtcfx/dashboard")}
+                                className="w-full bg-orange-600 px-6 py-5 rounded-xl items-center mb-4 border border-orange-600/30 active:bg-orange-700"
+                                activeOpacity={0.9}
+                            >
+                                <View className="flex-row items-center">
+                                    <Text className="text-white font-bold text-xl mr-3">Go to Dashboard</Text>
                                     <ArrowRight size={20} color="#ffffff" />
-                                </TouchableOpacity>
+                                </View>
+                            </TouchableOpacity>
 
-                                <TouchableOpacity
-                                    onPress={handleLogout}
-                                    className="w-full bg-gray-700 text-red-400 border-2 border-red-700 py-4 px-6 rounded-xl font-semibold flex flex-row items-center justify-center gap-2"
-                                >
-                                    <LogOut size={20} color="#ef4444" />
-                                    <Text>Logout</Text>
-                                </TouchableOpacity>
-                            </View>
+                            <TouchableOpacity
+                                onPress={handleLogout}
+                                className="w-full bg-red-500/20 border border-red-500/30 rounded-xl px-6 py-5 items-center active:bg-red-500/30"
+                                activeOpacity={0.9}
+                            >
+                                <View className="flex-row items-center">
+                                    <LogOut size={20} color="#ef4444" style={{ marginRight: 8 }} />
+                                    <Text className="text-red-400 font-bold text-xl">Logout</Text>
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     </View>
                 </ScrollView>
@@ -260,76 +260,93 @@ const GTCFxAuth = () => {
         );
     }
 
-    // Not authenticated - Show login form
+    // Login Form
     return (
-        <SafeAreaView className="flex-1 bg-gray-900 justify-center p-4">
-            <View className="w-full mx-4">
-                {/* Header */}
-                <View className="text-center mb-8">
-                    <View className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-br from-orange-600 to-orange-500 rounded-2xl shadow-lg mb-6">
-                        <TrendingUp size={40} color="#ffffff" />
+        <SafeAreaView className="flex-1 bg-gray-900">
+            <StatusBar style="light" />
+            {/* Header - nupips-team style */}
+            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    className="flex-row items-center p-2 bg-gray-800/50 rounded-xl active:bg-gray-800/70"
+                    activeOpacity={0.9}
+                >
+                    <ArrowLeft size={24} color="#ea580c" />
+                    <Text className="text-white font-semibold text-base ml-3">GTC FX Login</Text>
+                </TouchableOpacity>
+            </View>
+
+            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+                <View className="py-4 pb-24 px-4">
+                    {/* Hero */}
+                    <View className="items-center mb-6">
+                        <View className="w-20 h-20 bg-orange-500/20 border border-orange-500/50 rounded-xl items-center justify-center mb-4">
+                            <TrendingUp size={32} color="#ea580c" />
+                        </View>
+                        <Text className="text-gray-400 text-center text-sm font-medium">Access your trading account and strategies</Text>
                     </View>
-                    <Text className="text-3xl font-bold text-white mb-2">GTC FX Login</Text>
-                    <Text className="text-gray-400">Access your trading account and strategies</Text>
-                </View>
 
-                {/* Login Form Card */}
-                <View className="bg-gray-800 rounded-2xl p-8 shadow-lg border border-gray-700">
-                    {/* Error Messages */}
-                    {submitError && (
-                        <View className="mb-6 p-4 bg-red-900 border border-red-700 rounded-xl flex flex-row items-start gap-3">
-                            <AlertCircle size={20} color="#ef4444" />
-                            <Text className="text-sm text-red-400 flex-1">{submitError}</Text>
-                        </View>
-                    )}
+                    {/* Form Card */}
+                    <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                        {submitError && (
+                            <View className="mx-4 mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start">
+                                <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
+                                <Text className="text-red-400 text-sm flex-1">{submitError}</Text>
+                            </View>
+                        )}
 
-                    {gtcError && (
-                        <View className="mb-6 p-4 bg-red-900 border border-red-700 rounded-xl flex flex-row items-start gap-3">
-                            <AlertCircle size={20} color="#ef4444" />
-                            <Text className="text-sm text-red-400 flex-1">{gtcError}</Text>
-                        </View>
-                    )}
+                        {gtcError && (
+                            <View className="mx-4 mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start">
+                                <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
+                                <Text className="text-red-400 text-sm flex-1">{gtcError}</Text>
+                            </View>
+                        )}
 
-                    <View className="space-y-5">
-                        {/* Email Field */}
-                        <View>
-                            <Text className="text-sm font-medium text-gray-400 mb-2">Email Address</Text>
+                        {/* Email */}
+                        <View className="mb-6">
+                            <Text className="text-gray-400 text-sm font-medium mb-3">Email Address</Text>
                             <View className="relative">
-                                <User size={20} color="#9ca3af" className="absolute left-4 top-1/2 -translate-y-1/2" />
+                                <User size={20} color="#9ca3af" style={{ position: 'absolute', left: 16, top: 18, zIndex: 1 }} />
                                 <TextInput
                                     value={formData.account}
                                     onChangeText={(value) => handleInputChange("account", value)}
                                     editable={!isLoading}
-                                    className={`w-full pl-12 pr-4 py-3 border rounded-xl ${errors.account ? "border-red-700 bg-red-900" : "border-gray-700 bg-gray-900"
-                                        } text-white`}
+                                    className={`w-full pl-12 pr-5 py-4 border rounded-xl text-white text-base ${errors.account
+                                        ? "border-red-500/50 bg-red-500/10"
+                                        : "border-gray-700/40 bg-gray-900/50"
+                                        }`}
                                     placeholder="Enter your email"
+                                    placeholderTextColor="#6b7280"
                                 />
                             </View>
                             {errors.account && (
-                                <View className="mt-2 flex flex-row items-center gap-1">
-                                    <AlertCircle size={16} color="#ef4444" />
-                                    <Text className="text-sm text-red-400">{errors.account}</Text>
+                                <View className="flex-row items-center mt-3">
+                                    <AlertCircle size={16} color="#ef4444" style={{ marginRight: 8 }} />
+                                    <Text className="text-red-400 text-sm">{errors.account}</Text>
                                 </View>
                             )}
                         </View>
 
-                        {/* Password Field */}
-                        <View>
-                            <Text className="text-sm font-medium text-gray-400 mb-2">Password</Text>
+                        {/* Password */}
+                        <View className="mb-6">
+                            <Text className="text-gray-400 text-sm font-medium mb-3">Password</Text>
                             <View className="relative">
-                                <Lock size={20} color="#9ca3af" className="absolute left-4 top-1/2 -translate-y-1/2" />
+                                <Lock size={20} color="#9ca3af" style={{ position: 'absolute', left: 16, top: 18, zIndex: 1 }} />
                                 <TextInput
                                     value={formData.password}
                                     onChangeText={(value) => handleInputChange("password", value)}
                                     editable={!isLoading}
                                     secureTextEntry={!showPassword}
-                                    className={`w-full pl-12 pr-12 py-3 border rounded-xl ${errors.password ? "border-red-700 bg-red-900" : "border-gray-700 bg-gray-900"
-                                        } text-white`}
+                                    className={`w-full pl-12 pr-12 py-4 border rounded-xl text-white text-base ${errors.password
+                                        ? "border-red-500/50 bg-red-500/10"
+                                        : "border-gray-700/40 bg-gray-900/50"
+                                        }`}
                                     placeholder="Enter your password"
+                                    placeholderTextColor="#6b7280"
                                 />
                                 <TouchableOpacity
                                     onPress={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
+                                    style={{ position: 'absolute', right: 16, top: 18, zIndex: 1 }}
                                     disabled={isLoading}
                                 >
                                     {showPassword ? (
@@ -340,41 +357,44 @@ const GTCFxAuth = () => {
                                 </TouchableOpacity>
                             </View>
                             {errors.password && (
-                                <View className="mt-2 flex flex-row items-center gap-1">
-                                    <AlertCircle size={16} color="#ef4444" />
-                                    <Text className="text-sm text-red-400">{errors.password}</Text>
+                                <View className="flex-row items-center mt-3">
+                                    <AlertCircle size={16} color="#ef4444" style={{ marginRight: 8 }} />
+                                    <Text className="text-red-400 text-sm">{errors.password}</Text>
                                 </View>
                             )}
                         </View>
 
-                        {/* Submit Button */}
+                        {/* Login Button */}
                         <TouchableOpacity
                             onPress={handleLogin}
                             disabled={isLoading}
-                            className="w-full bg-linear-to-r from-orange-600 to-orange-500 text-white py-4 px-6 rounded-xl font-semibold flex flex-row items-center justify-center gap-2"
+                            className="w-full bg-orange-600 px-6 py-5 rounded-xl items-center border border-orange-600/30 active:bg-orange-700 mb-6"
+                            activeOpacity={0.9}
                         >
                             {isLoading ? (
                                 <>
-                                    <ActivityIndicator size="small" color="#ffffff" />
-                                    <Text>Signing In...</Text>
+                                    <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 12 }} />
+                                    <Text className="text-white font-bold text-lg">Signing In...</Text>
                                 </>
                             ) : (
-                                <Text>Login to GTC FX</Text>
+                                <Text className="text-white font-bold text-lg">Login to GTC FX</Text>
                             )}
                         </TouchableOpacity>
+
+                        {/* Footer */}
+                        <View className="items-center">
+                            <Text className="text-gray-500 text-sm mb-4">Need help?</Text>
+                            <TouchableOpacity
+                                onPress={() => Linking.openURL("mailto:support@gtcfx.com")}
+                                className="px-6 py-3 border border-orange-600/30 rounded-xl active:bg-orange-600/10"
+                                activeOpacity={0.9}
+                            >
+                                <Text className="text-orange-400 font-semibold text-base">Contact Support</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
-
-                {/* Footer */}
-                <View className="text-center mt-6">
-                    <Text className="text-gray-400 text-sm">
-                        Need help?{" "}
-                        <TouchableOpacity onPress={() => Linking.openURL("mailto:support@gtcfx.com")}>
-                            <Text className="text-orange-500 font-medium">Contact Support</Text>
-                        </TouchableOpacity>
-                    </Text>
-                </View>
-            </View>
+            </ScrollView>
         </SafeAreaView>
     );
 };

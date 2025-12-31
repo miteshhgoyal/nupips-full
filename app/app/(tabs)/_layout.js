@@ -19,6 +19,7 @@ import {
     FileText,
     PlayCircle,
     Clock,
+    Badge,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -49,6 +50,7 @@ const TAB_CONFIG = [
     { name: 'transaction-history', label: 'History', icon: History },
     { name: 'shop', label: 'Shop', icon: ShoppingBag },
     { name: 'orders', label: 'Orders', icon: Package },
+    { name: 'broker-selection', label: 'Broker Selection', icon: Badge },
     { name: 'learn', label: 'Learn', icon: Book },
     { name: 'profile', label: 'Profile', icon: User },
 ];
@@ -136,14 +138,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                                     paddingHorizontal: 8,
                                 }}
                             >
-                                <View
-                                    style={{
-                                        backgroundColor: isFocused ? `${ACTIVE_TAB_COLOR}20` : 'transparent',
-                                        borderRadius: 16,
-                                        padding: isFocused ? 8 : 6,
-                                        margin: isFocused ? 2 : 0,
-                                    }}
-                                >
+                                <View>
                                     <Icon
                                         size={isFocused ? 26 : 22}
                                         color={isFocused ? ACTIVE_TAB_COLOR : INACTIVE_TAB_COLOR}
@@ -167,7 +162,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                     })}
                 </ScrollView>
             </View>
-        </View>
+        </View >
     );
 }
 
@@ -237,6 +232,12 @@ export default function TabsLayout() {
                         title: 'Lesson View'
                     }}
                 />
+
+                <Tabs.Screen
+                    name="broker-selection"
+                    options={{ href: null, title: 'Broker Selection' }}
+                />
+
                 <Tabs.Screen
                     name="coming-soon"
                     options={{

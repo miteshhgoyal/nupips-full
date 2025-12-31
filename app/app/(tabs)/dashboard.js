@@ -25,12 +25,14 @@ import {
     RefreshCw,
     PieChart,
     BarChart3,
+    AlertCircle,
+    X,
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 
-// Horizontal Slider Card Component
-const HorizontalCard = ({ title, value, icon, color = 'gray' }) => (
-    <View className={`bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 w-48 mr-3`}>
+// Horizontal KPI Card Component - nupips-team style
+const HorizontalCard = ({ title, value, icon, color = 'text-white' }) => (
+    <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-5 w-48 mr-4">
         <View className="flex-row items-center justify-between mb-3">
             {icon}
         </View>
@@ -39,7 +41,7 @@ const HorizontalCard = ({ title, value, icon, color = 'gray' }) => (
     </View>
 );
 
-// MiniChart Component (same as before)
+// MiniChart Component
 const MiniChart = ({ title, data, color = 'gray' }) => {
     const max = Math.max(...data.map((d) => d.value), 1);
     const colorMap = {
@@ -49,19 +51,19 @@ const MiniChart = ({ title, data, color = 'gray' }) => {
         orange: 'bg-orange-600',
     };
     return (
-        <View className="flex-1 min-w-0">
-            <Text className="text-xs text-gray-400 mb-2">{title}</Text>
-            <View className="flex-row items-end h-16">
+        <View className="flex-1 min-w-0 mr-4 last:mr-0">
+            <Text className="text-xs text-gray-400 mb-3">{title}</Text>
+            <View className="flex-row items-end h-20">
                 {data.map((d, i) => (
                     <View key={i} className="flex-1 flex-col justify-end mr-1 last:mr-0">
                         <View
-                            className={`w-full ${colorMap[color]} rounded-t`}
+                            className={`w-full ${colorMap[color]} rounded-t-xl`}
                             style={{ height: `${(d.value / max) * 100}%` }}
                         />
                     </View>
                 ))}
             </View>
-            <View className="flex-row items-center justify-between mt-1">
+            <View className="flex-row items-center justify-between mt-2">
                 <Text className="text-[10px] text-gray-400">{data[0]?.label}</Text>
                 <Text className="text-[10px] text-gray-400">{data[data.length - 1]?.label}</Text>
             </View>
@@ -96,22 +98,29 @@ const Dashboard = () => {
         return (
             <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
                 <StatusBar style="light" />
-                <ActivityIndicator size="large" color="#fff" />
-                <Text className="text-gray-400 mt-4">Loading dashboard...</Text>
+                <ActivityIndicator size="large" color="#ea580c" />
+                <Text className="text-gray-400 mt-4 font-medium">Loading dashboard...</Text>
             </SafeAreaView>
         );
     }
 
     if (error) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center p-6">
+            <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center px-6">
                 <StatusBar style="light" />
-                <Text className="text-red-500 text-center mb-4">{error}</Text>
+                <View className="mx-4 mb-6 p-5 bg-red-500/20 border border-red-500/40 rounded-xl flex-row items-start">
+                    <AlertCircle size={24} color="#ef4444" style={{ marginRight: 16 }} />
+                    <Text className="text-red-400 text-base flex-1 font-medium">{error}</Text>
+                    <TouchableOpacity onPress={load} className="p-2" activeOpacity={0.7}>
+                        <X size={24} color="#ef4444" />
+                    </TouchableOpacity>
+                </View>
                 <TouchableOpacity
                     onPress={load}
-                    className="px-6 py-3 bg-orange-600 rounded-xl text-white font-medium"
+                    className="px-8 py-4 bg-orange-600 rounded-xl active:bg-orange-700"
+                    activeOpacity={0.9}
                 >
-                    <Text>Try Again</Text>
+                    <Text className="text-white font-semibold text-lg">Try Again</Text>
                 </TouchableOpacity>
             </SafeAreaView>
         );
@@ -138,13 +147,13 @@ const Dashboard = () => {
         {
             title: 'Total Deposits',
             value: `$${(financials.totalDeposits || 0).toFixed(2)}`,
-            icon: <TrendingUp size={24} color="#ea580c" />,
+            icon: <TrendingUp size={24} color="#22c55e" />,
             color: 'text-white',
         },
         {
             title: 'Total Withdrawals',
             value: `$${(financials.totalWithdrawals || 0).toFixed(2)}`,
-            icon: <TrendingDown size={24} color="#ea580c" />,
+            icon: <TrendingDown size={24} color="#ef4444" />,
             color: 'text-white',
         },
         {
@@ -158,29 +167,36 @@ const Dashboard = () => {
     return (
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
+
+            {/* Header - nupips-team style */}
             <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
-                <Text className="text-3xl text-white">Dashboard</Text>
+                <Text className="text-3xl text-white font-light">Dashboard</Text>
             </View>
+
             <ScrollView
                 className="flex-1"
-                refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}
+                refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#ea580c" />}
+                showsVerticalScrollIndicator={false}
             >
                 <View className="py-4 pb-24">
-                    <View className="mx-4 flex-row items-center justify-between mb-8">
-                        <View>
-                            <Text className="text-2xl font-light text-white">
-                                Welcome back, {user?.name?.split(' ')[0] || 'User'}!
-                            </Text>
-                            <Text className="text-gray-400 mt-2">Here's your account overview</Text>
+                    {/* Welcome Section */}
+                    <View className="mx-4 mb-8">
+                        <View className="flex-row items-center justify-between mb-3">
+                            <View>
+                                <Text className="text-2xl font-light text-white">
+                                    Welcome back, {user?.name?.split(' ')[0] || 'User'}!
+                                </Text>
+                                <Text className="text-gray-400 text-sm mt-1">Here's your account overview</Text>
+                            </View>
+                            <TouchableOpacity onPress={load} className="w-12 h-12 bg-gray-800/50 border border-gray-700/30 rounded-xl items-center justify-center active:bg-gray-800/70" activeOpacity={0.9}>
+                                <RefreshCw size={20} color="#ea580c" />
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity onPress={load} className="p-3 rounded-xl border border-orange-600/70">
-                            <RefreshCw size={20} color="#ea580c" />
-                        </TouchableOpacity>
                     </View>
 
                     {/* Horizontal KPI Cards */}
-                    <View className="ml-4 mb-6">
-                        <Text className="text-lg font-light text-white mb-2">Key Metrics</Text>
+                    <View className="mx-4 mb-6">
+                        <Text className="text-lg font-light text-white mb-4">Key Metrics</Text>
                         <FlatList
                             horizontal
                             showsHorizontalScrollIndicator={false}
@@ -194,14 +210,15 @@ const Dashboard = () => {
                                 />
                             )}
                             keyExtractor={(item, index) => index.toString()}
+                            contentContainerStyle={{ paddingLeft: 4 }}
                         />
                     </View>
 
                     {/* Performance Charts */}
-                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
-                        <View className="flex-row items-center justify-between mb-4">
+                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                        <View className="flex-row items-center justify-between mb-5">
                             <Text className="text-xl font-light text-white">Performance Overview</Text>
-                            <BarChart3 size={20} color="#ea580c" />
+                            <BarChart3 size={24} color="#ea580c" />
                         </View>
                         <View className="flex-row">
                             <MiniChart
@@ -219,7 +236,6 @@ const Dashboard = () => {
                                 }
                                 color="orange"
                             />
-                            <View className="w-3" />
                             <MiniChart
                                 title="Withdrawals (7d)"
                                 data={
@@ -233,42 +249,40 @@ const Dashboard = () => {
                                         { label: 'Sun', value: 190 },
                                     ]
                                 }
-                                color="orange"
+                                color="green"
                             />
                         </View>
                     </View>
 
                     {/* Trading Performance */}
-                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
-                        <View className="flex-row items-center justify-between mb-5">
-                            <View className="flex-row gap-2 items-center">
-                                <Activity size={24} color="#ea580c" />
-                                <Text className="text-xl font-light text-white">Trading Performance</Text>
-                            </View>
+                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                        <View className="flex-row items-center mb-5">
+                            <Activity size={24} color="#ea580c" />
+                            <Text className="text-xl font-light text-white ml-4">Trading Performance</Text>
                         </View>
-                        <View className="flex-row">
-                            <View className="flex-1 p-4 bg-gray-900 rounded-xl border border-gray-600 mr-2">
-                                <Text className="text-xs text-gray-400 font-light mb-2">Total Trades</Text>
+                        <View className="flex-row mb-4">
+                            <View className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl p-5 mr-3">
+                                <Text className="text-xs text-gray-400 font-medium mb-2">Total Trades</Text>
                                 <Text className="text-xl font-light text-white">
                                     {tradingStats.totalTrades || 0}
                                 </Text>
                             </View>
-                            <View className="flex-1 p-4 bg-gray-900 rounded-xl border border-gray-600 ml-2">
-                                <Text className="text-xs text-gray-400 font-light mb-2">Volume (Lots)</Text>
+                            <View className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl p-5 ml-3">
+                                <Text className="text-xs text-gray-400 font-medium mb-2">Volume (Lots)</Text>
                                 <Text className="text-xl font-light text-white">
                                     {Number(tradingStats.totalVolumeLots || 0).toFixed(2)}
                                 </Text>
                             </View>
                         </View>
-                        <View className="flex-row mt-2">
-                            <View className="flex-1 p-4 bg-gray-900 rounded-xl border border-gray-600 mr-2">
-                                <Text className="text-xs text-gray-400 font-light mb-2">Total Profit</Text>
-                                <Text className="text-xl font-light text-green-500">
+                        <View className="flex-row">
+                            <View className="flex-1 bg-green-500/10 border border-green-500/30 rounded-xl p-5 mr-3">
+                                <Text className="text-xs text-gray-400 font-medium mb-2">Total Profit</Text>
+                                <Text className="text-xl font-bold text-green-400">
                                     ${(tradingStats.totalProfit || 0).toFixed(2)}
                                 </Text>
                             </View>
-                            <View className="flex-1 p-4 bg-gray-900 rounded-xl border border-gray-600 ml-2">
-                                <Text className="text-xs text-gray-400 font-light mb-2">Win Rate</Text>
+                            <View className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl p-5 ml-3">
+                                <Text className="text-xs text-gray-400 font-medium mb-2">Win Rate</Text>
                                 <Text className="text-xl font-light text-white">
                                     {Number(tradingStats.winRate || 0).toFixed(1)}%
                                 </Text>
@@ -277,37 +291,35 @@ const Dashboard = () => {
                     </View>
 
                     {/* Referral Network */}
-                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
-                        <View className="flex-row items-center justify-between mb-5">
-                            <View className="flex-row gap-2 items-center">
-                                <Activity size={24} color="#ea580c" />
-                                <Text className="text-xl font-light text-white">Referral Network</Text>
-                            </View>
+                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                        <View className="flex-row items-center mb-5">
+                            <Users size={24} color="#ea580c" />
+                            <Text className="text-xl font-light text-white ml-4">Referral Network</Text>
                         </View>
-                        <View className="flex-row">
-                            <View className="flex-1 p-4 bg-gray-900 rounded-xl border border-gray-600 mr-2">
-                                <Text className="text-xs text-gray-400 font-light mb-2">Direct Referrals</Text>
+                        <View className="flex-row mb-4">
+                            <View className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl p-5 mr-3">
+                                <Text className="text-xs text-gray-400 font-medium mb-2">Direct Referrals</Text>
                                 <Text className="text-xl font-light text-white">
                                     {referralDetails.totalDirectReferrals || 0}
                                 </Text>
                             </View>
-                            <View className="flex-1 p-4 bg-gray-900 rounded-xl border border-gray-600 ml-2">
-                                <Text className="text-xs text-gray-400 font-light mb-2">Total Downline</Text>
+                            <View className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl p-5 ml-3">
+                                <Text className="text-xs text-gray-400 font-medium mb-2">Total Downline</Text>
                                 <Text className="text-xl font-light text-white">
                                     {referralDetails.totalDownlineUsers || 0}
                                 </Text>
                             </View>
                         </View>
-                        <View className="flex-row mt-2">
-                            <View className="flex-1 p-4 bg-gray-900 rounded-xl border border-gray-600 mr-2">
-                                <Text className="text-xs text-gray-400 font-light mb-2">Total Agents</Text>
+                        <View className="flex-row">
+                            <View className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl p-5 mr-3">
+                                <Text className="text-xs text-gray-400 font-medium mb-2">Total Agents</Text>
                                 <Text className="text-xl font-light text-white">
                                     {downlineStats.totalAgents || 0}
                                 </Text>
                             </View>
-                            <View className="flex-1 p-4 bg-gray-900 rounded-xl border border-gray-600 ml-2">
-                                <Text className="text-xs text-gray-400 font-light mb-2">Cumulative Balance</Text>
-                                <Text className="text-xl font-light text-white">
+                            <View className="flex-1 bg-blue-500/10 border border-blue-500/30 rounded-xl p-5 ml-3">
+                                <Text className="text-xs text-gray-400 font-medium mb-2">Cumulative Balance</Text>
+                                <Text className="text-xl font-light text-blue-400">
                                     ${(downlineStats.cumulativeBalance || 0).toFixed(2)}
                                 </Text>
                             </View>
@@ -315,20 +327,18 @@ const Dashboard = () => {
                     </View>
 
                     {/* Pending Transactions */}
-                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
-                        <Text className="text-sm font-light text-white mb-4">Pending</Text>
-                        <View className="p-3 bg-gray-900 rounded-lg mb-3">
-                            <View className="flex-row items-center justify-between">
-                                <Text className="text-xs text-gray-400">Pending Deposits</Text>
-                                <Text className="text-sm font-light text-white">
+                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                        <Text className="text-lg font-light text-white mb-5">Pending Transactions</Text>
+                        <View className="flex-row">
+                            <View className="flex-1 bg-orange-500/10 border border-orange-500/30 rounded-xl p-5 mr-4">
+                                <Text className="text-xs text-gray-400 font-medium mb-2">Pending Deposits</Text>
+                                <Text className="text-xl font-light text-orange-400">
                                     ${(financials.pendingDeposits || 0).toFixed(2)}
                                 </Text>
                             </View>
-                        </View>
-                        <View className="p-3 bg-gray-900 rounded-lg">
-                            <View className="flex-row items-center justify-between">
-                                <Text className="text-xs text-gray-400">Pending Withdrawals</Text>
-                                <Text className="text-sm font-light text-white">
+                            <View className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl p-5 ml-4">
+                                <Text className="text-xs text-gray-400 font-medium mb-2">Pending Withdrawals</Text>
+                                <Text className="text-xl font-light text-white">
                                     ${(financials.pendingWithdrawals || 0).toFixed(2)}
                                 </Text>
                             </View>
@@ -336,34 +346,33 @@ const Dashboard = () => {
                     </View>
 
                     {/* Income Breakdown */}
-                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30 mb-6">
-                        <View className="flex-row items-center justify-between mb-4">
-                            <Text className="text-sm font-light text-white">Income Breakdown</Text>
-                            <PieChart size={16} color="#ea580c" />
+                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                        <View className="flex-row items-center justify-between mb-5">
+                            <Text className="text-lg font-light text-white">Income Breakdown</Text>
+                            <PieChart size={24} color="#ea580c" />
                         </View>
-                        <View className="p-3 bg-gray-900 rounded-lg mb-3">
-                            <View className="flex-row items-center justify-between">
-                                <Text className="text-xs text-gray-400">Rebate Income</Text>
-                                <Text className="text-sm font-light text-white">
+                        <View className="bg-gray-900/70 border border-gray-700/30 rounded-xl p-5 mb-3">
+                            <View className="flex-row items-center justify-between mb-2">
+                                <Text className="text-sm text-gray-400 font-medium">Rebate Income</Text>
+                                <Text className="text-lg font-light text-green-400">
                                     ${(financials.totalRebateIncome || 0).toFixed(2)}
                                 </Text>
                             </View>
                         </View>
-                        <View className="p-3 bg-gray-900 rounded-lg">
-                            <View className="flex-row items-center justify-between">
-                                <Text className="text-xs text-gray-400">Affiliate Income</Text>
-                                <Text className="text-sm font-light text-white">
+                        <View className="bg-gray-900/70 border border-gray-700/30 rounded-xl p-5 mb-4">
+                            <View className="flex-row items-center justify-between mb-2">
+                                <Text className="text-sm text-gray-400 font-medium">Affiliate Income</Text>
+                                <Text className="text-lg font-light text-blue-400">
                                     ${(financials.totalAffiliateIncome || 0).toFixed(2)}
                                 </Text>
                             </View>
                         </View>
-                        <View className="h-px bg-gray-900 my-2" />
-                        <View className="p-3 bg-gray-900 rounded-lg">
+                        <View className="h-px bg-gray-800 my-3" />
+                        <View className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-5">
                             <View className="flex-row items-center justify-between">
-                                <Text className="text-xs font-light text-white">Total Income</Text>
-                                <Text className="text-sm font-light text-white">
-                                    $
-                                    {Number(
+                                <Text className="text-sm font-light text-white">Total Income</Text>
+                                <Text className="text-xl font-bold text-orange-400">
+                                    ${Number(
                                         (financials.totalRebateIncome || 0) +
                                         (financials.totalAffiliateIncome || 0)
                                     ).toFixed(2)}
@@ -373,42 +382,38 @@ const Dashboard = () => {
                     </View>
 
                     {/* Recent Activity */}
-                    <View className="mx-4 bg-gray-800/40 rounded-xl p-5 border border-gray-700/30">
-                        <Text className="text-sm font-light text-white mb-4">Recent Activity</Text>
-                        <View>
-                            {recentActivity && recentActivity.length > 0 ? (
-                                recentActivity.slice(0, 5).map((activity, i) => (
-                                    <View
-                                        key={i}
-                                        className="flex-row items-center justify-between p-3 bg-gray-900 rounded-lg mb-3"
-                                    >
-                                        <View className="flex-row items-center">
-                                            <View
-                                                className={`w-9 h-9 rounded-lg flex-row items-center justify-center bg-gray-900 mr-3`}
-                                            >
-                                                {activity.type === 'deposit' ? (
-                                                    <TrendingUp size={16} color="#ea580c" />
-                                                ) : activity.type === 'withdrawal' ? (
-                                                    <TrendingDown size={16} color="#ea580c" />
-                                                ) : (
-                                                    <Users size={16} color="#ea580c" />
-                                                )}
-                                            </View>
-                                            <View>
-                                                <Text className="text-sm font-light text-white">{activity.title}</Text>
-                                                <Text className="text-xs text-gray-400">{activity.date}</Text>
-                                            </View>
+                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6">
+                        <Text className="text-lg font-light text-white mb-5">Recent Activity</Text>
+                        {recentActivity && recentActivity.length > 0 ? (
+                            recentActivity.slice(0, 5).map((activity, i) => (
+                                <View
+                                    key={i}
+                                    className="flex-row items-center justify-between p-5 bg-gray-900/70 border border-gray-700/30 rounded-xl mb-4"
+                                >
+                                    <View className="flex-row items-center">
+                                        <View className="w-12 h-12 bg-gray-800/50 border border-gray-700/30 rounded-xl items-center justify-center mr-4">
+                                            {activity.type === 'deposit' ? (
+                                                <TrendingUp size={20} color="#22c55e" />
+                                            ) : activity.type === 'withdrawal' ? (
+                                                <TrendingDown size={20} color="#ef4444" />
+                                            ) : (
+                                                <Users size={20} color="#ea580c" />
+                                            )}
                                         </View>
-                                        <Text className={`text-sm font-light text-white`}>{activity.value}</Text>
+                                        <View>
+                                            <Text className="text-base font-light text-white mb-1">{activity.title}</Text>
+                                            <Text className="text-sm text-gray-400">{activity.date}</Text>
+                                        </View>
                                     </View>
-                                ))
-                            ) : (
-                                <View className="text-center py-8">
-                                    <Calendar size={32} color="#ea580c" />
-                                    <Text className="text-xs text-gray-400">No recent activity</Text>
+                                    <Text className="text-lg font-light text-white">{activity.value}</Text>
                                 </View>
-                            )}
-                        </View>
+                            ))
+                        ) : (
+                            <View className="items-center py-12">
+                                <Calendar size={48} color="#6b7280" />
+                                <Text className="text-gray-400 mt-4 font-medium text-center">No recent activity</Text>
+                            </View>
+                        )}
                     </View>
                 </View>
             </ScrollView>
