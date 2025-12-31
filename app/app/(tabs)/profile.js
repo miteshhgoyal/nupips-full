@@ -161,16 +161,8 @@ const Profile = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            {/* Header - nupips-team style */}
             <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="flex-row items-center p-3 bg-gray-800/50 rounded-xl active:bg-gray-800/70"
-                    activeOpacity={0.9}
-                >
-                    <ArrowLeft size={24} color="#ea580c" />
-                    <Text className="text-white font-semibold text-base ml-3">Profile</Text>
-                </TouchableOpacity>
+                <Text className="text-2xl font-bold text-white">Profile</Text>
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -291,8 +283,8 @@ const Profile = () => {
                                     placeholder="Enter your name"
                                     placeholderTextColor="#6b7280"
                                     className={`pl-12 pr-5 py-4 text-white text-base rounded-xl border ${editing
-                                            ? 'border-orange-600/50 bg-gray-900/70'
-                                            : 'border-gray-700/30 bg-gray-900/50'
+                                        ? 'border-orange-600/50 bg-gray-900/70'
+                                        : 'border-gray-700/30 bg-gray-900/50'
                                         }`}
                                 />
                             </View>
@@ -307,8 +299,8 @@ const Profile = () => {
                                     placeholder="Enter username"
                                     placeholderTextColor="#6b7280"
                                     className={`pl-12 pr-5 py-4 text-white text-base rounded-xl border ${editing
-                                            ? 'border-orange-600/50 bg-gray-900/70'
-                                            : 'border-gray-700/30 bg-gray-900/50'
+                                        ? 'border-orange-600/50 bg-gray-900/70'
+                                        : 'border-gray-700/30 bg-gray-900/50'
                                         }`}
                                 />
                             </View>
@@ -394,8 +386,8 @@ const Profile = () => {
                                 onPress={changePassword}
                                 disabled={changingPassword}
                                 className={`w-full py-5 rounded-xl flex-row items-center justify-center ${changingPassword
-                                        ? 'bg-gray-700/50'
-                                        : 'bg-orange-600 active:bg-orange-700'
+                                    ? 'bg-gray-700/50'
+                                    : 'bg-orange-600 active:bg-orange-700'
                                     }`}
                                 activeOpacity={0.9}
                             >
@@ -440,8 +432,8 @@ const Profile = () => {
                                     <Text className="text-gray-400 text-sm font-medium ml-4">Status</Text>
                                 </View>
                                 <View className={`px-5 py-3 rounded-xl ${user?.status === 'active'
-                                        ? 'bg-green-500/20 border border-green-500/40'
-                                        : 'bg-gray-700/50 border border-gray-600'
+                                    ? 'bg-green-500/20 border border-green-500/40'
+                                    : 'bg-gray-700/50 border border-gray-600'
                                     }`}>
                                     <Text className={`font-semibold ${user?.status === 'active' ? 'text-green-400' : 'text-gray-400'
                                         }`}>

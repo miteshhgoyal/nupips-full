@@ -212,9 +212,8 @@ const Orders = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            {/* Header - nupips-team style */}
             <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
-                <Text className="text-3xl text-white font-light">My Orders</Text>
+                <Text className="text-2xl font-bold text-white">My Orders</Text>
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>

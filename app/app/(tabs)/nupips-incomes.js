@@ -164,7 +164,6 @@ const NupipsIncomes = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            {/* Header - EXACT Team header: px-4 py-3 */}
             <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
                 <Text className="text-2xl font-bold text-white">Income History</Text>
             </View>

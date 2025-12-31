@@ -50,16 +50,8 @@ const BrokerSelection = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            {/* Header - nupips-team style */}
             <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="flex-row items-center p-2 bg-gray-800/50 rounded-xl active:bg-gray-800/70"
-                    activeOpacity={0.9}
-                >
-                    <TrendingUp size={24} color="#ea580c" />
-                    <Text className="text-white font-semibold text-base ml-3">Connect Broker</Text>
-                </TouchableOpacity>
+                <Text className="text-2xl font-bold text-white">Connect Broker</Text>
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>

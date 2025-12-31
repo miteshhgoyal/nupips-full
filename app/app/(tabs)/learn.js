@@ -155,9 +155,8 @@ const Learn = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            {/* Header - Matching nupips-team */}
             <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
-                <Text className="text-3xl text-white">Learning Center</Text>
+                <Text className="text-2xl font-bold text-white">Learning Center</Text>
             </View>
 
             <ScrollView
@@ -254,8 +253,8 @@ const Learn = () => {
                                 <TouchableOpacity
                                     onPress={() => setCategoryFilter("all")}
                                     className={`px-4 py-2 rounded-xl mr-2 ${categoryFilter === "all"
-                                            ? "bg-orange-600"
-                                            : "bg-gray-800/40 border border-gray-700/30"
+                                        ? "bg-orange-600"
+                                        : "bg-gray-800/40 border border-gray-700/30"
                                         }`}
                                     activeOpacity={0.9}
                                 >
@@ -269,8 +268,8 @@ const Learn = () => {
                                         key={cat}
                                         onPress={() => setCategoryFilter(cat)}
                                         className={`px-4 py-2 rounded-xl mr-2 ${categoryFilter === cat
-                                                ? "bg-orange-600"
-                                                : "bg-gray-800/40 border border-gray-700/30"
+                                            ? "bg-orange-600"
+                                            : "bg-gray-800/40 border border-gray-700/30"
                                             }`}
                                         activeOpacity={0.9}
                                     >
