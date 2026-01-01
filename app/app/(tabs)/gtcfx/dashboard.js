@@ -399,8 +399,8 @@ const GTCFxDashboard = () => {
                     {/* Personal Info */}
                     <View className="mx-4 mb-6 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6">
                         <Text className="text-xl font-bold text-white mb-6">Personal Information</Text>
-                        <View className="space-y-4">
-                            <View className="flex-row items-start">
+                        <View className="mb-4">
+                            <View className="flex-row items-start mb-4">
                                 <View className="w-12 h-12 bg-gray-700/50 border border-gray-700/30 rounded-xl items-center justify-center mr-4 flex-shrink-0">
                                     <User size={20} color="#9ca3af" />
                                 </View>
@@ -410,7 +410,7 @@ const GTCFxDashboard = () => {
                                 </View>
                             </View>
 
-                            <View className="flex-row items-start">
+                            <View className="flex-row items-start mb-4">
                                 <View className="w-12 h-12 bg-gray-700/50 border border-gray-700/30 rounded-xl items-center justify-center mr-4 flex-shrink-0">
                                     <User size={20} color="#9ca3af" />
                                 </View>
@@ -420,7 +420,7 @@ const GTCFxDashboard = () => {
                                 </View>
                             </View>
 
-                            <View className="flex-row items-start">
+                            <View className="flex-row items-start mb-4">
                                 <View className="w-12 h-12 bg-gray-700/50 border border-gray-700/30 rounded-xl items-center justify-center mr-4 flex-shrink-0">
                                     <Mail size={20} color="#9ca3af" />
                                 </View>

@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    Linking,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from "@/services/gtcfxApi";
@@ -192,7 +193,7 @@ const GTCFxProfitLogs = () => {
                     {/* Summary Cards */}
                     {summary && (
                         <View className="mx-4 mb-6">
-                            <View className={`bg-${parseFloat(summary.copy_profit || 0) >= 0 ? 'green' : 'red'}-500/10 border border-${parseFloat(summary.copy_profit || 0) >= 0 ? 'green' : 'red'}-500/30 rounded-xl p-6 mb-4`}>
+                            <View className={`bg-${parseFloat(summary.copy_profit || 0) >= 0 ? 'green-500/10 border border-green-500/30' : 'red-500/10 border border-red-500/30'} rounded-xl p-6 mb-4`}>
                                 <View className="flex-row items-center mb-3">
                                     <View className={`w-12 h-12 ${parseFloat(summary.copy_profit || 0) >= 0 ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'} rounded-xl items-center justify-center mr-4`}>
                                         {parseFloat(summary.copy_profit || 0) >= 0 ? (
@@ -275,10 +276,10 @@ const GTCFxProfitLogs = () => {
                     {/* Filters */}
                     <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
                         <View className="mb-4">
-                            <Text className="text-gray-400 text-sm font-medium mb-3 flex-row items-center">
+                            <View className="flex-row items-center mb-3">
                                 <Calendar size={20} color="#9ca3af" style={{ marginRight: 12 }} />
-                                Date Range
-                            </Text>
+                                <Text className="text-gray-400 text-sm font-medium">Date Range</Text>
+                            </View>
                             <View className="flex-row mb-4">
                                 <View className="flex-1 mr-3">
                                     <Text className="text-gray-500 text-xs mb-2">Start Date</Text>
@@ -350,7 +351,7 @@ const GTCFxProfitLogs = () => {
                                             </View>
 
                                             <View className="flex-row mb-4">
-                                                <View className="flex-1">
+                                                <View className="flex-1 mr-3">
                                                     <Text className="text-gray-400 text-xs mb-1">P/L</Text>
                                                     <View className="flex-row items-center">
                                                         {profit >= 0 ? (
@@ -371,8 +372,8 @@ const GTCFxProfitLogs = () => {
                                                 </View>
                                             </View>
 
-                                            <View className="flex-row space-x-4 mb-4">
-                                                <View className="flex-1 bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                                            <View className="flex-row mb-4">
+                                                <View className="flex-1 bg-red-500/10 border border-red-500/30 rounded-xl p-3 mr-3">
                                                     <Text className="text-gray-400 text-xs mb-1">Management Fee</Text>
                                                     <Text className="font-semibold text-white text-sm">
                                                         ${parseFloat(log.management_fee || 0).toFixed(4)}

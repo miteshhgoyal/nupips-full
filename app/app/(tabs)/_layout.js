@@ -2,22 +2,20 @@ import React from 'react';
 import { View, TouchableOpacity, Text, ScrollView } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/context/authContext';
-import { useGTCFxAuth } from '@/context/gtcfxAuthContext'; // 👈 GTC FX Context
+import { useGTCFxAuth } from '@/context/gtcfxAuthContext';
 import {
-    LayoutDashboard,
-    TrendingUp,
-    Users,
     Home,
-    ShoppingBag,
-    Book,
+    Users,
+    TrendingUp,
     DollarSign,
     ArrowLeftRight,
-    History,
+    ShoppingBag,
+    Book,
     User,
-    Package,
-    Badge,
+    MoreHorizontal,
+    LayoutDashboard,
 } from 'lucide-react-native';
-import { useRouter, useSegments } from 'expo-router';
+import { useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ACTIVE_TAB_COLOR = '#ea580c';
@@ -34,7 +32,6 @@ const TAB_BAR_CONFIG = {
     itemGap: 6,
 };
 
-// Dynamic TAB_CONFIG based on GTC FX auth
 function getTabConfig(gtcAuthenticated, gtcLoading) {
     const baseTabs = [
         { name: 'dashboard', label: 'Home', icon: Home },
@@ -42,18 +39,14 @@ function getTabConfig(gtcAuthenticated, gtcLoading) {
         { name: 'nupips-incomes', label: 'Income', icon: TrendingUp },
         { name: 'deposit', label: 'Deposit', icon: DollarSign },
         { name: 'withdrawal', label: 'Withdraw', icon: ArrowLeftRight },
-        { name: 'transfer', label: 'Transfer', icon: ArrowLeftRight },
-        { name: 'transaction-history', label: 'History', icon: History },
         { name: 'shop', label: 'Shop', icon: ShoppingBag },
-        { name: 'orders', label: 'Orders', icon: Package },
-        { name: 'broker-selection', label: 'Broker Selection', icon: Badge },
+        { name: 'more', label: 'More', icon: MoreHorizontal },
         { name: 'learn', label: 'Learn', icon: Book },
         { name: 'profile', label: 'Profile', icon: User },
     ];
 
-    // Add GTC FX only if authenticated and not loading
     if (gtcAuthenticated && !gtcLoading) {
-        baseTabs.splice(3, 0, { name: 'gtcfx', label: 'GTC FX', icon: LayoutDashboard });
+        baseTabs.splice(4, 0, { name: 'gtcfx', label: 'GTC FX', icon: LayoutDashboard });
     }
 
     return baseTabs;
@@ -63,15 +56,15 @@ function FloatingTabBar({ state, descriptors, navigation }) {
     const segments = useSegments();
     const { gtcAuthenticated, gtcLoading } = useGTCFxAuth();
 
-    // Hide main tabs when inside GTC FX
-    const isGtcfxActive = segments[0] === 'gtcfx';
-    if (isGtcfxActive) {
+    // Only hide for GTC FX nested screens
+    const isGtcfxNested = segments[0] === 'gtcfx' && segments.length > 1;
+
+    if (isGtcfxNested) {
         return null;
     }
 
     const TAB_CONFIG = getTabConfig(gtcAuthenticated, gtcLoading);
-    const { paddingHorizontal, bottomInset, barHeight, borderRadius, itemMinWidth, itemGap } =
-        TAB_BAR_CONFIG;
+    const { paddingHorizontal, bottomInset, barHeight, borderRadius, itemMinWidth, itemGap } = TAB_BAR_CONFIG;
 
     return (
         <View
@@ -119,13 +112,16 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                         const isFocused = state.index === index;
                         const Icon = config.icon;
 
+                        // Clean tab navigation (no dismissAll)
                         const onPress = () => {
                             const event = navigation.emit({
                                 type: 'tabPress',
                                 target: route.key,
                                 canPreventDefault: true,
                             });
+
                             if (!isFocused && !event.defaultPrevented) {
+                                // Simple tab navigation - Expo Router handles history
                                 navigation.navigate(route.name);
                             }
                         };
@@ -144,13 +140,11 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                                     paddingHorizontal: 8,
                                 }}
                             >
-                                <View>
-                                    <Icon
-                                        size={isFocused ? 26 : 22}
-                                        color={isFocused ? ACTIVE_TAB_COLOR : INACTIVE_TAB_COLOR}
-                                        strokeWidth={isFocused ? 2.5 : 2}
-                                    />
-                                </View>
+                                <Icon
+                                    size={isFocused ? 26 : 22}
+                                    color={isFocused ? ACTIVE_TAB_COLOR : INACTIVE_TAB_COLOR}
+                                    strokeWidth={isFocused ? 2.5 : 2}
+                                />
                                 <Text
                                     style={{
                                         marginTop: 4,
@@ -173,10 +167,6 @@ function FloatingTabBar({ state, descriptors, navigation }) {
 }
 
 export default function TabsLayout() {
-    const { user, logout } = useAuth();
-    const { gtcAuthenticated, gtcLoading } = useGTCFxAuth();
-
-    // Always include GTC FX screen (conditional rendering handled in tab bar)
     return (
         <SafeAreaView className="flex-1 bg-gray-900" edges={['top']}>
             <Tabs
@@ -185,25 +175,28 @@ export default function TabsLayout() {
                     tabBarShowLabel: false,
                     tabBarStyle: {
                         position: 'absolute',
-                        height: 0,
+                        height: 1,
                     },
                 }}
                 tabBar={(props) => <FloatingTabBar {...props} />}
             >
+                {/* Main Tabs */}
                 <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
-                <Tabs.Screen name="nupips-team" options={{ title: 'Nupips Team' }} />
-                <Tabs.Screen name="nupips-incomes" options={{ title: 'Nupips Incomes' }} />
-                <Tabs.Screen name="gtcfx" options={{ title: 'GTC FX' }} />
+                <Tabs.Screen name="nupips-team" options={{ title: 'Team' }} />
+                <Tabs.Screen name="nupips-incomes" options={{ title: 'Incomes' }} />
                 <Tabs.Screen name="deposit" options={{ title: 'Deposit' }} />
+                <Tabs.Screen name="gtcfx" options={{ title: 'GTC FX' }} />
                 <Tabs.Screen name="withdrawal" options={{ title: 'Withdrawal' }} />
-                <Tabs.Screen name="transfer" options={{ title: 'Transfer' }} />
-                <Tabs.Screen name="transaction-history" options={{ title: 'Transaction History' }} />
                 <Tabs.Screen name="shop" options={{ title: 'Shop' }} />
-                <Tabs.Screen name="orders" options={{ title: 'Orders' }} />
-                <Tabs.Screen name="broker-selection" options={{ title: 'Broker Selection' }} />
+                <Tabs.Screen name="more" options={{ title: 'More' }} />
                 <Tabs.Screen name="learn" options={{ title: 'Learn' }} />
                 <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
 
+                {/* Hidden Screens */}
+                <Tabs.Screen name="transfer" options={{ href: null }} />
+                <Tabs.Screen name="transaction-history" options={{ href: null }} />
+                <Tabs.Screen name="orders" options={{ href: null }} />
+                <Tabs.Screen name="broker-selection" options={{ href: null }} />
                 <Tabs.Screen name="product-item" options={{ href: null }} />
                 <Tabs.Screen name="place-order" options={{ href: null }} />
                 <Tabs.Screen name="course-view" options={{ href: null }} />
