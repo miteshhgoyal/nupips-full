@@ -18,12 +18,9 @@ import {
     Phone,
     Calendar,
     AlertCircle,
-    ArrowRight,
     DollarSign,
     Activity,
     Award,
-    Target,
-    Users,
     BarChart3,
     ArrowDownLeft,
     ArrowUpRight,
@@ -156,17 +153,32 @@ const GTCFxDashboard = () => {
             <SafeAreaView className="flex-1 bg-gray-900">
                 <StatusBar style="light" />
                 <View className="flex-1 justify-center items-center px-6">
-                    <View className="w-20 h-20 bg-red-500/20 border border-red-500/40 rounded-xl items-center justify-center mb-6">
+                    <View style={{
+                        width: 80,
+                        height: 80,
+                        backgroundColor: 'rgba(239,68,68,0.15)',
+                        borderWidth: 2,
+                        borderColor: 'rgba(239,68,68,0.3)',
+                        borderRadius: 16,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 24,
+                    }}>
                         <AlertCircle size={40} color="#ef4444" />
                     </View>
-                    <Text className="text-xl font-semibold text-white mb-2 text-center">Failed to Load Dashboard</Text>
-                    <Text className="text-gray-400 mb-6 text-center">{error}</Text>
+                    <Text className="text-2xl font-bold text-white mb-3 text-center">Failed to Load Dashboard</Text>
+                    <Text className="text-gray-400 mb-8 text-center leading-5">{error}</Text>
                     <TouchableOpacity
                         onPress={fetchDashboardData}
-                        className="px-10 py-4 bg-orange-600 rounded-xl active:bg-orange-700 border border-orange-600/30"
-                        activeOpacity={0.9}
+                        style={{
+                            paddingHorizontal: 40,
+                            paddingVertical: 16,
+                            backgroundColor: '#ea580c',
+                            borderRadius: 12,
+                        }}
+                        activeOpacity={0.7}
                     >
-                        <Text className="text-white font-semibold text-lg">Try Again</Text>
+                        <Text className="text-white font-bold text-base">Try Again</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -189,137 +201,174 @@ const GTCFxDashboard = () => {
     return (
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
-            {/* Header - nupips-team style */}
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+
+            {/* Header */}
+            <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
                 <TouchableOpacity
                     onPress={() => router.back()}
-                    className="flex-row items-center p-2 bg-gray-800/50 rounded-xl active:bg-gray-800/70"
-                    activeOpacity={0.9}
+                    className="flex-row items-center"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    activeOpacity={0.7}
                 >
-                    <ArrowLeft size={24} color="#ea580c" />
-                    <Text className="text-white font-semibold text-base ml-3">Dashboard</Text>
+                    <ArrowLeft size={22} color="#ffffff" style={{ marginRight: 12 }} />
+                    <View>
+                        <Text className="text-2xl font-bold text-white">Dashboard</Text>
+                        <Text className="text-sm text-gray-400 mt-0.5">Your account overview</Text>
+                    </View>
                 </TouchableOpacity>
             </View>
 
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="py-4 pb-24 px-0">
-                    {/* Welcome Header */}
-                    <View className="mx-4 mb-6">
-                        <Text className="text-2xl font-bold text-white mb-2">
-                            Welcome back, {displayInfo.nickname || "User"}!
-                        </Text>
-                        <Text className="text-gray-400 text-base">Here's your GTC FX account overview</Text>
-                    </View>
+            <ScrollView
+                className="flex-1"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100 }}
+            >
+                {/* Welcome Header */}
+                <View className="px-4 mt-5 mb-6">
+                    <Text className="text-2xl font-bold text-white mb-2">
+                        Welcome back, {displayInfo.nickname || "User"}!
+                    </Text>
+                    <Text className="text-gray-400 text-sm">Here's your GTC FX account overview</Text>
+                </View>
 
-                    {/* Quick Stats */}
-                    <View className="mx-4 mb-6">
-                        <View className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-6 mb-4">
-                            <View className="flex-row items-center mb-3">
-                                <View className="w-12 h-12 bg-orange-500/20 border border-orange-500/50 rounded-xl items-center justify-center mr-4">
-                                    <Wallet size={20} color="#ea580c" />
+                {/* Balance Card - Featured */}
+                <View className="px-4 mb-6">
+                    <View className="bg-gradient-to-br from-orange-600/20 to-orange-500/10 rounded-2xl p-6 border border-orange-500/20">
+                        <View className="flex-row items-center justify-between mb-3">
+                            <View className="flex-row items-center flex-1">
+                                <View className="w-12 h-12 bg-orange-500/20 rounded-xl items-center justify-center mr-4">
+                                    <Wallet size={22} color="#ea580c" />
                                 </View>
-                                <View className="flex-1">
-                                    <Text className="text-gray-400 text-sm font-medium mb-1">Account Balance</Text>
+                                <View>
+                                    <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                        Account Balance
+                                    </Text>
                                     <Text className="text-3xl font-bold text-white">
                                         ${parseFloat(displayInfo.amount || 0).toFixed(2)}
                                     </Text>
                                 </View>
-                                <View className="px-3.5 py-2 bg-green-500/20 border border-green-500/30 rounded-xl">
-                                    <Text className="text-green-400 text-xs font-semibold">Active</Text>
+                            </View>
+                            <View style={{
+                                paddingHorizontal: 12,
+                                paddingVertical: 6,
+                                backgroundColor: 'rgba(34,197,94,0.15)',
+                                borderWidth: 1.5,
+                                borderColor: 'rgba(34,197,94,0.3)',
+                                borderRadius: 8,
+                            }}>
+                                <Text className="text-green-400 font-bold" style={{ fontSize: 11 }}>Active</Text>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Account Stats Grid */}
+                <View className="px-4 mb-6">
+                    <View className="flex-row mb-5" style={{ gap: 12 }}>
+                        <View className="flex-1">
+                            <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                                <View className="w-12 h-12 bg-blue-500/20 rounded-xl items-center justify-center mb-3">
+                                    <User size={22} color="#3b82f6" />
                                 </View>
+                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    Account Type
+                                </Text>
+                                <Text className="text-xl font-bold text-white capitalize">
+                                    {displayInfo.userType === 1 ? "Agent" : "User"}
+                                </Text>
                             </View>
                         </View>
 
-                        <View className="flex-row mb-4">
-                            <View className="flex-1 bg-blue-500/10 border border-blue-500/30 rounded-xl p-5 mr-3">
-                                <View className="flex-row items-center">
-                                    <View className="w-12 h-12 bg-blue-500/20 border border-blue-500/50 rounded-xl items-center justify-center mr-4">
-                                        <User size={20} color="#3b82f6" />
-                                    </View>
-                                    <View className="flex-1">
-                                        <Text className="text-gray-400 text-sm font-medium mb-1">Account Type</Text>
-                                        <Text className="text-xl font-bold text-white capitalize">
-                                            {displayInfo.userType === 1 ? "Agent" : "User"}
-                                        </Text>
-                                    </View>
+                        <View className="flex-1">
+                            <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                                <View className="w-12 h-12 bg-green-500/20 rounded-xl items-center justify-center mb-3">
+                                    <Activity size={22} color="#22c55e" />
                                 </View>
-                            </View>
-
-                            <View className="flex-1 bg-green-500/10 border border-green-500/30 rounded-xl p-5">
-                                <View className="flex-row items-center">
-                                    <View className="w-12 h-12 bg-green-500/20 border border-green-500/50 rounded-xl items-center justify-center mr-4">
-                                        <Activity size={20} color="#22c55e" />
-                                    </View>
-                                    <View className="flex-1">
-                                        <Text className="text-gray-400 text-sm font-medium mb-1">Status</Text>
-                                        <Text className={`font-bold text-lg ${displayInfo.status === 1 ? "text-green-400" : "text-red-400"}`}>
-                                            {displayInfo.status === 1 ? "Active" : "Inactive"}
-                                        </Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
-
-                        <View className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-5">
-                            <View className="flex-row items-center">
-                                <View className="w-12 h-12 bg-purple-500/20 border border-purple-500/50 rounded-xl items-center justify-center mr-4">
-                                    <Calendar size={20} color="#a855f7" />
-                                </View>
-                                <View className="flex-1">
-                                    <Text className="text-gray-400 text-sm font-medium mb-1">Member Since</Text>
-                                    <Text className="text-xl font-bold text-white">
-                                        {displayInfo.create_time
-                                            ? new Date(parseInt(displayInfo.create_time) * 1000).toLocaleDateString("en-US", {
-                                                month: "short",
-                                                year: "numeric",
-                                            })
-                                            : "N/A"}
-                                    </Text>
-                                </View>
+                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    Status
+                                </Text>
+                                <Text className={`font-bold text-xl ${displayInfo.status === 1 ? "text-green-400" : "text-red-400"}`}>
+                                    {displayInfo.status === 1 ? "Active" : "Inactive"}
+                                </Text>
                             </View>
                         </View>
                     </View>
 
-                    {/* Commission Summary */}
-                    {(commissionReceived || commissionGiven) && (
-                        <View className="mx-4 mb-6">
-                            <View className="flex-row items-center mb-6">
-                                <Award size={24} color="#ea580c" style={{ marginRight: 12 }} />
-                                <Text className="text-xl font-bold text-white">Commission Overview</Text>
+                    <View className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50">
+                        <View className="flex-row items-center">
+                            <View className="w-12 h-12 bg-purple-500/20 rounded-xl items-center justify-center mr-4">
+                                <Calendar size={22} color="#a855f7" />
                             </View>
+                            <View>
+                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    Member Since
+                                </Text>
+                                <Text className="text-2xl font-bold text-white">
+                                    {displayInfo.create_time
+                                        ? new Date(parseInt(displayInfo.create_time) * 1000).toLocaleDateString("en-US", {
+                                            month: "short",
+                                            day: "numeric",
+                                            year: "numeric",
+                                        })
+                                        : "N/A"}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                </View>
 
-                            {commissionReceived && (
-                                <View className="bg-green-500/10 border border-green-500/30 rounded-xl p-6 mb-6">
-                                    <View className="flex-row items-center mb-4">
-                                        <View className="w-12 h-12 bg-green-500/20 border border-green-500/50 rounded-xl items-center justify-center mr-4">
-                                            <ArrowDownLeft size={20} color="#22c55e" />
+                {/* Commission Overview */}
+                {(commissionReceived || commissionGiven) && (
+                    <View className="px-4 mb-6">
+                        <View className="flex-row items-center mb-5">
+                            <Award size={22} color="#ea580c" style={{ marginRight: 10 }} />
+                            <Text className="text-xl font-bold text-white">Commission Overview</Text>
+                        </View>
+
+                        {/* Commissions Received */}
+                        {commissionReceived && (
+                            <View className="mb-5">
+                                <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                                    <View className="flex-row items-center mb-5">
+                                        <View className="w-12 h-12 bg-green-500/20 rounded-xl items-center justify-center mr-4">
+                                            <ArrowDownLeft size={22} color="#22c55e" />
                                         </View>
                                         <View className="flex-1">
-                                            <Text className="text-lg font-bold text-white mb-1">Commissions Received</Text>
-                                            <Text className="text-gray-400 text-sm">Earned from your referrals</Text>
+                                            <Text className="text-base font-bold text-white mb-1">Commissions Received</Text>
+                                            <Text className="text-gray-400 text-xs">Earned from your referrals</Text>
                                         </View>
                                     </View>
 
-                                    <View className="flex-row mb-4">
-                                        <View className="flex-1 bg-green-500/20 border border-green-500/30 rounded-xl p-4 mr-3">
-                                            <Text className="text-gray-400 text-xs font-medium mb-2">Total Commission</Text>
+                                    <View className="flex-row mb-4" style={{ gap: 12 }}>
+                                        <View className="flex-1 bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+                                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                                Total Commission
+                                            </Text>
                                             <Text className="text-2xl font-bold text-green-400">
                                                 ${commissionReceived.commission.toFixed(2)}
                                             </Text>
                                         </View>
-                                        <View className="flex-1 bg-gray-800/40 border border-gray-700/30 rounded-xl p-4">
-                                            <Text className="text-gray-400 text-xs font-medium mb-2">Transactions</Text>
+                                        <View className="flex-1 bg-gray-900/50 border border-gray-700 rounded-xl p-4">
+                                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                                Transactions
+                                            </Text>
                                             <Text className="text-xl font-bold text-white">{commissionReceived.total}</Text>
                                         </View>
                                     </View>
 
-                                    <View className="flex-row">
-                                        <View className="flex-1 bg-gray-800/40 border border-gray-700/30 rounded-xl p-4 mr-3">
-                                            <Text className="text-gray-400 text-xs font-medium mb-2">Total Volume</Text>
-                                            <Text className="text-lg font-bold text-white">{commissionReceived.volume.toFixed(2)} Lots</Text>
+                                    <View className="flex-row" style={{ gap: 12 }}>
+                                        <View className="flex-1 bg-gray-900/50 border border-gray-700 rounded-xl p-4">
+                                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                                Total Volume
+                                            </Text>
+                                            <Text className="text-base font-bold text-white">
+                                                {commissionReceived.volume.toFixed(2)} Lots
+                                            </Text>
                                         </View>
-                                        <View className="flex-1 bg-gray-800/40 border border-gray-700/30 rounded-xl p-4">
-                                            <Text className="text-gray-400 text-xs font-medium mb-1">Avg per lot</Text>
+                                        <View className="flex-1 bg-gray-900/50 border border-gray-700 rounded-xl p-4">
+                                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                                Avg per Lot
+                                            </Text>
                                             <Text className="text-green-400 font-bold text-sm">
                                                 ${(commissionReceived.volume > 0
                                                     ? commissionReceived.commission / commissionReceived.volume
@@ -329,115 +378,150 @@ const GTCFxDashboard = () => {
                                         </View>
                                     </View>
                                 </View>
-                            )}
+                            </View>
+                        )}
 
-                            {commissionGiven && (
-                                <View className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-6">
-                                    <View className="flex-row items-center mb-4">
-                                        <View className="w-12 h-12 bg-orange-500/20 border border-orange-500/50 rounded-xl items-center justify-center mr-4">
-                                            <ArrowUpRight size={20} color="#ea580c" />
-                                        </View>
-                                        <View className="flex-1">
-                                            <Text className="text-lg font-bold text-white mb-1">Commissions Given</Text>
-                                            <Text className="text-gray-400 text-sm">Paid to your upline</Text>
-                                        </View>
+                        {/* Commissions Given */}
+                        {commissionGiven && (
+                            <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                                <View className="flex-row items-center mb-5">
+                                    <View className="w-12 h-12 bg-orange-500/20 rounded-xl items-center justify-center mr-4">
+                                        <ArrowUpRight size={22} color="#ea580c" />
                                     </View>
-
-                                    <View className="flex-row mb-4">
-                                        <View className="flex-1 bg-orange-500/20 border border-orange-500/30 rounded-xl p-4 mr-3">
-                                            <Text className="text-gray-400 text-xs font-medium mb-2">Total Commission</Text>
-                                            <Text className="text-2xl font-bold text-orange-400">
-                                                ${commissionGiven.commission.toFixed(2)}
-                                            </Text>
-                                        </View>
-                                        <View className="flex-1 bg-gray-800/40 border border-gray-700/30 rounded-xl p-4">
-                                            <Text className="text-gray-400 text-xs font-medium mb-2">Transactions</Text>
-                                            <Text className="text-xl font-bold text-white">{commissionGiven.total}</Text>
-                                        </View>
-                                    </View>
-
-                                    <View className="flex-row">
-                                        <View className="flex-1 bg-gray-800/40 border border-gray-700/30 rounded-xl p-4 mr-3">
-                                            <Text className="text-gray-400 text-xs font-medium mb-2">Total Volume</Text>
-                                            <Text className="text-lg font-bold text-white">{commissionGiven.volume.toFixed(2)} Lots</Text>
-                                        </View>
-                                        <View className="flex-1 bg-gray-800/40 border border-gray-700/30 rounded-xl p-4">
-                                            <Text className="text-gray-400 text-xs font-medium mb-1">Avg per lot</Text>
-                                            <Text className="text-orange-400 font-bold text-sm">
-                                                ${(commissionGiven.volume > 0
-                                                    ? commissionGiven.commission / commissionGiven.volume
-                                                    : 0
-                                                ).toFixed(2)}
-                                            </Text>
-                                        </View>
+                                    <View className="flex-1">
+                                        <Text className="text-base font-bold text-white mb-1">Commissions Given</Text>
+                                        <Text className="text-gray-400 text-xs">Paid to your upline</Text>
                                     </View>
                                 </View>
-                            )}
-                        </View>
-                    )}
 
-                    {/* Top Symbols */}
-                    {topSymbols.length > 0 && (
-                        <View className="mx-4 mb-6">
-                            <View className="flex-row items-center mb-4">
-                                <BarChart3 size={24} color="#ea580c" style={{ marginRight: 12 }} />
-                                <Text className="text-xl font-bold text-white">Top Trading Symbols</Text>
-                            </View>
-                            <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-6">
-                                {topSymbols.map(({ symbol, amount }) => (
-                                    <View key={symbol} className="flex-row items-center justify-between py-4 border-b border-gray-700/30 last:border-b-0">
-                                        <Text className="text-gray-400 text-base font-medium flex-1">{symbol}</Text>
+                                <View className="flex-row mb-4" style={{ gap: 12 }}>
+                                    <View className="flex-1 bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
+                                        <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                            Total Commission
+                                        </Text>
                                         <Text className="text-2xl font-bold text-orange-400">
-                                            ${parseFloat(amount).toFixed(2)}
+                                            ${commissionGiven.commission.toFixed(2)}
                                         </Text>
                                     </View>
-                                ))}
+                                    <View className="flex-1 bg-gray-900/50 border border-gray-700 rounded-xl p-4">
+                                        <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                            Transactions
+                                        </Text>
+                                        <Text className="text-xl font-bold text-white">{commissionGiven.total}</Text>
+                                    </View>
+                                </View>
+
+                                <View className="flex-row" style={{ gap: 12 }}>
+                                    <View className="flex-1 bg-gray-900/50 border border-gray-700 rounded-xl p-4">
+                                        <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                            Total Volume
+                                        </Text>
+                                        <Text className="text-base font-bold text-white">
+                                            {commissionGiven.volume.toFixed(2)} Lots
+                                        </Text>
+                                    </View>
+                                    <View className="flex-1 bg-gray-900/50 border border-gray-700 rounded-xl p-4">
+                                        <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                                            Avg per Lot
+                                        </Text>
+                                        <Text className="text-orange-400 font-bold text-sm">
+                                            ${(commissionGiven.volume > 0
+                                                ? commissionGiven.commission / commissionGiven.volume
+                                                : 0
+                                            ).toFixed(2)}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                {/* Top Trading Symbols */}
+                {topSymbols.length > 0 && (
+                    <View className="px-4 mb-6">
+                        <View className="flex-row items-center mb-4">
+                            <BarChart3 size={22} color="#ea580c" style={{ marginRight: 10 }} />
+                            <Text className="text-xl font-bold text-white">Top Trading Symbols</Text>
+                        </View>
+                        <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                            {topSymbols.map(({ symbol, amount }, index) => (
+                                <View
+                                    key={symbol}
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        paddingVertical: 16,
+                                        borderBottomWidth: index < topSymbols.length - 1 ? 1 : 0,
+                                        borderBottomColor: 'rgba(55,65,81,0.3)',
+                                    }}
+                                >
+                                    <Text className="text-gray-300 text-base font-semibold flex-1">{symbol}</Text>
+                                    <Text className="text-xl font-bold text-orange-400">
+                                        ${parseFloat(amount).toFixed(2)}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                    </View>
+                )}
+
+                {/* Personal Information */}
+                <View className="px-4 mb-6">
+                    <Text className="text-xl font-bold text-white mb-4">Personal Information</Text>
+                    <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50" style={{ gap: 16 }}>
+                        {/* Nickname */}
+                        <View className="flex-row items-center">
+                            <View className="w-12 h-12 bg-gray-700/30 rounded-xl items-center justify-center mr-4">
+                                <User size={20} color="#9ca3af" />
+                            </View>
+                            <View className="flex-1 min-w-0">
+                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    Nickname
+                                </Text>
+                                <Text className="text-white font-bold text-base">{displayInfo.nickname || "Not set"}</Text>
                             </View>
                         </View>
-                    )}
 
-                    {/* Personal Info */}
-                    <View className="mx-4 mb-6 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6">
-                        <Text className="text-xl font-bold text-white mb-6">Personal Information</Text>
-                        <View className="mb-4">
-                            <View className="flex-row items-start mb-4">
-                                <View className="w-12 h-12 bg-gray-700/50 border border-gray-700/30 rounded-xl items-center justify-center mr-4 flex-shrink-0">
-                                    <User size={20} color="#9ca3af" />
-                                </View>
-                                <View className="flex-1 min-w-0">
-                                    <Text className="text-gray-400 text-sm font-medium mb-2">Nickname</Text>
-                                    <Text className="text-white font-semibold text-lg">{displayInfo.nickname || "Not set"}</Text>
-                                </View>
+                        {/* Real Name */}
+                        <View className="flex-row items-center">
+                            <View className="w-12 h-12 bg-gray-700/30 rounded-xl items-center justify-center mr-4">
+                                <User size={20} color="#9ca3af" />
                             </View>
-
-                            <View className="flex-row items-start mb-4">
-                                <View className="w-12 h-12 bg-gray-700/50 border border-gray-700/30 rounded-xl items-center justify-center mr-4 flex-shrink-0">
-                                    <User size={20} color="#9ca3af" />
-                                </View>
-                                <View className="flex-1 min-w-0">
-                                    <Text className="text-gray-400 text-sm font-medium mb-2">Real Name</Text>
-                                    <Text className="text-white font-semibold text-lg">{displayInfo.realname || "Not set"}</Text>
-                                </View>
+                            <View className="flex-1 min-w-0">
+                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    Real Name
+                                </Text>
+                                <Text className="text-white font-bold text-base">{displayInfo.realname || "Not set"}</Text>
                             </View>
+                        </View>
 
-                            <View className="flex-row items-start mb-4">
-                                <View className="w-12 h-12 bg-gray-700/50 border border-gray-700/30 rounded-xl items-center justify-center mr-4 flex-shrink-0">
-                                    <Mail size={20} color="#9ca3af" />
-                                </View>
-                                <View className="flex-1 min-w-0">
-                                    <Text className="text-gray-400 text-sm font-medium mb-2">Email</Text>
-                                    <Text className="text-white font-semibold text-base" numberOfLines={1}>{displayInfo.email}</Text>
-                                </View>
+                        {/* Email */}
+                        <View className="flex-row items-center">
+                            <View className="w-12 h-12 bg-gray-700/30 rounded-xl items-center justify-center mr-4">
+                                <Mail size={20} color="#9ca3af" />
                             </View>
+                            <View className="flex-1 min-w-0">
+                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    Email
+                                </Text>
+                                <Text className="text-white font-bold text-sm" numberOfLines={1}>
+                                    {displayInfo.email}
+                                </Text>
+                            </View>
+                        </View>
 
-                            <View className="flex-row items-start">
-                                <View className="w-12 h-12 bg-gray-700/50 border border-gray-700/30 rounded-xl items-center justify-center mr-4 flex-shrink-0">
-                                    <Phone size={20} color="#9ca3af" />
-                                </View>
-                                <View className="flex-1 min-w-0">
-                                    <Text className="text-gray-400 text-sm font-medium mb-2">Phone</Text>
-                                    <Text className="text-white font-semibold text-base">{displayInfo.phone || "Not set"}</Text>
-                                </View>
+                        {/* Phone */}
+                        <View className="flex-row items-center">
+                            <View className="w-12 h-12 bg-gray-700/30 rounded-xl items-center justify-center mr-4">
+                                <Phone size={20} color="#9ca3af" />
+                            </View>
+                            <View className="flex-1 min-w-0">
+                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    Phone
+                                </Text>
+                                <Text className="text-white font-bold text-base">{displayInfo.phone || "Not set"}</Text>
                             </View>
                         </View>
                     </View>

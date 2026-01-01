@@ -11,85 +11,67 @@ import {
     Modal,
     FlatList,
 } from "react-native";
-import { useRouter } from 'expo-router';
+import { useRouter } from "expo-router";
 import api from "@/services/api";
 import {
     Package,
     AlertCircle,
     X,
     Search,
-    Filter,
-    ChevronDown,
+    Calendar,
     Clock,
     CheckCircle,
     XCircle,
     Truck,
     MapPin,
-    Calendar,
     DollarSign,
     Eye,
     RefreshCw,
-    Ban,
-    ArrowLeft,
-    CreditCard,
-    TrendingUp,
     Phone,
 } from "lucide-react-native";
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from "expo-status-bar";
 
+/* ----------------------------- Screen ----------------------------- */
 const Orders = () => {
     const router = useRouter();
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
 
     const [orders, setOrders] = useState([]);
-    const [filteredOrders, setFilteredOrders] = useState([]);
-    const [selectedOrder, setSelectedOrder] = useState(null);
-    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [filtered, setFiltered] = useState([]);
 
-    // Filters
-    const [statusFilter, setStatusFilter] = useState("all");
-    const [searchTerm, setSearchTerm] = useState("");
-    const [showFilters, setShowFilters] = useState(false);
-    const [dateRange, setDateRange] = useState({ start: "", end: "" });
+    const [selected, setSelected] = useState(null);
+    const [showModal, setShowModal] = useState(false);
 
-    // Stats
+    const [status, setStatus] = useState("all");
+    const [search, setSearch] = useState("");
+
     const [stats, setStats] = useState({
         total: 0,
         pending: 0,
-        completed: 0,
+        delivered: 0,
         cancelled: 0,
-        totalSpent: 0,
-        totalRefunds: 0,
+        spent: 0,
+        refunds: 0,
     });
 
-    const statusOptions = [
-        { value: "all", label: "All Orders", icon: Package, color: "#6b7280" },
-        { value: "Order Placed", label: "Order Placed", icon: Clock, color: "#3b82f6" },
-        { value: "Processing", label: "Processing", icon: RefreshCw, color: "#eab308" },
-        { value: "Shipped", label: "Shipped", icon: Truck, color: "#a855f7" },
-        { value: "Out for Delivery", label: "Out for Delivery", icon: Truck, color: "#6366f1" },
-        { value: "Delivered", label: "Delivered", icon: CheckCircle, color: "#22c55e" },
-        { value: "Cancelled", label: "Cancelled", icon: XCircle, color: "#ef4444" },
-    ];
-
     useEffect(() => {
-        loadOrders();
+        load();
     }, []);
 
     useEffect(() => {
         applyFilters();
-    }, [orders, statusFilter, searchTerm, dateRange]);
+    }, [orders, status, search]);
 
-    const loadOrders = async () => {
+    const load = async () => {
         setLoading(true);
         setError("");
         try {
-            const response = await api.get("/product/order/my-orders");
-            const ordersData = response.data.orders || [];
-            setOrders(ordersData);
-            calculateStats(ordersData);
+            const res = await api.get("/product/order/my-orders");
+            const data = res.data.orders || [];
+            setOrders(data);
+            computeStats(data);
         } catch (e) {
             setError(e.response?.data?.message || "Failed to load orders");
         } finally {
@@ -97,113 +79,69 @@ const Orders = () => {
         }
     };
 
-    const calculateStats = (ordersData) => {
-        const totalSpent = ordersData
-            .filter((o) => o.status !== "Cancelled")
-            .reduce((sum, o) => sum + o.amount, 0);
+    const computeStats = (data) => {
+        const spent = data
+            .filter(o => o.status !== "Cancelled")
+            .reduce((s, o) => s + o.amount, 0);
 
-        const totalRefunds = ordersData
-            .filter((o) => o.status === "Cancelled" && o.refundAmount)
-            .reduce((sum, o) => sum + (o.refundAmount || 0), 0);
+        const refunds = data
+            .filter(o => o.status === "Cancelled")
+            .reduce((s, o) => s + (o.refundAmount || 0), 0);
 
-        const stats = {
-            total: ordersData.length,
-            pending: ordersData.filter((o) =>
-                ["Order Placed", "Processing"].includes(o.status)
-            ).length,
-            completed: ordersData.filter((o) => o.status === "Delivered").length,
-            cancelled: ordersData.filter((o) => o.status === "Cancelled").length,
-            totalSpent,
-            totalRefunds,
-        };
-        setStats(stats);
+        setStats({
+            total: data.length,
+            pending: data.filter(o => ["Order Placed", "Processing"].includes(o.status)).length,
+            delivered: data.filter(o => o.status === "Delivered").length,
+            cancelled: data.filter(o => o.status === "Cancelled").length,
+            spent,
+            refunds,
+        });
     };
 
     const applyFilters = () => {
-        let filtered = [...orders];
+        let list = [...orders];
 
-        if (statusFilter !== "all") {
-            filtered = filtered.filter((order) => order.status === statusFilter);
+        if (status !== "all") {
+            list = list.filter(o => o.status === status);
         }
 
-        if (searchTerm) {
-            filtered = filtered.filter(
-                (order) =>
-                    order._id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    order.items.some((item) =>
-                        item.name?.toLowerCase().includes(searchTerm.toLowerCase())
-                    )
+        if (search) {
+            const q = search.toLowerCase();
+            list = list.filter(
+                o =>
+                    o._id.toLowerCase().includes(q) ||
+                    o.items.some(i => i.name?.toLowerCase().includes(q))
             );
         }
 
-        if (dateRange.start) {
-            filtered = filtered.filter(
-                (order) => new Date(order.createdAt) >= new Date(dateRange.start)
-            );
-        }
-        if (dateRange.end) {
-            filtered = filtered.filter(
-                (order) => new Date(order.createdAt) <= new Date(dateRange.end)
-            );
-        }
-
-        setFilteredOrders(filtered);
+        setFiltered(list);
     };
 
-    const viewOrderDetails = async (orderId) => {
+    const openDetails = async (id) => {
         try {
-            const response = await api.get(`/product/order/history/${orderId}`);
-            setSelectedOrder(response.data.order);
-            setShowDetailModal(true);
-        } catch (e) {
+            const res = await api.get(`/product/order/history/${id}`);
+            setSelected(res.data.order);
+            setShowModal(true);
+        } catch {
             setError("Failed to load order details");
         }
     };
 
-    const clearAllFilters = () => {
-        setStatusFilter("all");
-        setSearchTerm("");
-        setDateRange({ start: "", end: "" });
-        setShowFilters(false);
-    };
-
-    const formatDate = (date) => {
-        return new Date(date).toLocaleDateString("en-IN", {
+    const formatDate = (d) =>
+        new Date(d).toLocaleDateString("en-IN", {
             day: "2-digit",
             month: "short",
             year: "numeric",
             hour: "2-digit",
             minute: "2-digit",
         });
-    };
-
-    const getStatusBadge = (status) => {
-        const statusConfig = {
-            "Order Placed": { bg: "bg-blue-500/20", text: "text-blue-400", icon: Clock },
-            Processing: { bg: "bg-yellow-500/20", text: "text-yellow-400", icon: RefreshCw },
-            Shipped: { bg: "bg-purple-500/20", text: "text-purple-400", icon: Truck },
-            "Out for Delivery": { bg: "bg-indigo-500/20", text: "text-indigo-400", icon: Truck },
-            Delivered: { bg: "bg-green-500/20", text: "text-green-400", icon: CheckCircle },
-            Cancelled: { bg: "bg-red-500/20", text: "text-red-400", icon: XCircle },
-        };
-
-        const config = statusConfig[status] || statusConfig["Order Placed"];
-        const Icon = config.icon;
-
-        return (
-            <View className={`flex-row items-center px-3 py-2 border border-gray-700/30 rounded-xl ${config.bg}`}>
-                <Icon size={14} color={config.text.replace('text-', '').replace('text-', '')} />
-                <Text className={`font-semibold text-sm ml-2 ${config.text}`}>{status}</Text>
-            </View>
-        );
-    };
 
     if (loading) {
         return (
             <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
                 <StatusBar style="light" />
                 <ActivityIndicator size="large" color="#ea580c" />
-                <Text className="text-gray-400 mt-4 font-medium">Loading orders...</Text>
+                <Text className="text-gray-400 mt-4">Loading orders…</Text>
             </SafeAreaView>
         );
     }
@@ -212,196 +150,125 @@ const Orders = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+            {/* Header */}
+            <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
                 <Text className="text-2xl font-bold text-white">My Orders</Text>
+                <Text className="text-sm text-gray-400 mt-0.5">
+                    Purchase history
+                </Text>
             </View>
 
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="py-4 pb-24">
-                    {/* Error Alert */}
-                    {error && (
-                        <View className="mx-4 mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start">
-                            <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
-                            <Text className="text-red-400 text-sm flex-1">{error}</Text>
-                            <TouchableOpacity onPress={() => setError("")} className="p-1" activeOpacity={0.7}>
-                                <X size={20} color="#ef4444" />
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {/* Stats Cards */}
-                    <View className="mx-4 mb-6">
-                        <Text className="text-lg font-light text-white mb-3">Order Overview</Text>
-
-                        {/* Total Orders Card */}
-                        <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-4">
-                            <View className="flex-row items-center justify-between mb-3">
-                                <View>
-                                    <Text className="text-gray-400 text-sm mb-1">Total Orders</Text>
-                                    <Text className="text-2xl font-bold text-white">{stats.total}</Text>
-                                </View>
-                                <View className="w-14 h-14 bg-blue-500/20 border border-blue-500/40 rounded-xl items-center justify-center">
-                                    <Package size={24} color="#3b82f6" />
-                                </View>
-                            </View>
-                            <View className="flex-row justify-between">
-                                <View>
-                                    <Text className="text-gray-400 text-xs mb-1">Pending</Text>
-                                    <Text className="text-blue-400 font-semibold">{stats.pending}</Text>
-                                </View>
-                                <View>
-                                    <Text className="text-gray-400 text-xs mb-1">Completed</Text>
-                                    <Text className="text-green-400 font-semibold">{stats.completed}</Text>
-                                </View>
-                                <View>
-                                    <Text className="text-gray-400 text-xs mb-1">Cancelled</Text>
-                                    <Text className="text-red-400 font-semibold">{stats.cancelled}</Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        {/* Financial Stats */}
-                        <View className="flex-row">
-                            <View className="flex-1 bg-green-500/10 border border-green-500/30 rounded-xl p-5 mr-3">
-                                <View className="flex-row items-center mb-2">
-                                    <TrendingUp size={18} color="#22c55e" />
-                                    <Text className="text-sm font-medium text-green-400 ml-2">Total Spent</Text>
-                                </View>
-                                <Text className="text-xl font-bold text-white">${stats.totalSpent.toFixed(2)}</Text>
-                            </View>
-                            <View className="flex-1 bg-red-500/10 border border-red-500/30 rounded-xl p-5 ml-3">
-                                <View className="flex-row items-center mb-2">
-                                    <DollarSign size={18} color="#ef4444" />
-                                    <Text className="text-sm font-medium text-red-400 ml-2">Refunds</Text>
-                                </View>
-                                <Text className="text-xl font-bold text-white">${stats.totalRefunds.toFixed(2)}</Text>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* Filters */}
-                    <View className="mx-4 mb-6">
-                        {/* Search */}
-                        <View className="relative mb-4">
-                            <Search
-                                size={18}
-                                color="#9ca3af"
-                                style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}
-                            />
-                            <TextInput
-                                placeholder="Search by order ID or product name..."
-                                value={searchTerm}
-                                onChangeText={setSearchTerm}
-                                placeholderTextColor="#6b7280"
-                                className="bg-gray-800/40 border border-gray-700/30 rounded-xl pl-12 pr-5 py-3.5 text-white"
-                            />
-                        </View>
-
-                        {/* Filter Buttons */}
-                        <View className="flex-row">
-                            <TouchableOpacity
-                                onPress={() => {
-                                    // Toggle status filter picker logic here if needed
-                                }}
-                                className="flex-1 flex-row items-center justify-between bg-gray-800/40 border border-gray-700/30 rounded-xl px-5 py-4 mr-3 active:bg-gray-800/60"
-                                activeOpacity={0.9}
-                            >
-                                <View className="flex-row items-center">
-                                    <Filter size={18} color="#9ca3af" />
-                                    <Text className="text-white font-medium ml-3">
-                                        {statusOptions.find(s => s.value === statusFilter)?.label || 'All Status'}
-                                    </Text>
-                                </View>
-                                <ChevronDown size={18} color="#9ca3af" />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                onPress={() => setShowFilters(!showFilters)}
-                                className="flex-1 flex-row items-center justify-center bg-gray-800/40 border border-gray-700/30 rounded-xl py-4 ml-3 active:bg-gray-800/60"
-                                activeOpacity={0.9}
-                            >
-                                <Calendar size={18} color="#9ca3af" />
-                                <Text className="text-gray-400 font-medium ml-3">Date Range</Text>
-                                <ChevronDown
-                                    size={18}
-                                    color="#9ca3af"
-                                    style={{ transform: [{ rotate: showFilters ? '180deg' : '0deg' }] }}
-                                />
-                            </TouchableOpacity>
-                        </View>
-
-                        {(statusFilter !== "all" || searchTerm || dateRange.start || dateRange.end) && (
-                            <TouchableOpacity
-                                onPress={clearAllFilters}
-                                className="flex-row items-center justify-center bg-red-500/20 border border-red-500/30 rounded-xl py-4 px-6 mt-4 mx-auto"
-                                activeOpacity={0.9}
-                            >
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+                {/* Error */}
+                {error && (
+                    <View className="mx-4 mt-5 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                        <View className="flex-row items-center">
+                            <AlertCircle size={20} color="#ef4444" />
+                            <Text className="text-red-400 ml-3 flex-1">{error}</Text>
+                            <TouchableOpacity onPress={() => setError("")}>
                                 <X size={18} color="#ef4444" />
-                                <Text className="text-red-400 font-semibold ml-2">Clear Filters</Text>
                             </TouchableOpacity>
-                        )}
+                        </View>
+                    </View>
+                )}
 
-                        {showFilters && (
-                            <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mt-4">
-                                <Text className="text-white font-semibold mb-4">Date Range</Text>
-                                <View className="flex-row">
-                                    <TextInput
-                                        placeholder="Start Date"
-                                        value={dateRange.start}
-                                        onChangeText={(text) => setDateRange(prev => ({ ...prev, start: text }))}
-                                        placeholderTextColor="#6b7280"
-                                        className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl px-5 py-4 mr-3 text-white"
-                                    />
-                                    <TextInput
-                                        placeholder="End Date"
-                                        value={dateRange.end}
-                                        onChangeText={(text) => setDateRange(prev => ({ ...prev, end: text }))}
-                                        placeholderTextColor="#6b7280"
-                                        className="flex-1 bg-gray-900/70 border border-gray-700/30 rounded-xl px-5 py-4 ml-3 text-white"
-                                    />
-                                </View>
-                            </View>
-                        )}
+                {/* Overview */}
+                <View className="px-4 mt-6 mb-6">
+                    <Text className="text-xl font-bold text-white mb-4">
+                        Overview
+                    </Text>
 
-                        <Text className="text-sm text-gray-400 font-medium mt-4">
-                            {filteredOrders.length} Orders Found
+                    <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-5 mb-4">
+                        <Text className="text-gray-400 text-xs uppercase mb-2">
+                            Total Orders
                         </Text>
+                        <Text className="text-2xl font-bold text-white">
+                            {stats.total}
+                        </Text>
+
+                        <View className="flex-row justify-between mt-4">
+                            <Stat label="Pending" value={stats.pending} color="text-orange-400" />
+                            <Stat label="Delivered" value={stats.delivered} color="text-green-400" />
+                            <Stat label="Cancelled" value={stats.cancelled} color="text-red-400" />
+                        </View>
                     </View>
 
-                    {/* Orders List */}
-                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl overflow-hidden">
-                        {filteredOrders.length === 0 ? (
-                            <View className="p-16 items-center">
-                                <Package size={64} color="#6b7280" />
-                                <Text className="text-gray-400 mt-6 font-medium text-lg text-center">
-                                    {orders.length === 0 ? "No orders found" : "Try adjusting your filters"}
-                                </Text>
-                            </View>
-                        ) : (
-                            <FlatList
-                                data={filteredOrders}
-                                keyExtractor={(item) => item._id}
-                                renderItem={({ item: order }) => (
-                                    <OrderRow
-                                        order={order}
-                                        onViewDetails={() => viewOrderDetails(order._id)}
-                                        formatDate={formatDate}
-                                        getStatusBadge={getStatusBadge}
-                                    />
-                                )}
-                                showsVerticalScrollIndicator={false}
-                            />
-                        )}
+                    <View className="flex-row">
+                        <View className="flex-1 bg-green-500/10 border border-green-500/30 rounded-2xl p-5 mr-3">
+                            <Text className="text-xs text-green-400 uppercase mb-2">
+                                Total Spent
+                            </Text>
+                            <Text className="text-xl font-bold text-white">
+                                ${stats.spent.toFixed(2)}
+                            </Text>
+                        </View>
+
+                        <View className="flex-1 bg-red-500/10 border border-red-500/30 rounded-2xl p-5 ml-3">
+                            <Text className="text-xs text-red-400 uppercase mb-2">
+                                Refunds
+                            </Text>
+                            <Text className="text-xl font-bold text-white">
+                                ${stats.refunds.toFixed(2)}
+                            </Text>
+                        </View>
                     </View>
+                </View>
+
+                {/* Search */}
+                <View className="px-4 mb-6">
+                    <View className="relative">
+                        <Search size={18} color="#9ca3af" style={{ position: "absolute", left: 16, top: 16 }} />
+                        <TextInput
+                            value={search}
+                            onChangeText={setSearch}
+                            placeholder="Search order or product…"
+                            placeholderTextColor="#6b7280"
+                            style={{
+                                paddingLeft: 48,
+                                paddingVertical: 16,
+                                borderRadius: 12,
+                                backgroundColor: "rgba(17,24,39,0.5)",
+                                borderWidth: 1.5,
+                                borderColor: "#374151",
+                                color: "#ffffff",
+                            }}
+                        />
+                    </View>
+                </View>
+
+                {/* Orders */}
+                <View className="px-4">
+                    <Text className="text-xl font-bold text-white mb-4">
+                        Orders ({filtered.length})
+                    </Text>
+
+                    {filtered.length === 0 ? (
+                        <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-12 items-center">
+                            <Package size={40} color="#6b7280" />
+                            <Text className="text-gray-400 mt-4">
+                                No orders found
+                            </Text>
+                        </View>
+                    ) : (
+                        filtered.map(order => (
+                            <OrderCard
+                                key={order._id}
+                                order={order}
+                                onView={() => openDetails(order._id)}
+                                formatDate={formatDate}
+                            />
+                        ))
+                    )}
                 </View>
             </ScrollView>
 
-            <OrderDetailModal
-                visible={showDetailModal}
-                order={selectedOrder}
+            {/* Detail Modal */}
+            <OrderDetail
+                visible={showModal}
+                order={selected}
                 onClose={() => {
-                    setShowDetailModal(false);
-                    setSelectedOrder(null);
+                    setShowModal(false);
+                    setSelected(null);
                 }}
                 formatDate={formatDate}
             />
@@ -409,160 +276,153 @@ const Orders = () => {
     );
 };
 
-// Order Row Component - nupips-team style
-const OrderRow = ({ order, onViewDetails, formatDate, getStatusBadge }) => (
+/* ----------------------------- Components ----------------------------- */
+
+const Stat = ({ label, value, color }) => (
+    <View>
+        <Text className="text-gray-400 text-xs mb-1">{label}</Text>
+        <Text className={`font-bold ${color}`}>{value}</Text>
+    </View>
+);
+
+const OrderCard = ({ order, onView, formatDate }) => (
     <TouchableOpacity
-        onPress={onViewDetails}
-        className="p-6 border-b border-gray-700/30 last:border-b-0 bg-gray-800/30 active:bg-gray-800/60"
-        activeOpacity={0.95}
+        onPress={onView}
+        className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-5 mb-4"
+        activeOpacity={0.8}
     >
-        <View className="flex-row items-center justify-between mb-3">
-            <Text className="font-mono text-base font-bold text-white">
+        <View className="flex-row justify-between mb-3">
+            <Text className="font-mono font-bold text-white">
                 #{order._id.slice(-8).toUpperCase()}
             </Text>
-            <TouchableOpacity
-                onPress={onViewDetails}
-                className="w-12 h-12 bg-blue-500/20 border border-blue-500/40 rounded-xl items-center justify-center active:bg-blue-500/30"
-                activeOpacity={0.9}
-            >
-                <Eye size={20} color="#3b82f6" />
-            </TouchableOpacity>
-        </View>
-
-        <View className="flex-row items-center justify-between mb-4">
-            <View className="flex-row items-center">
-                <Calendar size={16} color="#9ca3af" />
-                <Text className="text-gray-400 text-sm ml-3">{formatDate(order.createdAt)}</Text>
-            </View>
-            <View className="items-end">
-                <Text className="text-xl font-bold text-white">${order.amount.toFixed(2)}</Text>
-                {order.status === "Cancelled" && order.refundAmount > 0 && (
-                    <View className="flex-row items-center mt-2 bg-green-500/20 border border-green-500/40 px-3 py-2 rounded-xl">
-                        <CheckCircle size={14} color="#22c55e" />
-                        <Text className="text-xs text-green-400 font-semibold ml-2">
-                            ${order.refundAmount.toFixed(2)}
-                        </Text>
-                    </View>
-                )}
+            <View className="w-10 h-10 bg-gray-900/50 border border-gray-700/30 rounded-xl items-center justify-center">
+                <Eye size={18} color="#ea580c" />
             </View>
         </View>
 
-        <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center bg-gray-800/60 border border-gray-700/30 px-4 py-3 rounded-xl">
-                <Text className="text-white font-semibold text-base">{order.items.length} items</Text>
-            </View>
-            {getStatusBadge(order.status)}
+        <View className="flex-row justify-between mb-3">
+            <Text className="text-gray-400 text-sm">
+                {formatDate(order.createdAt)}
+            </Text>
+            <Text className="text-xl font-bold text-white">
+                ${order.amount.toFixed(2)}
+            </Text>
+        </View>
+
+        <View className="flex-row justify-between items-center">
+            <Text className="text-gray-400">
+                {order.items.length} items
+            </Text>
+            <StatusBadge status={order.status} />
         </View>
     </TouchableOpacity>
 );
 
-// Order Detail Modal Component - nupips-team style
-const OrderDetailModal = ({ visible, order, onClose, formatDate }) => {
+const StatusBadge = ({ status }) => {
+    const map = {
+        Delivered: ["bg-green-500/20", "text-green-400", CheckCircle],
+        Cancelled: ["bg-red-500/20", "text-red-400", XCircle],
+        Processing: ["bg-orange-500/20", "text-orange-400", RefreshCw],
+        Shipped: ["bg-orange-500/20", "text-orange-400", Truck],
+        "Order Placed": ["bg-gray-700/50", "text-gray-300", Clock],
+    };
+
+    const [bg, text, Icon] = map[status] || map["Order Placed"];
+
+    return (
+        <View className={`flex-row items-center px-3 py-2 rounded-xl ${bg}`}>
+            <Icon size={14} color="#ea580c" />
+            <Text className={`ml-2 text-sm font-semibold ${text}`}>
+                {status}
+            </Text>
+        </View>
+    );
+};
+
+/* ----------------------------- Detail Modal ----------------------------- */
+
+const OrderDetail = ({ visible, order, onClose, formatDate }) => {
     if (!visible || !order) return null;
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
             <View className="flex-1 bg-black/50 justify-end">
-                <View className="bg-gray-900 border border-gray-800 rounded-t-3xl max-h-[90%]">
-                    {/* Modal Header */}
-                    <View className="p-6 border-b border-gray-800 flex-row items-center justify-between">
-                        <View>
-                            <Text className="text-xl font-bold text-white">Order Details</Text>
-                            <Text className="text-gray-400 text-sm mt-1">Complete order information</Text>
-                        </View>
-                        <TouchableOpacity onPress={onClose} className="w-12 h-12 bg-gray-800 rounded-xl items-center justify-center active:bg-gray-800/70" activeOpacity={0.9}>
-                            <X size={20} color="#9ca3af" />
+                <View className="bg-gray-900 rounded-t-3xl max-h-[90%]">
+                    <View className="p-6 border-b border-gray-800 flex-row justify-between">
+                        <Text className="text-xl font-bold text-white">
+                            Order Details
+                        </Text>
+                        <TouchableOpacity onPress={onClose}>
+                            <X size={20} color="#ffffff" />
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView className="p-6" showsVerticalScrollIndicator={false}>
-                        {/* Order Summary */}
-                        <View className="bg-orange-600/20 border border-orange-600/40 rounded-xl p-6 mb-6">
-                            <View className="flex-row items-center mb-5">
-                                <Package size={20} color="#ea580c" />
-                                <Text className="text-lg font-bold text-white ml-3">Order Summary</Text>
-                            </View>
-                            <InfoItem label="Order ID" value={`#${order._id.slice(-8).toUpperCase()}`} />
-                            <InfoItem label="Order Date" value={formatDate(order.createdAt)} />
-                            <InfoItem label="Status" value={order.status} highlighted />
-                            <InfoItem label="Payment" value={order.payment ? "Paid" : "Unpaid"} />
-                            <InfoItem label="Total Amount" value={`$${order.amount.toFixed(2)}`} bold />
-                            {order.refundAmount > 0 && (
-                                <InfoItem label="Refund Amount" value={`$${order.refundAmount.toFixed(2)}`} green />
-                            )}
-                        </View>
+                    <ScrollView className="p-6">
+                        <DetailBlock label="Order ID" value={`#${order._id.slice(-8)}`} />
+                        <DetailBlock label="Date" value={formatDate(order.createdAt)} />
+                        <DetailBlock label="Status" value={order.status} highlight />
+                        <DetailBlock label="Amount" value={`$${order.amount.toFixed(2)}`} bold />
 
-                        {/* Order Items */}
-                        <View className="mb-6">
-                            <View className="flex-row items-center mb-5">
-                                <Package size={20} color="#ea580c" />
-                                <Text className="text-lg font-bold text-white ml-3">Order Items ({order.items.length})</Text>
-                            </View>
-                            {order.items.map((item, idx) => (
-                                <View key={idx} className="flex-row items-center p-5 bg-gray-800/50 border border-gray-700/30 rounded-xl mb-4">
-                                    {item.image && (
+                        <View className="mt-6">
+                            <Text className="text-xs text-gray-400 uppercase mb-3">
+                                Items
+                            </Text>
+                            {order.items.map((i, idx) => (
+                                <View
+                                    key={idx}
+                                    className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-5 mb-4 flex-row"
+                                >
+                                    {i.image && (
                                         <Image
-                                            source={{ uri: item.image || "https://via.placeholder.com/80" }}
-                                            style={{ width: 72, height: 72, borderRadius: 16 }}
-                                            resizeMode="cover"
+                                            source={{ uri: i.image }}
+                                            style={{ width: 64, height: 64, borderRadius: 12 }}
                                         />
                                     )}
-                                    <View className="flex-1 ml-4">
-                                        <Text className="text-white font-semibold mb-3" numberOfLines={2}>
-                                            {item.name}
+                                    <View className="ml-4 flex-1">
+                                        <Text className="text-white font-semibold mb-1">
+                                            {i.name}
                                         </Text>
-                                        <View className="flex-row mb-3">
-                                            <View className="bg-gray-700/50 px-4 py-2.5 border border-gray-600 rounded-xl mr-3">
-                                                <Text className="text-gray-300 text-sm font-medium">Qty: {item.quantity}</Text>
-                                            </View>
-                                            {item.size && (
-                                                <View className="bg-gray-700/50 px-4 py-2.5 border border-gray-600 rounded-xl">
-                                                    <Text className="text-gray-300 text-sm font-medium">Size: {item.size}</Text>
-                                                </View>
-                                            )}
-                                        </View>
+                                        <Text className="text-gray-400">
+                                            Qty: {i.quantity}
+                                        </Text>
                                     </View>
-                                    <Text className="text-orange-400 font-bold text-xl">
-                                        ${(item.price * item.quantity).toFixed(2)}
+                                    <Text className="text-orange-400 font-bold">
+                                        ${(i.price * i.quantity).toFixed(2)}
                                     </Text>
                                 </View>
                             ))}
                         </View>
 
-                        {/* Shipping Address */}
                         {order.address && (
-                            <View className="mb-6">
-                                <View className="flex-row items-center mb-5">
-                                    <MapPin size={20} color="#ea580c" />
-                                    <Text className="text-lg font-bold text-white ml-3">Shipping Address</Text>
-                                </View>
-                                <View className="bg-gray-800/50 border border-gray-700/30 p-6 rounded-xl">
-                                    <Text className="text-white font-bold mb-4">
-                                        {order.address.firstName} {order.address.lastName}
+                            <View className="mt-6 bg-gray-800/50 border border-gray-700/50 rounded-2xl p-5">
+                                <Text className="text-xs text-gray-400 uppercase mb-3">
+                                    Shipping
+                                </Text>
+                                <Text className="text-white mb-2">
+                                    {order.address.firstName} {order.address.lastName}
+                                </Text>
+                                <Text className="text-gray-400">
+                                    {order.address.street}
+                                </Text>
+                                <Text className="text-gray-400">
+                                    {order.address.city}, {order.address.state}
+                                </Text>
+                                <View className="flex-row items-center mt-3">
+                                    <Phone size={16} color="#9ca3af" />
+                                    <Text className="text-gray-400 ml-2">
+                                        {order.address.phone}
                                     </Text>
-                                    <Text className="text-gray-400 mb-3">{order.address.street}</Text>
-                                    <Text className="text-gray-400 mb-3">
-                                        {order.address.city}, {order.address.state} {order.address.zipcode}
-                                    </Text>
-                                    <Text className="text-gray-400 mb-4">{order.address.country}</Text>
-                                    <View className="flex-row items-center">
-                                        <Phone size={18} color="#9ca3af" />
-                                        <Text className="text-gray-400 text-base ml-3">{order.address.phone}</Text>
-                                    </View>
                                 </View>
                             </View>
                         )}
                     </ScrollView>
 
-                    {/* Modal Footer */}
-                    <View className="p-6 border-t border-gray-800 bg-gray-900/50">
+                    <View className="p-6 border-t border-gray-800">
                         <TouchableOpacity
                             onPress={onClose}
-                            className="w-full bg-orange-600 py-5 rounded-xl flex-row items-center justify-center active:bg-orange-700"
-                            activeOpacity={0.9}
+                            className="bg-orange-500 rounded-xl py-4 items-center"
                         >
-                            <X size={20} color="#ffffff" />
-                            <Text className="text-white font-bold text-lg ml-3">Close Details</Text>
+                            <Text className="text-white font-bold">Close</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -571,14 +431,12 @@ const OrderDetailModal = ({ visible, order, onClose, formatDate }) => {
     );
 };
 
-// Info Item Component
-const InfoItem = ({ label, value, bold = false, highlighted = false, green = false }) => (
+const DetailBlock = ({ label, value, bold = false, highlight = false }) => (
     <View className="mb-4">
-        <Text className="text-gray-500 text-xs font-medium mb-2 uppercase">{label}</Text>
+        <Text className="text-xs text-gray-400 uppercase mb-1">{label}</Text>
         <Text
-            className={`font-semibold ${bold ? 'text-xl font-bold' : 'text-lg'} ${highlighted ? 'text-orange-400' : green ? 'text-green-400' : 'text-white'
-                }`}
-            numberOfLines={1}
+            className={`${bold ? "text-xl font-bold" : "text-base"
+                } ${highlight ? "text-orange-400" : "text-white"}`}
         >
             {value}
         </Text>

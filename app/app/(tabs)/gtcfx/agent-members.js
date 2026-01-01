@@ -200,90 +200,149 @@ const GTCFxAgentMembers = () => {
     const TreeNodeRow = ({ node, isRoot = false, level = 0 }) => {
         const hasChildren = node.children && node.children.length > 0;
         const isExpanded = expandedNodes.has(node.member_id);
-        const indent = level * 20;
+        const indent = level * 16;
 
         return (
             <View>
-                <View className={`border-b border-gray-700/30 ${isRoot ? "bg-orange-500/20" : level === 1 ? "bg-purple-500/10" : level === 2 ? "bg-blue-500/10" : "bg-gray-800/40"}`}>
-                    <View style={{ paddingLeft: 12 + indent, paddingVertical: 12, paddingRight: 12 }}>
-                        <View className="flex-row items-center mb-2">
-                            {hasChildren ? (
-                                <TouchableOpacity onPress={() => toggleNode(node.member_id)} className="mr-2">
-                                    {isExpanded ? (
-                                        <ChevronDown size={16} color="#ea580c" />
-                                    ) : (
-                                        <ChevronRight size={16} color="#9ca3af" />
-                                    )}
-                                </TouchableOpacity>
-                            ) : (
-                                <View className="w-5 mr-2" />
-                            )}
-                            <View className={`w-9 h-9 rounded-full items-center justify-center mr-2 ${isRoot ? "bg-orange-500" : level === 1 ? "bg-purple-400" : level === 2 ? "bg-blue-400" : "bg-gray-400"}`}>
-                                <Text className="text-white font-bold text-xs">
-                                    {(node.nickname || "U").charAt(0).toUpperCase()}
-                                </Text>
-                            </View>
-                            <View className="flex-1 min-w-0">
-                                <Text className="font-semibold text-white text-sm" numberOfLines={1}>{node.nickname}</Text>
-                                <Text className="text-gray-400 text-xs">{node.realname || "N/A"}</Text>
-                            </View>
-                        </View>
-
-                        <View className="flex-row items-center mb-2">
-                            <Mail size={14} color="#9ca3af" style={{ marginRight: 8 }} />
-                            <Text className="text-gray-400 text-xs flex-1" numberOfLines={1}>{node.email}</Text>
-                        </View>
-
-                        {node.phone && (
-                            <View className="flex-row items-center mb-2">
-                                <Phone size={14} color="#9ca3af" style={{ marginRight: 8 }} />
-                                <Text className="text-gray-400 text-xs">{node.phone}</Text>
-                            </View>
+                <View style={{
+                    paddingLeft: 16 + indent,
+                    paddingVertical: 16,
+                    paddingRight: 16,
+                    backgroundColor: isRoot
+                        ? 'rgba(234,88,12,0.08)'
+                        : level === 1
+                            ? 'rgba(168,85,247,0.05)'
+                            : level === 2
+                                ? 'rgba(59,130,246,0.05)'
+                                : 'rgba(31,41,55,0.3)',
+                    borderBottomWidth: 1,
+                    borderBottomColor: 'rgba(55,65,81,0.3)',
+                }}>
+                    {/* Main Info Row */}
+                    <View className="flex-row items-center mb-3">
+                        {hasChildren ? (
+                            <TouchableOpacity
+                                onPress={() => toggleNode(node.member_id)}
+                                className="mr-3 p-1"
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                            >
+                                {isExpanded ? (
+                                    <ChevronDown size={18} color="#ea580c" />
+                                ) : (
+                                    <ChevronRight size={18} color="#9ca3af" />
+                                )}
+                            </TouchableOpacity>
+                        ) : (
+                            <View className="w-7 mr-3" />
                         )}
-
-                        <View className="flex-row items-center justify-between mb-2">
-                            <View className={`px-3 py-1 rounded-lg ${node.user_type === "agent" ? "bg-purple-500/20 border border-purple-500/30" : "bg-green-500/20 border border-green-500/30"}`}>
-                                <Text className={`text-xs font-semibold ${node.user_type === "agent" ? "text-purple-400" : "text-green-400"}`}>
-                                    {node.user_type === "agent" ? "Agent" : "Direct"}
-                                </Text>
-                            </View>
-                            <View className="px-3 py-1 rounded-lg bg-orange-500/20 border border-orange-500/30">
-                                <Text className="text-xs font-semibold text-orange-400">L{level}</Text>
-                            </View>
-                        </View>
-
-                        <View className="flex-row items-center justify-between mb-2">
-                            <Text className="text-gray-400 text-xs">Balance:</Text>
-                            <Text className="font-bold text-green-400 text-sm">
-                                ${parseFloat(node.amount || 0).toFixed(2)}
+                        <View style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginRight: 12,
+                            backgroundColor: isRoot
+                                ? '#ea580c'
+                                : level === 1
+                                    ? '#a855f7'
+                                    : level === 2
+                                        ? '#3b82f6'
+                                        : '#6b7280'
+                        }}>
+                            <Text className="text-white font-bold text-sm">
+                                {(node.nickname || "U").charAt(0).toUpperCase()}
                             </Text>
                         </View>
-
-                        <View className="flex-row items-center mb-2">
-                            <Calendar size={14} color="#9ca3af" style={{ marginRight: 8 }} />
-                            <Text className="text-gray-400 text-xs">
-                                {new Date(node.create_time * 1000).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "2-digit",
-                                })}
+                        <View className="flex-1 min-w-0">
+                            <Text className="font-bold text-white text-base mb-0.5" numberOfLines={1}>
+                                {node.nickname}
                             </Text>
+                            <Text className="text-gray-400 text-xs">{node.realname || "N/A"}</Text>
                         </View>
-
-                        <View className="flex-row items-center mb-2">
-                            <Text className="text-xs font-mono text-gray-500 mr-2">ID:</Text>
-                            <Text className="text-xs font-mono text-gray-400">{node.member_id}</Text>
-                        </View>
-
-                        {hasChildren && (
-                            <View className="flex-row items-center">
-                                <Users size={14} color="#3b82f6" style={{ marginRight: 8 }} />
-                                <Text className="text-blue-400 text-xs font-semibold">
-                                    {node.children.length} {node.children.length === 1 ? 'child' : 'children'}
-                                </Text>
-                            </View>
-                        )}
                     </View>
+
+                    {/* Email */}
+                    <View className="flex-row items-center mb-2.5">
+                        <Mail size={14} color="#9ca3af" style={{ marginRight: 10 }} />
+                        <Text className="text-gray-400 text-xs flex-1" numberOfLines={1}>{node.email}</Text>
+                    </View>
+
+                    {/* Phone */}
+                    {node.phone && (
+                        <View className="flex-row items-center mb-2.5">
+                            <Phone size={14} color="#9ca3af" style={{ marginRight: 10 }} />
+                            <Text className="text-gray-400 text-xs">{node.phone}</Text>
+                        </View>
+                    )}
+
+                    {/* Type & Level Badges */}
+                    <View className="flex-row items-center mb-3" style={{ gap: 8 }}>
+                        <View style={{
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 8,
+                            backgroundColor: node.user_type === "agent" ? 'rgba(168,85,247,0.15)' : 'rgba(34,197,94,0.15)',
+                            borderWidth: 1,
+                            borderColor: node.user_type === "agent" ? 'rgba(168,85,247,0.3)' : 'rgba(34,197,94,0.3)',
+                        }}>
+                            <Text style={{
+                                fontSize: 11,
+                                fontWeight: '700',
+                                color: node.user_type === "agent" ? '#c084fc' : '#4ade80',
+                            }}>
+                                {node.user_type === "agent" ? "Agent" : "Direct"}
+                            </Text>
+                        </View>
+                        <View style={{
+                            paddingHorizontal: 12,
+                            paddingVertical: 6,
+                            borderRadius: 8,
+                            backgroundColor: 'rgba(234,88,12,0.15)',
+                            borderWidth: 1,
+                            borderColor: 'rgba(234,88,12,0.3)',
+                        }}>
+                            <Text className="text-orange-400 font-bold" style={{ fontSize: 11 }}>
+                                Level {level}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Balance */}
+                    <View className="flex-row items-center justify-between mb-2.5 py-2 px-3 bg-gray-900/40 rounded-lg">
+                        <Text className="text-gray-400 text-xs font-medium">Account Balance</Text>
+                        <Text className="font-bold text-green-400 text-sm">
+                            ${parseFloat(node.amount || 0).toFixed(2)}
+                        </Text>
+                    </View>
+
+                    {/* Date */}
+                    <View className="flex-row items-center mb-2.5">
+                        <Calendar size={14} color="#9ca3af" style={{ marginRight: 10 }} />
+                        <Text className="text-gray-400 text-xs">
+                            Joined {new Date(node.create_time * 1000).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                            })}
+                        </Text>
+                    </View>
+
+                    {/* Member ID */}
+                    <View className="flex-row items-center mb-2.5">
+                        <Text className="text-xs font-mono text-gray-500 mr-2">ID:</Text>
+                        <Text className="text-xs font-mono text-gray-400">{node.member_id}</Text>
+                    </View>
+
+                    {/* Children Count */}
+                    {hasChildren && (
+                        <View className="flex-row items-center pt-2 border-t border-gray-700/30">
+                            <Users size={14} color="#3b82f6" style={{ marginRight: 8 }} />
+                            <Text className="text-blue-400 text-xs font-semibold">
+                                {node.children.length} {node.children.length === 1 ? 'Team Member' : 'Team Members'}
+                            </Text>
+                        </View>
+                    )}
                 </View>
 
                 {hasChildren && isExpanded &&
@@ -311,17 +370,32 @@ const GTCFxAgentMembers = () => {
             <SafeAreaView className="flex-1 bg-gray-900">
                 <StatusBar style="light" />
                 <View className="flex-1 justify-center items-center px-6">
-                    <View className="w-20 h-20 bg-red-500/20 border border-red-500/40 rounded-xl items-center justify-center mb-6">
+                    <View style={{
+                        width: 80,
+                        height: 80,
+                        backgroundColor: 'rgba(239,68,68,0.15)',
+                        borderWidth: 2,
+                        borderColor: 'rgba(239,68,68,0.3)',
+                        borderRadius: 16,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 24,
+                    }}>
                         <AlertCircle size={40} color="#ef4444" />
                     </View>
-                    <Text className="text-xl font-semibold text-white mb-2 text-center">Failed to Load Team Tree</Text>
-                    <Text className="text-gray-400 mb-6 text-center">{error}</Text>
+                    <Text className="text-2xl font-bold text-white mb-3 text-center">Failed to Load Team Tree</Text>
+                    <Text className="text-gray-400 mb-8 text-center leading-5">{error}</Text>
                     <TouchableOpacity
                         onPress={fetchMemberTree}
-                        className="px-10 py-4 bg-orange-600 rounded-xl active:bg-orange-700 border border-orange-600/30"
+                        style={{
+                            paddingHorizontal: 40,
+                            paddingVertical: 16,
+                            backgroundColor: '#ea580c',
+                            borderRadius: 12,
+                        }}
                         activeOpacity={0.9}
                     >
-                        <Text className="text-white font-semibold text-lg">Try Again</Text>
+                        <Text className="text-white font-bold text-base">Try Again</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -334,157 +408,290 @@ const GTCFxAgentMembers = () => {
             <StatusBar style="light" />
 
             {/* Header */}
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
-                <View className="flex-row items-center justify-between">
+            <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
+                <View className="flex-row items-center justify-between mb-3">
                     <TouchableOpacity
                         onPress={() => router.back()}
-                        className="flex-row items-center p-2 bg-gray-800/50 rounded-xl active:bg-gray-800/70 flex-1"
-                        activeOpacity={0.9}
+                        className="flex-row items-center flex-1"
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
                     >
-                        <ArrowLeft size={24} color="#ea580c" />
-                        <Text className="text-white font-semibold text-base ml-3">Team Tree</Text>
+                        <ArrowLeft size={22} color="#ffffff" style={{ marginRight: 12 }} />
+                        <View>
+                            <Text className="text-2xl font-bold text-white">Team Tree</Text>
+                            <Text className="text-sm text-gray-400 mt-0.5">Manage your team structure</Text>
+                        </View>
                     </TouchableOpacity>
+                </View>
 
-                    <View className="flex-row ml-2">
-                        <TouchableOpacity
-                            onPress={expandAllNodes}
-                            className="px-3 py-2 border border-gray-700/40 rounded-lg mr-2 active:bg-gray-800/50"
-                            activeOpacity={0.9}
-                        >
-                            <Text className="text-gray-400 text-xs font-medium">Expand</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={collapseAllNodes}
-                            className="px-3 py-2 border border-gray-700/40 rounded-lg active:bg-gray-800/50"
-                            activeOpacity={0.9}
-                        >
-                            <Text className="text-gray-400 text-xs font-medium">Collapse</Text>
-                        </TouchableOpacity>
-                    </View>
+                {/* Expand/Collapse Controls */}
+                <View className="flex-row" style={{ gap: 8 }}>
+                    <TouchableOpacity
+                        onPress={expandAllNodes}
+                        style={{
+                            flex: 1,
+                            paddingVertical: 10,
+                            backgroundColor: 'rgba(55,65,81,0.5)',
+                            borderWidth: 1,
+                            borderColor: '#374151',
+                            borderRadius: 10,
+                            alignItems: 'center',
+                        }}
+                        activeOpacity={0.7}
+                    >
+                        <Text className="text-gray-300 text-xs font-semibold">Expand All</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={collapseAllNodes}
+                        style={{
+                            flex: 1,
+                            paddingVertical: 10,
+                            backgroundColor: 'rgba(55,65,81,0.5)',
+                            borderWidth: 1,
+                            borderColor: '#374151',
+                            borderRadius: 10,
+                            alignItems: 'center',
+                        }}
+                        activeOpacity={0.7}
+                    >
+                        <Text className="text-gray-300 text-xs font-semibold">Collapse All</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
 
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="py-4 pb-24">
-                    {/* Stats Cards */}
-                    <View className="mx-4 mb-6">
-                        <Text className="text-lg font-light text-white mb-3">Team Overview</Text>
-                        <View className="mb-4">
-                            <View className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-5 mb-3">
-                                <View className="flex-row items-center">
-                                    <View className="w-12 h-12 bg-blue-500/20 border border-blue-500/50 rounded-xl items-center justify-center mr-4">
-                                        <Users size={20} color="#3b82f6" />
-                                    </View>
-                                    <View className="flex-1">
-                                        <Text className="text-gray-400 text-sm font-medium mb-1">Total Members</Text>
-                                        <Text className="text-2xl font-bold text-white">{stats.total}</Text>
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
+            <ScrollView
+                className="flex-1"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100 }}
+            >
+                {/* Stats Cards */}
+                <View className="px-4 mt-5 mb-6">
+                    <Text className="text-xl font-bold text-white mb-5">Team Overview</Text>
 
-                        <View className="flex-row mb-4">
-                            <View className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-5 flex-1 mr-3">
-                                <View className="flex-row items-center">
-                                    <View className="w-12 h-12 bg-purple-500/20 border border-purple-500/50 rounded-xl items-center justify-center mr-4">
-                                        <Award size={20} color="#a855f7" />
+                    {/* Total Members - Full Width */}
+                    <View className="mb-5">
+                        <View className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6">
+                            <View className="flex-row items-center justify-between">
+                                <View className="flex-row items-center flex-1">
+                                    <View className="w-12 h-12 bg-blue-500/20 rounded-xl items-center justify-center mr-4">
+                                        <Users size={22} color="#3b82f6" />
                                     </View>
-                                    <View className="flex-1">
-                                        <Text className="text-gray-400 text-sm font-medium mb-1">Sub-Agents</Text>
-                                        <Text className="text-2xl font-bold text-white">{stats.agents}</Text>
-                                    </View>
-                                </View>
-                            </View>
-
-                            <View className="bg-green-500/10 border border-green-500/30 rounded-xl p-5 flex-1">
-                                <View className="flex-row items-center">
-                                    <View className="w-12 h-12 bg-green-500/20 border border-green-500/50 rounded-xl items-center justify-center mr-4">
-                                        <TrendingUp size={20} color="#22c55e" />
-                                    </View>
-                                    <View className="flex-1">
-                                        <Text className="text-gray-400 text-sm font-medium mb-1">Direct Clients</Text>
-                                        <Text className="text-2xl font-bold text-white">{stats.directClients}</Text>
+                                    <View>
+                                        <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                            Total Members
+                                        </Text>
+                                        <Text className="text-3xl font-bold text-white">{stats.total}</Text>
                                     </View>
                                 </View>
-                            </View>
-                        </View>
-
-                        <View className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-5">
-                            <View className="flex-row items-center">
-                                <View className="w-12 h-12 bg-orange-500/20 border border-orange-500/50 rounded-xl items-center justify-center mr-4">
-                                    <DollarSign size={20} color="#ea580c" />
-                                </View>
-                                <View className="flex-1">
-                                    <Text className="text-gray-400 text-sm font-medium mb-1">Total Balance</Text>
-                                    <Text className="text-2xl font-bold text-white">${stats.totalBalance.toFixed(2)}</Text>
+                                <View className="w-10 h-10 bg-blue-500/10 rounded-full items-center justify-center">
+                                    <TrendingUp size={20} color="#3b82f6" />
                                 </View>
                             </View>
                         </View>
                     </View>
 
-                    {/* Search & Filter */}
-                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
-                        <View className="mb-4">
-                            <Text className="text-gray-400 text-sm font-medium mb-3">Search Members</Text>
+                    {/* Sub-Agents & Direct Clients - Side by Side */}
+                    <View className="flex-row mb-5" style={{ gap: 12 }}>
+                        <View className="flex-1">
+                            <View className="bg-purple-500/10 border border-purple-500/20 rounded-2xl p-5">
+                                <View className="w-12 h-12 bg-purple-500/20 rounded-xl items-center justify-center mb-3">
+                                    <Award size={22} color="#a855f7" />
+                                </View>
+                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    Sub-Agents
+                                </Text>
+                                <Text className="text-2xl font-bold text-white">{stats.agents}</Text>
+                            </View>
+                        </View>
+
+                        <View className="flex-1">
+                            <View className="bg-green-500/10 border border-green-500/20 rounded-2xl p-5">
+                                <View className="w-12 h-12 bg-green-500/20 rounded-xl items-center justify-center mb-3">
+                                    <Users size={22} color="#22c55e" />
+                                </View>
+                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    Direct Clients
+                                </Text>
+                                <Text className="text-2xl font-bold text-white">{stats.directClients}</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Total Balance */}
+                    <View className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-6">
+                        <View className="flex-row items-center justify-between">
+                            <View className="flex-row items-center flex-1">
+                                <View className="w-12 h-12 bg-orange-500/20 rounded-xl items-center justify-center mr-4">
+                                    <DollarSign size={22} color="#ea580c" />
+                                </View>
+                                <View>
+                                    <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                        Total Balance
+                                    </Text>
+                                    <Text className="text-3xl font-bold text-white">${stats.totalBalance.toFixed(2)}</Text>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Search & Filter */}
+                <View className="px-4 mb-6">
+                    <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                        <Text className="text-xl font-bold text-white mb-5">Search & Filter</Text>
+
+                        {/* Search Input */}
+                        <View className="mb-5">
+                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                                Search Members
+                            </Text>
                             <View className="relative">
-                                <Search size={20} color="#9ca3af" style={{ position: 'absolute', left: 16, top: 18, zIndex: 1 }} />
+                                <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                    <Search size={20} color="#9ca3af" />
+                                </View>
                                 <TextInput
-                                    placeholder="Search by email, nickname, or real name..."
+                                    placeholder="Email, nickname, or name..."
                                     placeholderTextColor="#6b7280"
                                     value={searchTerm}
                                     onChangeText={setSearchTerm}
-                                    className="w-full pl-12 pr-5 py-4 border border-gray-700/40 bg-gray-900/50 rounded-xl text-white text-base"
+                                    style={{
+                                        paddingLeft: 48,
+                                        paddingRight: 16,
+                                        paddingVertical: 16,
+                                        fontSize: 15,
+                                        fontWeight: '500',
+                                        color: '#ffffff',
+                                        backgroundColor: 'rgba(17,24,39,0.5)',
+                                        borderRadius: 12,
+                                        borderWidth: 1.5,
+                                        borderColor: '#374151',
+                                    }}
                                 />
                             </View>
                         </View>
 
+                        {/* Filter Type */}
                         <View>
-                            <Text className="text-gray-400 text-sm font-medium mb-3">Member Type</Text>
-                            <View className="border border-gray-700/30 rounded-xl bg-gray-900/50 overflow-hidden">
-                                <TouchableOpacity onPress={() => setFilterUserType("")} className="px-6 py-4 border-b border-gray-700/30">
-                                    <Text className={`text-base font-semibold ${filterUserType === "" ? "text-white" : "text-gray-400"}`}>
+                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                                Member Type
+                            </Text>
+                            <View style={{ gap: 8 }}>
+                                <TouchableOpacity
+                                    onPress={() => setFilterUserType("")}
+                                    style={{
+                                        paddingVertical: 14,
+                                        paddingHorizontal: 16,
+                                        backgroundColor: filterUserType === "" ? '#ea580c' : 'rgba(17,24,39,0.5)',
+                                        borderRadius: 10,
+                                        borderWidth: 1.5,
+                                        borderColor: filterUserType === "" ? '#ea580c' : '#374151',
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={{
+                                        fontSize: 14,
+                                        fontWeight: '700',
+                                        color: filterUserType === "" ? '#ffffff' : '#9ca3af',
+                                    }}>
                                         All Members
                                     </Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setFilterUserType("agent")} className="px-6 py-4 border-b border-gray-700/30">
-                                    <Text className={`text-base font-semibold ${filterUserType === "agent" ? "text-white" : "text-gray-400"}`}>
-                                        Sub-Agents
+
+                                <TouchableOpacity
+                                    onPress={() => setFilterUserType("agent")}
+                                    style={{
+                                        paddingVertical: 14,
+                                        paddingHorizontal: 16,
+                                        backgroundColor: filterUserType === "agent" ? '#ea580c' : 'rgba(17,24,39,0.5)',
+                                        borderRadius: 10,
+                                        borderWidth: 1.5,
+                                        borderColor: filterUserType === "agent" ? '#ea580c' : '#374151',
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={{
+                                        fontSize: 14,
+                                        fontWeight: '700',
+                                        color: filterUserType === "agent" ? '#ffffff' : '#9ca3af',
+                                    }}>
+                                        Sub-Agents Only
                                     </Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity onPress={() => setFilterUserType("direct")} className="px-6 py-4">
-                                    <Text className={`text-base font-semibold ${filterUserType === "direct" ? "text-white" : "text-gray-400"}`}>
-                                        Direct Clients
+
+                                <TouchableOpacity
+                                    onPress={() => setFilterUserType("direct")}
+                                    style={{
+                                        paddingVertical: 14,
+                                        paddingHorizontal: 16,
+                                        backgroundColor: filterUserType === "direct" ? '#ea580c' : 'rgba(17,24,39,0.5)',
+                                        borderRadius: 10,
+                                        borderWidth: 1.5,
+                                        borderColor: filterUserType === "direct" ? '#ea580c' : '#374151',
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={{
+                                        fontSize: 14,
+                                        fontWeight: '700',
+                                        color: filterUserType === "direct" ? '#ffffff' : '#9ca3af',
+                                    }}>
+                                        Direct Clients Only
                                     </Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
 
+                        {/* Reset Filters */}
                         {(searchTerm || filterUserType) && (
                             <TouchableOpacity
                                 onPress={() => {
                                     setSearchTerm("");
                                     setFilterUserType("");
                                 }}
-                                className="flex-row items-center justify-center bg-orange-600/20 border border-orange-600/30 px-6 py-3 rounded-xl mt-4 active:bg-orange-600/30"
-                                activeOpacity={0.9}
+                                style={{
+                                    marginTop: 16,
+                                    paddingVertical: 14,
+                                    backgroundColor: 'rgba(234,88,12,0.15)',
+                                    borderWidth: 1.5,
+                                    borderColor: 'rgba(234,88,12,0.3)',
+                                    borderRadius: 10,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 10,
+                                }}
+                                activeOpacity={0.7}
                             >
-                                <RefreshCw size={18} color="#ea580c" style={{ marginRight: 8 }} />
-                                <Text className="text-orange-400 font-semibold text-sm">Reset Filters</Text>
+                                <RefreshCw size={18} color="#ea580c" />
+                                <Text className="text-orange-400 font-bold text-sm">Reset Filters</Text>
                             </TouchableOpacity>
                         )}
                     </View>
+                </View>
 
-                    {/* Team Tree */}
-                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl mb-6 overflow-hidden">
+                {/* Team Tree */}
+                <View className="px-4 mb-6">
+                    <Text className="text-xl font-bold text-white mb-4">Team Structure</Text>
+                    <View className="bg-gray-800/50 rounded-2xl border border-gray-700/50 overflow-hidden">
                         {filteredTreeData ? (
                             <TreeNodeRow node={filteredTreeData} isRoot={true} level={0} />
                         ) : (
                             <View className="p-12 items-center">
-                                <View className="w-24 h-24 bg-gray-700/50 border border-gray-600 rounded-xl items-center justify-center mb-6">
+                                <View style={{
+                                    width: 96,
+                                    height: 96,
+                                    backgroundColor: 'rgba(55,65,81,0.5)',
+                                    borderWidth: 2,
+                                    borderColor: '#4b5563',
+                                    borderRadius: 16,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginBottom: 20,
+                                }}>
                                     <Users size={48} color="#6b7280" />
                                 </View>
-                                <Text className="text-lg font-semibold text-gray-300 mb-2 text-center">No Members Found</Text>
-                                <Text className="text-gray-500 text-sm text-center mb-4">
+                                <Text className="text-xl font-bold text-gray-300 mb-3 text-center">No Members Found</Text>
+                                <Text className="text-gray-500 text-sm text-center mb-6 leading-5">
                                     {!treeData?.tree
                                         ? "You don't have any team members yet"
                                         : "No members match your search criteria"}
@@ -495,83 +702,164 @@ const GTCFxAgentMembers = () => {
                                             setSearchTerm("");
                                             setFilterUserType("");
                                         }}
-                                        className="flex-row items-center bg-orange-600/20 border border-orange-600/30 px-6 py-4 rounded-xl active:bg-orange-600/30"
-                                        activeOpacity={0.9}
+                                        style={{
+                                            paddingVertical: 14,
+                                            paddingHorizontal: 24,
+                                            backgroundColor: 'rgba(234,88,12,0.15)',
+                                            borderWidth: 1.5,
+                                            borderColor: 'rgba(234,88,12,0.3)',
+                                            borderRadius: 12,
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            gap: 10,
+                                        }}
+                                        activeOpacity={0.7}
                                     >
-                                        <RefreshCw size={20} color="#ea580c" style={{ marginRight: 12 }} />
-                                        <Text className="text-orange-400 font-semibold text-base">Reset Filters</Text>
+                                        <RefreshCw size={20} color="#ea580c" />
+                                        <Text className="text-orange-400 font-bold text-base">Reset Filters</Text>
                                     </TouchableOpacity>
                                 )}
                             </View>
                         )}
                     </View>
+                </View>
 
-                    {/* Top Members */}
-                    {stats.allMembers.length > 1 && (
-                        <View className="mx-4 mb-6">
-                            <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-5 mb-4">
-                                <View className="flex-row items-center mb-4">
-                                    <TrendingUp size={20} color="#ea580c" style={{ marginRight: 8 }} />
-                                    <Text className="text-base font-bold text-white">Top Members by Balance</Text>
-                                </View>
+                {/* Top Members */}
+                {stats.allMembers.length > 1 && (
+                    <View className="px-4 mb-6">
+                        {/* Top by Balance */}
+                        <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50 mb-5">
+                            <View className="flex-row items-center mb-4">
+                                <TrendingUp size={20} color="#ea580c" style={{ marginRight: 10 }} />
+                                <Text className="text-lg font-bold text-white">Top Members by Balance</Text>
+                            </View>
+                            <View style={{ gap: 10 }}>
                                 {stats.allMembers
                                     .sort((a, b) => parseFloat(b.amount || 0) - parseFloat(a.amount || 0))
                                     .slice(0, 5)
                                     .map((member, index) => (
-                                        <View key={member.member_id} className="flex-row items-center justify-between p-3 bg-gray-900/50 rounded-lg mb-2">
+                                        <View
+                                            key={member.member_id}
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: 14,
+                                                backgroundColor: 'rgba(17,24,39,0.5)',
+                                                borderRadius: 12,
+                                            }}
+                                        >
                                             <View className="flex-row items-center flex-1 min-w-0 mr-3">
                                                 <View className="relative mr-3">
-                                                    <View className="w-8 h-8 bg-orange-500 rounded-full items-center justify-center">
-                                                        <Text className="text-white font-bold text-xs">
+                                                    <View style={{
+                                                        width: 36,
+                                                        height: 36,
+                                                        backgroundColor: '#ea580c',
+                                                        borderRadius: 10,
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    }}>
+                                                        <Text className="text-white font-bold text-sm">
                                                             {member.nickname.charAt(0).toUpperCase()}
                                                         </Text>
                                                     </View>
                                                     {index < 3 && (
-                                                        <View className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full items-center justify-center border border-white">
-                                                            <Text className="text-[9px] font-bold">{index + 1}</Text>
+                                                        <View style={{
+                                                            position: 'absolute',
+                                                            top: -4,
+                                                            right: -4,
+                                                            width: 18,
+                                                            height: 18,
+                                                            backgroundColor: '#facc15',
+                                                            borderRadius: 9,
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            borderWidth: 2,
+                                                            borderColor: '#ffffff',
+                                                        }}>
+                                                            <Text style={{ fontSize: 9, fontWeight: 'bold', color: '#000' }}>
+                                                                {index + 1}
+                                                            </Text>
                                                         </View>
                                                     )}
                                                 </View>
                                                 <View className="flex-1 min-w-0">
-                                                    <Text className="font-semibold text-white text-xs" numberOfLines={1}>{member.nickname}</Text>
-                                                    <Text className="text-[10px] text-gray-500" numberOfLines={1}>{member.email}</Text>
+                                                    <Text className="font-bold text-white text-sm mb-0.5" numberOfLines={1}>
+                                                        {member.nickname}
+                                                    </Text>
+                                                    <Text className="text-[11px] text-gray-500" numberOfLines={1}>
+                                                        {member.email}
+                                                    </Text>
                                                 </View>
                                             </View>
-                                            <Text className="text-orange-400 font-bold text-xs">
+                                            <Text className="text-orange-400 font-bold text-sm">
                                                 ${parseFloat(member.amount || 0).toFixed(2)}
                                             </Text>
                                         </View>
                                     ))}
                             </View>
+                        </View>
 
-                            <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-5 mb-4">
-                                <View className="flex-row items-center mb-4">
-                                    <Clock size={20} color="#ea580c" style={{ marginRight: 8 }} />
-                                    <Text className="text-base font-bold text-white">Recent Registrations</Text>
-                                </View>
+                        {/* Recent Registrations */}
+                        <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                            <View className="flex-row items-center mb-4">
+                                <Clock size={20} color="#ea580c" style={{ marginRight: 10 }} />
+                                <Text className="text-lg font-bold text-white">Recent Registrations</Text>
+                            </View>
+                            <View style={{ gap: 10 }}>
                                 {stats.allMembers
                                     .sort((a, b) => b.create_time - a.create_time)
                                     .slice(0, 5)
                                     .map((member) => (
-                                        <View key={member.member_id} className="flex-row items-center justify-between p-3 bg-gray-900/50 rounded-lg mb-2">
+                                        <View
+                                            key={member.member_id}
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: 14,
+                                                backgroundColor: 'rgba(17,24,39,0.5)',
+                                                borderRadius: 12,
+                                            }}
+                                        >
                                             <View className="flex-row items-center flex-1 min-w-0 mr-3">
-                                                <View className="w-8 h-8 bg-orange-500 rounded-full items-center justify-center mr-3">
-                                                    <Text className="text-white font-bold text-xs">
+                                                <View style={{
+                                                    width: 36,
+                                                    height: 36,
+                                                    backgroundColor: '#ea580c',
+                                                    borderRadius: 10,
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    marginRight: 12,
+                                                }}>
+                                                    <Text className="text-white font-bold text-sm">
                                                         {member.nickname.charAt(0).toUpperCase()}
                                                     </Text>
                                                 </View>
                                                 <View className="flex-1 min-w-0">
-                                                    <Text className="font-semibold text-white text-xs" numberOfLines={1}>{member.nickname}</Text>
-                                                    <Text className="text-[10px] text-gray-500">
+                                                    <Text className="font-bold text-white text-sm mb-0.5" numberOfLines={1}>
+                                                        {member.nickname}
+                                                    </Text>
+                                                    <Text className="text-[11px] text-gray-500">
                                                         {new Date(member.create_time * 1000).toLocaleDateString("en-US", {
                                                             month: "short",
                                                             day: "numeric",
+                                                            year: "numeric",
                                                         })}
                                                     </Text>
                                                 </View>
                                             </View>
-                                            <View className={`px-2 py-0.5 rounded-full ${member.user_type === "agent" ? "bg-purple-500/20" : "bg-green-500/20"}`}>
-                                                <Text className={`text-[10px] font-semibold ${member.user_type === "agent" ? "text-purple-400" : "text-green-400"}`}>
+                                            <View style={{
+                                                paddingHorizontal: 10,
+                                                paddingVertical: 4,
+                                                borderRadius: 6,
+                                                backgroundColor: member.user_type === "agent" ? 'rgba(168,85,247,0.15)' : 'rgba(34,197,94,0.15)',
+                                            }}>
+                                                <Text style={{
+                                                    fontSize: 10,
+                                                    fontWeight: '700',
+                                                    color: member.user_type === "agent" ? '#c084fc' : '#4ade80',
+                                                }}>
                                                     {member.user_type === "agent" ? "Agent" : "Direct"}
                                                 </Text>
                                             </View>
@@ -579,20 +867,29 @@ const GTCFxAgentMembers = () => {
                                     ))}
                             </View>
                         </View>
-                    )}
-
-                    {/* Export Button */}
-                    <View className="mx-4 mb-6">
-                        <TouchableOpacity
-                            onPress={handleExportJSON}
-                            disabled={!treeData}
-                            className="flex-row items-center justify-center bg-orange-600 px-6 py-5 rounded-xl active:bg-orange-700 border border-orange-600/30"
-                            activeOpacity={0.9}
-                        >
-                            <FileJson size={20} color="#ffffff" style={{ marginRight: 12 }} />
-                            <Text className="text-white font-bold text-lg">Export Tree Data</Text>
-                        </TouchableOpacity>
                     </View>
+                )}
+
+                {/* Export Button */}
+                <View className="px-4 mb-6">
+                    <TouchableOpacity
+                        onPress={handleExportJSON}
+                        disabled={!treeData}
+                        style={{
+                            paddingVertical: 18,
+                            backgroundColor: treeData ? '#ea580c' : 'rgba(55,65,81,0.4)',
+                            borderRadius: 14,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 12,
+                            opacity: treeData ? 1 : 0.5,
+                        }}
+                        activeOpacity={0.7}
+                    >
+                        <FileJson size={20} color="#ffffff" />
+                        <Text className="text-white font-bold text-base">Export Tree Data (JSON)</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </SafeAreaView>

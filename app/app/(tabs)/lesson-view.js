@@ -110,8 +110,13 @@ const LessonView = () => {
                     </Text>
                     <TouchableOpacity
                         onPress={() => router.push({ pathname: '/(tabs)/course-view', params: { id: courseId } })}
-                        className="px-10 py-4 bg-orange-600 rounded-xl active:bg-orange-700"
-                        activeOpacity={0.9}
+                        style={{
+                            paddingHorizontal: 40,
+                            paddingVertical: 16,
+                            backgroundColor: '#ea580c',
+                            borderRadius: 14,
+                        }}
+                        activeOpacity={0.7}
                     >
                         <Text className="text-white font-semibold text-lg">Back to Course</Text>
                     </TouchableOpacity>
@@ -124,16 +129,17 @@ const LessonView = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            {/* Top Navigation - nupips-team style */}
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
+            {/* Top Navigation */}
+            <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
                 <View className="flex-row items-center justify-between">
                     <TouchableOpacity
                         onPress={() => router.back()}
-                        className="flex-row items-center p-2 bg-gray-800/50 rounded-xl active:bg-gray-800/70"
-                        activeOpacity={0.9}
+                        className="flex-row items-center"
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
                     >
-                        <ArrowLeft size={20} color="#ea580c" />
-                        <Text className="text-white font-semibold text-base ml-2">Course</Text>
+                        <ArrowLeft size={22} color="#ea580c" style={{ marginRight: 8 }} />
+                        <Text className="text-white font-semibold text-base">Course</Text>
                     </TouchableOpacity>
 
                     <View className="flex-1 items-center mx-4">
@@ -156,18 +162,23 @@ const LessonView = () => {
 
                     <TouchableOpacity
                         onPress={() => setShowLessonList(true)}
-                        className="w-11 h-11 bg-gray-800/50 border border-gray-700/30 rounded-xl items-center justify-center active:bg-gray-800/70"
-                        activeOpacity={0.9}
+                        className="w-11 h-11 bg-gray-800/50 border border-gray-700/50 rounded-xl items-center justify-center"
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        activeOpacity={0.7}
                     >
                         <List size={20} color="#9ca3af" />
                     </TouchableOpacity>
                 </View>
             </View>
 
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="px-4 py-6 pb-24">
-                    {/* Video Player */}
-                    <View className="bg-black border border-gray-800 rounded-2xl overflow-hidden mb-6" style={{ height: VIDEO_HEIGHT }}>
+            <ScrollView
+                className="flex-1"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100 }}
+            >
+                {/* Video Player */}
+                <View className="px-4 mt-5 mb-6">
+                    <View className="bg-black border border-gray-800 rounded-2xl overflow-hidden" style={{ height: VIDEO_HEIGHT }}>
                         <Video
                             source={{ uri: currentLesson.videoUrl }}
                             style={{ width: '100%', height: VIDEO_HEIGHT }}
@@ -178,14 +189,16 @@ const LessonView = () => {
                             onLoad={() => setVideoStatus({ isLoaded: true })}
                         />
                     </View>
+                </View>
 
-                    {/* Lesson Info */}
-                    <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
-                        <View className="flex-row items-center flex-wrap mb-4">
-                            <View className="bg-orange-600/30 border border-orange-600 px-4 py-2.5 rounded-full mr-3 mb-3">
-                                <Text className="text-white text-xs font-bold">Lesson {currentLesson.order}</Text>
+                {/* Lesson Info */}
+                <View className="px-4 mb-6">
+                    <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
+                        <View className="flex-row items-center flex-wrap mb-4" style={{ gap: 8 }}>
+                            <View className="bg-orange-600/20 border border-orange-600/30 px-4 py-2.5 rounded-full">
+                                <Text className="text-orange-400 text-xs font-bold">Lesson {currentLesson.order}</Text>
                             </View>
-                            <View className="flex-row items-center bg-gray-800/50 border border-gray-700/30 px-3.5 py-2 rounded-lg">
+                            <View className="flex-row items-center bg-gray-900/50 border border-gray-700/30 px-3.5 py-2 rounded-lg">
                                 <Clock size={14} color="#9ca3af" />
                                 <Text className="text-gray-400 text-sm font-medium ml-2">
                                     {formatDuration(currentLesson.duration)}
@@ -201,7 +214,7 @@ const LessonView = () => {
                         )}
 
                         {/* Progress Bar */}
-                        <View className="p-4 bg-gray-800/50 border border-gray-700/30 rounded-xl mb-6">
+                        <View className="p-5 bg-gray-900/50 border border-gray-700/30 rounded-xl mb-6">
                             <View className="flex-row items-center justify-between mb-3">
                                 <Text className="text-gray-400 text-sm font-medium">Course Progress</Text>
                                 <Text className="text-orange-400 text-sm font-bold">
@@ -220,25 +233,43 @@ const LessonView = () => {
                         </View>
 
                         {/* Navigation Buttons */}
-                        <View className="flex-row">
+                        <View className="flex-row" style={{ gap: 12 }}>
                             {previousLesson ? (
                                 <TouchableOpacity
                                     onPress={() => goToLesson(previousLesson)}
-                                    className="flex-1 flex-row items-center justify-center bg-gray-800/50 border border-gray-700/30 px-6 py-4 rounded-xl mr-3 active:bg-gray-800/70"
-                                    activeOpacity={0.9}
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        paddingVertical: 16,
+                                        backgroundColor: 'rgba(55,65,81,0.5)',
+                                        borderWidth: 1,
+                                        borderColor: '#374151',
+                                        borderRadius: 12,
+                                    }}
+                                    activeOpacity={0.7}
                                 >
                                     <ChevronLeft size={20} color="#9ca3af" />
                                     <Text className="text-gray-400 font-semibold ml-2">Previous</Text>
                                 </TouchableOpacity>
                             ) : (
-                                <View className="flex-1 mr-3" />
+                                <View style={{ flex: 1 }} />
                             )}
 
                             {nextLesson ? (
                                 <TouchableOpacity
                                     onPress={() => goToLesson(nextLesson)}
-                                    className="flex-1 flex-row items-center justify-center bg-orange-600 px-6 py-4 rounded-xl active:bg-orange-700"
-                                    activeOpacity={0.9}
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        paddingVertical: 16,
+                                        backgroundColor: '#ea580c',
+                                        borderRadius: 12,
+                                    }}
+                                    activeOpacity={0.7}
                                 >
                                     <Text className="text-white font-bold mr-2">Next Lesson</Text>
                                     <ChevronRight size={20} color="#ffffff" />
@@ -246,8 +277,16 @@ const LessonView = () => {
                             ) : (
                                 <TouchableOpacity
                                     onPress={() => router.back()}
-                                    className="flex-1 flex-row items-center justify-center bg-green-600 px-6 py-4 rounded-xl active:bg-green-700"
-                                    activeOpacity={0.9}
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        paddingVertical: 16,
+                                        backgroundColor: '#10b981',
+                                        borderRadius: 12,
+                                    }}
+                                    activeOpacity={0.7}
                                 >
                                     <Award size={20} color="#ffffff" />
                                     <Text className="text-white font-bold ml-2">Course Complete!</Text>
@@ -258,7 +297,7 @@ const LessonView = () => {
                 </View>
             </ScrollView>
 
-            {/* Lesson List Modal - nupips-team style */}
+            {/* Lesson List Modal */}
             <Modal visible={showLessonList} animationType="slide" transparent>
                 <View className="flex-1 bg-black/50 justify-end">
                     <TouchableOpacity
@@ -273,7 +312,11 @@ const LessonView = () => {
                                 <List size={24} color="#ea580c" />
                                 <Text className="text-xl font-bold text-white ml-3">Course Lessons</Text>
                             </View>
-                            <TouchableOpacity onPress={() => setShowLessonList(false)} className="w-10 h-10 bg-gray-800 rounded-full items-center justify-center active:bg-gray-800/70" activeOpacity={0.7}>
+                            <TouchableOpacity
+                                onPress={() => setShowLessonList(false)}
+                                className="w-10 h-10 bg-gray-800 rounded-full items-center justify-center"
+                                activeOpacity={0.7}
+                            >
                                 <X size={20} color="#9ca3af" />
                             </TouchableOpacity>
                         </View>
@@ -284,26 +327,27 @@ const LessonView = () => {
                                     key={lesson._id}
                                     onPress={() => goToLesson(lesson)}
                                     className={`p-5 border-b border-gray-700/30 last:border-b-0 ${lesson._id === lessonId
-                                            ? "bg-orange-600/10 border-l-4 border-l-orange-600"
-                                            : "bg-gray-800/30 active:bg-gray-800/60"
+                                        ? "bg-orange-600/10"
+                                        : "bg-gray-800/30"
                                         }`}
+                                    style={lesson._id === lessonId ? { borderLeftWidth: 4, borderLeftColor: '#ea580c' } : {}}
                                     activeOpacity={0.95}
                                 >
                                     <View className="flex-row items-start">
-                                        <View className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${lesson._id === lessonId
+                                        <View
+                                            className={`w-12 h-12 rounded-xl items-center justify-center mr-4 ${lesson._id === lessonId
                                                 ? "bg-orange-600 border border-orange-600/50"
                                                 : "bg-gray-700/50 border border-gray-600"
-                                            }`}>
-                                            <Text className={`text-xl font-bold ${lesson._id === lessonId ? "text-white" : "text-gray-300"
-                                                }`}>
+                                                }`}
+                                        >
+                                            <Text className={`text-xl font-bold ${lesson._id === lessonId ? "text-white" : "text-gray-300"}`}>
                                                 {lesson.order}
                                             </Text>
                                         </View>
 
                                         <View className="flex-1">
                                             <Text
-                                                className={`font-semibold mb-2 ${lesson._id === lessonId ? 'text-orange-400' : 'text-white'
-                                                    }`}
+                                                className={`font-semibold mb-2 ${lesson._id === lessonId ? 'text-orange-400' : 'text-white'}`}
                                                 numberOfLines={2}
                                             >
                                                 {lesson.title}
@@ -327,15 +371,15 @@ const LessonView = () => {
                         </ScrollView>
 
                         {/* Footer Stats */}
-                        <View className="p-6 bg-gray-800/50 border-t border-gray-700/30">
-                            <View className="flex-row">
-                                <View className="flex-1 bg-gray-700/50 p-4 border border-gray-600 rounded-xl mr-3">
+                        <View className="p-6 bg-gray-800/50 border-t border-gray-700/50">
+                            <View className="flex-row" style={{ gap: 12 }}>
+                                <View className="flex-1 bg-gray-900/50 p-4 border border-gray-700/30 rounded-xl">
                                     <Text className="text-gray-400 text-xs mb-1">Completed</Text>
                                     <Text className="text-xl font-bold text-white">
                                         {currentIndex + 1}/{sortedLessons.length}
                                     </Text>
                                 </View>
-                                <View className="flex-1 bg-gray-700/50 p-4 border border-gray-600 rounded-xl">
+                                <View className="flex-1 bg-gray-900/50 p-4 border border-gray-700/30 rounded-xl">
                                     <Text className="text-gray-400 text-xs mb-1">Progress</Text>
                                     <Text className="text-xl font-bold text-orange-400">
                                         {progressPercentage}%

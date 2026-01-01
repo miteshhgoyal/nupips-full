@@ -14,6 +14,7 @@ import {
     CheckCircle,
     Info,
     ShieldCheck,
+    ArrowLeft,
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 
@@ -50,140 +51,278 @@ const BrokerSelection = () => {
         <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-3">
-                <Text className="text-2xl font-bold text-white">Connect Broker</Text>
+            {/* Header */}
+            <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
+                <TouchableOpacity
+                    onPress={() => router.back()}
+                    className="flex-row items-center mb-2"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    activeOpacity={0.7}
+                >
+                    <ArrowLeft size={22} color="#ffffff" style={{ marginRight: 12 }} />
+                    <View>
+                        <Text className="text-2xl font-bold text-white">Connect Broker</Text>
+                        <Text className="text-sm text-gray-400 mt-0.5">Link your trading accounts</Text>
+                    </View>
+                </TouchableOpacity>
             </View>
 
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="py-4 pb-24">
-                    {/* Connection Status */}
-                    {gtcFxConnected && (
-                        <View className="mx-4 mb-6 bg-green-500/10 border border-green-500/30 rounded-xl p-5">
-                            <View className="flex-row items-center mb-2">
-                                <View className="w-10 h-10 bg-green-500/20 rounded-full items-center justify-center mr-3">
-                                    <CheckCircle size={20} color="#22c55e" />
+            <ScrollView
+                className="flex-1"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100 }}
+            >
+                {/* Connection Status */}
+                {gtcFxConnected && (
+                    <View className="mx-4 mt-5 mb-6">
+                        <View className="bg-green-500/10 border border-green-500/20 rounded-2xl p-6">
+                            <View className="flex-row items-center">
+                                <View className="w-12 h-12 bg-green-500/20 rounded-xl items-center justify-center mr-4">
+                                    <CheckCircle size={22} color="#22c55e" />
                                 </View>
                                 <View className="flex-1">
-                                    <Text className="text-white font-semibold text-base mb-1">GTC FX Connected</Text>
+                                    <Text className="text-base font-bold text-white mb-1">GTC FX Connected</Text>
                                     <Text className="text-gray-400 text-sm">{gtcUser?.email}</Text>
                                 </View>
                             </View>
                         </View>
-                    )}
-
-                    {/* Brokers */}
-                    <View className="mx-4 mb-6">
-                        {brokers.map((broker) => {
-                            const isConnected = broker.id === "gtcfx" && gtcFxConnected;
-
-                            return (
-                                <TouchableOpacity
-                                    key={broker.id}
-                                    onPress={() => handleBrokerSelect(broker)}
-                                    className={`bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6 ${selectedBroker === broker.id
-                                        ? 'border-orange-500/30 bg-orange-500/10'
-                                        : isConnected
-                                            ? 'border-green-500/30 bg-green-500/10'
-                                            : ''
-                                        } active:bg-gray-800/60`}
-                                    activeOpacity={0.95}
-                                >
-                                    {/* Status Badge */}
-                                    <View className="absolute top-4 right-4 z-10">
-                                        {isConnected ? (
-                                            <View className="flex-row items-center bg-green-500/20 border border-green-500/30 px-3.5 py-2 rounded-xl">
-                                                <CheckCircle size={16} color="#22c55e" />
-                                                <Text className="text-green-400 text-sm font-semibold ml-2">Connected</Text>
-                                            </View>
-                                        ) : broker.available ? (
-                                            <View className="flex-row items-center bg-blue-500/20 border border-blue-500/30 px-3.5 py-2 rounded-xl">
-                                                <ShieldCheck size={16} color="#3b82f6" />
-                                                <Text className="text-blue-400 text-sm font-semibold ml-2">Available</Text>
-                                            </View>
-                                        ) : (
-                                            <View className="px-3.5 py-2 rounded-xl bg-gray-700/50">
-                                                <Text className="text-gray-400 text-sm font-semibold">Coming Soon</Text>
-                                            </View>
-                                        )}
-                                    </View>
-
-                                    {/* Broker Logo */}
-                                    <View className={`w-16 h-16 rounded-xl items-center justify-center mb-5 border ${broker.available
-                                        ? 'bg-orange-500/20 border-orange-500/50'
-                                        : 'bg-gray-700/50 border-gray-700/50'
-                                        }`}>
-                                        <TrendingUp size={24} color={broker.available ? "#ea580c" : "#6b7280"} />
-                                    </View>
-
-                                    {/* Broker Info */}
-                                    <Text className="text-2xl font-bold text-white mb-3">{broker.name}</Text>
-                                    <Text className="text-gray-400 text-base leading-relaxed mb-6">{broker.description}</Text>
-
-                                    {/* Features */}
-                                    <View className="mb-6">
-                                        {broker.features.map((feature, index) => (
-                                            <View key={index} className="flex-row items-start mb-3">
-                                                <View className="w-5 h-5 bg-orange-500/20 border border-orange-500/40 rounded-full items-center justify-center mr-4 mt-0.5">
-                                                    <CheckCircle size={14} color="#ea580c" />
-                                                </View>
-                                                <Text className="text-gray-300 text-sm flex-1 leading-5">{feature}</Text>
-                                            </View>
-                                        ))}
-                                    </View>
-
-                                    {/* Connect Button */}
-                                    {broker.available && (
-                                        <TouchableOpacity
-                                            onPress={() => handleBrokerSelect(broker)}
-                                            className={`w-full py-4 px-6 rounded-xl flex-row items-center justify-center ${isConnected
-                                                ? 'bg-green-500/90 active:bg-green-600/90 border border-green-500/30'
-                                                : 'bg-orange-600 active:bg-orange-700 border border-orange-600/30'
-                                                }`}
-                                            activeOpacity={0.9}
-                                        >
-                                            <Text className="text-white font-semibold text-lg flex-1 text-center">
-                                                {isConnected ? "Manage Connection" : "Connect Now"}
-                                            </Text>
-                                            <ArrowRight size={18} color="#ffffff" />
-                                        </TouchableOpacity>
-                                    )}
-                                </TouchableOpacity>
-                            );
-                        })}
                     </View>
+                )}
 
-                    {/* Why Connect Section */}
-                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
-                        <View className="flex-row items-center mb-4">
-                            <View className="w-12 h-12 bg-blue-500/20 border border-blue-500/30 rounded-xl items-center justify-center mr-4">
-                                <Info size={20} color="#3b82f6" />
+                {/* Brokers List */}
+                <View className="px-4 mb-6">
+                    <Text className="text-xl font-bold text-white mb-4">Available Brokers</Text>
+
+                    {brokers.map((broker) => {
+                        const isConnected = broker.id === "gtcfx" && gtcFxConnected;
+
+                        return (
+                            <TouchableOpacity
+                                key={broker.id}
+                                onPress={() => handleBrokerSelect(broker)}
+                                style={{
+                                    padding: 24,
+                                    borderRadius: 16,
+                                    borderWidth: 2,
+                                    marginBottom: 20,
+                                    backgroundColor: isConnected
+                                        ? 'rgba(34,197,94,0.05)'
+                                        : selectedBroker === broker.id
+                                            ? 'rgba(234,88,12,0.08)'
+                                            : 'rgba(31,41,55,0.3)',
+                                    borderColor: isConnected
+                                        ? 'rgba(34,197,94,0.2)'
+                                        : selectedBroker === broker.id
+                                            ? '#ea580c'
+                                            : '#374151',
+                                }}
+                                activeOpacity={0.8}
+                            >
+                                {/* Status Badge - Top Right */}
+                                <View style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
+                                    {isConnected ? (
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            paddingHorizontal: 12,
+                                            paddingVertical: 6,
+                                            backgroundColor: 'rgba(34,197,94,0.15)',
+                                            borderWidth: 1.5,
+                                            borderColor: 'rgba(34,197,94,0.3)',
+                                            borderRadius: 8,
+                                        }}>
+                                            <CheckCircle size={14} color="#22c55e" style={{ marginRight: 6 }} />
+                                            <Text style={{ color: '#4ade80', fontSize: 11, fontWeight: '700' }}>
+                                                Connected
+                                            </Text>
+                                        </View>
+                                    ) : broker.available ? (
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            paddingHorizontal: 12,
+                                            paddingVertical: 6,
+                                            backgroundColor: 'rgba(59,130,246,0.15)',
+                                            borderWidth: 1.5,
+                                            borderColor: 'rgba(59,130,246,0.3)',
+                                            borderRadius: 8,
+                                        }}>
+                                            <ShieldCheck size={14} color="#3b82f6" style={{ marginRight: 6 }} />
+                                            <Text style={{ color: '#60a5fa', fontSize: 11, fontWeight: '700' }}>
+                                                Available
+                                            </Text>
+                                        </View>
+                                    ) : (
+                                        <View style={{
+                                            paddingHorizontal: 12,
+                                            paddingVertical: 6,
+                                            backgroundColor: 'rgba(75,85,99,0.5)',
+                                            borderRadius: 8,
+                                        }}>
+                                            <Text style={{ color: '#9ca3af', fontSize: 11, fontWeight: '700' }}>
+                                                Coming Soon
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+
+                                {/* Broker Logo */}
+                                <View style={{
+                                    width: 64,
+                                    height: 64,
+                                    borderRadius: 12,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginBottom: 20,
+                                    backgroundColor: broker.available ? 'rgba(234,88,12,0.15)' : 'rgba(75,85,99,0.5)',
+                                    borderWidth: 1.5,
+                                    borderColor: broker.available ? 'rgba(234,88,12,0.3)' : 'rgba(75,85,99,0.3)',
+                                }}>
+                                    <TrendingUp size={28} color={broker.available ? "#ea580c" : "#6b7280"} />
+                                </View>
+
+                                {/* Broker Info */}
+                                <Text className="text-2xl font-bold text-white mb-3">{broker.name}</Text>
+                                <Text className="text-gray-400 text-sm leading-6 mb-6">{broker.description}</Text>
+
+                                {/* Features */}
+                                <View className="mb-6" style={{ gap: 12 }}>
+                                    {broker.features.map((feature, index) => (
+                                        <View key={index} className="flex-row items-start">
+                                            <View style={{
+                                                width: 20,
+                                                height: 20,
+                                                backgroundColor: 'rgba(234,88,12,0.15)',
+                                                borderWidth: 1.5,
+                                                borderColor: 'rgba(234,88,12,0.3)',
+                                                borderRadius: 10,
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                marginRight: 12,
+                                                marginTop: 2,
+                                            }}>
+                                                <CheckCircle size={12} color="#ea580c" />
+                                            </View>
+                                            <Text className="text-gray-300 text-sm flex-1 leading-5">{feature}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+
+                                {/* Connect Button */}
+                                {broker.available && (
+                                    <TouchableOpacity
+                                        onPress={() => handleBrokerSelect(broker)}
+                                        style={{
+                                            paddingVertical: 16,
+                                            borderRadius: 12,
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            backgroundColor: isConnected ? '#10b981' : '#ea580c',
+                                            gap: 10,
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text className="text-white font-bold text-base flex-1 text-center">
+                                            {isConnected ? "Manage Connection" : "Connect Now"}
+                                        </Text>
+                                        <ArrowRight size={20} color="#ffffff" />
+                                    </TouchableOpacity>
+                                )}
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+
+                {/* Why Connect Section */}
+                <View className="px-4 mb-6">
+                    <View className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50">
+                        <View className="flex-row items-center mb-5">
+                            <View className="w-12 h-12 bg-blue-500/20 rounded-xl items-center justify-center mr-4">
+                                <Info size={22} color="#3b82f6" />
                             </View>
                             <Text className="text-xl font-bold text-white flex-1">Why Connect a Broker?</Text>
                         </View>
-                        <View className="space-y-4">
+
+                        <View style={{ gap: 16 }}>
                             <View className="flex-row items-start">
-                                <View className="w-5 h-5 bg-blue-500/20 border border-blue-500/40 rounded-full items-center justify-center mr-4 mt-0.5">
-                                    <CheckCircle size={14} color="#3b82f6" />
+                                <View style={{
+                                    width: 20,
+                                    height: 20,
+                                    backgroundColor: 'rgba(59,130,246,0.15)',
+                                    borderWidth: 1.5,
+                                    borderColor: 'rgba(59,130,246,0.3)',
+                                    borderRadius: 10,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginRight: 12,
+                                    marginTop: 2,
+                                }}>
+                                    <CheckCircle size={12} color="#3b82f6" />
                                 </View>
-                                <Text className="text-gray-300 text-base flex-1 leading-relaxed">Access professional trading strategies</Text>
+                                <Text className="text-gray-300 text-sm flex-1 leading-6">
+                                    Access professional trading strategies
+                                </Text>
                             </View>
+
                             <View className="flex-row items-start">
-                                <View className="w-5 h-5 bg-blue-500/20 border border-blue-500/40 rounded-full items-center justify-center mr-4 mt-0.5">
-                                    <CheckCircle size={14} color="#3b82f6" />
+                                <View style={{
+                                    width: 20,
+                                    height: 20,
+                                    backgroundColor: 'rgba(59,130,246,0.15)',
+                                    borderWidth: 1.5,
+                                    borderColor: 'rgba(59,130,246,0.3)',
+                                    borderRadius: 10,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginRight: 12,
+                                    marginTop: 2,
+                                }}>
+                                    <CheckCircle size={12} color="#3b82f6" />
                                 </View>
-                                <Text className="text-gray-300 text-base flex-1 leading-relaxed">Track your profit logs and performance in real-time</Text>
+                                <Text className="text-gray-300 text-sm flex-1 leading-6">
+                                    Track your profit logs and performance in real-time
+                                </Text>
                             </View>
+
                             <View className="flex-row items-start">
-                                <View className="w-5 h-5 bg-blue-500/20 border border-blue-500/40 rounded-full items-center justify-center mr-4 mt-0.5">
-                                    <CheckCircle size={14} color="#3b82f6" />
+                                <View style={{
+                                    width: 20,
+                                    height: 20,
+                                    backgroundColor: 'rgba(59,130,246,0.15)',
+                                    borderWidth: 1.5,
+                                    borderColor: 'rgba(59,130,246,0.3)',
+                                    borderRadius: 10,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginRight: 12,
+                                    marginTop: 2,
+                                }}>
+                                    <CheckCircle size={12} color="#3b82f6" />
                                 </View>
-                                <Text className="text-gray-300 text-base flex-1 leading-relaxed">Manage subscriptions and automate trading</Text>
+                                <Text className="text-gray-300 text-sm flex-1 leading-6">
+                                    Manage subscriptions and automate trading
+                                </Text>
                             </View>
+
                             <View className="flex-row items-start">
-                                <View className="w-5 h-5 bg-blue-500/20 border border-blue-500/40 rounded-full items-center justify-center mr-4 mt-0.5">
-                                    <CheckCircle size={14} color="#3b82f6" />
+                                <View style={{
+                                    width: 20,
+                                    height: 20,
+                                    backgroundColor: 'rgba(59,130,246,0.15)',
+                                    borderWidth: 1.5,
+                                    borderColor: 'rgba(59,130,246,0.3)',
+                                    borderRadius: 10,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginRight: 12,
+                                    marginTop: 2,
+                                }}>
+                                    <CheckCircle size={12} color="#3b82f6" />
                                 </View>
-                                <Text className="text-gray-300 text-base flex-1 leading-relaxed">Earn agent commissions from referrals</Text>
+                                <Text className="text-gray-300 text-sm flex-1 leading-6">
+                                    Earn agent commissions from referrals
+                                </Text>
                             </View>
                         </View>
                     </View>

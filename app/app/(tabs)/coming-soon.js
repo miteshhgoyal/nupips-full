@@ -4,7 +4,6 @@ import {
     Text,
     SafeAreaView,
     TouchableOpacity,
-    Dimensions,
 } from 'react-native';
 import {
     Code2,
@@ -15,18 +14,16 @@ import {
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
 const ComingSoon = () => {
     return (
-        <SafeAreaView className="flex-1 bg-gradient-to-b from-gray-900 via-gray-900 to-black">
+        <SafeAreaView className="flex-1 bg-gray-900">
             <StatusBar style="light" />
 
             {/* Header */}
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-4">
+            <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
                 <View className="flex-row items-center justify-center">
                     <Code2 size={28} color="#ea580c" />
-                    <Text className="text-2xl font-light text-white ml-3">Development</Text>
+                    <Text className="text-2xl font-bold text-white ml-3">Development</Text>
                 </View>
             </View>
 
@@ -34,7 +31,7 @@ const ComingSoon = () => {
                 {/* Main Icon */}
                 <View className="w-48 h-48 bg-gray-800/50 border border-gray-700/30 rounded-3xl items-center justify-center mb-8 shadow-2xl shadow-black/50">
                     <Rocket size={64} color="#ea580c" />
-                    <View className="w-24 h-24 bg-orange-600/30 border border-orange-600/50 rounded-2xl items-center justify-center mt-4">
+                    <View className="w-24 h-24 bg-orange-600/20 border border-orange-600/30 rounded-2xl items-center justify-center mt-4">
                         <Zap size={32} color="#ffffff" />
                     </View>
                 </View>
@@ -50,12 +47,12 @@ const ComingSoon = () => {
                 </Text>
 
                 {/* Development Status */}
-                <View className="bg-gray-900/70 border border-gray-700/50 rounded-2xl p-6 mb-8 w-full max-w-md">
+                <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6 mb-8 w-full max-w-md">
                     <View className="flex-row items-center mb-4">
                         <View className="w-3 h-3 bg-orange-500 rounded-full mr-3" />
                         <Text className="text-lg font-semibold text-orange-400">Development Mode</Text>
                     </View>
-                    <View className="space-y-3">
+                    <View style={{ gap: 12 }}>
                         <View className="flex-row items-center">
                             <Settings size={18} color="#9ca3af" />
                             <Text className="text-gray-400 text-sm ml-3">Backend APIs: In Progress</Text>
@@ -72,16 +69,30 @@ const ComingSoon = () => {
                 </View>
 
                 {/* Action Buttons */}
-                <View className="flex-row w-full max-w-md space-x-4">
+                <View className="flex-row w-full max-w-md" style={{ gap: 12 }}>
                     <TouchableOpacity
-                        className="flex-1 bg-gray-800/60 border border-gray-700/50 rounded-xl py-5 items-center active:bg-gray-800/80"
-                        activeOpacity={0.9}
+                        style={{
+                            flex: 1,
+                            backgroundColor: 'rgba(55,65,81,0.6)',
+                            borderWidth: 1,
+                            borderColor: 'rgba(75,85,99,0.5)',
+                            borderRadius: 12,
+                            paddingVertical: 18,
+                            alignItems: 'center',
+                        }}
+                        activeOpacity={0.7}
                     >
                         <Text className="text-white font-semibold text-lg">Watch Progress</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        className="flex-1 bg-orange-600 rounded-xl py-5 items-center active:bg-orange-700 shadow-lg shadow-orange-500/25"
-                        activeOpacity={0.9}
+                        style={{
+                            flex: 1,
+                            backgroundColor: '#ea580c',
+                            borderRadius: 12,
+                            paddingVertical: 18,
+                            alignItems: 'center',
+                        }}
+                        activeOpacity={0.7}
                     >
                         <Text className="text-white font-bold text-lg">Notify Me</Text>
                     </TouchableOpacity>

@@ -21,29 +21,26 @@ import {
     DollarSign,
     Activity,
     Calendar,
-    ArrowUpRight,
-    ArrowDownRight,
     RefreshCw,
     PieChart,
     BarChart3,
     AlertCircle,
     X,
-    ArrowLeft,
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 
-// Horizontal KPI Card Component - nupips-team style
+// Horizontal KPI Card Component
 const HorizontalCard = ({ title, value, icon, color = 'text-white' }) => (
-    <View className="bg-gray-800/40 border border-gray-700/30 rounded-xl p-5 w-48 mr-4">
+    <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-5 w-48 mr-4">
         <View className="flex-row items-center justify-between mb-3">
             {icon}
         </View>
         <Text className="text-gray-400 text-sm mb-1">{title}</Text>
-        <Text className={`text-xl font-light ${color}`}>{value}</Text>
+        <Text className={`text-xl font-bold ${color}`}>{value}</Text>
     </View>
 );
 
-// MiniChart Component - simplified without gap classes
+// MiniChart Component
 const MiniChart = ({ title, data, color = 'gray' }) => {
     const max = Math.max(...data.map((d) => d.value), 1);
     const colorMap = {
@@ -112,17 +109,26 @@ const Dashboard = () => {
             <SafeAreaView className="flex-1 bg-gray-900">
                 <StatusBar style="light" />
                 <View className="flex-1 justify-center items-center px-6">
-                    <View className="mx-4 mb-6 p-5 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start">
-                        <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
-                        <Text className="text-red-400 text-base flex-1 font-medium">{error}</Text>
-                        <TouchableOpacity onPress={load} className="p-1" activeOpacity={0.7}>
-                            <X size={20} color="#ef4444" />
-                        </TouchableOpacity>
+                    <View className="mx-4 mb-6 p-5 bg-red-500/10 border border-red-500/30 rounded-xl">
+                        <View className="flex-row items-center">
+                            <AlertCircle size={20} color="#ef4444" style={{ marginTop: 2, marginRight: 12 }} />
+                            <View className="flex-1">
+                                <Text className="text-red-400 text-base font-medium leading-5">{error}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setError('')} className="ml-2 p-1">
+                                <X size={18} color="#ef4444" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                     <TouchableOpacity
                         onPress={load}
-                        className="px-10 py-4 bg-orange-600 rounded-xl active:bg-orange-700 border border-orange-600/30"
-                        activeOpacity={0.9}
+                        style={{
+                            paddingHorizontal: 40,
+                            paddingVertical: 16,
+                            backgroundColor: '#ea580c',
+                            borderRadius: 14,
+                        }}
+                        activeOpacity={0.7}
                     >
                         <Text className="text-white font-semibold text-lg">Try Again</Text>
                     </TouchableOpacity>
@@ -177,45 +183,50 @@ const Dashboard = () => {
                 className="flex-1"
                 refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor="#ea580c" />}
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100 }}
             >
-                <View className="py-4 pb-24">
-                    {/* Welcome Section */}
-                    <View className="mx-4 mb-6">
-                        <View className="flex-row items-center justify-between mb-3">
-                            <View>
-                                <Text className="text-2xl font-bold text-white">
-                                    Welcome back, {user?.name?.split(' ')[0] || 'User'}!
-                                </Text>
-                                <Text className="text-gray-400 text-sm mt-1">Here's your account overview</Text>
-                            </View>
-                            <TouchableOpacity onPress={load} className="w-12 h-12 bg-gray-800/50 border border-gray-700/30 rounded-xl items-center justify-center active:bg-gray-800/70" activeOpacity={0.9}>
-                                <RefreshCw size={20} color="#ea580c" />
-                            </TouchableOpacity>
+                {/* Welcome Section */}
+                <View className="px-4 mt-5 mb-6">
+                    <View className="flex-row items-center justify-between mb-3">
+                        <View>
+                            <Text className="text-2xl font-bold text-white">
+                                Welcome back, {user?.name?.split(' ')[0] || 'User'}!
+                            </Text>
+                            <Text className="text-gray-400 text-sm mt-1">Here's your account overview</Text>
                         </View>
+                        <TouchableOpacity
+                            onPress={load}
+                            className="w-12 h-12 bg-gray-800/50 border border-gray-700/50 rounded-xl items-center justify-center active:bg-gray-800/70"
+                            activeOpacity={0.7}
+                        >
+                            <RefreshCw size={20} color="#ea580c" />
+                        </TouchableOpacity>
                     </View>
+                </View>
 
-                    {/* Horizontal KPI Cards */}
-                    <View className="mx-4 mb-6">
-                        <Text className="text-lg font-light text-white mb-4">Key Metrics</Text>
-                        <FlatList
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            data={kpiCards}
-                            renderItem={({ item }) => (
-                                <HorizontalCard
-                                    title={item.title}
-                                    value={item.value}
-                                    icon={item.icon}
-                                    color={item.color}
-                                />
-                            )}
-                            keyExtractor={(item, index) => index.toString()}
-                            contentContainerStyle={{ paddingLeft: 4 }}
-                        />
-                    </View>
+                {/* Horizontal KPI Cards */}
+                <View className="mb-6">
+                    <Text className="text-xl font-bold text-white mb-4 px-4">Key Metrics</Text>
+                    <FlatList
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        data={kpiCards}
+                        renderItem={({ item }) => (
+                            <HorizontalCard
+                                title={item.title}
+                                value={item.value}
+                                icon={item.icon}
+                                color={item.color}
+                            />
+                        )}
+                        keyExtractor={(item, index) => index.toString()}
+                        contentContainerStyle={{ paddingLeft: 16 }}
+                    />
+                </View>
 
-                    {/* Performance Charts */}
-                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                {/* Performance Charts */}
+                <View className="px-4 mb-6">
+                    <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
                         <View className="flex-row items-center mb-5">
                             <BarChart3 size={24} color="#ea580c" style={{ marginRight: 16 }} />
                             <Text className="text-xl font-bold text-white">Performance Overview</Text>
@@ -253,9 +264,11 @@ const Dashboard = () => {
                             />
                         </View>
                     </View>
+                </View>
 
-                    {/* Trading Performance */}
-                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                {/* Trading Performance */}
+                <View className="px-4 mb-6">
+                    <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
                         <View className="flex-row items-center mb-5">
                             <Activity size={24} color="#ea580c" style={{ marginRight: 16 }} />
                             <Text className="text-xl font-bold text-white">Trading Performance</Text>
@@ -289,9 +302,11 @@ const Dashboard = () => {
                             </View>
                         </View>
                     </View>
+                </View>
 
-                    {/* Referral Network */}
-                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                {/* Referral Network */}
+                <View className="px-4 mb-6">
+                    <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
                         <View className="flex-row items-center mb-5">
                             <Users size={24} color="#ea580c" style={{ marginRight: 16 }} />
                             <Text className="text-xl font-bold text-white">Referral Network</Text>
@@ -325,9 +340,11 @@ const Dashboard = () => {
                             </View>
                         </View>
                     </View>
+                </View>
 
-                    {/* Pending Transactions */}
-                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                {/* Pending Transactions */}
+                <View className="px-4 mb-6">
+                    <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
                         <Text className="text-xl font-bold text-white mb-5">Pending Transactions</Text>
                         <View className="flex-row">
                             <View className="flex-1 bg-orange-500/10 border border-orange-500/30 rounded-xl p-5 mr-4">
@@ -344,9 +361,11 @@ const Dashboard = () => {
                             </View>
                         </View>
                     </View>
+                </View>
 
-                    {/* Income Breakdown */}
-                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6 mb-6">
+                {/* Income Breakdown */}
+                <View className="px-4 mb-6">
+                    <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
                         <View className="flex-row items-center mb-5">
                             <PieChart size={24} color="#ea580c" style={{ marginRight: 16 }} />
                             <Text className="text-xl font-bold text-white">Income Breakdown</Text>
@@ -380,15 +399,17 @@ const Dashboard = () => {
                             </View>
                         </View>
                     </View>
+                </View>
 
-                    {/* Recent Activity */}
-                    <View className="mx-4 bg-gray-800/40 border border-gray-700/30 rounded-xl p-6">
+                {/* Recent Activity */}
+                <View className="px-4 mb-6">
+                    <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
                         <Text className="text-xl font-bold text-white mb-5">Recent Activity</Text>
                         {recentActivity && recentActivity.length > 0 ? (
                             recentActivity.slice(0, 5).map((activity, i) => (
                                 <View
                                     key={i}
-                                    className="flex-row items-center justify-between p-5 bg-gray-900/50 border border-gray-700/30 rounded-xl mb-4"
+                                    className="flex-row items-center justify-between p-5 bg-gray-900/50 border border-gray-700/30 rounded-xl mb-4 last:mb-0"
                                 >
                                     <View className="flex-row items-center">
                                         <View className="w-12 h-12 bg-gray-800/50 border border-gray-700/30 rounded-xl items-center justify-center mr-4">
