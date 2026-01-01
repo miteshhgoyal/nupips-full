@@ -7,13 +7,10 @@ import {
     Home,
     Users,
     TrendingUp,
-    DollarSign,
-    ArrowLeftRight,
-    ShoppingBag,
-    Book,
     User,
     MoreHorizontal,
     LayoutDashboard,
+    Badge,
 } from 'lucide-react-native';
 import { useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,26 +34,27 @@ function getTabConfig(gtcAuthenticated, gtcLoading) {
         { name: 'dashboard', label: 'Home', icon: Home },
         { name: 'nupips-team', label: 'Team', icon: Users },
         { name: 'nupips-incomes', label: 'Income', icon: TrendingUp },
-        { name: 'deposit', label: 'Deposit', icon: DollarSign },
-        { name: 'withdrawal', label: 'Withdraw', icon: ArrowLeftRight },
-        { name: 'shop', label: 'Shop', icon: ShoppingBag },
-        { name: 'more', label: 'More', icon: MoreHorizontal },
-        { name: 'learn', label: 'Learn', icon: Book },
         { name: 'profile', label: 'Profile', icon: User },
+        { name: 'more', label: 'More', icon: MoreHorizontal },
     ];
 
-    if (gtcAuthenticated && !gtcLoading) {
-        baseTabs.splice(4, 0, { name: 'gtcfx', label: 'GTC FX', icon: LayoutDashboard });
+    // Dynamic 6th tab: Broker → GTC FX when connected
+    if (gtcLoading) {
+        baseTabs.push({ name: 'broker-selection', label: 'Broker', icon: Badge });
+    } else if (gtcAuthenticated) {
+        baseTabs.push({ name: 'gtcfx', label: 'GTC FX', icon: LayoutDashboard });
+    } else {
+        baseTabs.push({ name: 'broker-selection', label: 'Broker', icon: Badge });
     }
 
     return baseTabs;
 }
 
+// FloatingTabBar remains exactly the same
 function FloatingTabBar({ state, descriptors, navigation }) {
     const segments = useSegments();
     const { gtcAuthenticated, gtcLoading } = useGTCFxAuth();
 
-    // Only hide for GTC FX nested screens
     const isGtcfxNested = segments[0] === 'gtcfx' && segments.length > 1;
 
     if (isGtcfxNested) {
@@ -112,7 +110,6 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                         const isFocused = state.index === index;
                         const Icon = config.icon;
 
-                        // Clean tab navigation (no dismissAll)
                         const onPress = () => {
                             const event = navigation.emit({
                                 type: 'tabPress',
@@ -121,7 +118,6 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                             });
 
                             if (!isFocused && !event.defaultPrevented) {
-                                // Simple tab navigation - Expo Router handles history
                                 navigation.navigate(route.name);
                             }
                         };
@@ -180,23 +176,26 @@ export default function TabsLayout() {
                 }}
                 tabBar={(props) => <FloatingTabBar {...props} />}
             >
-                {/* Main Tabs */}
+                {/* Core 5 Tabs - Always Visible */}
                 <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
                 <Tabs.Screen name="nupips-team" options={{ title: 'Team' }} />
                 <Tabs.Screen name="nupips-incomes" options={{ title: 'Incomes' }} />
-                <Tabs.Screen name="deposit" options={{ title: 'Deposit' }} />
+
+                {/* Dynamic Broker/GTC FX Tab */}
+                <Tabs.Screen name="broker-selection" options={{ title: 'Broker' }} />
                 <Tabs.Screen name="gtcfx" options={{ title: 'GTC FX' }} />
-                <Tabs.Screen name="withdrawal" options={{ title: 'Withdrawal' }} />
-                <Tabs.Screen name="shop" options={{ title: 'Shop' }} />
-                <Tabs.Screen name="more" options={{ title: 'More' }} />
-                <Tabs.Screen name="learn" options={{ title: 'Learn' }} />
+
                 <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+                <Tabs.Screen name="more" options={{ title: 'More' }} />
 
                 {/* Hidden Screens */}
+                <Tabs.Screen name="deposit" options={{ href: null }} />
+                <Tabs.Screen name="withdrawal" options={{ href: null }} />
+                <Tabs.Screen name="shop" options={{ href: null }} />
+                <Tabs.Screen name="learn" options={{ href: null }} />
                 <Tabs.Screen name="transfer" options={{ href: null }} />
                 <Tabs.Screen name="transaction-history" options={{ href: null }} />
                 <Tabs.Screen name="orders" options={{ href: null }} />
-                <Tabs.Screen name="broker-selection" options={{ href: null }} />
                 <Tabs.Screen name="product-item" options={{ href: null }} />
                 <Tabs.Screen name="place-order" options={{ href: null }} />
                 <Tabs.Screen name="course-view" options={{ href: null }} />

@@ -16,6 +16,9 @@ import {
     LayoutDashboard,
     DollarSign,
     Users,
+    TrendingUp,
+    ShoppingBag,
+    Book,
     ChevronRight,
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -27,8 +30,7 @@ const More = () => {
     const QuickActionItem = ({ icon: Icon, label, onPress, isLast = false }) => (
         <TouchableOpacity
             onPress={onPress}
-            className={`flex-row items-center justify-between py-4 px-4 ${!isLast ? 'border-b border-gray-800' : ''
-                } active:bg-gray-800/50`}
+            className={`flex-row items-center justify-between py-4 px-4 ${!isLast ? 'border-b border-gray-800' : ''} active:bg-gray-800/50`}
             activeOpacity={0.8}
         >
             <View className="flex-row items-center flex-1">
@@ -52,12 +54,38 @@ const More = () => {
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
                 <View className="py-6 pb-20">
+                    {/* Team & Earnings */}
+                    <View className="mx-4 mb-8">
+                        <Text className="text-lg font-bold text-gray-300 mb-6 px-2">Team & Earnings</Text>
+                        <View className="bg-gray-800/30 rounded-2xl overflow-hidden">
+                            <QuickActionItem
+                                icon={Users}
+                                label="Team"
+                                onPress={() => router.push('/nupips-team')}
+                            />
+                            <QuickActionItem
+                                icon={TrendingUp}
+                                label="Income"
+                                onPress={() => router.push('/nupips-incomes')}
+                                isLast
+                            />
+                        </View>
+                    </View>
+
                     {/* Financial Actions */}
                     <View className="mx-4 mb-8">
-                        <Text className="text-lg font-bold text-gray-300 mb-6 px-2">
-                            Financial
-                        </Text>
+                        <Text className="text-lg font-bold text-gray-300 mb-6 px-2">Financial</Text>
                         <View className="bg-gray-800/30 rounded-2xl overflow-hidden">
+                            <QuickActionItem
+                                icon={DollarSign}
+                                label="Deposit"
+                                onPress={() => router.push('/deposit')}
+                            />
+                            <QuickActionItem
+                                icon={ArrowLeftRight}
+                                label="Withdraw"
+                                onPress={() => router.push('/withdrawal')}
+                            />
                             <QuickActionItem
                                 icon={ArrowLeftRight}
                                 label="Transfer"
@@ -74,10 +102,13 @@ const More = () => {
 
                     {/* Shopping */}
                     <View className="mx-4 mb-8">
-                        <Text className="text-lg font-bold text-gray-300 mb-6 px-2">
-                            Shopping
-                        </Text>
+                        <Text className="text-lg font-bold text-gray-300 mb-6 px-2">Shopping</Text>
                         <View className="bg-gray-800/30 rounded-2xl overflow-hidden">
+                            <QuickActionItem
+                                icon={ShoppingBag}
+                                label="Shop"
+                                onPress={() => router.push('/shop')}
+                            />
                             <QuickActionItem
                                 icon={Package}
                                 label="My Orders"
@@ -89,9 +120,7 @@ const More = () => {
 
                     {/* Trading */}
                     <View className="mx-4 mb-8">
-                        <Text className="text-lg font-bold text-gray-300 mb-6 px-2">
-                            Trading
-                        </Text>
+                        <Text className="text-lg font-bold text-gray-300 mb-6 px-2">Trading</Text>
                         <View className="bg-gray-800/30 rounded-2xl overflow-hidden">
                             <QuickActionItem
                                 icon={Badge}
@@ -114,12 +143,25 @@ const More = () => {
                                     />
                                     <QuickActionItem
                                         icon={Users}
-                                        label="GTC FXAgent Members"
+                                        label="GTC FX Agent Members"
                                         onPress={() => router.push('/gtcfx/agent-members')}
                                         isLast
                                     />
                                 </>
                             )}
+                        </View>
+                    </View>
+
+                    {/* Learning */}
+                    <View className="mx-4 mb-8">
+                        <Text className="text-lg font-bold text-gray-300 mb-6 px-2">Learning</Text>
+                        <View className="bg-gray-800/30 rounded-2xl overflow-hidden">
+                            <QuickActionItem
+                                icon={Book}
+                                label="Learn"
+                                onPress={() => router.push('/learn')}
+                                isLast
+                            />
                         </View>
                     </View>
                 </View>
