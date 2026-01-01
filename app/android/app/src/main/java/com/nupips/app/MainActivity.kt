@@ -1,4 +1,4 @@
-package com.miteshgoyal.nupipsuserapp
+package com.nupips.app
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.miteshgoyal.nupipsuserapp'
+    namespace 'com.nupips.app'
     defaultConfig {
-        applicationId 'com.miteshgoyal.nupipsuserapp'
+        applicationId 'com.nupips.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

@@ -1,4 +1,4 @@
-package com.miteshgoyal.nupipsuserapp
+package com.nupips.app
 
 import android.app.Application
 import android.content.res.Configuration
