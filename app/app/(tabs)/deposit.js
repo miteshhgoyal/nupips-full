@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Text,
@@ -6,9 +6,8 @@ import {
     SafeAreaView,
     ActivityIndicator,
     TouchableOpacity,
-    TextInput,
     Image,
-} from "react-native";
+} from 'react-native';
 import { useAuth } from '@/context/authContext';
 import api from '@/services/api';
 import * as Clipboard from 'expo-clipboard';
@@ -25,9 +24,15 @@ import {
     X,
     ArrowLeft,
     TrendingUp,
-} from "lucide-react-native";
+} from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+
+// Import Components
+import InputField from '@/components/InputField';
+import QuickAmountButton from '@/components/QuickAmountButton';
+import CryptoOptionCard from '@/components/CryptoOptionCard';
+import DetailRow from '@/components/DetailRow';
 
 const Deposit = () => {
     const router = useRouter();
@@ -53,7 +58,6 @@ const Deposit = () => {
     const [depositDetails, setDepositDetails] = useState(null);
     const [qrLoaded, setQrLoaded] = useState(false);
     const [qrError, setQrError] = useState(false);
-
     const [checkingPayment, setCheckingPayment] = useState(false);
 
     const cryptoOptions = [
@@ -92,7 +96,6 @@ const Deposit = () => {
         return true;
     };
 
-    // Triple timeout strategy
     const handleAmountChange = (value) => {
         if (amountTimeoutRef.current) {
             clearTimeout(amountTimeoutRef.current);
@@ -110,7 +113,6 @@ const Deposit = () => {
         }, 0);
     };
 
-    // Quadruple timeout for quick amounts
     const handleQuickAmount = (quickAmount) => {
         if (quickAmountTimeoutRef.current) {
             clearTimeout(quickAmountTimeoutRef.current);
@@ -130,22 +132,15 @@ const Deposit = () => {
         }, 0);
     };
 
-    // Continue handler with QR fallback
     const handleContinue = async () => {
-        console.log('Continue clicked - amount:', amount, 'error:', amountError);
-
         const isValid = await new Promise((resolve) => {
             setTimeout(() => {
                 const valid = !amountError && amount && validateAmount(amount);
-                console.log('Validation result:', valid);
                 resolve(valid);
             }, 100);
         });
 
-        if (!isValid) {
-            console.log('Validation failed - blocking navigation');
-            return;
-        }
+        if (!isValid) return;
 
         setLoading(true);
         setError(null);
@@ -164,9 +159,10 @@ const Deposit = () => {
                 setTransactionId(data.transactionId || '');
                 setDepositDetails(data);
 
-                // Set QR with fallback
                 const primaryQr = data.qrCodeUrl;
-                const fallbackQr = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(data.address)}&format=png&qzone=1`;
+                const fallbackQr = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(
+                    data.address
+                )}&format=png&qzone=1`;
 
                 setQrCodeUrl(primaryQr || fallbackQr);
                 setQrLoaded(false);
@@ -176,25 +172,23 @@ const Deposit = () => {
                 setError(response.data?.message || 'Failed to create deposit');
             }
         } catch (err) {
-            console.log('Deposit error:', err.response?.data);
             setError(err.response?.data?.message || 'Failed to create deposit. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    // QR fallback handler
     const handleQrError = () => {
         if (!qrError && paymentAddress) {
-            console.log('QR load failed, using fallback...');
-            const fallbackQr = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(paymentAddress)}&format=png&qzone=1`;
+            const fallbackQr = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(
+                paymentAddress
+            )}&format=png&qzone=1`;
             setQrCodeUrl(fallbackQr);
             setQrError(true);
             setQrLoaded(false);
         }
     };
 
-    // Cleanup timeouts on unmount
     useEffect(() => {
         return () => {
             if (amountTimeoutRef.current) clearTimeout(amountTimeoutRef.current);
@@ -219,11 +213,12 @@ const Deposit = () => {
                     await checkAuth();
                     setStep(3);
                 } else {
-                    const statusMessage = deposit.blockBeeStatus === 'pending_payment'
-                        ? 'Waiting for payment...'
-                        : deposit.blockBeeStatus === 'pending_confirmation'
-                            ? 'Payment detected, waiting for confirmations...'
-                            : `Status: ${deposit.status}`;
+                    const statusMessage =
+                        deposit.blockBeeStatus === 'pending_payment'
+                            ? 'Waiting for payment...'
+                            : deposit.blockBeeStatus === 'pending_confirmation'
+                                ? 'Payment detected, waiting for confirmations...'
+                                : `Status: ${deposit.status}`;
                     setError(statusMessage);
                 }
             }
@@ -255,24 +250,22 @@ const Deposit = () => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-900">
+        <SafeAreaView className="flex-1 bg-[#0a0a0a]">
             <StatusBar style="light" />
 
             {/* Header */}
-            <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
-                <View className="flex-row items-center justify-between">
-                    <View className="flex-row items-center flex-1">
-                        <TouchableOpacity
-                            onPress={() => router.back()}
-                            className="mr-3 p-2 -ml-2"
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                            <ArrowLeft size={22} color="#ffffff" />
-                        </TouchableOpacity>
-                        <View>
-                            <Text className="text-2xl font-bold text-white">Deposit Funds</Text>
-                            <Text className="text-sm text-gray-400 mt-0.5">Add funds to your wallet</Text>
-                        </View>
+            <View className="px-5 pt-5 pb-4 border-b border-neutral-800">
+                <View className="flex-row items-center">
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="mr-4 w-10 h-10 bg-neutral-900 rounded-xl items-center justify-center"
+                        activeOpacity={0.7}
+                    >
+                        <ArrowLeft size={20} color="#fff" />
+                    </TouchableOpacity>
+                    <View>
+                        <Text className="text-2xl font-bold text-white">Deposit Funds</Text>
+                        <Text className="text-sm text-neutral-400 mt-0.5">Add funds to your wallet</Text>
                     </View>
                 </View>
             </View>
@@ -284,15 +277,15 @@ const Deposit = () => {
             >
                 {/* Current Balance Card */}
                 {user && (
-                    <View className="mx-4 mt-5 mb-6">
-                        <View className="bg-gradient-to-br from-orange-600/20 to-orange-500/10 rounded-2xl p-6 border border-orange-500/20">
+                    <View className="mx-5 mt-6 mb-6">
+                        <View className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-6">
                             <View className="flex-row items-center justify-between">
                                 <View className="flex-row items-center flex-1">
                                     <View className="w-12 h-12 bg-orange-500/20 rounded-xl items-center justify-center mr-4">
-                                        <Wallet size={22} color="#f97316" />
+                                        <Wallet size={22} color="#ea580c" />
                                     </View>
                                     <View>
-                                        <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                        <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-1">
                                             Current Balance
                                         </Text>
                                         <Text className="text-3xl font-bold text-white">
@@ -301,7 +294,7 @@ const Deposit = () => {
                                     </View>
                                 </View>
                                 <View className="w-10 h-10 bg-orange-500/10 rounded-full items-center justify-center">
-                                    <TrendingUp size={20} color="#f97316" />
+                                    <TrendingUp size={20} color="#ea580c" />
                                 </View>
                             </View>
                         </View>
@@ -310,13 +303,13 @@ const Deposit = () => {
 
                 {/* Error Alert */}
                 {error && (
-                    <View className="mx-4 mb-5 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-                        <View className="flex-row items-center">
+                    <View className="mx-5 mb-5 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl">
+                        <View className="flex-row items-start">
                             <AlertCircle size={20} color="#ef4444" style={{ marginTop: 2, marginRight: 12 }} />
                             <View className="flex-1">
-                                <Text className="text-red-400 text-sm font-medium leading-1">{error}</Text>
+                                <Text className="text-red-400 text-sm font-medium leading-5">{error}</Text>
                             </View>
-                            <TouchableOpacity onPress={() => setError(null)} className="ml-2 p-1">
+                            <TouchableOpacity onPress={() => setError(null)}>
                                 <X size={18} color="#ef4444" />
                             </TouchableOpacity>
                         </View>
@@ -325,134 +318,50 @@ const Deposit = () => {
 
                 {/* Step 1: Amount Selection */}
                 {step === 1 && (
-                    <View className="px-4">
+                    <View className="px-5">
                         {/* Amount Input Card */}
-                        <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50 mb-5">
+                        <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-5 mb-5">
                             <Text className="text-xl font-bold text-white mb-5">Deposit Amount</Text>
 
-                            <View className="mb-5">
-                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                                    Amount (USD)
-                                </Text>
-                                <View className="relative">
-                                    <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
-                                        <DollarSign size={20} color="#9ca3af" />
-                                    </View>
-                                    <TextInput
-                                        value={amount}
-                                        onChangeText={handleAmountChange}
-                                        placeholder="0.00"
-                                        placeholderTextColor="#6b7280"
-                                        keyboardType="decimal-pad"
-                                        style={{
-                                            paddingLeft: 48,
-                                            paddingRight: 16,
-                                            paddingVertical: 16,
-                                            fontSize: 18,
-                                            fontWeight: '600',
-                                            color: '#ffffff',
-                                            backgroundColor: amountError ? 'rgba(239,68,68,0.05)' : 'rgba(17,24,39,0.5)',
-                                            borderRadius: 12,
-                                            borderWidth: 1.5,
-                                            borderColor: amountError ? '#ef4444' : '#374151',
-                                        }}
-                                    />
-                                </View>
-                                {amountError && (
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-                                        <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
-                                        <Text className="text-xs text-red-400 font-medium">{amountError}</Text>
-                                    </View>
-                                )}
-                            </View>
+                            <InputField
+                                label="Amount (USD)"
+                                value={amount}
+                                onChangeText={handleAmountChange}
+                                placeholder="0.00"
+                                keyboardType="decimal-pad"
+                                error={amountError}
+                                icon={DollarSign}
+                            />
 
                             {/* Quick Amounts */}
-                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                            <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-3">
                                 Quick Select
                             </Text>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                {[10, 50, 100, 500, 1000].map((quickAmount) => {
-                                    const isActive = parseFloat(amount) === quickAmount;
-                                    return (
-                                        <TouchableOpacity
-                                            key={quickAmount}
-                                            onPress={() => handleQuickAmount(quickAmount)}
-                                            style={{
-                                                flex: 1,
-                                                minWidth: 65,
-                                                paddingVertical: 12,
-                                                borderRadius: 10,
-                                                borderWidth: 1.5,
-                                                alignItems: 'center',
-                                                borderColor: isActive ? '#ea580c' : '#374151',
-                                                backgroundColor: isActive ? '#ea580c' : 'rgba(17,24,39,0.5)',
-                                            }}
-                                        >
-                                            <Text style={{
-                                                fontWeight: '700',
-                                                fontSize: 13,
-                                                color: isActive ? '#ffffff' : '#9ca3af',
-                                            }}>
-                                                ${quickAmount}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
+                            <View className="flex-row gap-2 flex-wrap">
+                                {[10, 50, 100, 500, 1000].map((quickAmount) => (
+                                    <QuickAmountButton
+                                        key={quickAmount}
+                                        amount={quickAmount}
+                                        isActive={parseFloat(amount) === quickAmount}
+                                        onPress={() => handleQuickAmount(quickAmount)}
+                                    />
+                                ))}
                             </View>
                         </View>
 
                         {/* Crypto Selection Card */}
-                        <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50 mb-6">
+                        <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-5 mb-6">
                             <Text className="text-xl font-bold text-white mb-5">Select Cryptocurrency</Text>
 
-                            <View style={{ gap: 12 }}>
-                                {cryptoOptions.map((option) => {
-                                    const isSelected = selectedCrypto === option.value;
-                                    return (
-                                        <TouchableOpacity
-                                            key={option.value}
-                                            onPress={() => setSelectedCrypto(option.value)}
-                                            style={{
-                                                padding: 16,
-                                                borderRadius: 14,
-                                                borderWidth: 2,
-                                                borderColor: isSelected ? '#ea580c' : '#374151',
-                                                backgroundColor: isSelected ? 'rgba(234,88,12,0.08)' : 'rgba(17,24,39,0.3)',
-                                            }}
-                                        >
-                                            <View className="flex-row items-center justify-between mb-3">
-                                                <View>
-                                                    <Text className="text-white font-bold text-base mb-1">
-                                                        {option.label}
-                                                    </Text>
-                                                    <Text className="text-gray-400 text-xs">
-                                                        {option.network}
-                                                    </Text>
-                                                </View>
-                                                {isSelected && (
-                                                    <View className="w-8 h-8 bg-orange-500 rounded-full items-center justify-center">
-                                                        <Check size={18} color="#ffffff" />
-                                                    </View>
-                                                )}
-                                            </View>
-
-                                            <View className="pt-3 border-t border-gray-700/50" style={{ gap: 6 }}>
-                                                <View className="flex-row justify-between">
-                                                    <Text className="text-gray-400 text-xs">Network Fee</Text>
-                                                    <Text className="text-emerald-400 text-xs font-semibold">{option.fee}</Text>
-                                                </View>
-                                                <View className="flex-row justify-between">
-                                                    <Text className="text-gray-400 text-xs">Min. Deposit</Text>
-                                                    <Text className="text-white text-xs font-semibold">${option.minDeposit}</Text>
-                                                </View>
-                                                <View className="flex-row justify-between">
-                                                    <Text className="text-gray-400 text-xs">Processing Time</Text>
-                                                    <Text className="text-white text-xs font-semibold">{option.processingTime}</Text>
-                                                </View>
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                })}
+                            <View className="gap-3">
+                                {cryptoOptions.map((option) => (
+                                    <CryptoOptionCard
+                                        key={option.value}
+                                        option={option}
+                                        isSelected={selectedCrypto === option.value}
+                                        onPress={() => setSelectedCrypto(option.value)}
+                                    />
+                                ))}
                             </View>
                         </View>
 
@@ -460,25 +369,17 @@ const Deposit = () => {
                         <TouchableOpacity
                             onPress={handleContinue}
                             disabled={loading || !amount || !!amountError}
-                            style={{
-                                borderRadius: 14,
-                                paddingVertical: 18,
-                                alignItems: 'center',
-                                backgroundColor: loading || !amount || !!amountError ? 'rgba(55,65,81,0.4)' : '#ea580c',
-                                opacity: loading || !amount || !!amountError ? 0.5 : 1,
-                            }}
+                            className={`rounded-xl py-5 items-center ${loading || !amount || !!amountError ? 'bg-neutral-800/50' : 'bg-orange-500'
+                                }`}
+                            activeOpacity={0.7}
                         >
                             {loading ? (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                    <ActivityIndicator size="small" color="#ffffff" />
-                                    <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 16 }}>
-                                        Processing...
-                                    </Text>
+                                <View className="flex-row items-center gap-3">
+                                    <ActivityIndicator size="small" color="#fff" />
+                                    <Text className="text-white font-bold text-lg">Processing...</Text>
                                 </View>
                             ) : (
-                                <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 16 }}>
-                                    Continue to Payment
-                                </Text>
+                                <Text className="text-white font-bold text-lg">Continue to Payment</Text>
                             )}
                         </TouchableOpacity>
                     </View>
@@ -486,69 +387,35 @@ const Deposit = () => {
 
                 {/* Step 2: Payment Instructions */}
                 {step === 2 && paymentAddress && (
-                    <View className="px-4">
-                        <View className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50">
+                    <View className="px-5">
+                        <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
                             {/* Header */}
-                            <View style={{ alignItems: 'center', marginBottom: 28 }}>
-                                <View style={{
-                                    width: 72,
-                                    height: 72,
-                                    backgroundColor: 'rgba(234,88,12,0.15)',
-                                    borderRadius: 16,
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    marginBottom: 16,
-                                }}>
+                            <View className="items-center mb-7">
+                                <View className="w-18 h-18 bg-orange-500/20 border border-orange-500/30 rounded-2xl items-center justify-center mb-4">
                                     <Clock size={32} color="#ea580c" />
                                 </View>
-                                <Text style={{ fontSize: 24, fontWeight: '700', color: '#ffffff', marginBottom: 10 }}>
-                                    Send Payment
-                                </Text>
-                                <Text style={{ color: '#9ca3af', fontSize: 15, textAlign: 'center', lineHeight: 22 }}>
-                                    Send exactly <Text style={{ fontWeight: '700', color: '#ffffff' }}>${amount}</Text> worth of{'\n'}
-                                    <Text style={{ fontWeight: '700', color: '#ffffff' }}>{selectedOption?.label}</Text> to the address below
+                                <Text className="text-2xl font-bold text-white mb-2.5">Send Payment</Text>
+                                <Text className="text-neutral-400 text-base text-center leading-6">
+                                    Send exactly <Text className="font-bold text-white">${amount}</Text> worth of{'\n'}
+                                    <Text className="font-bold text-white">{selectedOption?.label}</Text> to the address
+                                    below
                                 </Text>
                             </View>
 
                             {/* QR Code */}
-                            <View style={{ alignItems: 'center', marginBottom: 24 }}>
-                                <View style={{
-                                    padding: 20,
-                                    backgroundColor: '#ffffff',
-                                    borderRadius: 20,
-                                    shadowColor: '#000',
-                                    shadowOffset: { width: 0, height: 4 },
-                                    shadowOpacity: 0.3,
-                                    shadowRadius: 8,
-                                    elevation: 8,
-                                }}>
+                            <View className="items-center mb-6">
+                                <View className="p-5 bg-white rounded-2xl">
                                     {!qrLoaded && (
-                                        <View style={{
-                                            width: 240,
-                                            height: 240,
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            backgroundColor: '#f3f4f6',
-                                            borderRadius: 12,
-                                        }}>
+                                        <View className="w-60 h-60 items-center justify-center bg-neutral-100 rounded-xl">
                                             <ActivityIndicator size="large" color="#ea580c" />
-                                            <Text style={{ color: '#6b7280', fontSize: 12, marginTop: 12 }}>
-                                                Loading QR Code...
-                                            </Text>
+                                            <Text className="text-neutral-600 text-xs mt-3 font-medium">Loading QR Code...</Text>
                                         </View>
                                     )}
                                     <Image
                                         source={{ uri: qrCodeUrl }}
-                                        style={{
-                                            width: 240,
-                                            height: 240,
-                                            borderRadius: 12,
-                                            display: qrLoaded ? 'flex' : 'none',
-                                        }}
-                                        onLoad={() => {
-                                            setQrLoaded(true);
-                                            console.log('QR Code loaded successfully');
-                                        }}
+                                        className="w-60 h-60 rounded-xl"
+                                        style={{ display: qrLoaded ? 'flex' : 'none' }}
+                                        onLoad={() => setQrLoaded(true)}
                                         onError={handleQrError}
                                         resizeMode="contain"
                                     />
@@ -557,35 +424,28 @@ const Deposit = () => {
 
                             {/* Payment Address */}
                             <View className="mb-6">
-                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                                <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-3">
                                     Payment Address
                                 </Text>
-                                <View className="bg-gray-900/70 border border-gray-700 rounded-xl p-4">
+                                <View className="bg-black/40 border border-neutral-800 rounded-xl p-4">
                                     <View className="flex-row items-center justify-between">
                                         <Text
-                                            className="text-white text-sm font-mono flex-1 mr-3"
+                                            className="text-white text-sm font-mono flex-1 mr-3 leading-5"
                                             numberOfLines={2}
-                                            style={{ lineHeight: 20 }}
                                         >
                                             {paymentAddress}
                                         </Text>
                                         <TouchableOpacity
                                             onPress={() => copyToClipboard(paymentAddress)}
-                                            style={{
-                                                padding: 10,
-                                                backgroundColor: copied ? 'rgba(34,197,94,0.15)' : 'rgba(55,65,81,0.5)',
-                                                borderRadius: 10,
-                                            }}
+                                            className={`p-2.5 rounded-xl ${copied ? 'bg-green-500/20 border border-green-500/30' : 'bg-neutral-800 border border-neutral-700'
+                                                }`}
+                                            activeOpacity={0.7}
                                         >
-                                            {copied ? (
-                                                <Check size={20} color="#22c55e" />
-                                            ) : (
-                                                <Copy size={20} color="#9ca3af" />
-                                            )}
+                                            {copied ? <Check size={20} color="#22c55e" /> : <Copy size={20} color="#9ca3af" />}
                                         </TouchableOpacity>
                                     </View>
                                     {copied && (
-                                        <Text className="text-emerald-400 text-xs font-medium mt-2">
+                                        <Text className="text-green-400 text-xs font-bold mt-2">
                                             Address copied to clipboard!
                                         </Text>
                                     )}
@@ -593,11 +453,11 @@ const Deposit = () => {
                             </View>
 
                             {/* Transaction ID */}
-                            <View className="mb-6 p-4 bg-gray-900/40 rounded-xl border border-gray-700/50">
-                                <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                            <View className="mb-6 p-4 bg-black/40 border border-neutral-800 rounded-xl">
+                                <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-2">
                                     Transaction ID
                                 </Text>
-                                <Text className="font-mono text-xs text-gray-300 leading-5" numberOfLines={2}>
+                                <Text className="font-mono text-xs text-neutral-300 leading-5" numberOfLines={2}>
                                     {transactionId}
                                 </Text>
                             </View>
@@ -607,10 +467,10 @@ const Deposit = () => {
                                 <View className="flex-row items-start">
                                     <Info size={20} color="#3b82f6" style={{ marginTop: 2, marginRight: 12 }} />
                                     <View className="flex-1">
-                                        <Text className="text-blue-400 font-semibold text-sm mb-2">
+                                        <Text className="text-blue-400 font-bold text-sm mb-2">
                                             Important Information
                                         </Text>
-                                        <View style={{ gap: 6 }}>
+                                        <View className="gap-1.5">
                                             <Text className="text-blue-300 text-xs leading-5">
                                                 • Send exactly the amount specified above
                                             </Text>
@@ -629,49 +489,33 @@ const Deposit = () => {
                             </View>
 
                             {/* Action Buttons */}
-                            <View style={{ gap: 12 }}>
+                            <View className="gap-3">
                                 <TouchableOpacity
                                     onPress={handleCheckPayment}
                                     disabled={checkingPayment}
-                                    style={{
-                                        paddingVertical: 16,
-                                        borderRadius: 12,
-                                        alignItems: 'center',
-                                        backgroundColor: checkingPayment ? 'rgba(0, 158, 24,0.3)' : 'rgb(0, 158, 24)',
-                                        flexDirection: 'row',
-                                        justifyContent: 'center',
-                                        gap: 10,
-                                    }}
+                                    className={`py-5 rounded-xl items-center flex-row justify-center gap-2.5 ${checkingPayment ? 'bg-green-500/50' : 'bg-green-500'
+                                        }`}
+                                    activeOpacity={0.7}
                                 >
                                     {checkingPayment ? (
                                         <>
-                                            <ActivityIndicator size="small" color="#ffffff" />
-                                            <Text className="text-white font-bold text-base">
-                                                Checking Status...
-                                            </Text>
+                                            <ActivityIndicator size="small" color="#fff" />
+                                            <Text className="text-white font-bold text-base">Checking Status...</Text>
                                         </>
                                     ) : (
                                         <>
-                                            <RefreshCw size={20} color="#ffffff" />
-                                            <Text className="text-white font-bold text-base">
-                                                Check Payment Status
-                                            </Text>
+                                            <RefreshCw size={20} color="#fff" style={{ marginRight: 4 }} />
+                                            <Text className="text-white font-bold text-base">Check Payment Status</Text>
                                         </>
                                     )}
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     onPress={resetDeposit}
-                                    style={{
-                                        paddingVertical: 16,
-                                        borderRadius: 12,
-                                        alignItems: 'center',
-                                        backgroundColor: 'rgba(55,65,81,0.5)',
-                                        borderWidth: 1,
-                                        borderColor: '#374151',
-                                    }}
+                                    className="py-5 rounded-xl items-center bg-neutral-800 border border-neutral-700"
+                                    activeOpacity={0.7}
                                 >
-                                    <Text className="text-gray-300 font-semibold text-base">
+                                    <Text className="text-neutral-300 font-bold text-base">
                                         Change Amount or Method
                                     </Text>
                                 </TouchableOpacity>
@@ -679,15 +523,15 @@ const Deposit = () => {
 
                             {/* Status Info */}
                             {depositDetails && (
-                                <View className="mt-5 pt-5 border-t border-gray-700/50">
-                                    <Text className="text-center text-sm text-gray-400 mb-2">
+                                <View className="mt-5 pt-5 border-t border-neutral-800">
+                                    <Text className="text-center text-sm text-neutral-400 mb-2 font-bold uppercase tracking-wide">
                                         Current Status
                                     </Text>
-                                    <Text className="text-center text-base font-semibold text-white capitalize">
+                                    <Text className="text-center text-base font-bold text-white capitalize">
                                         {depositDetails.blockBeeStatus || depositDetails.status}
                                     </Text>
                                     {depositDetails.confirmations > 0 && (
-                                        <Text className="text-center text-sm text-gray-400 mt-2">
+                                        <Text className="text-center text-sm text-neutral-400 mt-2 font-medium">
                                             Confirmations: {depositDetails.confirmations}/3
                                         </Text>
                                     )}
@@ -699,82 +543,53 @@ const Deposit = () => {
 
                 {/* Step 3: Success */}
                 {step === 3 && (
-                    <View className="px-4">
-                        <View className="bg-gray-800/50 rounded-2xl p-8 border border-gray-700/50" style={{ alignItems: 'center' }}>
-                            <View style={{
-                                width: 96,
-                                height: 96,
-                                backgroundColor: 'rgba(16,185,129,0.15)',
-                                borderRadius: 20,
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: 20,
-                            }}>
+                    <View className="px-5">
+                        <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 items-center">
+                            <View className="w-24 h-24 bg-green-500/20 border border-green-500/30 rounded-2xl items-center justify-center mb-5">
                                 <CheckCircle size={52} color="#10b981" />
                             </View>
 
-                            <Text style={{ fontSize: 28, fontWeight: '700', color: '#ffffff', marginBottom: 12, textAlign: 'center' }}>
-                                Deposit Successful!
-                            </Text>
+                            <Text className="text-3xl font-bold text-white mb-3 text-center">Deposit Successful!</Text>
 
-                            <Text style={{ color: '#9ca3af', fontSize: 16, marginBottom: 28, textAlign: 'center' }}>
+                            <Text className="text-neutral-400 text-base mb-7 text-center leading-6">
                                 ${amount} has been credited to your account
                             </Text>
 
                             {/* Details Card */}
-                            <View className="w-full bg-gray-900/50 border border-gray-700 rounded-xl p-5 mb-8" style={{ gap: 12 }}>
-                                <View className="flex-row justify-between">
-                                    <Text className="text-gray-400 text-sm">Amount Deposited</Text>
-                                    <Text className="text-white font-bold text-sm">${amount}</Text>
-                                </View>
-                                <View className="flex-row justify-between">
-                                    <Text className="text-gray-400 text-sm">Payment Method</Text>
-                                    <Text className="text-white font-semibold text-sm">{selectedOption?.label}</Text>
-                                </View>
-                                <View className="flex-row justify-between">
-                                    <Text className="text-gray-400 text-sm">New Balance</Text>
-                                    <Text className="text-emerald-400 font-bold text-sm">
-                                        ${parseFloat(user?.walletBalance || 0).toFixed(2)}
+                            <View className="w-full bg-black/40 border border-neutral-800 rounded-xl p-5 mb-8">
+                                <DetailRow label="Amount Deposited" value={`$${amount}`} />
+                                <DetailRow label="Payment Method" value={selectedOption?.label} />
+                                <DetailRow
+                                    label="New Balance"
+                                    value={`$${parseFloat(user?.walletBalance || 0).toFixed(2)}`}
+                                    valueColor="text-green-400"
+                                />
+                                <View className="pt-3 border-t border-neutral-800">
+                                    <Text className="text-neutral-400 text-xs font-bold uppercase tracking-wide mb-2">
+                                        Transaction ID
                                     </Text>
-                                </View>
-                                <View className="pt-3 border-t border-gray-700/50">
-                                    <Text className="text-gray-400 text-xs mb-1">Transaction ID</Text>
-                                    <Text className="text-gray-300 font-mono text-xs" numberOfLines={1}>
+                                    <Text className="text-neutral-300 font-mono text-xs" numberOfLines={1}>
                                         {transactionId}
                                     </Text>
                                 </View>
                             </View>
 
                             {/* Action Buttons */}
-                            <View className="w-full" style={{ gap: 12 }}>
+                            <View className="w-full gap-3">
                                 <TouchableOpacity
                                     onPress={resetDeposit}
-                                    style={{
-                                        paddingVertical: 16,
-                                        borderRadius: 12,
-                                        alignItems: 'center',
-                                        backgroundColor: '#10b981',
-                                    }}
+                                    className="py-5 rounded-xl items-center bg-green-500"
+                                    activeOpacity={0.7}
                                 >
-                                    <Text className="text-white font-bold text-base">
-                                        Make Another Deposit
-                                    </Text>
+                                    <Text className="text-white font-bold text-lg">Make Another Deposit</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     onPress={() => router.back()}
-                                    style={{
-                                        paddingVertical: 16,
-                                        borderRadius: 12,
-                                        alignItems: 'center',
-                                        backgroundColor: 'rgba(55,65,81,0.5)',
-                                        borderWidth: 1,
-                                        borderColor: '#374151',
-                                    }}
+                                    className="py-5 rounded-xl items-center bg-neutral-800 border border-neutral-700"
+                                    activeOpacity={0.7}
                                 >
-                                    <Text className="text-gray-300 font-semibold text-base">
-                                        Back to Wallet
-                                    </Text>
+                                    <Text className="text-neutral-300 font-bold text-base">Back to Wallet</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>

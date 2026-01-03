@@ -1,13 +1,6 @@
 import React from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, TouchableOpacity } from 'react-native';
-import {
-    ArrowLeft,
-    LayoutDashboard,
-    TrendingUp,
-    Users,
-} from 'lucide-react-native';
 
 export default function GtcfxLayout() {
     return (
@@ -17,7 +10,7 @@ export default function GtcfxLayout() {
                 screenOptions={{
                     headerShown: false,
                     headerStyle: {
-                        backgroundColor: '#111827',
+                        backgroundColor: '#0a0a0a',
                     },
                     headerTintColor: '#ffffff',
                     headerTitleStyle: {
@@ -26,7 +19,7 @@ export default function GtcfxLayout() {
                     },
                     headerShadowVisible: false,
                     contentStyle: {
-                        backgroundColor: '#111827',
+                        backgroundColor: '#0a0a0a',
                     },
                     animation: 'slide_from_right',
                     animationDuration: 250,
@@ -37,24 +30,17 @@ export default function GtcfxLayout() {
                     name="auth"
                     options={{
                         title: 'GTC FX Login',
-                        headerLeft: () => null, // No back button on auth
+                        headerShown: false,
+                        headerLeft: () => null,
                     }}
                 />
 
-                {/* Main Dashboard - Default Screen */}
+                {/* Main Dashboard */}
                 <Stack.Screen
                     name="dashboard"
                     options={{
+                        title: 'GTC FX Dashboard',
                         headerShown: false,
-                        headerLeft: () => (
-                            <TouchableOpacity
-                                onPress={() => router.back()}
-                                className="p-2 ml-2"
-                                activeOpacity={0.7}
-                            >
-                                <ArrowLeft size={24} color="#ffffff" />
-                            </TouchableOpacity>
-                        ),
                     }}
                 />
 
@@ -63,15 +49,7 @@ export default function GtcfxLayout() {
                     name="profit-logs"
                     options={{
                         title: 'Profit Logs',
-                        headerLeft: () => (
-                            <TouchableOpacity
-                                onPress={() => router.back()}
-                                className="p-2 ml-2"
-                                activeOpacity={0.7}
-                            >
-                                <ArrowLeft size={24} color="#ffffff" />
-                            </TouchableOpacity>
-                        ),
+                        headerShown: false,
                     }}
                 />
 
@@ -80,15 +58,7 @@ export default function GtcfxLayout() {
                     name="agent-members"
                     options={{
                         title: 'Agent Members',
-                        headerLeft: () => (
-                            <TouchableOpacity
-                                onPress={() => router.back()}
-                                className="p-2 ml-2"
-                                activeOpacity={0.7}
-                            >
-                                <ArrowLeft size={24} color="#ffffff" />
-                            </TouchableOpacity>
-                        ),
+                        headerShown: false,
                     }}
                 />
             </Stack>

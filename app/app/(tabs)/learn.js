@@ -20,8 +20,10 @@ import {
     ChevronRight,
     X,
     BookOpen,
+    ArrowLeft,
 } from "lucide-react-native";
 import { StatusBar } from 'expo-status-bar';
+import SummaryCard from '@/components/SummaryCard';
 
 // Duration formatter
 const formatDuration = (seconds) => {
@@ -30,33 +32,19 @@ const formatDuration = (seconds) => {
     return `${mins}m`;
 };
 
-// Stats Card Component
-const StatsCard = ({ title, value, subtitle, icon, colors }) => (
-    <View className={`rounded-2xl p-5 border ${colors.bg} ${colors.border} mb-3`}>
-        <View className="flex-row items-center mb-2">
-            <View className={`w-12 h-12 rounded-xl items-center justify-center mr-3 ${colors.iconBg}`}>
-                {icon}
-            </View>
-            <Text className={`text-sm font-semibold ${colors.text}`}>{title}</Text>
-        </View>
-        <Text className={`text-2xl font-bold ${colors.text}`}>{value}</Text>
-        <Text className={`text-xs ${colors.subText} mt-1`}>{subtitle}</Text>
-    </View>
-);
-
 // Course Card Component
 const CourseCard = ({ course, onPress }) => {
     return (
         <TouchableOpacity
             onPress={onPress}
-            className="bg-gray-800/50 border border-gray-700/50 rounded-2xl overflow-hidden mb-4 active:bg-gray-800/60"
-            activeOpacity={0.95}
+            className="bg-neutral-900/50 border border-neutral-800 rounded-2xl overflow-hidden mb-4"
+            activeOpacity={0.7}
         >
             {/* Course Header */}
-            <View className="p-5 bg-orange-600/10 border-b border-orange-600/20">
-                <View className="flex-row items-center mb-3">
-                    <View className="bg-orange-500/20 px-3 py-1.5 border border-orange-500/30 rounded-full">
-                        <Text className="text-xs text-orange-400 font-semibold uppercase">
+            <View className="p-5 bg-orange-500/10 border-b border-orange-500/20">
+                <View className="mb-3">
+                    <View className="bg-orange-500/15 border border-orange-500/30 px-3 py-1.5 rounded-xl self-start">
+                        <Text className="text-xs text-orange-400 font-bold uppercase tracking-wide">
                             {course.category}
                         </Text>
                     </View>
@@ -68,18 +56,20 @@ const CourseCard = ({ course, onPress }) => {
 
             {/* Course Info */}
             <View className="p-5">
-                <Text className="text-gray-400 text-sm mb-4" numberOfLines={3}>
+                <Text className="text-neutral-400 text-sm mb-4 leading-5" numberOfLines={3}>
                     {course.description}
                 </Text>
 
-                <View className="mb-4" style={{ gap: 10 }}>
-                    <View className="flex-row items-center bg-gray-900/50 border border-gray-700/30 px-4 py-3 rounded-xl">
-                        <Video size={16} color="#9ca3af" />
-                        <Text className="text-white font-medium ml-2">{course.videos?.length || 0} lessons</Text>
+                <View className="flex-row gap-3 mb-4">
+                    <View className="flex-1 bg-black/40 border border-neutral-800 px-4 py-3 rounded-xl flex-row items-center">
+                        <Video size={16} color="#9ca3af" style={{ marginRight: 8 }} />
+                        <Text className="text-white font-bold text-sm">
+                            {course.videos?.length || 0} lessons
+                        </Text>
                     </View>
-                    <View className="flex-row items-center bg-gray-900/50 border border-gray-700/30 px-4 py-3 rounded-xl">
-                        <Clock size={16} color="#9ca3af" />
-                        <Text className="text-white font-medium ml-2">
+                    <View className="flex-1 bg-black/40 border border-neutral-800 px-4 py-3 rounded-xl flex-row items-center">
+                        <Clock size={16} color="#9ca3af" style={{ marginRight: 8 }} />
+                        <Text className="text-white font-bold text-sm">
                             {formatDuration(course.totalDuration)}
                         </Text>
                     </View>
@@ -87,18 +77,10 @@ const CourseCard = ({ course, onPress }) => {
 
                 {/* CTA Button */}
                 <TouchableOpacity
-                    style={{
-                        width: '100%',
-                        paddingVertical: 16,
-                        backgroundColor: '#ea580c',
-                        borderRadius: 12,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
+                    className="w-full py-4 bg-orange-500 rounded-xl flex-row items-center justify-center"
                     activeOpacity={0.7}
                 >
-                    <Text className="text-white font-semibold text-base mr-2">Start Learning</Text>
+                    <Text className="text-white font-bold text-base mr-2">Start Learning</Text>
                     <ChevronRight size={20} color="#ffffff" />
                 </TouchableOpacity>
             </View>
@@ -120,8 +102,9 @@ const Learn = () => {
     }, [searchTerm, categoryFilter]);
 
     const loadCourses = async () => {
-        setLoading(true);
-        setRefreshing(true);
+        if (!refreshing && courses.length === 0) {
+            setLoading(true);
+        }
         setError("");
         try {
             const params = {};
@@ -141,6 +124,7 @@ const Learn = () => {
     const categories = Array.from(new Set(courses.map((c) => c.category || 'General')));
 
     const handleRefresh = () => {
+        setRefreshing(true);
         loadCourses();
     };
 
@@ -149,23 +133,35 @@ const Learn = () => {
         setCategoryFilter("all");
     };
 
-    if (loading && courses.length === 0) {
+    if (loading && courses.length === 0 && !refreshing) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
+            <SafeAreaView className="flex-1 bg-[#0a0a0a] justify-center items-center">
                 <StatusBar style="light" />
                 <ActivityIndicator size="large" color="#ea580c" />
-                <Text className="text-gray-400 mt-4 font-medium">Loading courses...</Text>
+                <Text className="text-neutral-400 mt-4 font-medium">Loading courses...</Text>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-900">
+        <SafeAreaView className="flex-1 bg-[#0a0a0a]">
             <StatusBar style="light" />
 
-            <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
-                <Text className="text-2xl font-bold text-white">Learning Center</Text>
-                <Text className="text-sm text-gray-400 mt-0.5">Explore our courses</Text>
+            {/* Header */}
+            <View className="px-5 pt-5 pb-4 border-b border-neutral-800">
+                <View className="flex-row items-center">
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="mr-4 w-10 h-10 bg-neutral-900 rounded-xl items-center justify-center"
+                        activeOpacity={0.7}
+                    >
+                        <ArrowLeft size={20} color="#fff" />
+                    </TouchableOpacity>
+                    <View>
+                        <Text className="text-2xl font-bold text-white">Learning Center</Text>
+                        <Text className="text-sm text-neutral-400 mt-0.5">Explore our courses</Text>
+                    </View>
+                </View>
             </View>
 
             <ScrollView
@@ -182,13 +178,13 @@ const Learn = () => {
             >
                 {/* Error Alert */}
                 {error && (
-                    <View className="mx-4 mt-5 mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-                        <View className="flex-row items-center">
+                    <View className="mx-5 mt-5 mb-4 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl">
+                        <View className="flex-row items-start">
                             <AlertCircle size={20} color="#ef4444" style={{ marginTop: 2, marginRight: 12 }} />
                             <View className="flex-1">
                                 <Text className="text-red-400 text-sm font-medium leading-5">{error}</Text>
                             </View>
-                            <TouchableOpacity onPress={() => setError("")} className="ml-2 p-1">
+                            <TouchableOpacity onPress={() => setError("")}>
                                 <X size={18} color="#ef4444" />
                             </TouchableOpacity>
                         </View>
@@ -196,166 +192,137 @@ const Learn = () => {
                 )}
 
                 {/* Stats Cards */}
-                <View className="px-4 mt-5 mb-6">
+                <View className="px-5 mt-6 mb-6">
                     <Text className="text-xl font-bold text-white mb-4">Overview</Text>
-                    <StatsCard
-                        title="Available Courses"
-                        value={courses.length}
-                        subtitle="Total courses"
-                        icon={<PlayCircle size={22} color="#3b82f6" />}
-                        colors={{
-                            bg: "bg-blue-500/10",
-                            border: "border-blue-500/30",
-                            iconBg: "bg-blue-500/20",
-                            text: "text-white",
-                            subText: "text-gray-400",
-                        }}
-                    />
-                    <StatsCard
-                        title="Total Lessons"
-                        value={courses.reduce((sum, c) => sum + (c.videos?.length || 0), 0)}
-                        subtitle="All courses combined"
-                        icon={<Video size={22} color="#a855f7" />}
-                        colors={{
-                            bg: "bg-purple-500/10",
-                            border: "border-purple-500/30",
-                            iconBg: "bg-purple-500/20",
-                            text: "text-white",
-                            subText: "text-gray-400",
-                        }}
-                    />
-                    <StatsCard
-                        title="Total Duration"
-                        value={formatDuration(courses.reduce((sum, c) => sum + (c.totalDuration || 0), 0))}
-                        subtitle="Learning time"
-                        icon={<Clock size={22} color="#ea580c" />}
-                        colors={{
-                            bg: "bg-orange-500/10",
-                            border: "border-orange-500/30",
-                            iconBg: "bg-orange-500/20",
-                            text: "text-white",
-                            subText: "text-gray-400",
-                        }}
-                    />
+                    <View className="flex-row gap-3 mb-3">
+                        <SummaryCard
+                            icon={<PlayCircle size={20} color="#3b82f6" />}
+                            label="Courses"
+                            value={courses.length}
+                            valueColor="text-white"
+                            bgColor="bg-neutral-900/50"
+                        />
+                        <SummaryCard
+                            icon={<Video size={20} color="#a855f7" />}
+                            label="Lessons"
+                            value={courses.reduce((sum, c) => sum + (c.videos?.length || 0), 0)}
+                            valueColor="text-white"
+                            bgColor="bg-neutral-900/50"
+                        />
+                    </View>
+                    <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-5">
+                        <View className="flex-row items-center mb-3">
+                            <View className="w-12 h-12 bg-orange-500/20 rounded-xl items-center justify-center mr-3">
+                                <Clock size={20} color="#ea580c" />
+                            </View>
+                            <View>
+                                <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-1">
+                                    Total Duration
+                                </Text>
+                                <Text className="text-2xl font-bold text-white">
+                                    {formatDuration(courses.reduce((sum, c) => sum + (c.totalDuration || 0), 0))}
+                                </Text>
+                            </View>
+                        </View>
+                        <Text className="text-xs text-neutral-500">Learning time across all courses</Text>
+                    </View>
                 </View>
 
                 {/* Filters */}
-                <View className="px-4 mb-6">
+                <View className="px-5 mb-6">
                     <Text className="text-xl font-bold text-white mb-4">Search & Filter</Text>
 
+                    {/* Search Bar */}
                     <View className="mb-4">
+                        <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-3">
+                            Search Courses
+                        </Text>
                         <View className="relative">
-                            <Search
-                                size={20}
-                                color="#9ca3af"
-                                style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}
-                            />
+                            <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                <Search size={18} color="#9ca3af" />
+                            </View>
                             <TextInput
                                 placeholder="Search courses..."
                                 placeholderTextColor="#6b7280"
                                 value={searchTerm}
                                 onChangeText={setSearchTerm}
-                                style={{
-                                    paddingLeft: 48,
-                                    paddingRight: 16,
-                                    paddingVertical: 16,
-                                    fontSize: 15,
-                                    fontWeight: '500',
-                                    color: '#ffffff',
-                                    backgroundColor: 'rgba(17,24,39,0.5)',
-                                    borderRadius: 12,
-                                    borderWidth: 1.5,
-                                    borderColor: '#374151',
-                                }}
+                                className="pl-12 pr-4 py-4 text-white text-base font-medium bg-neutral-900 border-2 border-neutral-800 rounded-xl"
                             />
                         </View>
                     </View>
 
                     {/* Category Filter */}
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-                        <View className="flex-row" style={{ gap: 8 }}>
-                            <TouchableOpacity
-                                onPress={() => setCategoryFilter("all")}
-                                style={{
-                                    paddingHorizontal: 16,
-                                    paddingVertical: 10,
-                                    borderRadius: 10,
-                                    borderWidth: 1.5,
-                                    backgroundColor: categoryFilter === "all" ? '#ea580c' : 'rgba(17,24,39,0.5)',
-                                    borderColor: categoryFilter === "all" ? '#ea580c' : '#374151',
-                                }}
-                                activeOpacity={0.7}
-                            >
-                                <Text style={{
-                                    fontWeight: '700',
-                                    fontSize: 13,
-                                    color: categoryFilter === "all" ? '#ffffff' : '#9ca3af',
-                                }}>
-                                    All
-                                </Text>
-                            </TouchableOpacity>
-                            {categories.map((cat) => (
+                    <View className="mb-4">
+                        <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-3">
+                            Category
+                        </Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                            <View className="flex-row gap-2">
                                 <TouchableOpacity
-                                    key={cat}
-                                    onPress={() => setCategoryFilter(cat)}
-                                    style={{
-                                        paddingHorizontal: 16,
-                                        paddingVertical: 10,
-                                        borderRadius: 10,
-                                        borderWidth: 1.5,
-                                        backgroundColor: categoryFilter === cat ? '#ea580c' : 'rgba(17,24,39,0.5)',
-                                        borderColor: categoryFilter === cat ? '#ea580c' : '#374151',
-                                    }}
+                                    onPress={() => setCategoryFilter("all")}
+                                    className={`px-4 py-3 rounded-xl border-2 ${categoryFilter === "all"
+                                            ? "bg-orange-500 border-orange-500"
+                                            : "bg-transparent border-neutral-800"
+                                        }`}
                                     activeOpacity={0.7}
                                 >
-                                    <Text style={{
-                                        fontWeight: '700',
-                                        fontSize: 13,
-                                        color: categoryFilter === cat ? '#ffffff' : '#9ca3af',
-                                    }}>
-                                        {cat}
+                                    <Text
+                                        className={`font-bold text-sm ${categoryFilter === "all" ? "text-white" : "text-neutral-400"
+                                            }`}
+                                    >
+                                        All
                                     </Text>
                                 </TouchableOpacity>
-                            ))}
-                        </View>
-                    </ScrollView>
+                                {categories.map((cat) => (
+                                    <TouchableOpacity
+                                        key={cat}
+                                        onPress={() => setCategoryFilter(cat)}
+                                        className={`px-4 py-3 rounded-xl border-2 ${categoryFilter === cat
+                                                ? "bg-orange-500 border-orange-500"
+                                                : "bg-transparent border-neutral-800"
+                                            }`}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text
+                                            className={`font-bold text-sm ${categoryFilter === cat ? "text-white" : "text-neutral-400"
+                                                }`}
+                                        >
+                                            {cat}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </ScrollView>
+                    </View>
 
+                    {/* Clear Filters */}
                     {(searchTerm || categoryFilter !== "all") && (
                         <TouchableOpacity
                             onPress={clearFilters}
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                backgroundColor: 'rgba(239,68,68,0.1)',
-                                borderWidth: 1.5,
-                                borderColor: 'rgba(239,68,68,0.3)',
-                                borderRadius: 12,
-                                paddingVertical: 12,
-                                paddingHorizontal: 16,
-                            }}
+                            className="flex-row items-center bg-red-500/10 border-2 border-red-500/30 rounded-xl py-3 px-4"
                             activeOpacity={0.7}
                         >
-                            <X size={18} color="#ef4444" />
-                            <Text className="text-red-400 font-semibold ml-2">Clear Filters</Text>
+                            <X size={18} color="#ef4444" style={{ marginRight: 8 }} />
+                            <Text className="text-red-400 font-bold">Clear Filters</Text>
                         </TouchableOpacity>
                     )}
                 </View>
 
                 {/* Courses List */}
-                <View className="px-4 mb-6">
+                <View className="px-5 mb-6">
                     <Text className="text-xl font-bold text-white mb-4">
                         Courses ({courses.length})
                     </Text>
 
                     {courses.length === 0 ? (
-                        <View className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-12 items-center">
-                            <View className="w-20 h-20 bg-gray-700/50 border border-gray-600 rounded-xl items-center justify-center mb-6">
+                        <View className="bg-neutral-900/30 rounded-2xl p-12 items-center">
+                            <View className="w-20 h-20 bg-neutral-800/50 rounded-2xl items-center justify-center mb-4">
                                 <BookOpen size={40} color="#6b7280" />
                             </View>
-                            <Text className="text-gray-300 text-lg font-semibold mb-2 text-center">
+                            <Text className="text-xl font-bold text-white mb-2 text-center">
                                 {searchTerm || categoryFilter !== "all" ? "No Courses Found" : "No Courses Available"}
                             </Text>
-                            <Text className="text-gray-500 text-sm text-center">
+                            <Text className="text-neutral-400 text-sm text-center">
                                 {searchTerm || categoryFilter !== "all"
                                     ? "Try adjusting your filters"
                                     : "Check back soon for new content"

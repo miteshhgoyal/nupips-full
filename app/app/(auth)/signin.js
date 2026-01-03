@@ -8,19 +8,18 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
-    StatusBar,
     Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/authContext';
 import { Mail, Lock, AlertCircle, RotateCcw, LogIn, EyeOff, Eye, CheckCircle } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
 import api from '@/services/api';
 
 const SignIn = () => {
     const router = useRouter();
     const { login, clearError, error: authError } = useAuth();
-    const [keyboardVisible, setKeyboardVisible] = useState(false);
 
     const [formData, setFormData] = useState({ userInput: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
@@ -28,15 +27,6 @@ const SignIn = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [successMessage, setSuccessMessage] = useState('');
-
-    React.useEffect(() => {
-        const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-        const keyboardDidHide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-        return () => {
-            keyboardDidShow.remove();
-            keyboardDidHide.remove();
-        };
-    }, []);
 
     const handleInputChange = (name, value) => {
         setFormData((prev) => ({ ...prev, [name]: value }));
@@ -63,22 +53,16 @@ const SignIn = () => {
         setErrors({});
 
         try {
-            console.log("=====================");
-            console.log("proceeding to send login request");
             const response = await api.post('/auth/login', {
                 userInput: formData.userInput,
                 password: formData.password,
                 rememberMe,
             });
-            console.log("login request sent");
             if (response.data.token) {
-                console.log("login request successful");
                 setSuccessMessage('Login successful! Redirecting...');
-                console.log("logging in using auth context login function");
                 await login(response.data);
+                setTimeout(() => router.replace('/(tabs)/dashboard'), 1000);
             }
-            console.log("login request was unsuccessful");
-            setTimeout(() => router.replace('/(tabs)/dashboard'), 1000);
         } catch (error) {
             setErrors({
                 submit: error.response?.data?.message || 'Invalid credentials. Please try again.',
@@ -96,8 +80,8 @@ const SignIn = () => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-900">
-            <StatusBar barStyle="light-content" backgroundColor="#111827" />
+        <SafeAreaView className="flex-1 bg-[#0a0a0a]">
+            <StatusBar style="light" />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 className="flex-1"
@@ -105,8 +89,8 @@ const SignIn = () => {
                 <ScrollView
                     contentContainerStyle={{
                         flexGrow: 1,
-                        paddingHorizontal: 16,
-                        paddingVertical: 24,
+                        paddingHorizontal: 20,
+                        paddingVertical: 40,
                     }}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -114,66 +98,83 @@ const SignIn = () => {
                 >
                     <View className="w-full max-w-md mx-auto">
                         {/* Header */}
-                        <View className="items-center mb-8">
-                            <View className="w-20 h-20 bg-orange-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-orange-900/50">
-                                <LogIn size={40} color="white" />
+                        <View className="items-center mb-10">
+                            <View className="w-24 h-24 bg-orange-500 rounded-2xl items-center justify-center mb-5">
+                                <LogIn size={48} color="white" />
                             </View>
                             <Text className="text-3xl font-bold text-white mb-2">Nupips User Panel</Text>
-                            <Text className="text-gray-400 text-base">Welcome Back</Text>
+                            <Text className="text-neutral-400 text-base">Welcome Back</Text>
                         </View>
 
                         {/* Form Container */}
-                        <View className="bg-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-700">
+                        <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
                             {successMessage && (
-                                <View className="mb-4 p-3 bg-green-900/30 border border-green-700 rounded-lg flex-row items-center">
-                                    <CheckCircle size={18} color="#22c55e" />
-                                    <Text className="text-sm text-green-400 ml-2 flex-1">{successMessage}</Text>
+                                <View className="mb-5 p-4 bg-green-500/10 border border-green-500/30 rounded-2xl flex-row items-center">
+                                    <CheckCircle size={20} color="#22c55e" />
+                                    <Text className="text-sm text-green-400 ml-3 flex-1 font-medium">{successMessage}</Text>
                                 </View>
                             )}
 
                             {errors.submit && (
-                                <View className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg flex-row items-center">
-                                    <AlertCircle size={18} color="#ef4444" />
-                                    <Text className="text-sm text-red-400 ml-2 flex-1">{errors.submit}</Text>
+                                <View className="mb-5 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex-row items-center">
+                                    <AlertCircle size={20} color="#ef4444" />
+                                    <Text className="text-sm text-red-400 ml-3 flex-1 font-medium">{errors.submit}</Text>
                                 </View>
                             )}
 
                             {/* Username/Email Input */}
-                            <View className="mb-4">
-                                <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">
+                            <View className="mb-5">
+                                <Text className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wide">
                                     Username or Email
                                 </Text>
-                                <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
-                                    <Mail size={20} color="#ea580c" />
+                                <View className="relative">
+                                    <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                        <Mail size={20} color="#ea580c" />
+                                    </View>
                                     <TextInput
                                         value={formData.userInput}
                                         onChangeText={(value) => handleInputChange('userInput', value)}
                                         placeholder="Enter Username or Email"
                                         placeholderTextColor="#6b7280"
-                                        className="flex-1 py-3 px-3 text-base text-white"
+                                        className={`pl-12 pr-4 py-4 text-white text-base font-medium rounded-xl border-2 ${errors.userInput
+                                                ? 'bg-red-500/5 border-red-500'
+                                                : 'bg-black/40 border-neutral-800'
+                                            }`}
                                     />
                                 </View>
                                 {errors.userInput && (
-                                    <Text className="text-xs text-red-400 mt-1 ml-1">{errors.userInput}</Text>
+                                    <View className="flex-row items-center mt-2">
+                                        <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
+                                        <Text className="text-xs text-red-400 font-medium">{errors.userInput}</Text>
+                                    </View>
                                 )}
                             </View>
 
                             {/* Password Input */}
-                            <View className="mb-4">
-                                <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">
+                            <View className="mb-5">
+                                <Text className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wide">
                                     Password
                                 </Text>
-                                <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
-                                    <Lock size={20} color="#ea580c" />
+                                <View className="relative">
+                                    <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                        <Lock size={20} color="#ea580c" />
+                                    </View>
                                     <TextInput
                                         value={formData.password}
                                         onChangeText={(value) => handleInputChange('password', value)}
                                         placeholder="Enter Password"
                                         placeholderTextColor="#6b7280"
                                         secureTextEntry={!showPassword}
-                                        className="flex-1 py-3 px-3 text-base text-white"
+                                        className={`pl-12 pr-12 py-4 text-white text-base font-medium rounded-xl border-2 ${errors.password
+                                                ? 'bg-red-500/5 border-red-500'
+                                                : 'bg-black/40 border-neutral-800'
+                                            }`}
                                     />
-                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                    <TouchableOpacity
+                                        onPress={() => setShowPassword(!showPassword)}
+                                        style={{ position: 'absolute', right: 16, top: 16, zIndex: 1, padding: 4 }}
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    >
                                         {showPassword ? (
                                             <Eye size={20} color="#9ca3af" />
                                         ) : (
@@ -182,7 +183,10 @@ const SignIn = () => {
                                     </TouchableOpacity>
                                 </View>
                                 {errors.password && (
-                                    <Text className="text-xs text-red-400 mt-1 ml-1">{errors.password}</Text>
+                                    <View className="flex-row items-center mt-2">
+                                        <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
+                                        <Text className="text-xs text-red-400 font-medium">{errors.password}</Text>
+                                    </View>
                                 )}
                             </View>
 
@@ -190,31 +194,40 @@ const SignIn = () => {
                             <TouchableOpacity
                                 onPress={() => setRememberMe(!rememberMe)}
                                 className="flex-row items-center mb-6"
+                                activeOpacity={0.7}
                             >
-                                <View className={`w-5 h-5 rounded border-2 mr-2 ${rememberMe ? 'bg-orange-600 border-orange-600' : 'border-gray-600'}`} />
-                                <Text className="text-sm text-gray-300">Remember me</Text>
+                                <View
+                                    className={`w-6 h-6 rounded-lg border-2 items-center justify-center mr-3 ${rememberMe ? 'bg-orange-500 border-orange-500' : 'border-neutral-600'
+                                        }`}
+                                >
+                                    {rememberMe && <CheckCircle size={14} color="#fff" strokeWidth={3} />}
+                                </View>
+                                <Text className="text-sm text-white font-medium">Remember me</Text>
                             </TouchableOpacity>
 
                             {/* Action Buttons */}
                             <View className="flex-row gap-3">
                                 <TouchableOpacity
                                     onPress={resetForm}
-                                    className="flex-1 px-6 py-3.5 bg-gray-700 rounded-lg items-center justify-center border border-gray-600 flex-row"
+                                    className="flex-1 py-4 bg-neutral-800 border border-neutral-700 rounded-xl items-center justify-center flex-row"
+                                    activeOpacity={0.7}
                                 >
                                     <RotateCcw size={18} color="#d1d5db" />
-                                    <Text className="text-gray-200 font-semibold text-sm ml-2">Reset</Text>
+                                    <Text className="text-neutral-200 font-bold text-base ml-2">Reset</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={handleSubmit}
                                     disabled={isLoading}
-                                    className="flex-1 px-6 py-3.5 bg-orange-600 rounded-lg items-center justify-center disabled:opacity-50 flex-row shadow-lg shadow-orange-900/50"
+                                    className={`flex-1 py-4 rounded-xl items-center justify-center flex-row ${isLoading ? 'bg-neutral-800/50' : 'bg-orange-500'
+                                        }`}
+                                    activeOpacity={0.7}
                                 >
                                     {isLoading ? (
                                         <ActivityIndicator size="small" color="#ffffff" />
                                     ) : (
                                         <>
                                             <LogIn size={18} color="white" />
-                                            <Text className="text-white font-semibold text-sm ml-2">Sign In</Text>
+                                            <Text className="text-white font-bold text-base ml-2">Sign In</Text>
                                         </>
                                     )}
                                 </TouchableOpacity>
@@ -222,12 +235,12 @@ const SignIn = () => {
                         </View>
 
                         {/* Footer */}
-                        <View className="items-center mt-6">
-                            <Text className="text-gray-400 text-sm">
+                        <View className="items-center mt-8">
+                            <Text className="text-neutral-400 text-base">
                                 Don't have an account?{' '}
                                 <Text
                                     onPress={() => router.push('/(auth)/signup')}
-                                    className="text-orange-500 font-semibold"
+                                    className="text-orange-500 font-bold"
                                 >
                                     Register Now
                                 </Text>

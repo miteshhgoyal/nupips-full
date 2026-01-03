@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Eye, EyeOff, MoreVertical } from "lucide-react-native";
 
@@ -17,9 +17,12 @@ const BalanceCard = ({
         colors={["#ea580c", "#c2410c", "#9a3412"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        className="flex-1 p-6 justify-between"
+        className="flex-1 p-6 justify-between relative"
       >
-        <View className="flex-row justify-between items-start">
+        {/* Watermark */}
+        <View className="absolute -bottom-8 right-4 z-10 justify-center items-center pointerEvents-none"></View>
+
+        <View className="flex-row justify-between items-start z-20">
           <View>
             <Text className="text-white/70 text-sm mb-2">Total Balance</Text>
             <View className="flex-row items-center">
@@ -52,16 +55,19 @@ const BalanceCard = ({
           </TouchableOpacity>
         </View>
 
-        <View className="flex-row justify-between items-end">
+        <View className="flex-row justify-between items-center z-20 mt-5">
           <View>
             <Text className="text-white/60 text-xs mb-1">ACCOUNT HOLDER</Text>
-            <Text className="text-white text-sm font-semibold">
+            <Text className="text-white text-sm font-semibold max-w-36">
               {cardHolder}
             </Text>
           </View>
           <View>
-            <Text className="text-white/60 text-xs mb-1">ID</Text>
-            <Text className="text-white text-sm font-semibold">#{userId}</Text>
+            <Image
+              source={require("@/assets/nupips.png")}
+              className="w-40 h-40 opacity-10"
+              resizeMode="contain"
+            />
           </View>
         </View>
       </LinearGradient>

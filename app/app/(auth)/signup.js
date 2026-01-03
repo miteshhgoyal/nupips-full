@@ -8,19 +8,18 @@ import {
     ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
-    StatusBar,
     Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/authContext';
 import { User, Mail, Phone, Lock, RotateCcw, UserCheck, Users, AlertCircle, CheckCircle, EyeOff, Eye } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
 import api from '@/services/api';
 
 const SignUp = () => {
     const router = useRouter();
     const { login } = useAuth();
-    const [keyboardVisible, setKeyboardVisible] = useState(false);
 
     const [formData, setFormData] = useState({
         username: '',
@@ -37,15 +36,6 @@ const SignUp = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [successMessage, setSuccessMessage] = useState('');
-
-    useEffect(() => {
-        const keyboardDidShow = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-        const keyboardDidHide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-        return () => {
-            keyboardDidShow.remove();
-            keyboardDidHide.remove();
-        };
-    }, []);
 
     const handleInputChange = (name, value) => {
         setFormData((prev) => ({ ...prev, [name]: value }));
@@ -125,14 +115,14 @@ const SignUp = () => {
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-900">
-            <StatusBar barStyle="light-content" backgroundColor="#111827" />
+        <SafeAreaView className="flex-1 bg-[#0a0a0a]">
+            <StatusBar style="light" />
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
                 <ScrollView
                     contentContainerStyle={{
                         flexGrow: 1,
-                        paddingHorizontal: 16,
-                        paddingVertical: 24,
+                        paddingHorizontal: 20,
+                        paddingVertical: 40,
                     }}
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
@@ -140,24 +130,24 @@ const SignUp = () => {
                 >
                     <View className="w-full max-w-lg mx-auto">
                         {/* Header */}
-                        <View className="items-center mb-8">
-                            <View className="w-20 h-20 bg-orange-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-orange-900/50">
-                                <UserCheck size={40} color="white" />
+                        <View className="items-center mb-10">
+                            <View className="w-24 h-24 bg-orange-500 rounded-2xl items-center justify-center mb-5">
+                                <UserCheck size={48} color="white" />
                             </View>
                             <Text className="text-3xl font-bold text-white mb-2">Nupips User Panel</Text>
-                            <Text className="text-gray-400 text-base">Join Our Community</Text>
+                            <Text className="text-neutral-400 text-base">Join Our Community</Text>
                         </View>
 
                         {/* Form Container */}
-                        <View className="bg-gray-800 rounded-2xl p-6 shadow-2xl border border-gray-700">
+                        <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-6">
                             {formData.referredBy && (
-                                <View className="mb-4 p-3 bg-purple-900/30 border border-purple-700 rounded-lg flex-row items-center">
-                                    <Users size={20} color="#a78bfa" />
-                                    <View className="ml-2 flex-1">
-                                        <Text className="text-xs font-semibold text-purple-300">
+                                <View className="mb-5 p-4 bg-purple-500/10 border border-purple-500/30 rounded-2xl flex-row items-center">
+                                    <Users size={20} color="#a855f7" />
+                                    <View className="ml-3 flex-1">
+                                        <Text className="text-xs font-bold text-purple-300 uppercase tracking-wide">
                                             Referred by: <Text className="font-mono">{formData.referredBy}</Text>
                                         </Text>
-                                        <Text className="text-xs text-purple-400 mt-0.5">
+                                        <Text className="text-xs text-purple-400 mt-1">
                                             You'll be linked to this sponsor after registration
                                         </Text>
                                     </View>
@@ -165,137 +155,197 @@ const SignUp = () => {
                             )}
 
                             {successMessage && (
-                                <View className="mb-4 p-3 bg-green-900/30 border border-green-700 rounded-lg flex-row items-center">
-                                    <CheckCircle size={18} color="#22c55e" />
-                                    <Text className="text-sm text-green-400 ml-2 flex-1">{successMessage}</Text>
+                                <View className="mb-5 p-4 bg-green-500/10 border border-green-500/30 rounded-2xl flex-row items-center">
+                                    <CheckCircle size={20} color="#22c55e" />
+                                    <Text className="text-sm text-green-400 ml-3 flex-1 font-medium">{successMessage}</Text>
                                 </View>
                             )}
 
                             {errors.submit && (
-                                <View className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg flex-row items-center">
-                                    <AlertCircle size={18} color="#ef4444" />
-                                    <Text className="text-sm text-red-400 ml-2 flex-1">{errors.submit}</Text>
+                                <View className="mb-5 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex-row items-center">
+                                    <AlertCircle size={20} color="#ef4444" />
+                                    <Text className="text-sm text-red-400 ml-3 flex-1 font-medium">{errors.submit}</Text>
                                 </View>
                             )}
 
                             {/* Username */}
-                            <View className="mb-4">
-                                <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">Username</Text>
-                                <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
-                                    <User size={20} color="#ea580c" />
+                            <View className="mb-5">
+                                <Text className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wide">Username</Text>
+                                <View className="relative">
+                                    <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                        <User size={20} color="#ea580c" />
+                                    </View>
                                     <TextInput
                                         value={formData.username}
                                         onChangeText={(value) => handleInputChange('username', value)}
                                         placeholder="Username"
                                         placeholderTextColor="#6b7280"
-                                        className="flex-1 py-3 px-3 text-base text-white"
+                                        className={`pl-12 pr-4 py-4 text-white text-base font-medium rounded-xl border-2 ${errors.username ? 'bg-red-500/5 border-red-500' : 'bg-black/40 border-neutral-800'
+                                            }`}
                                     />
                                 </View>
-                                {errors.username && <Text className="text-xs text-red-400 mt-1 ml-1">{errors.username}</Text>}
+                                {errors.username && (
+                                    <View className="flex-row items-center mt-2">
+                                        <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
+                                        <Text className="text-xs text-red-400 font-medium">{errors.username}</Text>
+                                    </View>
+                                )}
                             </View>
 
                             {/* Full Name */}
-                            <View className="mb-4">
-                                <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">Full Name</Text>
-                                <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
-                                    <User size={20} color="#ea580c" />
+                            <View className="mb-5">
+                                <Text className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wide">Full Name</Text>
+                                <View className="relative">
+                                    <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                        <User size={20} color="#ea580c" />
+                                    </View>
                                     <TextInput
                                         value={formData.name}
                                         onChangeText={(value) => handleInputChange('name', value)}
                                         placeholder="Full Name"
                                         placeholderTextColor="#6b7280"
-                                        className="flex-1 py-3 px-3 text-base text-white"
+                                        className={`pl-12 pr-4 py-4 text-white text-base font-medium rounded-xl border-2 ${errors.name ? 'bg-red-500/5 border-red-500' : 'bg-black/40 border-neutral-800'
+                                            }`}
                                     />
                                 </View>
-                                {errors.name && <Text className="text-xs text-red-400 mt-1 ml-1">{errors.name}</Text>}
+                                {errors.name && (
+                                    <View className="flex-row items-center mt-2">
+                                        <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
+                                        <Text className="text-xs text-red-400 font-medium">{errors.name}</Text>
+                                    </View>
+                                )}
                             </View>
 
                             {/* Email */}
-                            <View className="mb-4">
-                                <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">Email</Text>
-                                <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
-                                    <Mail size={20} color="#ea580c" />
+                            <View className="mb-5">
+                                <Text className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wide">Email</Text>
+                                <View className="relative">
+                                    <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                        <Mail size={20} color="#ea580c" />
+                                    </View>
                                     <TextInput
                                         value={formData.email}
                                         onChangeText={(value) => handleInputChange('email', value)}
                                         placeholder="Email Address"
                                         placeholderTextColor="#6b7280"
                                         keyboardType="email-address"
-                                        className="flex-1 py-3 px-3 text-base text-white"
+                                        className={`pl-12 pr-4 py-4 text-white text-base font-medium rounded-xl border-2 ${errors.email ? 'bg-red-500/5 border-red-500' : 'bg-black/40 border-neutral-800'
+                                            }`}
                                     />
                                 </View>
-                                {errors.email && <Text className="text-xs text-red-400 mt-1 ml-1">{errors.email}</Text>}
+                                {errors.email && (
+                                    <View className="flex-row items-center mt-2">
+                                        <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
+                                        <Text className="text-xs text-red-400 font-medium">{errors.email}</Text>
+                                    </View>
+                                )}
                             </View>
 
                             {/* Phone */}
-                            <View className="mb-4">
-                                <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">Phone</Text>
-                                <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
-                                    <Phone size={20} color="#ea580c" />
+                            <View className="mb-5">
+                                <Text className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wide">Phone</Text>
+                                <View className="relative">
+                                    <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                        <Phone size={20} color="#ea580c" />
+                                    </View>
                                     <TextInput
                                         value={formData.phone}
                                         onChangeText={(value) => handleInputChange('phone', value)}
                                         placeholder="Phone Number"
                                         placeholderTextColor="#6b7280"
                                         keyboardType="phone-pad"
-                                        className="flex-1 py-3 px-3 text-base text-white"
+                                        className={`pl-12 pr-4 py-4 text-white text-base font-medium rounded-xl border-2 ${errors.phone ? 'bg-red-500/5 border-red-500' : 'bg-black/40 border-neutral-800'
+                                            }`}
                                     />
                                 </View>
-                                {errors.phone && <Text className="text-xs text-red-400 mt-1 ml-1">{errors.phone}</Text>}
+                                {errors.phone && (
+                                    <View className="flex-row items-center mt-2">
+                                        <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
+                                        <Text className="text-xs text-red-400 font-medium">{errors.phone}</Text>
+                                    </View>
+                                )}
                             </View>
 
                             {/* Password */}
-                            <View className="mb-4">
-                                <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">Password</Text>
-                                <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
-                                    <Lock size={20} color="#ea580c" />
+                            <View className="mb-5">
+                                <Text className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wide">Password</Text>
+                                <View className="relative">
+                                    <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                        <Lock size={20} color="#ea580c" />
+                                    </View>
                                     <TextInput
                                         value={formData.password}
                                         onChangeText={(value) => handleInputChange('password', value)}
                                         placeholder="Password"
                                         placeholderTextColor="#6b7280"
                                         secureTextEntry={!showPassword}
-                                        className="flex-1 py-3 px-3 text-base text-white"
+                                        className={`pl-12 pr-12 py-4 text-white text-base font-medium rounded-xl border-2 ${errors.password ? 'bg-red-500/5 border-red-500' : 'bg-black/40 border-neutral-800'
+                                            }`}
                                     />
-                                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                                    <TouchableOpacity
+                                        onPress={() => setShowPassword(!showPassword)}
+                                        style={{ position: 'absolute', right: 16, top: 16, zIndex: 1, padding: 4 }}
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    >
                                         {showPassword ? <Eye size={20} color="#9ca3af" /> : <EyeOff size={20} color="#9ca3af" />}
                                     </TouchableOpacity>
                                 </View>
-                                {errors.password && <Text className="text-xs text-red-400 mt-1 ml-1">{errors.password}</Text>}
+                                {errors.password && (
+                                    <View className="flex-row items-start mt-2">
+                                        <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6, marginTop: 2 }} />
+                                        <Text className="text-xs text-red-400 font-medium flex-1">{errors.password}</Text>
+                                    </View>
+                                )}
                             </View>
 
                             {/* Confirm Password */}
-                            <View className="mb-4">
-                                <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">Confirm Password</Text>
-                                <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
-                                    <Lock size={20} color="#ea580c" />
+                            <View className="mb-5">
+                                <Text className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wide">Confirm Password</Text>
+                                <View className="relative">
+                                    <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                        <Lock size={20} color="#ea580c" />
+                                    </View>
                                     <TextInput
                                         value={formData.confirmPassword}
                                         onChangeText={(value) => handleInputChange('confirmPassword', value)}
                                         placeholder="Confirm Password"
                                         placeholderTextColor="#6b7280"
                                         secureTextEntry={!showConfirmPassword}
-                                        className="flex-1 py-3 px-3 text-base text-white"
+                                        className={`pl-12 pr-12 py-4 text-white text-base font-medium rounded-xl border-2 ${errors.confirmPassword ? 'bg-red-500/5 border-red-500' : 'bg-black/40 border-neutral-800'
+                                            }`}
                                     />
-                                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                                    <TouchableOpacity
+                                        onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        style={{ position: 'absolute', right: 16, top: 16, zIndex: 1, padding: 4 }}
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    >
                                         {showConfirmPassword ? <Eye size={20} color="#9ca3af" /> : <EyeOff size={20} color="#9ca3af" />}
                                     </TouchableOpacity>
                                 </View>
-                                {errors.confirmPassword && <Text className="text-xs text-red-400 mt-1 ml-1">{errors.confirmPassword}</Text>}
+                                {errors.confirmPassword && (
+                                    <View className="flex-row items-center mt-2">
+                                        <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
+                                        <Text className="text-xs text-red-400 font-medium">{errors.confirmPassword}</Text>
+                                    </View>
+                                )}
                             </View>
 
                             {/* Referral Code */}
                             {!formData.referredBy && (
-                                <View className="mb-4">
-                                    <Text className="text-xs font-semibold text-gray-300 mb-2 uppercase tracking-wider">Referral Code (Optional)</Text>
-                                    <View className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3">
-                                        <Users size={20} color="#ea580c" />
+                                <View className="mb-5">
+                                    <Text className="text-xs font-semibold text-neutral-400 mb-3 uppercase tracking-wide">
+                                        Referral Code (Optional)
+                                    </Text>
+                                    <View className="relative">
+                                        <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
+                                            <Users size={20} color="#ea580c" />
+                                        </View>
                                         <TextInput
                                             value={formData.referredBy}
                                             onChangeText={(value) => handleInputChange('referredBy', value)}
                                             placeholder="Referral Code (Optional)"
                                             placeholderTextColor="#6b7280"
-                                            className="flex-1 py-3 px-3 text-base text-white"
+                                            className="pl-12 pr-4 py-4 text-white text-base font-medium rounded-xl border-2 bg-black/40 border-neutral-800"
                                         />
                                     </View>
                                 </View>
@@ -304,33 +354,49 @@ const SignUp = () => {
                             {/* Terms Checkbox */}
                             <TouchableOpacity
                                 onPress={() => setAcceptTerms(!acceptTerms)}
-                                className="flex-row items-center mb-6"
+                                className="flex-row items-center mb-2"
+                                activeOpacity={0.7}
                             >
-                                <View className={`w-5 h-5 rounded border-2 mr-2 ${acceptTerms ? 'bg-orange-600 border-orange-600' : 'border-gray-600'}`} />
-                                <Text className="text-sm text-gray-300">I agree to the Terms and Privacy Policy</Text>
+                                <View
+                                    className={`w-6 h-6 rounded-lg border-2 items-center justify-center mr-3 ${acceptTerms ? 'bg-orange-500 border-orange-500' : 'border-neutral-600'
+                                        }`}
+                                >
+                                    {acceptTerms && <CheckCircle size={14} color="#fff" strokeWidth={3} />}
+                                </View>
+                                <Text className="text-sm text-white font-medium flex-1">
+                                    I agree to the Terms and Privacy Policy
+                                </Text>
                             </TouchableOpacity>
-                            {errors.terms && <Text className="text-xs text-red-400 mb-4 ml-1">{errors.terms}</Text>}
+                            {errors.terms && (
+                                <View className="flex-row items-center mb-5">
+                                    <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
+                                    <Text className="text-xs text-red-400 font-medium">{errors.terms}</Text>
+                                </View>
+                            )}
 
                             {/* Action Buttons */}
-                            <View className="flex-row gap-3">
+                            <View className="flex-row gap-3 mt-4">
                                 <TouchableOpacity
                                     onPress={resetForm}
-                                    className="flex-1 px-4 py-3.5 bg-gray-700 rounded-lg items-center justify-center border border-gray-600 flex-row"
+                                    className="flex-1 py-4 bg-neutral-800 border border-neutral-700 rounded-xl items-center justify-center flex-row"
+                                    activeOpacity={0.7}
                                 >
                                     <RotateCcw size={18} color="#d1d5db" />
-                                    <Text className="text-gray-200 font-semibold text-sm ml-2">Reset</Text>
+                                    <Text className="text-neutral-200 font-bold text-base ml-2">Reset</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={handleSubmit}
                                     disabled={isLoading}
-                                    className="flex-1 px-4 py-3.5 bg-orange-600 rounded-lg items-center justify-center disabled:opacity-50 flex-row shadow-lg shadow-orange-900/50"
+                                    className={`flex-1 py-4 rounded-xl items-center justify-center flex-row ${isLoading ? 'bg-neutral-800/50' : 'bg-orange-500'
+                                        }`}
+                                    activeOpacity={0.7}
                                 >
                                     {isLoading ? (
                                         <ActivityIndicator size="small" color="#ffffff" />
                                     ) : (
                                         <>
                                             <UserCheck size={18} color="white" />
-                                            <Text className="text-white font-semibold text-sm ml-2">Register</Text>
+                                            <Text className="text-white font-bold text-base ml-2">Register</Text>
                                         </>
                                     )}
                                 </TouchableOpacity>
@@ -338,12 +404,12 @@ const SignUp = () => {
                         </View>
 
                         {/* Footer */}
-                        <View className="items-center mt-6">
-                            <Text className="text-gray-400 text-sm">
+                        <View className="items-center mt-8">
+                            <Text className="text-neutral-400 text-base">
                                 Already have an account?{' '}
                                 <Text
                                     onPress={() => router.push('/(auth)/signin')}
-                                    className="text-orange-500 font-semibold"
+                                    className="text-orange-500 font-bold"
                                 >
                                     Sign In
                                 </Text>

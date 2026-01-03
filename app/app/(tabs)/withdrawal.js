@@ -24,6 +24,11 @@ import {
 } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 
+// Import Components
+import InputField from '@/components/InputField';
+import QuickAmountButton from '@/components/QuickAmountButton';
+import DetailRow from '@/components/DetailRow';
+
 const Withdrawal = () => {
     const router = useRouter();
     const { user, checkAuth } = useAuth();
@@ -80,7 +85,6 @@ const Withdrawal = () => {
         return parseFloat(amount) - calculateFee();
     };
 
-    // Validation with proper state sync
     const validateAmount = (testAmount) => {
         const numValue = parseFloat(testAmount);
         if (!testAmount || numValue <= 0 || isNaN(numValue)) {
@@ -99,7 +103,6 @@ const Withdrawal = () => {
         return true;
     };
 
-    // Triple timeout strategy
     const handleAmountChange = (value) => {
         if (amountTimeoutRef.current) {
             clearTimeout(amountTimeoutRef.current);
@@ -117,7 +120,6 @@ const Withdrawal = () => {
         }, 0);
     };
 
-    // Quadruple timeout for quick amounts
     const handleQuickAmount = (quickAmount) => {
         if (quickAmountTimeoutRef.current) {
             clearTimeout(quickAmountTimeoutRef.current);
@@ -137,22 +139,15 @@ const Withdrawal = () => {
         }, 0);
     };
 
-    // Ultra safe continue handler
     const handleWithdraw = async () => {
-        console.log('Withdraw clicked - amount:', amount, 'error:', amountError);
-
         const isValid = await new Promise((resolve) => {
             setTimeout(() => {
                 const valid = !amountError && amount && validateAmount(amount);
-                console.log('Validation result:', valid);
                 resolve(valid);
             }, 100);
         });
 
-        if (!isValid) {
-            console.log('Validation failed - blocking withdrawal');
-            return;
-        }
+        if (!isValid) return;
 
         if (withdrawalMethod === 'crypto') {
             if (!walletAddress.trim()) {
@@ -193,7 +188,6 @@ const Withdrawal = () => {
         }
     };
 
-    // Cleanup timeouts
     useEffect(() => {
         return () => {
             if (amountTimeoutRef.current) clearTimeout(amountTimeoutRef.current);
@@ -213,15 +207,13 @@ const Withdrawal = () => {
     // Success Screen
     if (withdrawalSuccess && withdrawalDetails) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-900">
+            <SafeAreaView className="flex-1 bg-[#0a0a0a]">
                 <StatusBar style="light" />
 
                 {/* Header */}
-                <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
-                    <View>
-                        <Text className="text-2xl font-bold text-white">Withdrawal Submitted</Text>
-                        <Text className="text-sm text-gray-400 mt-0.5">Your request is being processed</Text>
-                    </View>
+                <View className="px-5 pt-5 pb-4 border-b border-neutral-800">
+                    <Text className="text-2xl font-bold text-white">Withdrawal Submitted</Text>
+                    <Text className="text-sm text-neutral-400 mt-0.5">Your request is being processed</Text>
                 </View>
 
                 <ScrollView
@@ -230,76 +222,51 @@ const Withdrawal = () => {
                     contentContainerStyle={{ paddingBottom: 100 }}
                 >
                     {/* Success Card */}
-                    <View className="px-4 mt-5 mb-6">
-                        <View className="bg-gray-800/50 rounded-2xl p-8 border border-gray-700/50" style={{ alignItems: 'center' }}>
-                            <View style={{
-                                width: 96,
-                                height: 96,
-                                backgroundColor: 'rgba(16,185,129,0.15)',
-                                borderRadius: 20,
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                marginBottom: 20,
-                            }}>
+                    <View className="px-5 mt-6 mb-6">
+                        <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 items-center">
+                            <View className="w-24 h-24 bg-green-500/20 border border-green-500/30 rounded-2xl items-center justify-center mb-5">
                                 <CheckCircle size={52} color="#10b981" />
                             </View>
 
-                            <Text style={{ fontSize: 28, fontWeight: '700', color: '#ffffff', marginBottom: 12, textAlign: 'center' }}>
+                            <Text className="text-3xl font-bold text-white mb-3 text-center">
                                 Withdrawal Submitted!
                             </Text>
 
-                            <Text style={{ color: '#9ca3af', fontSize: 16, marginBottom: 28, textAlign: 'center' }}>
+                            <Text className="text-neutral-400 text-base mb-7 text-center leading-6">
                                 ${amount} will be processed within {selectedOption?.processingTime}
                             </Text>
 
                             {/* Details Card */}
-                            <View className="w-full bg-gray-900/50 border border-gray-700 rounded-xl p-5 mb-8" style={{ gap: 12 }}>
-                                <View className="flex-row justify-between">
-                                    <Text className="text-gray-400 text-sm">Amount</Text>
-                                    <Text className="text-white font-bold text-sm">${amount}</Text>
-                                </View>
-                                <View className="flex-row justify-between">
-                                    <Text className="text-gray-400 text-sm">Fee</Text>
-                                    <Text className="text-red-400 font-semibold text-sm">-${calculateFee().toFixed(2)}</Text>
-                                </View>
-                                <View className="flex-row justify-between">
-                                    <Text className="text-gray-400 text-sm">Net Amount</Text>
-                                    <Text className="text-emerald-400 font-bold text-sm">${calculateNetAmount().toFixed(2)}</Text>
-                                </View>
-                                <View className="pt-3 border-t border-gray-700/50">
-                                    <Text className="text-gray-400 text-xs mb-1">Transaction ID</Text>
-                                    <Text className="text-gray-300 font-mono text-xs" numberOfLines={1}>
+                            <View className="w-full bg-black/40 border border-neutral-800 rounded-xl p-5 mb-8">
+                                <DetailRow label="Amount" value={`$${amount}`} />
+                                <DetailRow label="Fee" value={`-$${calculateFee().toFixed(2)}`} valueColor="text-red-400" />
+                                <DetailRow label="Net Amount" value={`$${calculateNetAmount().toFixed(2)}`} valueColor="text-green-400" />
+                                <View className="pt-3 border-t border-neutral-800">
+                                    <Text className="text-neutral-400 text-xs font-bold uppercase tracking-wide mb-2">
+                                        Transaction ID
+                                    </Text>
+                                    <Text className="text-neutral-300 font-mono text-xs" numberOfLines={1}>
                                         {withdrawalDetails.transactionId}
                                     </Text>
                                 </View>
                             </View>
 
                             {/* Action Buttons */}
-                            <View className="w-full" style={{ gap: 12 }}>
+                            <View className="w-full gap-3">
                                 <TouchableOpacity
-                                    onPress={() => router.push('/(tabs)/dashboard')}
-                                    style={{
-                                        paddingVertical: 16,
-                                        borderRadius: 12,
-                                        alignItems: 'center',
-                                        backgroundColor: '#10b981',
-                                    }}
+                                    onPress={() => router.push('/(tabs)')}
+                                    className="py-5 rounded-xl items-center bg-green-500"
+                                    activeOpacity={0.7}
                                 >
-                                    <Text className="text-white font-bold text-base">Go to Dashboard</Text>
+                                    <Text className="text-white font-bold text-lg">Go to Dashboard</Text>
                                 </TouchableOpacity>
 
                                 <TouchableOpacity
                                     onPress={resetWithdrawal}
-                                    style={{
-                                        paddingVertical: 16,
-                                        borderRadius: 12,
-                                        alignItems: 'center',
-                                        backgroundColor: 'rgba(55,65,81,0.5)',
-                                        borderWidth: 1,
-                                        borderColor: '#374151',
-                                    }}
+                                    className="py-5 rounded-xl items-center bg-neutral-800 border border-neutral-700"
+                                    activeOpacity={0.7}
                                 >
-                                    <Text className="text-gray-300 font-semibold text-base">Make Another Withdrawal</Text>
+                                    <Text className="text-neutral-300 font-bold text-base">Make Another Withdrawal</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -310,23 +277,24 @@ const Withdrawal = () => {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-900">
+        <SafeAreaView className="flex-1 bg-[#0a0a0a]">
             <StatusBar style="light" />
 
             {/* Header */}
-            <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="flex-row items-center"
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    activeOpacity={0.7}
-                >
-                    <ArrowLeft size={22} color="#ffffff" style={{ marginRight: 12 }} />
+            <View className="px-5 pt-5 pb-4 border-b border-neutral-800">
+                <View className="flex-row items-center">
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="mr-4 w-10 h-10 bg-neutral-900 rounded-xl items-center justify-center"
+                        activeOpacity={0.7}
+                    >
+                        <ArrowLeft size={20} color="#fff" />
+                    </TouchableOpacity>
                     <View>
                         <Text className="text-2xl font-bold text-white">Withdraw Funds</Text>
-                        <Text className="text-sm text-gray-400 mt-0.5">Transfer funds from your wallet</Text>
+                        <Text className="text-sm text-neutral-400 mt-0.5">Transfer funds from your wallet</Text>
                     </View>
-                </TouchableOpacity>
+                </View>
             </View>
 
             <ScrollView
@@ -336,15 +304,15 @@ const Withdrawal = () => {
             >
                 {/* Balance Card */}
                 {user && (
-                    <View className="mx-4 mt-5 mb-6">
-                        <View className="bg-gradient-to-br from-orange-600/20 to-orange-500/10 rounded-2xl p-6 border border-orange-500/20">
+                    <View className="mx-5 mt-6 mb-6">
+                        <View className="bg-orange-500/10 border border-orange-500/20 rounded-2xl p-6">
                             <View className="flex-row items-center justify-between">
                                 <View className="flex-row items-center flex-1">
                                     <View className="w-12 h-12 bg-orange-500/20 rounded-xl items-center justify-center mr-4">
-                                        <Wallet size={22} color="#f97316" />
+                                        <Wallet size={22} color="#ea580c" />
                                     </View>
                                     <View>
-                                        <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                        <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-1">
                                             Available Balance
                                         </Text>
                                         <Text className="text-3xl font-bold text-white">
@@ -353,7 +321,7 @@ const Withdrawal = () => {
                                     </View>
                                 </View>
                                 <View className="w-10 h-10 bg-orange-500/10 rounded-full items-center justify-center">
-                                    <TrendingUp size={20} color="#f97316" />
+                                    <TrendingUp size={20} color="#ea580c" />
                                 </View>
                             </View>
                         </View>
@@ -362,13 +330,13 @@ const Withdrawal = () => {
 
                 {/* Error Alert */}
                 {error && (
-                    <View className="mx-4 mb-5 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-                        <View className="flex-row items-center">
+                    <View className="mx-5 mb-5 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl">
+                        <View className="flex-row items-start">
                             <AlertCircle size={20} color="#ef4444" style={{ marginTop: 2, marginRight: 12 }} />
                             <View className="flex-1">
                                 <Text className="text-red-400 text-sm font-medium leading-5">{error}</Text>
                             </View>
-                            <TouchableOpacity onPress={() => setError(null)} className="ml-2 p-1">
+                            <TouchableOpacity onPress={() => setError(null)}>
                                 <X size={18} color="#ef4444" />
                             </TouchableOpacity>
                         </View>
@@ -376,116 +344,72 @@ const Withdrawal = () => {
                 )}
 
                 {/* Withdrawal Method */}
-                <View className="px-4 mb-6">
-                    <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                <View className="px-5 mb-6">
+                    <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-5">
                         <Text className="text-xl font-bold text-white mb-5">Withdrawal Method</Text>
                         <TouchableOpacity
                             onPress={() => setWithdrawalMethod('crypto')}
-                            style={{
-                                padding: 20,
-                                borderRadius: 14,
-                                borderWidth: 2,
-                                alignItems: 'center',
-                                borderColor: withdrawalMethod === 'crypto' ? '#ea580c' : '#374151',
-                                backgroundColor: withdrawalMethod === 'crypto' ? 'rgba(234,88,12,0.08)' : 'rgba(17,24,39,0.3)',
-                            }}
+                            className={`p-6 rounded-xl border-2 items-center ${withdrawalMethod === 'crypto'
+                                    ? 'bg-orange-500/10 border-orange-500'
+                                    : 'bg-black/40 border-neutral-800'
+                                }`}
+                            activeOpacity={0.7}
                         >
-                            <Bitcoin size={32} color="#f97316" style={{ marginBottom: 12 }} />
+                            <Bitcoin size={32} color="#ea580c" style={{ marginBottom: 12 }} />
                             <Text className="font-bold text-white text-lg mb-2">Cryptocurrency</Text>
-                            <Text className="text-gray-400 text-xs text-center">Fast & secure withdrawals</Text>
+                            <Text className="text-neutral-400 text-xs text-center">Fast & secure withdrawals</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 {/* Amount Input */}
-                <View className="px-4 mb-6">
-                    <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                <View className="px-5 mb-6">
+                    <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-5">
                         <Text className="text-xl font-bold text-white mb-5">Withdrawal Amount</Text>
 
-                        <View className="mb-5">
-                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-                                Amount (USD)
-                            </Text>
-                            <View className="relative">
-                                <View style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}>
-                                    <DollarSign size={20} color="#9ca3af" />
-                                </View>
-                                <TextInput
-                                    value={amount}
-                                    onChangeText={handleAmountChange}
-                                    placeholder="0.00"
-                                    placeholderTextColor="#6b7280"
-                                    keyboardType="decimal-pad"
-                                    style={{
-                                        paddingLeft: 48,
-                                        paddingRight: 16,
-                                        paddingVertical: 16,
-                                        fontSize: 18,
-                                        fontWeight: '600',
-                                        color: '#ffffff',
-                                        backgroundColor: amountError ? 'rgba(239,68,68,0.05)' : 'rgba(17,24,39,0.5)',
-                                        borderRadius: 12,
-                                        borderWidth: 1.5,
-                                        borderColor: amountError ? '#ef4444' : '#374151',
-                                    }}
-                                />
-                            </View>
-                            {amountError && (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-                                    <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
-                                    <Text className="text-xs text-red-400 font-medium">{amountError}</Text>
-                                </View>
-                            )}
-                        </View>
+                        <InputField
+                            label="Amount (USD)"
+                            value={amount}
+                            onChangeText={handleAmountChange}
+                            placeholder="0.00"
+                            keyboardType="decimal-pad"
+                            error={amountError}
+                            icon={DollarSign}
+                        />
 
                         {/* Quick Amounts */}
-                        <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                        <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-3">
                             Quick Select
                         </Text>
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                            {[10, 50, 100, 500].map((quickAmount) => {
-                                const isActive = parseFloat(amount) === quickAmount;
-                                return (
-                                    <TouchableOpacity
-                                        key={quickAmount}
-                                        onPress={() => handleQuickAmount(quickAmount)}
-                                        style={{
-                                            flex: 1,
-                                            minWidth: 70,
-                                            paddingVertical: 12,
-                                            borderRadius: 10,
-                                            borderWidth: 1.5,
-                                            alignItems: 'center',
-                                            borderColor: isActive ? '#ea580c' : '#374151',
-                                            backgroundColor: isActive ? '#ea580c' : 'rgba(17,24,39,0.5)',
-                                        }}
-                                    >
-                                        <Text style={{
-                                            fontWeight: '700',
-                                            fontSize: 13,
-                                            color: isActive ? '#ffffff' : '#9ca3af',
-                                        }}>
-                                            ${quickAmount}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
+                        <View className="flex-row gap-2 mb-5">
+                            {[10, 50, 100, 500].map((quickAmount) => (
+                                <QuickAmountButton
+                                    key={quickAmount}
+                                    amount={quickAmount}
+                                    isActive={parseFloat(amount) === quickAmount}
+                                    onPress={() => handleQuickAmount(quickAmount)}
+                                />
+                            ))}
                         </View>
 
                         {/* Fee Preview */}
                         {amount && !amountError && selectedOption && (
-                            <View className="mt-5 p-4 bg-gray-900/50 rounded-xl border border-gray-700">
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                                    <Text className="text-gray-400 text-xs">Amount</Text>
-                                    <Text className="text-white font-semibold text-sm">${amount}</Text>
+                            <View className="p-4 bg-black/40 border border-neutral-800 rounded-xl gap-2.5">
+                                <View className="flex-row justify-between">
+                                    <Text className="text-neutral-400 text-xs">Amount</Text>
+                                    <Text className="text-white font-bold text-sm">${amount}</Text>
                                 </View>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                                    <Text className="text-gray-400 text-xs">Fee ({selectedOption.fee})</Text>
-                                    <Text className="text-red-400 font-semibold text-sm">-${calculateFee().toFixed(2)}</Text>
+                                <View className="flex-row justify-between">
+                                    <Text className="text-neutral-400 text-xs">Fee ({selectedOption.fee})</Text>
+                                    <Text className="text-red-400 font-bold text-sm">
+                                        -${calculateFee().toFixed(2)}
+                                    </Text>
                                 </View>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                    <Text className="text-gray-400 text-xs font-semibold">You'll Receive</Text>
-                                    <Text className="text-green-400 font-bold text-sm">${calculateNetAmount().toFixed(2)}</Text>
+                                <View className="flex-row justify-between pt-2.5 border-t border-neutral-800">
+                                    <Text className="text-neutral-400 text-xs font-bold">You'll Receive</Text>
+                                    <Text className="text-green-400 font-bold text-sm">
+                                        ${calculateNetAmount().toFixed(2)}
+                                    </Text>
                                 </View>
                             </View>
                         )}
@@ -494,65 +418,62 @@ const Withdrawal = () => {
 
                 {/* Crypto Selection & Details */}
                 {withdrawalMethod === 'crypto' && (
-                    <View className="px-4 mb-6">
-                        <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                    <View className="px-5 mb-6">
+                        <View className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-5">
                             <Text className="text-xl font-bold text-white mb-5">Cryptocurrency Details</Text>
 
                             {/* Crypto Selection */}
-                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                            <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-3">
                                 Select Network
                             </Text>
-                            <View style={{ gap: 12, marginBottom: 20 }}>
-                                {cryptoOptions.map((option) => {
-                                    const isSelected = selectedCrypto === option.value;
-                                    return (
-                                        <TouchableOpacity
-                                            key={option.value}
-                                            onPress={() => {
-                                                setSelectedCrypto(option.value);
-                                                setWalletNetwork(option.network);
-                                            }}
-                                            style={{
-                                                padding: 16,
-                                                borderRadius: 14,
-                                                borderWidth: 2,
-                                                borderColor: isSelected ? '#ea580c' : '#374151',
-                                                backgroundColor: isSelected ? 'rgba(234,88,12,0.08)' : 'rgba(17,24,39,0.3)',
-                                            }}
-                                        >
-                                            <View className="flex-row items-center justify-between mb-3">
-                                                <View>
-                                                    <Text className="text-white font-bold text-base mb-1">
-                                                        {option.label}
-                                                    </Text>
-                                                    <Text className="text-gray-400 text-xs">
-                                                        {option.network}
-                                                    </Text>
-                                                </View>
-                                                {isSelected && (
-                                                    <View className="w-8 h-8 bg-orange-500 rounded-full items-center justify-center">
-                                                        <Check size={18} color="#ffffff" />
-                                                    </View>
-                                                )}
+                            <View className="gap-3 mb-5">
+                                {cryptoOptions.map((option) => (
+                                    <TouchableOpacity
+                                        key={option.value}
+                                        onPress={() => {
+                                            setSelectedCrypto(option.value);
+                                            setWalletNetwork(option.network);
+                                        }}
+                                        className={`p-4 rounded-xl border-2 ${selectedCrypto === option.value
+                                                ? 'bg-orange-500/10 border-orange-500'
+                                                : 'bg-black/40 border-neutral-800'
+                                            }`}
+                                        activeOpacity={0.7}
+                                    >
+                                        <View className="flex-row items-center justify-between mb-3">
+                                            <View>
+                                                <Text className="text-white font-bold text-base mb-1">
+                                                    {option.label}
+                                                </Text>
+                                                <Text className="text-neutral-400 text-xs">{option.network}</Text>
                                             </View>
+                                            {selectedCrypto === option.value && (
+                                                <View className="w-8 h-8 bg-orange-500 rounded-full items-center justify-center">
+                                                    <Check size={18} color="#fff" />
+                                                </View>
+                                            )}
+                                        </View>
 
-                                            <View className="pt-3 border-t border-gray-700/50" style={{ gap: 6 }}>
-                                                <View className="flex-row justify-between">
-                                                    <Text className="text-gray-400 text-xs">Min. Withdrawal</Text>
-                                                    <Text className="text-white text-xs font-semibold">${option.minWithdrawal}</Text>
-                                                </View>
-                                                <View className="flex-row justify-between">
-                                                    <Text className="text-gray-400 text-xs">Processing Time</Text>
-                                                    <Text className="text-white text-xs font-semibold">{option.processingTime}</Text>
-                                                </View>
+                                        <View className="pt-3 border-t border-neutral-800 gap-1.5">
+                                            <View className="flex-row justify-between">
+                                                <Text className="text-neutral-400 text-xs">Min. Withdrawal</Text>
+                                                <Text className="text-white text-xs font-bold">
+                                                    ${option.minWithdrawal}
+                                                </Text>
                                             </View>
-                                        </TouchableOpacity>
-                                    );
-                                })}
+                                            <View className="flex-row justify-between">
+                                                <Text className="text-neutral-400 text-xs">Processing Time</Text>
+                                                <Text className="text-white text-xs font-bold">
+                                                    {option.processingTime}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
                             </View>
 
                             {/* Wallet Address */}
-                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                            <Text className="text-xs font-bold text-neutral-400 uppercase tracking-wide mb-3">
                                 Wallet Address
                             </Text>
                             <TextInput
@@ -560,20 +481,10 @@ const Withdrawal = () => {
                                 onChangeText={setWalletAddress}
                                 placeholder="Enter your wallet address"
                                 placeholderTextColor="#6b7280"
-                                style={{
-                                    paddingHorizontal: 16,
-                                    paddingVertical: 16,
-                                    fontSize: 15,
-                                    fontWeight: '500',
-                                    color: '#ffffff',
-                                    backgroundColor: 'rgba(17,24,39,0.5)',
-                                    borderRadius: 12,
-                                    borderWidth: 1.5,
-                                    borderColor: '#374151',
-                                }}
+                                className="px-4 py-4 text-base font-medium text-white bg-black/40 rounded-xl border-2 border-neutral-800"
                             />
 
-                            <Text className="text-xs text-gray-500 mt-3">
+                            <Text className="text-xs text-neutral-500 mt-3 font-medium">
                                 Network: {walletNetwork || selectedOption?.network}
                             </Text>
                         </View>
@@ -581,26 +492,23 @@ const Withdrawal = () => {
                 )}
 
                 {/* Submit Button */}
-                <View className="px-4">
+                <View className="px-5">
                     <TouchableOpacity
                         onPress={handleWithdraw}
                         disabled={loading || !amount || !!amountError || !walletAddress.trim()}
-                        style={{
-                            paddingVertical: 18,
-                            backgroundColor: loading || !amount || !!amountError || !walletAddress.trim() ? 'rgba(55,65,81,0.4)' : '#ea580c',
-                            borderRadius: 14,
-                            alignItems: 'center',
-                            opacity: loading || !amount || !!amountError || !walletAddress.trim() ? 0.5 : 1,
-                        }}
+                        className={`py-5 rounded-xl items-center ${loading || !amount || !!amountError || !walletAddress.trim()
+                                ? 'bg-neutral-800/50'
+                                : 'bg-orange-500'
+                            }`}
                         activeOpacity={0.7}
                     >
                         {loading ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                <ActivityIndicator size="small" color="#ffffff" />
+                            <View className="flex-row items-center gap-3">
+                                <ActivityIndicator size="small" color="#fff" />
                                 <Text className="text-white font-bold text-base">Processing...</Text>
                             </View>
                         ) : (
-                            <Text className="text-white font-bold text-base">Submit Withdrawal</Text>
+                            <Text className="text-white font-bold text-lg">Submit Withdrawal</Text>
                         )}
                     </TouchableOpacity>
                 </View>

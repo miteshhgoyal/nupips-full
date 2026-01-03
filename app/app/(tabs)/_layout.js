@@ -14,11 +14,13 @@ import {
 } from 'lucide-react-native';
 import { useSegments } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
-const ACTIVE_TAB_COLOR = '#ea580c';
-const INACTIVE_TAB_COLOR = '#9ca3af';
-const BAR_BG = '#111827';
-const BAR_BORDER = '#374151';
+// Theme colors matching the app design
+const ACTIVE_TAB_COLOR = '#ea580c'; // orange-500
+const INACTIVE_TAB_COLOR = '#737373'; // neutral-500
+const BAR_BG = '#171717'; // neutral-900
+const BAR_BORDER = '#404040'; // neutral-700
 
 const TAB_BAR_CONFIG = {
     paddingHorizontal: 12,
@@ -50,11 +52,11 @@ function getTabConfig(gtcAuthenticated, gtcLoading) {
     return baseTabs;
 }
 
-// FloatingTabBar remains exactly the same
 function FloatingTabBar({ state, descriptors, navigation }) {
     const segments = useSegments();
     const { gtcAuthenticated, gtcLoading } = useGTCFxAuth();
 
+    // Hide tab bar when in nested GTC FX screens
     const isGtcfxNested = segments[0] === 'gtcfx' && segments.length > 1;
 
     if (isGtcfxNested) {
@@ -84,10 +86,10 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                     borderColor: BAR_BORDER,
                     height: barHeight,
                     shadowColor: '#000',
-                    shadowOpacity: 0.35,
-                    shadowRadius: 12,
-                    shadowOffset: { width: 0, height: -2 },
-                    elevation: 16,
+                    shadowOpacity: 0.5,
+                    shadowRadius: 20,
+                    shadowOffset: { width: 0, height: -4 },
+                    elevation: 20,
                     overflow: 'hidden',
                     justifyContent: 'center',
                 }}
@@ -128,7 +130,7 @@ function FloatingTabBar({ state, descriptors, navigation }) {
                                 accessibilityRole="button"
                                 accessibilityState={isFocused ? { selected: true } : {}}
                                 onPress={onPress}
-                                activeOpacity={0.85}
+                                activeOpacity={0.7}
                                 style={{
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -164,44 +166,47 @@ function FloatingTabBar({ state, descriptors, navigation }) {
 
 export default function TabsLayout() {
     return (
-        <SafeAreaView className="flex-1 bg-gray-900" edges={['top']}>
-            <Tabs
-                screenOptions={{
-                    headerShown: false,
-                    tabBarShowLabel: false,
-                    tabBarStyle: {
-                        position: 'absolute',
-                        height: 1,
-                    },
-                }}
-                tabBar={(props) => <FloatingTabBar {...props} />}
-            >
-                {/* Core 5 Tabs - Always Visible */}
-                <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
-                <Tabs.Screen name="nupips-team" options={{ title: 'Team' }} />
-                <Tabs.Screen name="nupips-incomes" options={{ title: 'Incomes' }} />
+        <>
+            <StatusBar style="light" />
+            <SafeAreaView className="flex-1 bg-[#0a0a0a]" edges={['top']}>
+                <Tabs
+                    screenOptions={{
+                        headerShown: false,
+                        tabBarShowLabel: false,
+                        tabBarStyle: {
+                            position: 'absolute',
+                            height: 1,
+                        },
+                    }}
+                    tabBar={(props) => <FloatingTabBar {...props} />}
+                >
+                    {/* Core 5 Tabs - Always Visible */}
+                    <Tabs.Screen name="dashboard" options={{ title: 'Dashboard' }} />
+                    <Tabs.Screen name="nupips-team" options={{ title: 'Team' }} />
+                    <Tabs.Screen name="nupips-incomes" options={{ title: 'Incomes' }} />
 
-                {/* Dynamic Broker/GTC FX Tab */}
-                <Tabs.Screen name="broker-selection" options={{ title: 'Broker' }} />
-                <Tabs.Screen name="gtcfx" options={{ title: 'GTC FX' }} />
+                    {/* Dynamic Broker/GTC FX Tab */}
+                    <Tabs.Screen name="broker-selection" options={{ title: 'Broker' }} />
+                    <Tabs.Screen name="gtcfx" options={{ title: 'GTC FX' }} />
 
-                <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
-                <Tabs.Screen name="more" options={{ title: 'More' }} />
+                    <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+                    <Tabs.Screen name="more" options={{ title: 'More' }} />
 
-                {/* Hidden Screens */}
-                <Tabs.Screen name="deposit" options={{ href: null }} />
-                <Tabs.Screen name="withdrawal" options={{ href: null }} />
-                <Tabs.Screen name="shop" options={{ href: null }} />
-                <Tabs.Screen name="learn" options={{ href: null }} />
-                <Tabs.Screen name="transfer" options={{ href: null }} />
-                <Tabs.Screen name="transaction-history" options={{ href: null }} />
-                <Tabs.Screen name="orders" options={{ href: null }} />
-                <Tabs.Screen name="product-item" options={{ href: null }} />
-                <Tabs.Screen name="place-order" options={{ href: null }} />
-                <Tabs.Screen name="course-view" options={{ href: null }} />
-                <Tabs.Screen name="lesson-view" options={{ href: null }} />
-                <Tabs.Screen name="coming-soon" options={{ href: null }} />
-            </Tabs>
-        </SafeAreaView>
+                    {/* Hidden Screens */}
+                    <Tabs.Screen name="deposit" options={{ href: null }} />
+                    <Tabs.Screen name="withdrawal" options={{ href: null }} />
+                    <Tabs.Screen name="shop" options={{ href: null }} />
+                    <Tabs.Screen name="learn" options={{ href: null }} />
+                    <Tabs.Screen name="transfer" options={{ href: null }} />
+                    <Tabs.Screen name="transaction-history" options={{ href: null }} />
+                    <Tabs.Screen name="orders" options={{ href: null }} />
+                    <Tabs.Screen name="product-item" options={{ href: null }} />
+                    <Tabs.Screen name="place-order" options={{ href: null }} />
+                    <Tabs.Screen name="course-view" options={{ href: null }} />
+                    <Tabs.Screen name="lesson-view" options={{ href: null }} />
+                    <Tabs.Screen name="coming-soon" options={{ href: null }} />
+                </Tabs>
+            </SafeAreaView>
+        </>
     );
 }

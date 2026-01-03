@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { StatusBar, View, ActivityIndicator } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { View, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuth } from '@/context/authContext';
 import { GTCFxAuthProvider } from '@/context/gtcfxAuthContext';
 import './globals.css';
@@ -31,7 +32,7 @@ function MainLayout() {
 
     if (loading) {
         return (
-            <View className="flex-1 justify-center items-center bg-gray-900">
+            <View className="flex-1 justify-center items-center bg-[#0a0a0a]">
                 <ActivityIndicator size="large" color="#ea580c" />
             </View>
         );
@@ -39,12 +40,14 @@ function MainLayout() {
 
     return (
         <>
-            <StatusBar barStyle="light-content" backgroundColor="#111827" />
-            <Stack screenOptions={{
-                headerShown: false,
-                animationEnabled: false,
-                contentStyle: { backgroundColor: '#111827' }
-            }}>
+            <StatusBar style="light" />
+            <Stack
+                screenOptions={{
+                    headerShown: false,
+                    animationEnabled: false,
+                    contentStyle: { backgroundColor: '#0a0a0a' }
+                }}
+            >
                 <Stack.Screen
                     name="index"
                     options={{ headerShown: false, animationEnabled: false }}

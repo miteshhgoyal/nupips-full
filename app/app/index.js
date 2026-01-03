@@ -1,11 +1,11 @@
-// app/index.js
-import { ActivityIndicator, View, StatusBar } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from 'expo-status-bar';
 
 function Index() {
     return (
-        <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
-            <StatusBar barStyle="light-content" backgroundColor="#111827" />
+        <SafeAreaView className="flex-1 bg-[#0a0a0a] justify-center items-center">
+            <StatusBar style="light" />
             <ActivityIndicator size="large" color="#ea580c" />
         </SafeAreaView>
     );

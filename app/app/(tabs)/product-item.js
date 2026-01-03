@@ -5,7 +5,6 @@ import {
     ScrollView,
     SafeAreaView,
     TouchableOpacity,
-    TextInput,
     ActivityIndicator,
     Image,
     Alert,
@@ -21,25 +20,13 @@ import {
     Star,
     Minus,
     Plus,
-    Package,
     Truck,
     Shield,
 } from "lucide-react-native";
 import { StatusBar } from 'expo-status-bar';
 
-// Product Stats Cards (team page style)
-const StatsCard = ({ title, value, subtitle, icon, colors }) => (
-    <View className={`rounded-xl p-4 border ${colors.bg} ${colors.border} flex-1`}>
-        <View className="flex-row items-center gap-2 mb-2">
-            <View className={`w-10 h-10 rounded-lg items-center justify-center ${colors.iconBg}`}>
-                {icon}
-            </View>
-            <Text className={`text-xs font-semibold ${colors.text}`}>{title}</Text>
-        </View>
-        <Text className={`text-xl font-bold ${colors.text}`}>{value}</Text>
-        <Text className={`text-xs ${colors.subText} mt-1`}>{subtitle}</Text>
-    </View>
-);
+// Stats Card Component
+import SummaryCard from '@/components/SummaryCard';
 
 const ProductItem = () => {
     const router = useRouter();
@@ -107,29 +94,32 @@ const ProductItem = () => {
 
     if (loading) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center">
+            <SafeAreaView className="flex-1 bg-[#0a0a0a] justify-center items-center">
                 <StatusBar style="light" />
                 <ActivityIndicator size="large" color="#ea580c" />
-                <Text className="text-gray-400 mt-4 font-medium">Loading product...</Text>
+                <Text className="text-neutral-400 mt-4 font-medium">Loading product...</Text>
             </SafeAreaView>
         );
     }
 
     if (error && !product) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-900">
+            <SafeAreaView className="flex-1 bg-[#0a0a0a]">
                 <StatusBar style="light" />
                 <View className="flex-1 justify-center items-center px-6">
-                    <AlertCircle size={64} color="#ef4444" />
-                    <Text className="text-2xl font-bold text-white mt-4 mb-2 text-center">
+                    <View className="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-2xl items-center justify-center mb-6">
+                        <AlertCircle size={40} color="#ef4444" />
+                    </View>
+                    <Text className="text-2xl font-bold text-white mb-3 text-center">
                         Product Not Found
                     </Text>
-                    <Text className="text-gray-400 text-center mb-8">{error}</Text>
+                    <Text className="text-neutral-400 text-center mb-8">{error}</Text>
                     <TouchableOpacity
                         onPress={() => router.back()}
-                        className="px-8 py-4 bg-orange-600 rounded-xl"
+                        className="px-8 py-4 bg-orange-500 rounded-2xl"
+                        activeOpacity={0.7}
                     >
-                        <Text className="text-white font-semibold text-lg">Back to Shop</Text>
+                        <Text className="text-white font-bold text-lg">Back to Shop</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -141,9 +131,10 @@ const ProductItem = () => {
     const ImageThumbnail = ({ image, index, isSelected }) => (
         <TouchableOpacity
             onPress={() => setSelectedImage(index)}
-            className={`rounded-xl overflow-hidden border-2 mr-3 ${isSelected ? 'border-orange-600 bg-orange-500/20' : 'border-gray-700'
+            className={`rounded-xl overflow-hidden border-2 mr-3 ${isSelected ? 'border-orange-500 bg-orange-500/20' : 'border-neutral-800'
                 }`}
             style={{ width: 70, height: 70 }}
+            activeOpacity={0.7}
         >
             <Image
                 source={{ uri: image }}
@@ -153,192 +144,190 @@ const ProductItem = () => {
     );
 
     return (
-        <SafeAreaView className="flex-1 bg-gray-900">
+        <SafeAreaView className="flex-1 bg-[#0a0a0a]">
             <StatusBar style="light" />
 
             {/* Header */}
-            <View className="bg-gray-800/40 border-b border-gray-800 px-4 py-4">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="flex-row items-center gap-3 mb-2"
-                >
-                    <ArrowLeft size={24} color="#ea580c" />
-                    <Text className="text-white font-semibold text-lg">Back to Shop</Text>
-                </TouchableOpacity>
+            <View className="px-5 pt-5 pb-4 border-b border-neutral-800">
+                <View className="flex-row items-center">
+                    <TouchableOpacity
+                        onPress={() => router.back()}
+                        className="mr-4 w-10 h-10 bg-neutral-900 rounded-xl items-center justify-center"
+                        activeOpacity={0.7}
+                    >
+                        <ArrowLeft size={20} color="#fff" />
+                    </TouchableOpacity>
+                    <View>
+                        <Text className="text-2xl font-bold text-white">Product Details</Text>
+                        <Text className="text-sm text-neutral-400 mt-0.5">View & purchase</Text>
+                    </View>
+                </View>
             </View>
 
-            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                <View className="px-4 py-6 pb-24">
+            <ScrollView
+                className="flex-1"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100 }}
+            >
+                <View className="px-5 py-6">
                     {/* Error Alert */}
                     {error && (
-                        <View className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-xl flex-row items-start gap-3">
-                            <AlertCircle size={20} color="#ef4444" />
-                            <Text className="text-red-400 text-sm flex-1">{error}</Text>
+                        <View className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex-row items-start">
+                            <AlertCircle size={20} color="#ef4444" style={{ marginRight: 12 }} />
+                            <Text className="text-red-400 text-sm flex-1 font-medium">{error}</Text>
                             <TouchableOpacity onPress={() => setError("")}>
                                 <X size={20} color="#ef4444" />
                             </TouchableOpacity>
                         </View>
                     )}
 
-                    {/* Product Details */}
-                    <View className="flex-col lg:flex-row gap-6">
-                        {/* Image Gallery */}
-                        <View className="flex-1">
-                            {/* Main Image */}
-                            <View className="bg-gray-800 rounded-2xl overflow-hidden mb-0" style={{ aspectRatio: 1 }}>
-                                <Image
-                                    source={{ uri: product.image?.[selectedImage] || "https://via.placeholder.com/400" }}
-                                    style={{ flex: 1, width: '100%' }}
-                                    resizeMode="cover"
-                                />
-                                {product.bestseller && (
-                                    <View className="absolute top-4 left-4 bg-orange-600 px-4 py-2 rounded-full flex-row items-center gap-1">
-                                        <Star size={16} color="#ffffff" fill="#ffffff" />
-                                        <Text className="text-white text-sm font-semibold">Bestseller</Text>
-                                    </View>
+                    {/* Main Image */}
+                    <View className="bg-neutral-900 rounded-2xl overflow-hidden mb-4" style={{ aspectRatio: 1 }}>
+                        <Image
+                            source={{ uri: product.image?.[selectedImage] || "https://via.placeholder.com/400" }}
+                            style={{ flex: 1, width: '100%' }}
+                            resizeMode="cover"
+                        />
+                        {product.bestseller && (
+                            <View className="absolute top-4 left-4 bg-orange-500 px-4 py-2 rounded-xl flex-row items-center gap-1">
+                                <Star size={16} color="#ffffff" fill="#ffffff" />
+                                <Text className="text-white text-sm font-bold">Bestseller</Text>
+                            </View>
+                        )}
+                    </View>
+
+                    {/* Thumbnail Images */}
+                    {product.image?.length > 1 && (
+                        <View className="mb-6">
+                            <FlatList
+                                data={product.image}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                renderItem={({ item, index }) => (
+                                    <ImageThumbnail
+                                        image={item}
+                                        index={index}
+                                        isSelected={selectedImage === index}
+                                    />
                                 )}
-                            </View>
-
-                            {/* Thumbnail Images */}
-                            {product.image?.length > 1 && (
-                                <FlatList
-                                    data={product.image}
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    renderItem={({ item, index }) => (
-                                        <ImageThumbnail
-                                            image={item}
-                                            index={index}
-                                            isSelected={selectedImage === index}
-                                        />
-                                    )}
-                                    keyExtractor={(item, index) => `thumb-${index}`}
-                                    contentContainerStyle={{ paddingBottom: 8 }}
-                                />
-                            )}
+                                keyExtractor={(item, index) => `thumb-${index}`}
+                            />
                         </View>
+                    )}
 
-                        {/* Product Info */}
-                        <View className="flex-1">
-                            {/* Category */}
-                            <View className="bg-orange-500/20 px-4 py-2 rounded-full self-start mb-3">
-                                <Text className="text-orange-400 text-sm font-semibold uppercase">
-                                    {product.category}
-                                </Text>
-                            </View>
+                    {/* Category */}
+                    <View className="bg-orange-500/15 border border-orange-500/30 px-4 py-2 rounded-xl self-start mb-4">
+                        <Text className="text-orange-400 text-sm font-bold uppercase tracking-wide">
+                            {product.category}
+                        </Text>
+                    </View>
 
-                            {/* Title & Description */}
-                            <View className='mb-2'>
-                                <Text className="text-2xl font-bold text-white mb-3" numberOfLines={2}>
-                                    {product.name}
-                                </Text>
-                                <Text className="text-gray-400 leading-relaxed" numberOfLines={4}>
-                                    {product.description}
-                                </Text>
-                            </View>
+                    {/* Title & Description */}
+                    <View className="mb-4">
+                        <Text className="text-3xl font-bold text-white mb-3">
+                            {product.name}
+                        </Text>
+                        <Text className="text-neutral-400 leading-6 text-base">
+                            {product.description}
+                        </Text>
+                    </View>
 
-                            {/* Price */}
-                            <View className="py-4 border-t border-gray-700">
-                                <View className="flex-row items-baseline gap-2">
-                                    <Text className="text-4xl font-bold text-orange-500">
-                                        ${product.price}
-                                    </Text>
-                                    <Text className="text-gray-400 text-sm">inclusive of all taxes</Text>
-                                </View>
-                            </View>
-
-                            {/* Product Stats */}
-                            <View className="flex-row gap-3 mb-3">
-                                <StatsCard
-                                    title="Free Shipping"
-                                    value="✓"
-                                    subtitle="On orders over $50"
-                                    icon={<Truck size={20} color="#22c55e" />}
-                                    colors={{
-                                        bg: "bg-green-500/10",
-                                        border: "border-green-500/30",
-                                        iconBg: "bg-green-500/20",
-                                        text: "text-white",
-                                        subText: "text-gray-400",
-                                    }}
-                                />
-                                <StatsCard
-                                    title="Secure Checkout"
-                                    value="✓"
-                                    subtitle="SSL encrypted"
-                                    icon={<Shield size={20} color="#3b82f6" />}
-                                    colors={{
-                                        bg: "bg-blue-500/10",
-                                        border: "border-blue-500/30",
-                                        iconBg: "bg-blue-500/20",
-                                        text: "text-white",
-                                        subText: "text-gray-400",
-                                    }}
-                                />
-                            </View>
-
-                            {/* Size Selection */}
-                            {product.sizes && product.sizes.length > 0 && (
-                                <View className="mb-3">
-                                    <Text className="text-white font-semibold mb-4">Select Size</Text>
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                                        <View className="flex-row gap-3">
-                                            {product.sizes.map((size) => (
-                                                <TouchableOpacity
-                                                    key={size}
-                                                    onPress={() => setSelectedSize(size)}
-                                                    className={`px-6 py-3 border-2 rounded-xl font-semibold ${selectedSize === size
-                                                            ? "border-orange-600 bg-orange-500/20 text-orange-400"
-                                                            : "border-gray-700 bg-gray-800 text-gray-400"
-                                                        }`}
-                                                >
-                                                    <Text className="text-center">{size}</Text>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                    </ScrollView>
-                                </View>
-                            )}
-
-                            {/* Quantity Selector */}
-                            <View>
-                                <Text className="text-white font-semibold mb-4">Quantity</Text>
-                                <View className="flex-row items-center gap-4">
-                                    <View className="flex-row border-2 border-gray-700 rounded-xl overflow-hidden">
-                                        <TouchableOpacity
-                                            onPress={decrementQuantity}
-                                            className="w-12 h-12 items-center justify-center bg-gray-800"
-                                            disabled={quantity <= 1}
-                                        >
-                                            <Minus size={20} color={quantity <= 1 ? "#6b7280" : "#ea580c"} />
-                                        </TouchableOpacity>
-                                        <View className="w-16 items-center justify-center bg-gray-800 border-l border-gray-700">
-                                            <Text className="text-2xl font-bold text-white">{quantity}</Text>
-                                        </View>
-                                        <TouchableOpacity
-                                            onPress={incrementQuantity}
-                                            className="w-12 h-12 items-center justify-center bg-gray-800"
-                                        >
-                                            <Plus size={20} color="#ea580c" />
-                                        </TouchableOpacity>
-                                    </View>
-                                    <Text className="text-gray-400 text-sm">
-                                        {quantity} {quantity === 1 ? "item" : "items"} selected
-                                    </Text>
-                                </View>
-                            </View>
-
-                            {/* Buy Now Button */}
-                            <TouchableOpacity
-                                onPress={handleBuyNow}
-                                className="w-full py-5 bg-orange-600 rounded-2xl flex-row items-center justify-center gap-3 shadow-lg mt-3 mb-4"
-                                activeOpacity={0.9}
-                            >
-                                <ShoppingBag size={24} color="#ffffff" />
-                                <Text className="text-white font-bold text-lg">Buy Now</Text>
-                            </TouchableOpacity>
+                    {/* Price */}
+                    <View className="py-5 mb-5 border-y border-neutral-800">
+                        <View className="flex-row items-baseline gap-2">
+                            <Text className="text-4xl font-bold text-orange-500">
+                                ${product.price}
+                            </Text>
+                            <Text className="text-neutral-400 text-sm">inclusive of all taxes</Text>
                         </View>
                     </View>
+
+                    {/* Product Features */}
+                    <View className="flex-row gap-3 mb-6">
+                        <SummaryCard
+                            icon={<Truck size={20} color="#22c55e" />}
+                            label="Free Shipping"
+                            value="On orders $50+"
+                            valueColor="text-white"
+                            bgColor="bg-neutral-900/50"
+                        />
+                        <SummaryCard
+                            icon={<Shield size={20} color="#3b82f6" />}
+                            label="Secure"
+                            value="SSL encrypted"
+                            valueColor="text-white"
+                            bgColor="bg-neutral-900/50"
+                        />
+                    </View>
+
+                    {/* Size Selection */}
+                    {product.sizes && product.sizes.length > 0 && (
+                        <View className="mb-6">
+                            <Text className="text-white font-bold text-lg mb-4">Select Size</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                                <View className="flex-row gap-3">
+                                    {product.sizes.map((size) => (
+                                        <TouchableOpacity
+                                            key={size}
+                                            onPress={() => setSelectedSize(size)}
+                                            className={`px-6 py-4 border-2 rounded-xl ${selectedSize === size
+                                                    ? "border-orange-500 bg-orange-500/20"
+                                                    : "border-neutral-800 bg-neutral-900"
+                                                }`}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Text
+                                                className={`font-bold text-base ${selectedSize === size ? "text-orange-400" : "text-neutral-400"
+                                                    }`}
+                                            >
+                                                {size}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </ScrollView>
+                        </View>
+                    )}
+
+                    {/* Quantity Selector */}
+                    <View className="mb-6">
+                        <Text className="text-white font-bold text-lg mb-4">Quantity</Text>
+                        <View className="flex-row items-center gap-4">
+                            <View className="flex-row border-2 border-neutral-800 rounded-xl overflow-hidden">
+                                <TouchableOpacity
+                                    onPress={decrementQuantity}
+                                    className="w-14 h-14 items-center justify-center bg-neutral-900"
+                                    disabled={quantity <= 1}
+                                    activeOpacity={0.7}
+                                >
+                                    <Minus size={20} color={quantity <= 1 ? "#6b7280" : "#ea580c"} />
+                                </TouchableOpacity>
+                                <View className="w-20 items-center justify-center bg-neutral-900 border-x-2 border-neutral-800">
+                                    <Text className="text-2xl font-bold text-white">{quantity}</Text>
+                                </View>
+                                <TouchableOpacity
+                                    onPress={incrementQuantity}
+                                    className="w-14 h-14 items-center justify-center bg-neutral-900"
+                                    activeOpacity={0.7}
+                                >
+                                    <Plus size={20} color="#ea580c" />
+                                </TouchableOpacity>
+                            </View>
+                            <Text className="text-neutral-400 text-base">
+                                {quantity} {quantity === 1 ? "item" : "items"} selected
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Buy Now Button */}
+                    <TouchableOpacity
+                        onPress={handleBuyNow}
+                        className="w-full py-5 bg-orange-500 rounded-2xl flex-row items-center justify-center"
+                        activeOpacity={0.7}
+                    >
+                        <ShoppingBag size={24} color="#ffffff" style={{ marginRight: 12 }} />
+                        <Text className="text-white font-bold text-xl">Buy Now</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
         </SafeAreaView>

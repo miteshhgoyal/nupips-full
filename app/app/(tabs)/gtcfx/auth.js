@@ -134,35 +134,64 @@ const GTCFxAuth = () => {
         setFormData({ account: "", password: "" });
     };
 
+    const AlertBox = ({ message, onDismiss }) => (
+        <View className="mb-5 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl">
+            <View className="flex-row items-center">
+                <AlertCircle size={20} color="#ef4444" style={{ marginTop: 2, marginRight: 12 }} />
+                <View className="flex-1">
+                    <Text className="text-red-400 text-sm font-medium leading-5">{message}</Text>
+                </View>
+                <TouchableOpacity onPress={onDismiss} className="ml-2 p-1">
+                    <X size={18} color="#ef4444" />
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+
+    const InfoRow = ({ icon: Icon, label, value }) => (
+        <View className="flex-row items-center justify-between py-4 border-b border-neutral-800">
+            <View className="flex-row items-center flex-1">
+                <Icon size={18} color="#9ca3af" style={{ marginRight: 12 }} />
+                <Text className="text-neutral-400 text-sm">{label}</Text>
+            </View>
+            <Text className="text-white font-semibold text-sm" numberOfLines={1}>
+                {value}
+            </Text>
+        </View>
+    );
+
     if (gtcLoading) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-900 justify-center items-center px-6">
+            <SafeAreaView className="flex-1 bg-[#0a0a0a] justify-center items-center px-6">
                 <StatusBar style="light" />
                 <ActivityIndicator size="large" color="#ea580c" />
-                <Text className="text-gray-400 mt-4 font-medium text-center">Loading GTC FX...</Text>
+                <Text className="text-neutral-400 mt-4 font-medium text-center">Loading GTC FX...</Text>
             </SafeAreaView>
         );
     }
 
     if (gtcAuthenticated && gtcUser) {
         return (
-            <SafeAreaView className="flex-1 bg-gray-900">
+            <SafeAreaView className="flex-1 bg-[#0a0a0a]">
                 <StatusBar style="light" />
 
                 {/* Header */}
-                <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
-                    <TouchableOpacity
-                        onPress={() => router.back()}
-                        className="flex-row items-center"
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        activeOpacity={0.7}
-                    >
-                        <ArrowLeft size={22} color="#ffffff" style={{ marginRight: 12 }} />
-                        <View>
-                            <Text className="text-2xl font-bold text-white">GTC FX Account</Text>
-                            <Text className="text-sm text-gray-400 mt-0.5">Manage your trading account</Text>
+                <View className="px-5 pt-5 pb-4 border-b border-neutral-800">
+                    <View className="flex-row items-center justify-between">
+                        <View className="flex-row items-center flex-1">
+                            <TouchableOpacity
+                                onPress={() => router.back()}
+                                className="mr-4 w-10 h-10 bg-neutral-900 rounded-xl items-center justify-center"
+                                activeOpacity={0.7}
+                            >
+                                <ArrowLeft size={20} color="#fff" />
+                            </TouchableOpacity>
+                            <View>
+                                <Text className="text-2xl font-bold text-white">GTC FX Account</Text>
+                                <Text className="text-sm text-neutral-400 mt-0.5">Manage your trading account</Text>
+                            </View>
                         </View>
-                    </TouchableOpacity>
+                    </View>
                 </View>
 
                 <ScrollView
@@ -170,112 +199,81 @@ const GTCFxAuth = () => {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 100 }}
                 >
-                    {/* Profile Header Card */}
-                    <View className="mx-4 mt-5 mb-6">
-                        <View className="bg-gradient-to-br from-orange-600/20 to-orange-500/10 rounded-2xl p-6 border border-orange-500/20">
-                            <View className="items-center mb-5">
-                                <View style={{
-                                    width: 80,
-                                    height: 80,
-                                    backgroundColor: 'rgba(234,88,12,0.15)',
-                                    borderRadius: 16,
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    marginBottom: 16,
-                                    overflow: 'hidden',
-                                }}>
-                                    {gtcUser.avatar ? (
-                                        <Image
-                                            source={{ uri: gtcUser.avatar }}
-                                            style={{ width: 80, height: 80, borderRadius: 16 }}
-                                        />
-                                    ) : (
-                                        <User size={40} color="#ea580c" />
-                                    )}
-                                </View>
-                                <Text className="text-2xl font-bold text-white mb-2 text-center">
-                                    {gtcUser.nickname || gtcUser.realname || "User"}
+                    {/* Profile Header */}
+                    <View className="px-5 mt-6 mb-6">
+                        <View className="items-center mb-6">
+                            <View className="w-24 h-24 bg-orange-500/15 rounded-2xl items-center justify-center mb-4 overflow-hidden">
+                                {gtcUser.avatar ? (
+                                    <Image
+                                        source={{ uri: gtcUser.avatar }}
+                                        style={{ width: 96, height: 96, borderRadius: 16 }}
+                                    />
+                                ) : (
+                                    <User size={44} color="#ea580c" />
+                                )}
+                            </View>
+                            <Text className="text-2xl font-bold text-white mb-2 text-center">
+                                {gtcUser.nickname || gtcUser.realname || "User"}
+                            </Text>
+                            <Text className="text-neutral-400 text-base text-center">{gtcUser.email}</Text>
+                        </View>
+
+                        {/* Status Badges */}
+                        <View className="flex-row gap-3 mb-6">
+                            <View className={`flex-1 py-3 px-4 rounded-xl border-2 flex-row items-center justify-center ${gtcUser.status === 1
+                                ? 'bg-green-500/15 border-green-500/30'
+                                : 'bg-red-500/15 border-red-500/30'
+                                }`}>
+                                <Shield size={16} color={gtcUser.status === 1 ? "#22c55e" : "#ef4444"} />
+                                <Text className={`font-bold text-sm ml-2 ${gtcUser.status === 1 ? 'text-green-400' : 'text-red-400'
+                                    }`}>
+                                    {gtcUser.status === 1 ? "Active" : "Inactive"}
                                 </Text>
-                                <Text className="text-gray-400 text-sm text-center">{gtcUser.email}</Text>
                             </View>
 
-                            {/* Status Badges */}
-                            <View className="flex-row" style={{ gap: 12 }}>
-                                <View className="flex-1" style={{
-                                    paddingVertical: 12,
-                                    paddingHorizontal: 16,
-                                    borderRadius: 12,
-                                    backgroundColor: gtcUser.status === 1 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                                    borderWidth: 1.5,
-                                    borderColor: gtcUser.status === 1 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)',
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}>
-                                    <Shield size={16} color={gtcUser.status === 1 ? "#22c55e" : "#ef4444"} style={{ marginRight: 8 }} />
-                                    <Text style={{
-                                        fontSize: 13,
-                                        fontWeight: '700',
-                                        color: gtcUser.status === 1 ? "#4ade80" : "#f87171",
-                                    }}>
-                                        {gtcUser.status === 1 ? "Active" : "Inactive"}
-                                    </Text>
-                                </View>
-
-                                <View className="flex-1" style={{
-                                    paddingVertical: 12,
-                                    paddingHorizontal: 16,
-                                    borderRadius: 12,
-                                    backgroundColor: 'rgba(59,130,246,0.15)',
-                                    borderWidth: 1.5,
-                                    borderColor: 'rgba(59,130,246,0.3)',
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}>
-                                    <Activity size={16} color="#3b82f6" style={{ marginRight: 8 }} />
-                                    <Text className="text-blue-400 font-bold" style={{ fontSize: 13 }}>
-                                        {gtcUser.userType === 1 ? "Agent" : "User"}
-                                    </Text>
-                                </View>
+                            <View className="flex-1 py-3 px-4 rounded-xl border-2 bg-blue-500/15 border-blue-500/30 flex-row items-center justify-center">
+                                <Activity size={16} color="#3b82f6" />
+                                <Text className="text-blue-400 font-bold text-sm ml-2">
+                                    {gtcUser.userType === 1 ? "Agent" : "User"}
+                                </Text>
                             </View>
                         </View>
                     </View>
 
-                    {/* Stats Cards */}
-                    <View className="px-4 mb-6">
-                        {/* Balance Card */}
-                        <View className="mb-5">
-                            <View className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50">
-                                <View className="flex-row items-center justify-between">
-                                    <View className="flex-row items-center flex-1">
-                                        <View className="w-12 h-12 bg-orange-500/20 rounded-xl items-center justify-center mr-4">
-                                            <DollarSign size={22} color="#ea580c" />
-                                        </View>
-                                        <View>
-                                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                                                Account Balance
-                                            </Text>
-                                            <Text className="text-3xl font-bold text-white">
-                                                ${parseFloat(gtcUser.amount || 0).toFixed(2)}
-                                            </Text>
-                                        </View>
+                    {/* Balance Overview */}
+                    <View className="px-5 mb-6">
+                        <Text className="text-lg font-bold text-white mb-4">Account Overview</Text>
+
+                        {/* Main Balance Card */}
+                        <View className="bg-neutral-900/50 rounded-2xl p-5 mb-3">
+                            <View className="flex-row items-center justify-between">
+                                <View className="flex-row items-center flex-1">
+                                    <View className="w-12 h-12 bg-orange-500/20 rounded-xl items-center justify-center mr-4">
+                                        <DollarSign size={22} color="#ea580c" />
                                     </View>
-                                    <View className="w-10 h-10 bg-orange-500/10 rounded-full items-center justify-center">
-                                        <TrendingUp size={20} color="#ea580c" />
+                                    <View>
+                                        <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-1">
+                                            Account Balance
+                                        </Text>
+                                        <Text className="text-3xl font-bold text-white">
+                                            ${parseFloat(gtcUser.amount || 0).toFixed(2)}
+                                        </Text>
                                     </View>
+                                </View>
+                                <View className="w-10 h-10 bg-orange-500/10 rounded-full items-center justify-center">
+                                    <TrendingUp size={20} color="#ea580c" />
                                 </View>
                             </View>
                         </View>
 
                         {/* Member Since Card */}
-                        <View className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/50">
+                        <View className="bg-neutral-900/50 rounded-2xl p-5">
                             <View className="flex-row items-center">
                                 <View className="w-12 h-12 bg-blue-500/20 rounded-xl items-center justify-center mr-4">
                                     <Calendar size={22} color="#3b82f6" />
                                 </View>
                                 <View>
-                                    <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                                    <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-1">
                                         Member Since
                                     </Text>
                                     <Text className="text-2xl font-bold text-white">
@@ -291,42 +289,52 @@ const GTCFxAuth = () => {
                         </View>
                     </View>
 
+                    {/* Account Details */}
+                    <View className="px-5 mb-6">
+                        <View className="bg-neutral-900/50 rounded-2xl p-5">
+                            <Text className="text-lg font-bold text-white mb-5">Account Information</Text>
+                            <InfoRow
+                                icon={User}
+                                label="Real Name"
+                                value={gtcUser.realname || "—"}
+                            />
+                            <InfoRow
+                                icon={User}
+                                label="Nickname"
+                                value={gtcUser.nickname || "—"}
+                            />
+                            <View className="flex-row items-center justify-between py-4">
+                                <View className="flex-row items-center flex-1">
+                                    <Shield size={18} color="#9ca3af" style={{ marginRight: 12 }} />
+                                    <Text className="text-neutral-400 text-sm">Account Status</Text>
+                                </View>
+                                <View className={`px-3 py-1.5 rounded-lg ${gtcUser.status === 1 ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+                                    <Text className={`font-semibold text-xs ${gtcUser.status === 1 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {gtcUser.status === 1 ? "Active" : "Inactive"}
+                                    </Text>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+
                     {/* Action Buttons */}
-                    <View className="px-4" style={{ gap: 12 }}>
+                    <View className="px-5 gap-3">
                         <TouchableOpacity
                             onPress={() => router.push("/gtcfx/dashboard")}
-                            style={{
-                                paddingVertical: 18,
-                                backgroundColor: '#ea580c',
-                                borderRadius: 14,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 10,
-                            }}
+                            className="py-5 bg-orange-500 rounded-2xl flex-row items-center justify-center"
                             activeOpacity={0.7}
                         >
-                            <Text className="text-white font-bold text-base">Go to Dashboard</Text>
+                            <Text className="text-white font-bold text-base mr-2">Go to Dashboard</Text>
                             <ArrowRight size={20} color="#ffffff" />
                         </TouchableOpacity>
 
                         <TouchableOpacity
                             onPress={handleLogout}
-                            style={{
-                                paddingVertical: 18,
-                                backgroundColor: 'rgba(239,68,68,0.15)',
-                                borderWidth: 1.5,
-                                borderColor: 'rgba(239,68,68,0.3)',
-                                borderRadius: 14,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 10,
-                            }}
+                            className="py-5 bg-red-500/15 border-2 border-red-500/30 rounded-2xl flex-row items-center justify-center"
                             activeOpacity={0.7}
                         >
                             <LogOut size={20} color="#ef4444" />
-                            <Text className="text-red-400 font-bold text-base">Logout</Text>
+                            <Text className="text-red-400 font-bold text-base ml-2">Logout</Text>
                         </TouchableOpacity>
                     </View>
                 </ScrollView>
@@ -336,23 +344,26 @@ const GTCFxAuth = () => {
 
     // Login Form
     return (
-        <SafeAreaView className="flex-1 bg-gray-900">
+        <SafeAreaView className="flex-1 bg-[#0a0a0a]">
             <StatusBar style="light" />
 
             {/* Header */}
-            <View className="bg-gray-800/50 border-b border-gray-700/50 px-5 py-4">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="flex-row items-center"
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    activeOpacity={0.7}
-                >
-                    <ArrowLeft size={22} color="#ffffff" style={{ marginRight: 12 }} />
-                    <View>
-                        <Text className="text-2xl font-bold text-white">GTC FX Login</Text>
-                        <Text className="text-sm text-gray-400 mt-0.5">Access your trading account</Text>
+            <View className="px-5 pt-5 pb-4 border-b border-neutral-800">
+                <View className="flex-row items-center justify-between">
+                    <View className="flex-row items-center flex-1">
+                        <TouchableOpacity
+                            onPress={() => router.back()}
+                            className="mr-4 w-10 h-10 bg-neutral-900 rounded-xl items-center justify-center"
+                            activeOpacity={0.7}
+                        >
+                            <ArrowLeft size={20} color="#fff" />
+                        </TouchableOpacity>
+                        <View>
+                            <Text className="text-2xl font-bold text-white">GTC FX Login</Text>
+                            <Text className="text-sm text-neutral-400 mt-0.5">Access your trading account</Text>
+                        </View>
                     </View>
-                </TouchableOpacity>
+                </View>
             </View>
 
             <ScrollView
@@ -361,66 +372,27 @@ const GTCFxAuth = () => {
                 contentContainerStyle={{ paddingBottom: 100 }}
             >
                 {/* Hero Section */}
-                <View className="px-4 mt-5 mb-6">
+                <View className="px-5 mt-6 mb-6">
                     <View className="items-center">
-                        <View style={{
-                            width: 80,
-                            height: 80,
-                            backgroundColor: 'rgba(234,88,12,0.15)',
-                            borderRadius: 16,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginBottom: 16,
-                        }}>
-                            <TrendingUp size={40} color="#ea580c" />
+                        <View className="w-24 h-24 bg-orange-500/15 rounded-2xl items-center justify-center mb-4">
+                            <TrendingUp size={44} color="#ea580c" />
                         </View>
-                        <Text className="text-gray-400 text-center text-sm leading-5">
+                        <Text className="text-neutral-400 text-center text-base leading-6">
                             Access your trading account and strategies
                         </Text>
                     </View>
                 </View>
 
                 {/* Form Card */}
-                <View className="px-4">
-                    <View className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50">
+                <View className="px-5">
+                    <View className="bg-neutral-900/50 rounded-2xl p-5">
                         {/* Error Alerts */}
-                        {submitError && (
-                            <View className="mb-5 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-                                <View className="flex-row items-center">
-                                    <AlertCircle size={20} color="#ef4444" style={{ marginTop: 2, marginRight: 12 }} />
-                                    <View className="flex-1">
-                                        <Text className="text-red-400 text-sm font-medium leading-5">{submitError}</Text>
-                                    </View>
-                                    <TouchableOpacity
-                                        onPress={() => setSubmitError("")}
-                                        className="ml-2 p-1"
-                                    >
-                                        <X size={18} color="#ef4444" />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        )}
-
-                        {gtcError && (
-                            <View className="mb-5 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-                                <View className="flex-row items-center">
-                                    <AlertCircle size={20} color="#ef4444" style={{ marginTop: 2, marginRight: 12 }} />
-                                    <View className="flex-1">
-                                        <Text className="text-red-400 text-sm font-medium leading-5">{gtcError}</Text>
-                                    </View>
-                                    <TouchableOpacity
-                                        onPress={clearGTCError}
-                                        className="ml-2 p-1"
-                                    >
-                                        <X size={18} color="#ef4444" />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        )}
+                        {submitError && <AlertBox message={submitError} onDismiss={() => setSubmitError("")} />}
+                        {gtcError && <AlertBox message={gtcError} onDismiss={clearGTCError} />}
 
                         {/* Email Input */}
                         <View className="mb-5">
-                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                            <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-3">
                                 Email Address
                             </Text>
                             <View className="relative">
@@ -435,22 +407,14 @@ const GTCFxAuth = () => {
                                     placeholderTextColor="#6b7280"
                                     keyboardType="email-address"
                                     autoCapitalize="none"
-                                    style={{
-                                        paddingLeft: 48,
-                                        paddingRight: 16,
-                                        paddingVertical: 16,
-                                        fontSize: 15,
-                                        fontWeight: '500',
-                                        color: '#ffffff',
-                                        backgroundColor: errors.account ? 'rgba(239,68,68,0.05)' : 'rgba(17,24,39,0.5)',
-                                        borderRadius: 12,
-                                        borderWidth: 1.5,
-                                        borderColor: errors.account ? '#ef4444' : '#374151',
-                                    }}
+                                    className={`pl-12 pr-4 py-4 text-white text-base font-medium rounded-xl border-2 ${errors.account
+                                        ? 'bg-red-500/5 border-red-500'
+                                        : 'bg-black/40 border-neutral-800'
+                                        }`}
                                 />
                             </View>
                             {errors.account && (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+                                <View className="flex-row items-center mt-2">
                                     <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
                                     <Text className="text-xs text-red-400 font-medium">{errors.account}</Text>
                                 </View>
@@ -459,7 +423,7 @@ const GTCFxAuth = () => {
 
                         {/* Password Input */}
                         <View className="mb-6">
-                            <Text className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                            <Text className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-3">
                                 Password
                             </Text>
                             <View className="relative">
@@ -473,18 +437,10 @@ const GTCFxAuth = () => {
                                     secureTextEntry={!showPassword}
                                     placeholder="Enter your password"
                                     placeholderTextColor="#6b7280"
-                                    style={{
-                                        paddingLeft: 48,
-                                        paddingRight: 48,
-                                        paddingVertical: 16,
-                                        fontSize: 15,
-                                        fontWeight: '500',
-                                        color: '#ffffff',
-                                        backgroundColor: errors.password ? 'rgba(239,68,68,0.05)' : 'rgba(17,24,39,0.5)',
-                                        borderRadius: 12,
-                                        borderWidth: 1.5,
-                                        borderColor: errors.password ? '#ef4444' : '#374151',
-                                    }}
+                                    className={`pl-12 pr-12 py-4 text-white text-base font-medium rounded-xl border-2 ${errors.password
+                                        ? 'bg-red-500/5 border-red-500'
+                                        : 'bg-black/40 border-neutral-800'
+                                        }`}
                                 />
                                 <TouchableOpacity
                                     onPress={() => setShowPassword(!showPassword)}
@@ -500,7 +456,7 @@ const GTCFxAuth = () => {
                                 </TouchableOpacity>
                             </View>
                             {errors.password && (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+                                <View className="flex-row items-center mt-2">
                                     <AlertCircle size={14} color="#ef4444" style={{ marginRight: 6 }} />
                                     <Text className="text-xs text-red-400 font-medium">{errors.password}</Text>
                                 </View>
@@ -511,18 +467,12 @@ const GTCFxAuth = () => {
                         <TouchableOpacity
                             onPress={handleLogin}
                             disabled={isLoading}
-                            style={{
-                                paddingVertical: 18,
-                                backgroundColor: isLoading ? 'rgba(55,65,81,0.4)' : '#ea580c',
-                                borderRadius: 14,
-                                alignItems: 'center',
-                                marginBottom: 20,
-                                opacity: isLoading ? 0.5 : 1,
-                            }}
+                            className={`py-5 rounded-2xl items-center mb-5 ${isLoading ? 'bg-neutral-800/50' : 'bg-orange-500'
+                                }`}
                             activeOpacity={0.7}
                         >
                             {isLoading ? (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                <View className="flex-row items-center gap-3">
                                     <ActivityIndicator size="small" color="#ffffff" />
                                     <Text className="text-white font-bold text-base">Signing In...</Text>
                                 </View>
@@ -532,18 +482,11 @@ const GTCFxAuth = () => {
                         </TouchableOpacity>
 
                         {/* Support Section */}
-                        <View className="pt-5 border-t border-gray-700/50 items-center">
-                            <Text className="text-gray-500 text-sm mb-4">Need help?</Text>
+                        <View className="pt-5 border-t border-neutral-800 items-center">
+                            <Text className="text-neutral-500 text-sm mb-4">Need help?</Text>
                             <TouchableOpacity
                                 onPress={() => Linking.openURL("mailto:support@gtcfx.com")}
-                                style={{
-                                    paddingVertical: 12,
-                                    paddingHorizontal: 24,
-                                    backgroundColor: 'rgba(234,88,12,0.15)',
-                                    borderWidth: 1.5,
-                                    borderColor: 'rgba(234,88,12,0.3)',
-                                    borderRadius: 10,
-                                }}
+                                className="py-3 px-6 bg-orange-500/15 border-2 border-orange-500/30 rounded-xl"
                                 activeOpacity={0.7}
                             >
                                 <Text className="text-orange-400 font-bold text-sm">Contact Support</Text>
