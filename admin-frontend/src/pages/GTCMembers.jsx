@@ -71,6 +71,7 @@ const GTCMembers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterLevel, setFilterLevel] = useState("");
   const [filterHasParent, setFilterHasParent] = useState("");
+  const [filterOnboardingStatus, setFilterOnboardingStatus] = useState(""); // NEW
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -99,7 +100,7 @@ const GTCMembers = () => {
   useEffect(() => {
     fetchMembers();
     fetchOnboardingStats();
-  }, [currentPage, filterLevel, filterHasParent]);
+  }, [currentPage, filterLevel, filterHasParent, filterOnboardingStatus]);
 
   const fetchMembers = async () => {
     setLoading(true);
@@ -118,7 +119,36 @@ const GTCMembers = () => {
       const response = await api.get(`/admin/gtc-members?${params.toString()}`);
 
       if (response.data.success) {
-        setMembers(response.data.data);
+        let filteredMembers = response.data.data;
+
+        // Apply onboarding status filter on frontend
+        if (filterOnboardingStatus) {
+          if (filterOnboardingStatus === "both") {
+            filteredMembers = filteredMembers.filter(
+              (m) => m.onboardedWithCall && m.onboardedWithMessage
+            );
+          } else if (filterOnboardingStatus === "call") {
+            filteredMembers = filteredMembers.filter(
+              (m) => m.onboardedWithCall
+            );
+          } else if (filterOnboardingStatus === "message") {
+            filteredMembers = filteredMembers.filter(
+              (m) => m.onboardedWithMessage
+            );
+          } else if (filterOnboardingStatus === "none") {
+            filteredMembers = filteredMembers.filter(
+              (m) => !m.onboardedWithCall && !m.onboardedWithMessage
+            );
+          } else if (filterOnboardingStatus === "partial") {
+            filteredMembers = filteredMembers.filter(
+              (m) =>
+                (m.onboardedWithCall && !m.onboardedWithMessage) ||
+                (!m.onboardedWithCall && m.onboardedWithMessage)
+            );
+          }
+        }
+
+        setMembers(filteredMembers);
         setTotalCount(response.data.pagination.total);
         setTotalPages(response.data.pagination.pages);
         setStats(response.data.stats);
@@ -157,6 +187,7 @@ const GTCMembers = () => {
   const handleClearFilters = () => {
     setFilterLevel("");
     setFilterHasParent("");
+    setFilterOnboardingStatus("");
     setSearchQuery("");
     setCurrentPage(1);
     setTimeout(fetchMembers, 100);
@@ -203,7 +234,6 @@ const GTCMembers = () => {
       );
 
       if (response.data.success) {
-        // Update the member in the list
         setMembers((prev) =>
           prev.map((m) =>
             (m._id || m.gtcUserId) === memberId
@@ -215,7 +245,6 @@ const GTCMembers = () => {
           )
         );
 
-        // Update selected member if it's open
         if (
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
@@ -246,7 +275,6 @@ const GTCMembers = () => {
       );
 
       if (response.data.success) {
-        // Update the member in the list
         setMembers((prev) =>
           prev.map((m) =>
             (m._id || m.gtcUserId) === memberId
@@ -258,7 +286,6 @@ const GTCMembers = () => {
           )
         );
 
-        // Update selected member if it's open
         if (
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
@@ -376,8 +403,8 @@ const GTCMembers = () => {
         <div
           className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
             isRoot
-              ? "bg-linear-to-r from-blue-500 to-blue-600 border-blue-700 shadow-lg"
-              : "bg-white border-gray-200 hover:border-blue-300 hover:shadow-sm"
+              ? "bg-gradient-to-r from-orange-500 to-orange-600 border-orange-700 shadow-lg"
+              : "bg-white border-gray-200 hover:border-orange-300 hover:shadow-sm"
           } mb-2`}
         >
           {hasChildren ? (
@@ -417,12 +444,12 @@ const GTCMembers = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  isRoot ? "bg-white/20" : "bg-blue-100"
+                  isRoot ? "bg-white/20" : "bg-orange-100"
                 }`}
               >
                 <User
                   className={`w-4 h-4 ${
-                    isRoot ? "text-white" : "text-blue-600"
+                    isRoot ? "text-white" : "text-orange-600"
                   }`}
                 />
               </div>
@@ -447,7 +474,7 @@ const GTCMembers = () => {
                 className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                   isRoot
                     ? "bg-white/20 text-white"
-                    : "bg-blue-100 text-blue-700"
+                    : "bg-orange-100 text-orange-700"
                 }`}
               >
                 ID: {node.gtcUserId}
@@ -524,13 +551,13 @@ const GTCMembers = () => {
             className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
               isRoot
                 ? "bg-white/20 hover:bg-white/30"
-                : "bg-gray-100 hover:bg-blue-100"
+                : "bg-gray-100 hover:bg-orange-100"
             }`}
             title="View Details"
           >
             <Eye
               className={`w-4 h-4 ${
-                isRoot ? "text-white" : "text-gray-600 hover:text-blue-600"
+                isRoot ? "text-white" : "text-gray-600 hover:text-orange-600"
               }`}
             />
           </button>
@@ -602,7 +629,7 @@ const GTCMembers = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-4">
-          <Loader className="w-12 h-12 text-blue-600 animate-spin" />
+          <Loader className="w-12 h-12 text-orange-600 animate-spin" />
           <p className="text-gray-600 font-medium">Loading GTC members...</p>
         </div>
       </div>
@@ -629,7 +656,7 @@ const GTCMembers = () => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <Globe className="w-8 h-8 text-blue-600" />
+                <Globe className="w-8 h-8 text-orange-600" />
                 GTC Members
               </h1>
               <p className="text-gray-600 mt-2">
@@ -685,18 +712,20 @@ const GTCMembers = () => {
         )}
 
         {/* Stats Cards - Row 1 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
                 <UsersIcon className="w-5 h-5 text-white" />
               </div>
-              <p className="text-sm font-medium text-blue-900">Total Members</p>
+              <p className="text-sm font-medium text-orange-900">
+                Total Members
+              </p>
             </div>
-            <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+            <p className="text-2xl font-bold text-orange-900">{stats.total}</p>
           </div>
 
-          <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                 <Network className="w-5 h-5 text-white" />
@@ -708,33 +737,19 @@ const GTCMembers = () => {
             </p>
           </div>
 
-          {/* <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <p className="text-sm font-medium text-purple-900">
-                Root Members
-              </p>
-            </div>
-            <p className="text-2xl font-bold text-purple-900">
-              {stats.rootMembers}
-            </p>
-          </div> */}
-
-          <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                 <Layers className="w-5 h-5 text-white" />
               </div>
-              <p className="text-sm font-medium text-orange-900">Avg Level</p>
+              <p className="text-sm font-medium text-blue-900">Avg Level</p>
             </div>
-            <p className="text-2xl font-bold text-orange-900">
+            <p className="text-2xl font-bold text-blue-900">
               {stats.avgLevel.toFixed(1)}
             </p>
           </div>
 
-          <div className="bg-linear-to-br from-pink-50 to-pink-100 rounded-xl p-6 border border-pink-200">
+          <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-6 border border-pink-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-white" />
@@ -743,11 +758,8 @@ const GTCMembers = () => {
             </div>
             <p className="text-2xl font-bold text-pink-900">{stats.maxLevel}</p>
           </div>
-        </div>
 
-        {/* Stats Cards - Row 2: Onboarding Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-linear-to-br from-cyan-50 to-cyan-100 rounded-xl p-6 border border-cyan-200">
+          <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-xl p-6 border border-cyan-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center">
                 <PhoneCall className="w-5 h-5 text-white" />
@@ -761,7 +773,7 @@ const GTCMembers = () => {
             </p>
           </div>
 
-          <div className="bg-linear-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
                 <MessageCircle className="w-5 h-5 text-white" />
@@ -775,7 +787,7 @@ const GTCMembers = () => {
             </p>
           </div>
 
-          <div className="bg-linear-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200">
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-5 h-5 text-white" />
@@ -789,7 +801,7 @@ const GTCMembers = () => {
             </p>
           </div>
 
-          <div className="bg-linear-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
                 <AlertCircle className="w-5 h-5 text-white" />
@@ -802,36 +814,16 @@ const GTCMembers = () => {
               {onboardingStats.notOnboarded}
             </p>
           </div>
-
-          {/* <div className="bg-linear-to-br from-slate-50 to-slate-100 rounded-xl p-6 border border-slate-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-slate-500 rounded-full flex items-center justify-center">
-                <UserCheck className="w-5 h-5 text-white" />
-              </div>
-              <p className="text-sm font-medium text-slate-900">
-                Completion Rate
-              </p>
-            </div>
-            <p className="text-2xl font-bold text-slate-900">
-              {onboardingStats.total > 0
-                ? (
-                    (onboardingStats.bothOnboarded / onboardingStats.total) *
-                    100
-                  ).toFixed(1)
-                : 0}
-              %
-            </p>
-          </div> */}
         </div>
 
         {/* Filters */}
         <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
           <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-blue-600" />
+            <Filter className="w-5 h-5 text-orange-600" />
             <h2 className="text-lg font-bold text-gray-900">Filters</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Search
@@ -844,7 +836,7 @@ const GTCMembers = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                   placeholder="Search by GTC ID, email, or username..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -856,7 +848,7 @@ const GTCMembers = () => {
               <select
                 value={filterLevel}
                 onChange={(e) => setFilterLevel(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="">All Levels</option>
                 {Array.from({ length: stats.maxLevel || 10 }, (_, i) => (
@@ -874,11 +866,29 @@ const GTCMembers = () => {
               <select
                 value={filterHasParent}
                 onChange={(e) => setFilterHasParent(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="">All</option>
                 <option value="true">Has Parent</option>
                 <option value="false">Root Members</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Onboarding Status
+              </label>
+              <select
+                value={filterOnboardingStatus}
+                onChange={(e) => setFilterOnboardingStatus(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="">All Status</option>
+                <option value="both">✓ Both Completed</option>
+                <option value="call">📞 Call Only</option>
+                <option value="message">💬 Message Only</option>
+                <option value="partial">⚠️ Partial</option>
+                <option value="none">✗ Not Started</option>
               </select>
             </div>
           </div>
@@ -886,7 +896,7 @@ const GTCMembers = () => {
           <div className="flex items-center gap-2 mt-4">
             <button
               onClick={handleSearch}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-medium transition-colors"
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
             >
               Search
             </button>
@@ -937,7 +947,7 @@ const GTCMembers = () => {
                           No GTC members found
                         </p>
                         <p className="text-sm text-gray-500">
-                          Try syncing from GTC API to import members
+                          Try adjusting your filters or syncing from GTC API
                         </p>
                       </div>
                     </td>
@@ -952,8 +962,8 @@ const GTCMembers = () => {
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 shrink-0 bg-blue-100 rounded-full flex items-center justify-center">
-                              <User className="w-5 h-5 text-blue-600" />
+                            <div className="w-10 h-10 shrink-0 bg-orange-100 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-orange-600" />
                             </div>
                             <div>
                               <p className="font-medium text-gray-900 text-nowrap">
@@ -1054,7 +1064,7 @@ const GTCMembers = () => {
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => openDetailModal(member)}
-                              className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
+                              className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
                               title="View Details"
                             >
                               <Eye className="w-4 h-4" />
@@ -1118,10 +1128,10 @@ const GTCMembers = () => {
       {showDetailModal && selectedMember && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-200 bg-linear-to-r from-blue-50 to-blue-100">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center">
+                  <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center">
                     <User className="w-8 h-8 text-white" />
                   </div>
                   <div>
@@ -1144,7 +1154,7 @@ const GTCMembers = () => {
 
             <div className="flex-1 overflow-y-auto p-6">
               {/* Onboarding Status Section */}
-              <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-6 border-2 border-blue-200">
+              <div className="bg-gradient-to-br from-orange-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-6 border-2 border-orange-200">
                 <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
                   <UserCheck className="w-4 h-4" />
                   Onboarding Status
@@ -1331,7 +1341,7 @@ const GTCMembers = () => {
 
               {/* Hierarchy Info */}
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
                   <div className="flex items-center gap-2 mb-2">
                     <Network className="w-5 h-5 text-green-600" />
                     <p className="text-xs font-semibold text-green-900 uppercase">
@@ -1343,7 +1353,7 @@ const GTCMembers = () => {
                   </p>
                 </div>
 
-                <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
                   <div className="flex items-center gap-2 mb-2">
                     <Layers className="w-5 h-5 text-orange-600" />
                     <p className="text-xs font-semibold text-orange-900 uppercase">
@@ -1371,8 +1381,8 @@ const GTCMembers = () => {
                           className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                              <User className="w-4 h-4 text-blue-600" />
+                            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                              <User className="w-4 h-4 text-orange-600" />
                             </div>
                             <div>
                               <p className="text-sm font-medium text-gray-900">
@@ -1433,7 +1443,7 @@ const GTCMembers = () => {
             <div className="p-6 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="w-full py-3 bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md"
+                className="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md"
               >
                 Close
               </button>
@@ -1442,22 +1452,22 @@ const GTCMembers = () => {
         </div>
       )}
 
-      {/* Tree Modal - Same as before */}
+      {/* Tree Modal */}
       {showTreeModal && treeData && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div className="p-6 border-b border-gray-200 bg-linear-to-r from-blue-50 to-blue-100">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <Network className="w-6 h-6 text-blue-600" />
+                    <Network className="w-6 h-6 text-orange-600" />
                     GTC Team Tree
                   </h2>
                   <p className="text-sm text-gray-600 mt-1">
                     {treeData.root.name || treeData.root.username}'s downline
                     hierarchy
                     {treeData.tree && treeData.tree.length > 0 && (
-                      <span className="ml-2 text-blue-600 font-semibold">
+                      <span className="ml-2 text-orange-600 font-semibold">
                         ({treeData.tree.length} direct •{" "}
                         {treeData.tree.reduce(
                           (sum, node) => sum + countTotalDescendants(node),
@@ -1471,7 +1481,7 @@ const GTCMembers = () => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={expandAll}
-                    className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors"
+                    className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-sm font-medium transition-colors"
                   >
                     Expand All
                   </button>
