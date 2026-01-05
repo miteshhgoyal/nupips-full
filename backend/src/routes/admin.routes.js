@@ -1125,4 +1125,177 @@ router.get('/gtc-members/stats/overview', authenticateToken, async (req, res) =>
     }
 });
 
+// Toggle onboardedWithCall status
+router.patch('/gtc-members/:id/toggle-call', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        let member;
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            member = await GTCMember.findById(id);
+        } else {
+            member = await GTCMember.findOne({ gtcUserId: id });
+        }
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC member not found'
+            });
+        }
+
+        // Toggle the status
+        member.onboardedWithCall = !member.onboardedWithCall;
+        member.lastUpdated = new Date();
+        await member.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Onboarded with call status updated to ${member.onboardedWithCall}`,
+            data: {
+                onboardedWithCall: member.onboardedWithCall,
+                member
+            }
+        });
+    } catch (error) {
+        console.error('Toggle call status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to toggle call status',
+            error: error.message
+        });
+    }
+});
+
+// Toggle onboardedWithMessage status
+router.patch('/gtc-members/:id/toggle-message', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        let member;
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            member = await GTCMember.findById(id);
+        } else {
+            member = await GTCMember.findOne({ gtcUserId: id });
+        }
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC member not found'
+            });
+        }
+
+        // Toggle the status
+        member.onboardedWithMessage = !member.onboardedWithMessage;
+        member.lastUpdated = new Date();
+        await member.save();
+
+        res.status(200).json({
+            success: true,
+            message: `Onboarded with message status updated to ${member.onboardedWithMessage}`,
+            data: {
+                onboardedWithMessage: member.onboardedWithMessage,
+                member
+            }
+        });
+    } catch (error) {
+        console.error('Toggle message status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to toggle message status',
+            error: error.message
+        });
+    }
+});
+
+// Bulk update onboarding status
+router.patch('/gtc-members/bulk/onboarding', authenticateToken, async (req, res) => {
+    try {
+        const { memberIds, onboardedWithCall, onboardedWithMessage } = req.body;
+
+        if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'memberIds array is required'
+            });
+        }
+
+        const updateFields = {};
+        if (onboardedWithCall !== undefined) updateFields.onboardedWithCall = onboardedWithCall;
+        if (onboardedWithMessage !== undefined) updateFields.onboardedWithMessage = onboardedWithMessage;
+        updateFields.lastUpdated = new Date();
+
+        const result = await GTCMember.updateMany(
+            { gtcUserId: { $in: memberIds } },
+            { $set: updateFields }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: `Updated ${result.modifiedCount} members`,
+            data: {
+                matchedCount: result.matchedCount,
+                modifiedCount: result.modifiedCount
+            }
+        });
+    } catch (error) {
+        console.error('Bulk update error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to bulk update onboarding status',
+            error: error.message
+        });
+    }
+});
+
+// Get onboarding statistics
+router.get('/gtc-members/stats/onboarding', authenticateToken, async (req, res) => {
+    try {
+        const stats = await GTCMember.aggregate([
+            {
+                $facet: {
+                    total: [{ $count: 'count' }],
+                    onboardedWithCall: [
+                        { $match: { onboardedWithCall: true } },
+                        { $count: 'count' }
+                    ],
+                    onboardedWithMessage: [
+                        { $match: { onboardedWithMessage: true } },
+                        { $count: 'count' }
+                    ],
+                    bothOnboarded: [
+                        { $match: { onboardedWithCall: true, onboardedWithMessage: true } },
+                        { $count: 'count' }
+                    ],
+                    notOnboarded: [
+                        { $match: { onboardedWithCall: false, onboardedWithMessage: false } },
+                        { $count: 'count' }
+                    ]
+                }
+            }
+        ]);
+
+        const formattedStats = {
+            total: stats[0].total[0]?.count || 0,
+            onboardedWithCall: stats[0].onboardedWithCall[0]?.count || 0,
+            onboardedWithMessage: stats[0].onboardedWithMessage[0]?.count || 0,
+            bothOnboarded: stats[0].bothOnboarded[0]?.count || 0,
+            notOnboarded: stats[0].notOnboarded[0]?.count || 0
+        };
+
+        res.status(200).json({
+            success: true,
+            data: formattedStats
+        });
+    } catch (error) {
+        console.error('Get onboarding stats error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch onboarding statistics',
+            error: error.message
+        });
+    }
+});
+
 export default router;
