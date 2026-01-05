@@ -884,11 +884,10 @@ const GTCMembers = () => {
                 className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="">All Status</option>
-                <option value="both">✓ Both Completed</option>
-                <option value="call">📞 Call Only</option>
-                <option value="message">💬 Message Only</option>
-                <option value="partial">⚠️ Partial</option>
-                <option value="none">✗ Not Started</option>
+                <option value="both">Both Completed</option>
+                <option value="call">Call Only</option>
+                <option value="message">Message Only</option>
+                <option value="none">Not Started</option>
               </select>
             </div>
           </div>
