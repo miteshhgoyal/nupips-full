@@ -685,7 +685,7 @@ const GTCMembers = () => {
         )}
 
         {/* Stats Cards - Row 1 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
@@ -708,7 +708,7 @@ const GTCMembers = () => {
             </p>
           </div>
 
-          <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+          {/* <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
                 <Shield className="w-5 h-5 text-white" />
@@ -720,7 +720,7 @@ const GTCMembers = () => {
             <p className="text-2xl font-bold text-purple-900">
               {stats.rootMembers}
             </p>
-          </div>
+          </div> */}
 
           <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
@@ -746,7 +746,7 @@ const GTCMembers = () => {
         </div>
 
         {/* Stats Cards - Row 2: Onboarding Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-linear-to-br from-cyan-50 to-cyan-100 rounded-xl p-6 border border-cyan-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center">
@@ -803,7 +803,7 @@ const GTCMembers = () => {
             </p>
           </div>
 
-          <div className="bg-linear-to-br from-slate-50 to-slate-100 rounded-xl p-6 border border-slate-200">
+          {/* <div className="bg-linear-to-br from-slate-50 to-slate-100 rounded-xl p-6 border border-slate-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-slate-500 rounded-full flex items-center justify-center">
                 <UserCheck className="w-5 h-5 text-white" />
@@ -821,7 +821,7 @@ const GTCMembers = () => {
                 : 0}
               %
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* Filters */}
