@@ -7,7 +7,7 @@ dotenv.config();
 
 async function migrateGTCMembers() {
     try {
-        await mongoose.connect(process.env.MONGODB_URI_PROD);
+        await mongoose.connect('mongodb://localhost:27017/nupips');
         console.log('Connected to MongoDB');
 
         // Update all existing members to have onboarding fields set to false
