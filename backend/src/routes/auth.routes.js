@@ -248,7 +248,12 @@ router.post('/register', async (req, res) => {
         // Check if new user is an upline for reserved users
         await checkReservedUsersForUpline(newUser);
 
-        const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        const token = jwt.sign({
+            userId: newUser._id,
+            email: newUser.email,
+            userType: newUser.userType,
+            permissions: newUser.permissions || { pages: [] }
+        }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
         res.status(201).json({
             message: 'Registration successful',
@@ -260,6 +265,7 @@ router.post('/register', async (req, res) => {
                 email: newUser.email,
                 phone: newUser.phone,
                 walletBalance: newUser.walletBalance,
+                permissions: newUser.permissions,
                 uplineStatus: result.matched ? 'matched' : (result?.reserved ? 'reserved' : 'no_upline'),
                 referredBy: newUser.referralDetails.referredBy ?
                     (await User.findById(newUser.referralDetails.referredBy))?.username : null
@@ -290,15 +296,25 @@ router.post('/login', async (req, res) => {
         }
 
         const tokenExpiration = rememberMe ? '30d' : '7d';
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: tokenExpiration });
+        const token = jwt.sign({
+            userId: user._id,
+            email: user.email,
+            userType: user.userType,
+            permissions: user.permissions || { pages: [] }
+        }, process.env.JWT_SECRET, { expiresIn: tokenExpiration });
 
         res.json({
             message: 'Login successful',
             token,
             user: {
-                id: user._id, name: user.name, username: user.username,
-                email: user.email, phone: user.phone,
-                walletBalance: user.walletBalance, userType: user.userType
+                id: user._id,
+                name: user.name,
+                username: user.username,
+                email: user.email,
+                phone: user.phone,
+                walletBalance: user.walletBalance,
+                userType: user.userType,
+                permissions: user.permissions
             },
             rememberMe
         });

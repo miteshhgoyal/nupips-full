@@ -9,13 +9,17 @@ import IncomeExpense from '../models/IncomeExpense.js';
 import SystemConfig from '../models/SystemConfig.js';
 import GTCMember from '../models/GTCMember.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
+import { autoCheckPermission } from '../middlewares/checkPermission.js';
 import mongoose from 'mongoose';
 
 const router = express.Router();
 
+router.use(authenticateToken);
+router.use(autoCheckPermission);
+
 // ==================== DASHBOARD ROUTE ====================
 
-router.get('/dashboard', authenticateToken, async (req, res) => {
+router.get('/dashboard', async (req, res) => {
     try {
         const [
             userStats,
@@ -391,7 +395,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 
 // ==================== DEPOSIT ROUTES ====================
 
-router.get('/deposits', authenticateToken, async (req, res) => {
+router.get('/deposits', async (req, res) => {
     try {
         const { status, userId, page = 1, limit = 20 } = req.query;
 
@@ -431,7 +435,7 @@ router.get('/deposits', authenticateToken, async (req, res) => {
     }
 });
 
-router.get('/deposits/:id', authenticateToken, async (req, res) => {
+router.get('/deposits/:id', async (req, res) => {
     try {
         const deposit = await Deposit.findById(req.params.id)
             .populate('userId', 'name email username')
@@ -458,7 +462,7 @@ router.get('/deposits/:id', authenticateToken, async (req, res) => {
     }
 });
 
-router.patch('/deposits/:id', authenticateToken, async (req, res) => {
+router.patch('/deposits/:id', async (req, res) => {
     try {
         const { status, adminNotes } = req.body;
 
@@ -523,7 +527,7 @@ router.patch('/deposits/:id', authenticateToken, async (req, res) => {
     }
 });
 
-router.delete('/deposits/:id', authenticateToken, async (req, res) => {
+router.delete('/deposits/:id', async (req, res) => {
     try {
         const deposit = await Deposit.findById(req.params.id);
 
@@ -559,7 +563,7 @@ router.delete('/deposits/:id', authenticateToken, async (req, res) => {
 
 // ==================== WITHDRAWAL ROUTES ====================
 
-router.get('/withdrawals', authenticateToken, async (req, res) => {
+router.get('/withdrawals', async (req, res) => {
     try {
         const { status, userId, page = 1, limit = 20 } = req.query;
 
@@ -599,7 +603,7 @@ router.get('/withdrawals', authenticateToken, async (req, res) => {
     }
 });
 
-router.get('/withdrawals/:id', authenticateToken, async (req, res) => {
+router.get('/withdrawals/:id', async (req, res) => {
     try {
         const withdrawal = await Withdrawal.findById(req.params.id)
             .populate('userId', 'name email username')
@@ -626,7 +630,7 @@ router.get('/withdrawals/:id', authenticateToken, async (req, res) => {
     }
 });
 
-router.patch('/withdrawals/:id', authenticateToken, async (req, res) => {
+router.patch('/withdrawals/:id', async (req, res) => {
     try {
         const { status, adminNotes, rejectionReason } = req.body;
 
@@ -665,7 +669,7 @@ router.patch('/withdrawals/:id', authenticateToken, async (req, res) => {
     }
 });
 
-router.delete('/withdrawals/:id', authenticateToken, async (req, res) => {
+router.delete('/withdrawals/:id', async (req, res) => {
     try {
         const withdrawal = await Withdrawal.findById(req.params.id);
 
@@ -709,11 +713,11 @@ router.delete('/withdrawals/:id', authenticateToken, async (req, res) => {
 
 // ==================== USER ROUTES ====================
 
-router.get('/users', authenticateToken, async (req, res) => {
+router.get('/users', async (req, res) => {
     try {
         const { status, userType, search, page = 1, limit = 20 } = req.query;
 
-        const filter = { email: { $ne: process.env.ADMIN_EMAIL } };
+        const filter = { email: { $ne: process.env.ADMIN_EMAIL }, userType: { $ne: 'subadmin' } };
         if (status) filter.status = status;
         if (userType) filter.userType = userType;
 
@@ -779,7 +783,7 @@ router.get('/users', authenticateToken, async (req, res) => {
     }
 });
 
-router.get('/users/:id', authenticateToken, async (req, res) => {
+router.get('/users/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
             .select('-password -gtcfx.accessToken -gtcfx.refreshToken')
@@ -807,7 +811,7 @@ router.get('/users/:id', authenticateToken, async (req, res) => {
     }
 });
 
-router.patch('/users/:id', authenticateToken, async (req, res) => {
+router.patch('/users/:id', async (req, res) => {
     try {
         const { name, email, phone, status, userType } = req.body;
 
@@ -843,7 +847,7 @@ router.patch('/users/:id', authenticateToken, async (req, res) => {
     }
 });
 
-router.get('/users/:id/tree', authenticateToken, async (req, res) => {
+router.get('/users/:id/tree', async (req, res) => {
     try {
         const rootUser = await User.findById(req.params.id)
             .select('name username email phone userType status walletBalance financials')
@@ -897,7 +901,7 @@ router.get('/users/:id/tree', authenticateToken, async (req, res) => {
 
 // ==================== GTC MEMBERS ROUTES ====================
 
-router.get('/gtc-members', authenticateToken, async (req, res) => {
+router.get('/gtc-members', async (req, res) => {
     try {
         const { level, hasParent, search, page = 1, limit = 20 } = req.query;
 
@@ -971,7 +975,7 @@ router.get('/gtc-members', authenticateToken, async (req, res) => {
     }
 });
 
-router.get('/gtc-members/:id', authenticateToken, async (req, res) => {
+router.get('/gtc-members/:id', async (req, res) => {
     try {
         const { id } = req.params;
         let member;
@@ -1003,7 +1007,7 @@ router.get('/gtc-members/:id', authenticateToken, async (req, res) => {
     }
 });
 
-router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
+router.get('/gtc-members/:id/tree', async (req, res) => {
     try {
         const { id } = req.params;
         let rootMember;
@@ -1058,7 +1062,7 @@ router.get('/gtc-members/:id/tree', authenticateToken, async (req, res) => {
     }
 });
 
-router.get('/gtc-members/lookup/:gtcUserId', authenticateToken, async (req, res) => {
+router.get('/gtc-members/lookup/:gtcUserId', async (req, res) => {
     try {
         const member = await GTCMember.findOne({
             gtcUserId: req.params.gtcUserId
@@ -1085,7 +1089,7 @@ router.get('/gtc-members/lookup/:gtcUserId', authenticateToken, async (req, res)
     }
 });
 
-router.get('/gtc-members/stats/overview', authenticateToken, async (req, res) => {
+router.get('/gtc-members/stats/overview', async (req, res) => {
     try {
         const stats = await GTCMember.aggregate([
             {
@@ -1126,7 +1130,7 @@ router.get('/gtc-members/stats/overview', authenticateToken, async (req, res) =>
 });
 
 // Toggle onboardedWithCall status
-router.patch('/gtc-members/:id/toggle-call', authenticateToken, async (req, res) => {
+router.patch('/gtc-members/:id/toggle-call', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -1168,7 +1172,7 @@ router.patch('/gtc-members/:id/toggle-call', authenticateToken, async (req, res)
 });
 
 // Toggle onboardedWithMessage status
-router.patch('/gtc-members/:id/toggle-message', authenticateToken, async (req, res) => {
+router.patch('/gtc-members/:id/toggle-message', async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -1210,7 +1214,7 @@ router.patch('/gtc-members/:id/toggle-message', authenticateToken, async (req, r
 });
 
 // Bulk update onboarding status
-router.patch('/gtc-members/bulk/onboarding', authenticateToken, async (req, res) => {
+router.patch('/gtc-members/bulk/onboarding', async (req, res) => {
     try {
         const { memberIds, onboardedWithCall, onboardedWithMessage } = req.body;
 
@@ -1250,7 +1254,7 @@ router.patch('/gtc-members/bulk/onboarding', authenticateToken, async (req, res)
 });
 
 // Get onboarding statistics
-router.get('/gtc-members/stats/onboarding', authenticateToken, async (req, res) => {
+router.get('/gtc-members/stats/onboarding', async (req, res) => {
     try {
         const stats = await GTCMember.aggregate([
             {
@@ -1293,6 +1297,448 @@ router.get('/gtc-members/stats/onboarding', authenticateToken, async (req, res) 
         res.status(500).json({
             success: false,
             message: 'Failed to fetch onboarding statistics',
+            error: error.message
+        });
+    }
+});
+
+// ==================== SUBADMIN ROUTES ====================
+
+// Get all subadmins
+router.get('/subadmins', async (req, res) => {
+    try {
+        const { status, search, page = 1, limit = 20 } = req.query;
+
+        // Only admin can access this
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const filter = { userType: 'subadmin' };
+        if (status) filter.status = status;
+
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const [subadmins, total] = await Promise.all([
+            User.find(filter)
+                .select('-password -gtcfx.accessToken -gtcfx.refreshToken')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .lean(),
+            User.countDocuments(filter)
+        ]);
+
+        res.status(200).json({
+            success: true,
+            data: subadmins,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Get subadmins error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch subadmins',
+            error: error.message
+        });
+    }
+});
+
+
+// Get available pages list
+router.get('/subadmins/available-pages', async (req, res) => {
+    try {
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const availablePages = [
+            { key: 'dashboard', name: 'Dashboard', description: 'Main analytics dashboard' },
+            { key: 'deposits', name: 'Deposits', description: 'Manage user deposits' },
+            { key: 'withdrawals', name: 'Withdrawals', description: 'Manage user withdrawals' },
+            { key: 'system-incomes', name: 'System Incomes', description: 'View system income/expense' },
+            { key: 'products', name: 'Products', description: 'Manage products in marketing shop' },
+            { key: 'orders', name: 'Orders', description: 'Manage product orders' },
+            { key: 'competition', name: 'Competition', description: 'View and manage competitions' },
+            { key: 'gtc-members', name: 'GTC Members', description: 'Manage GTC members' },
+            { key: 'users', name: 'Users', description: 'Manage all users' },
+            { key: 'courses', name: 'Courses', description: 'Manage courses and videos' },
+            { key: 'system-configuration', name: 'System Configuration', description: 'Configure system settings' }
+        ];
+
+        res.status(200).json({
+            success: true,
+            data: availablePages
+        });
+    } catch (error) {
+        console.error('Get available pages error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch available pages',
+            error: error.message
+        });
+    }
+});
+
+// Get single subadmin
+router.get('/subadmins/:id', async (req, res) => {
+    try {
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const subadmin = await User.findOne({
+            _id: req.params.id,
+            userType: 'subadmin'
+        }).select('-password -gtcfx.accessToken -gtcfx.refreshToken');
+
+        if (!subadmin) {
+            return res.status(404).json({
+                success: false,
+                message: 'Subadmin not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: subadmin
+        });
+    } catch (error) {
+        console.error('Get subadmin error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch subadmin',
+            error: error.message
+        });
+    }
+});
+
+// Create new subadmin
+router.post('/subadmins', async (req, res) => {
+    try {
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { name, username, email, phone, password, permissions } = req.body;
+
+        // Validation
+        if (!name || !username || !email || !phone || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'All fields are required: name, username, email, phone, password'
+            });
+        }
+
+        // Validate permissions
+        const validPages = [
+            'dashboard',
+            'deposits',
+            'withdrawals',
+            'system-incomes',
+            'products',
+            'orders',
+            'competition',
+            'gtc-members',
+            'users',
+            'courses',
+            'system-configuration'
+        ];
+
+        if (permissions?.pages) {
+            const invalidPages = permissions.pages.filter(p => !validPages.includes(p));
+            if (invalidPages.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid pages: ${invalidPages.join(', ')}`
+                });
+            }
+        }
+
+        // Check if username or email already exists
+        const existingUser = await User.findOne({
+            $or: [{ email }, { username }]
+        });
+
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: existingUser.email === email
+                    ? 'Email already exists'
+                    : 'Username already exists'
+            });
+        }
+
+        // Hash password
+        const bcrypt = await import('bcryptjs');
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create subadmin
+        const subadmin = new User({
+            name,
+            username,
+            email,
+            phone,
+            password: hashedPassword,
+            userType: 'subadmin',
+            permissions: {
+                pages: permissions?.pages || []
+            },
+            status: 'active'
+        });
+
+        await subadmin.save();
+
+        // Remove sensitive data before sending response
+        const subadminData = subadmin.toObject();
+        delete subadminData.password;
+        delete subadminData.gtcfx;
+
+        res.status(201).json({
+            success: true,
+            message: 'Subadmin created successfully',
+            data: subadminData
+        });
+    } catch (error) {
+        console.error('Create subadmin error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create subadmin',
+            error: error.message
+        });
+    }
+});
+
+// Update subadmin
+router.patch('/subadmins/:id', async (req, res) => {
+    try {
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { name, email, phone, status, permissions, password } = req.body;
+
+        const subadmin = await User.findOne({
+            _id: req.params.id,
+            userType: 'subadmin'
+        });
+
+        if (!subadmin) {
+            return res.status(404).json({
+                success: false,
+                message: 'Subadmin not found'
+            });
+        }
+
+        // Update basic fields
+        if (name) subadmin.name = name;
+        if (email) {
+            // Check if email is already taken by another user
+            const emailExists = await User.findOne({
+                email,
+                _id: { $ne: req.params.id }
+            });
+            if (emailExists) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Email already exists'
+                });
+            }
+            subadmin.email = email;
+        }
+        if (phone) subadmin.phone = phone;
+        if (status) subadmin.status = status;
+
+        // Update permissions
+        if (permissions?.pages) {
+            const validPages = [
+                'dashboard',
+                'deposits',
+                'withdrawals',
+                'system-incomes',
+                'products',
+                'orders',
+                'competition',
+                'gtc-members',
+                'users',
+                'courses',
+                'system-configuration'
+            ];
+
+            const invalidPages = permissions.pages.filter(p => !validPages.includes(p));
+            if (invalidPages.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid pages: ${invalidPages.join(', ')}`
+                });
+            }
+
+            subadmin.permissions.pages = permissions.pages;
+        }
+
+        // Update password if provided
+        if (password) {
+            const bcrypt = await import('bcryptjs');
+            subadmin.password = await bcrypt.hash(password, 10);
+        }
+
+        await subadmin.save();
+
+        // Remove sensitive data
+        const subadminData = subadmin.toObject();
+        delete subadminData.password;
+        delete subadminData.gtcfx;
+
+        res.status(200).json({
+            success: true,
+            message: 'Subadmin updated successfully',
+            data: subadminData
+        });
+    } catch (error) {
+        console.error('Update subadmin error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update subadmin',
+            error: error.message
+        });
+    }
+});
+
+// Delete subadmin
+router.delete('/subadmins/:id', async (req, res) => {
+    try {
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const subadmin = await User.findOne({
+            _id: req.params.id,
+            userType: 'subadmin'
+        });
+
+        if (!subadmin) {
+            return res.status(404).json({
+                success: false,
+                message: 'Subadmin not found'
+            });
+        }
+
+        await User.findByIdAndDelete(req.params.id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Subadmin deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete subadmin error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete subadmin',
+            error: error.message
+        });
+    }
+});
+
+// Update subadmin permissions only
+router.patch('/subadmins/:id/permissions', async (req, res) => {
+    try {
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const { pages } = req.body;
+
+        if (!pages || !Array.isArray(pages)) {
+            return res.status(400).json({
+                success: false,
+                message: 'pages array is required'
+            });
+        }
+
+        const validPages = [
+            'dashboard',
+            'deposits',
+            'withdrawals',
+            'system-incomes',
+            'products',
+            'orders',
+            'competition',
+            'gtc-members',
+            'users',
+            'courses',
+            'system-configuration'
+        ];
+
+        const invalidPages = pages.filter(p => !validPages.includes(p));
+        if (invalidPages.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid pages: ${invalidPages.join(', ')}`,
+                validPages
+            });
+        }
+
+        const subadmin = await User.findOne({
+            _id: req.params.id,
+            userType: 'subadmin'
+        });
+
+        if (!subadmin) {
+            return res.status(404).json({
+                success: false,
+                message: 'Subadmin not found'
+            });
+        }
+
+        subadmin.permissions.pages = pages;
+        await subadmin.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Permissions updated successfully',
+            data: {
+                permissions: subadmin.permissions
+            }
+        });
+    } catch (error) {
+        console.error('Update permissions error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update permissions',
             error: error.message
         });
     }

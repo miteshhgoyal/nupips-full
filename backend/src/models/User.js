@@ -89,9 +89,30 @@ const UserSchema = new mongoose.Schema({
     // User Type & Roles
     userType: {
         type: String,
-        enum: ['admin', 'agent', 'trader'],
+        enum: ['admin', 'agent', 'trader', 'subadmin'],
         default: 'trader',
         index: true
+    },
+
+    permissions: {
+        pages: [{
+            type: String,
+            enum: [
+                'dashboard',
+                'deposits',
+                'withdrawals',
+                'system-incomes',
+                'products',
+                'orders',
+                'competition',
+                'gtc-members',
+                'users',
+                'courses',
+                'system-configuration',
+                'subadmins' // Only admin can manage subadmins
+            ]
+        }],
+        default: []
     },
 
     // Financial Tracking

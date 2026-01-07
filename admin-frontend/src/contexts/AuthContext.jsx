@@ -15,6 +15,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [permissions, setPermissions] = useState({ pages: [] });
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -24,6 +25,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = (userData) => {
     setUser(userData);
+    setPermissions(userData.permissions || { pages: [] });
   };
 
   const checkAuth = async () => {
@@ -38,11 +40,9 @@ export const AuthProvider = ({ children }) => {
 
       // Verify token with backend
       const response = await authAPI.verifyToken();
-      if (
-        response.data.valid &&
-        response.data.user.email.includes("admin@nupips.com")
-      ) {
+      if (response.data.valid && response.data.user) {
         setUser(response.data.user);
+        setPermissions(response.data.user.permissions || { pages: [] });
         setIsAuthenticated(true);
       } else {
         tokenService.removeToken();
@@ -58,22 +58,24 @@ export const AuthProvider = ({ children }) => {
   const login = (userData) => {
     const { token, user, rememberMe } = userData;
 
-    // if (rememberMe) tokenService.setToken(token);
     tokenService.setToken(token);
 
-    // Set user data
+    // Set user data with permissions
     setUser(user);
+    setPermissions(user.permissions || { pages: [] });
     setIsAuthenticated(true);
   };
 
   const logout = () => {
     tokenService.removeToken();
     setUser(null);
+    setPermissions({ pages: [] });
     setIsAuthenticated(false);
   };
 
   const value = {
     user,
+    permissions,
     isAuthenticated,
     loading,
     login,

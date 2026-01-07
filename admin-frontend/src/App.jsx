@@ -11,29 +11,25 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
+import { filterSidebarLinks } from "./utils/permissions";
 import {
   Home,
   User as NavUser,
-  Book,
   ShoppingBag,
-  TrendingUp,
-  ShoppingBagIcon,
   BookA,
   Settings,
-  Coins,
   Wallet,
   Users as UsersIcon,
   Swords,
+  UserCog,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
 
 // Import your pages
 import Login from "./pages/Login";
-import ComingSoon from "./pages/others/ComingSoon";
 import Orders from "./pages/Orders";
 import Products from "./pages/Products";
-
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
 import SystemConfiguration from "./pages/SystemConfiguration";
@@ -45,11 +41,12 @@ import Withdrawals from "./pages/Withdrawals";
 import Users from "./pages/Users";
 import GTCMembers from "./pages/GTCMembers";
 import Competition from "./pages/Competition";
+import Subadmins from "./pages/Subadmins";
 
 // Navigation configuration
 const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
 
-const sidebarLinks = [
+const allSidebarLinks = [
   {
     name: "Dashboard",
     href: "/dashboard",
@@ -93,6 +90,11 @@ const sidebarLinks = [
     href: "/system-configuration",
     icon: Settings,
   },
+  {
+    name: "Subadmins",
+    href: "/subadmins",
+    icon: UserCog,
+  },
 ];
 
 // Default Route Component
@@ -120,8 +122,14 @@ const DefaultRoute = () => {
 // Layout Wrapper Component
 const LayoutWrapper = ({ children }) => {
   const location = useLocation();
+  const { user, permissions } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Filter sidebar links based on user permissions
+  const filteredSidebarLinks = user
+    ? filterSidebarLinks(allSidebarLinks, user.userType, permissions)
+    : allSidebarLinks;
 
   // Check if current route should show layout
   const noLayoutRoutes = [
@@ -177,7 +185,7 @@ const LayoutWrapper = ({ children }) => {
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={toggleSidebar}
-        navigationLinks={sidebarLinks}
+        navigationLinks={filteredSidebarLinks}
         config={CONFIG}
       />
 
@@ -221,6 +229,7 @@ function App() {
       <AuthProvider>
         <LayoutWrapper>
           <Routes>
+            {/* Auth Routes */}
             <Route
               path="/login"
               element={
@@ -230,7 +239,7 @@ function App() {
               }
             />
 
-            {/* Main App Protected routes */}
+            {/* Dashboard */}
             <Route
               path="/dashboard"
               element={
@@ -239,30 +248,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/competition"
-              element={
-                <ProtectedRoute>
-                  <Competition />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gtc-members"
-              element={
-                <ProtectedRoute>
-                  <GTCMembers />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <ProtectedRoute>
-                  <Users />
-                </ProtectedRoute>
-              }
-            />
+
+            {/* Wallet Routes */}
             <Route
               path="/deposits"
               element={
@@ -280,13 +267,15 @@ function App() {
               }
             />
             <Route
-              path="/profile"
+              path="/system-incomes"
               element={
                 <ProtectedRoute>
-                  <Profile />
+                  <SystemIncomes />
                 </ProtectedRoute>
               }
             />
+
+            {/* Marketing Shop Routes */}
             <Route
               path="/products"
               element={
@@ -300,6 +289,36 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Orders />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Competition */}
+            <Route
+              path="/competition"
+              element={
+                <ProtectedRoute>
+                  <Competition />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* GTC Members */}
+            <Route
+              path="/gtc-members"
+              element={
+                <ProtectedRoute>
+                  <GTCMembers />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Users */}
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <Users />
                 </ProtectedRoute>
               }
             />
@@ -321,6 +340,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* System Configuration */}
             <Route
               path="/system-configuration"
               element={
@@ -329,11 +350,23 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Subadmins */}
             <Route
-              path="/system-incomes"
+              path="/subadmins"
               element={
                 <ProtectedRoute>
-                  <SystemIncomes />
+                  <Subadmins />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Profile */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

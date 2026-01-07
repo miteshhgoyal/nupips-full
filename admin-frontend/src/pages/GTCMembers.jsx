@@ -915,6 +915,9 @@ const GTCMembers = () => {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Joining Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     Member
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
@@ -959,6 +962,11 @@ const GTCMembers = () => {
                         key={member._id}
                         className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                       >
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-600 text-nowrap">
+                            {formatDate(member.joinedAt)}
+                          </div>
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 shrink-0 bg-orange-100 rounded-full flex items-center justify-center">
