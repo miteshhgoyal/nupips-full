@@ -80,6 +80,81 @@ const Competition = () => {
     }
   };
 
+  // Helper function to get only active metrics (weight > 0)
+  const getActiveMetrics = () => {
+    if (!competitionRules) return [];
+
+    const allMetrics = [
+      {
+        key: "directReferrals",
+        name: "Direct Referrals",
+        icon: Users,
+        color: "orange",
+        weight: competitionRules.directReferralsWeight,
+        scoreKey: "directReferralsScore",
+        metricKey: "directReferrals",
+        unit: "referrals",
+      },
+      {
+        key: "teamSize",
+        name: "Team Size",
+        icon: Users,
+        color: "green",
+        weight: competitionRules.teamSizeWeight,
+        scoreKey: "teamSizeScore",
+        metricKey: "nupipsTeamSize",
+        unit: "members",
+      },
+      {
+        key: "tradingVolume",
+        name: "Trading Volume",
+        icon: DollarSign,
+        color: "blue",
+        weight: competitionRules.tradingVolumeWeight,
+        scoreKey: "tradingVolumeScore",
+        metricKey: "tradingVolumeDollars",
+        unit: "USD",
+        format: "currency",
+      },
+      {
+        key: "profitability",
+        name: "Profitability",
+        icon: TrendingUp,
+        color: "purple",
+        weight: competitionRules.profitabilityWeight,
+        scoreKey: "profitabilityScore",
+        metricKey: "winRate",
+        unit: "% win rate",
+      },
+      {
+        key: "accountBalance",
+        name: "Account Balance",
+        icon: DollarSign,
+        color: "indigo",
+        weight: competitionRules.accountBalanceWeight,
+        scoreKey: "accountBalanceScore",
+        metricKey: "accountBalance",
+        unit: "USD",
+        format: "currency",
+      },
+      {
+        key: "kycCompletion",
+        name: "KYC Verification",
+        icon: CheckCircle,
+        color: "pink",
+        weight: competitionRules.kycCompletionWeight,
+        scoreKey: "kycCompletionScore",
+        metricKey: "isKYCVerified",
+        target: 1,
+        unit: "verified",
+        format: "boolean",
+      },
+    ];
+
+    // Filter out metrics with 0 weight
+    return allMetrics.filter((metric) => metric.weight > 0);
+  };
+
   const getRankIcon = (rank) => {
     if (!rewards || rewards.length === 0) {
       return { icon: Award, color: "text-gray-500" };
@@ -290,69 +365,13 @@ const Competition = () => {
     );
   };
 
-  // Scoring Breakdown Component
+  // Scoring Breakdown Component - Now filters by weight
   const ScoringBreakdown = () => {
     if (!userRank || !competitionRules) return null;
 
-    const scoringMetrics = [
-      {
-        name: "Direct Referrals",
-        icon: Users,
-        color: "orange",
-        weight: competitionRules.directReferralsWeight,
-        score: userRank.breakdown?.directReferralsScore || 0,
-        current: userRank.metrics?.directReferrals || 0,
-        unit: "referrals",
-      },
-      {
-        name: "Team Size",
-        icon: Users,
-        color: "green",
-        weight: competitionRules.teamSizeWeight,
-        score: userRank.breakdown?.teamSizeScore || 0,
-        current: userRank.metrics?.nupipsTeamSize || 0,
-        unit: "members",
-      },
-      {
-        name: "Trading Volume",
-        icon: DollarSign,
-        color: "blue",
-        weight: competitionRules.tradingVolumeWeight,
-        score: userRank.breakdown?.tradingVolumeScore || 0,
-        current: userRank.metrics?.tradingVolumeDollars || 0,
-        unit: "USD",
-        format: "currency",
-      },
-      {
-        name: "Profitability",
-        icon: TrendingUp,
-        color: "purple",
-        weight: competitionRules.profitabilityWeight,
-        score: userRank.breakdown?.profitabilityScore || 0,
-        current: userRank.metrics?.winRate || 0,
-        unit: "% win rate",
-      },
-      {
-        name: "Account Balance",
-        icon: DollarSign,
-        color: "indigo",
-        weight: competitionRules.accountBalanceWeight,
-        score: userRank.breakdown?.accountBalanceScore || 0,
-        current: userRank.metrics?.accountBalance || 0,
-        unit: "USD",
-        format: "currency",
-      },
-      {
-        name: "KYC Verification",
-        icon: CheckCircle,
-        color: "pink",
-        weight: competitionRules.kycCompletionWeight,
-        score: userRank.breakdown?.kycCompletionScore || 0,
-        current: userRank.metrics?.isKYCVerified ? 1 : 0,
-        target: 1,
-        unit: "verified",
-      },
-    ];
+    const activeMetrics = getActiveMetrics();
+
+    if (activeMetrics.length === 0) return null;
 
     const getColorClasses = (color) => {
       const colors = {
@@ -394,6 +413,9 @@ const Competition = () => {
       if (format === "currency") {
         return `$${value.toLocaleString()}`;
       }
+      if (format === "boolean") {
+        return value ? "Yes" : "No";
+      }
       return value.toLocaleString();
     };
 
@@ -405,13 +427,20 @@ const Competition = () => {
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {scoringMetrics.map((metric, index) => {
+          {activeMetrics.map((metric, index) => {
             const colors = getColorClasses(metric.color);
             const Icon = metric.icon;
+            const score = userRank.breakdown?.[metric.scoreKey] || 0;
+            const currentValue =
+              metric.format === "boolean"
+                ? userRank.metrics?.[metric.metricKey]
+                  ? 1
+                  : 0
+                : userRank.metrics?.[metric.metricKey] || 0;
 
             return (
               <div
-                key={index}
+                key={metric.key}
                 className={`bg-gradient-to-br ${colors.bg} border ${colors.border} rounded-xl p-4`}
               >
                 <div className="flex items-center justify-between mb-3">
@@ -430,13 +459,13 @@ const Competition = () => {
                   <div className="flex items-baseline justify-between">
                     <span className="text-xs text-gray-600">Score</span>
                     <span className={`text-lg font-bold ${colors.text}`}>
-                      {metric.score.toFixed(1)}
+                      {score.toFixed(1)}
                     </span>
                   </div>
                   <div className="flex items-baseline justify-between">
                     <span className="text-xs text-gray-600">Current</span>
                     <span className="text-sm font-semibold text-gray-900 truncate ml-2 text-right">
-                      {formatValue(metric.current, metric.format)} {metric.unit}
+                      {formatValue(currentValue, metric.format)} {metric.unit}
                     </span>
                   </div>
                 </div>
@@ -468,6 +497,8 @@ const Competition = () => {
 
   // Not Connected View
   if (!gtcAuthenticated || !gtcUser) {
+    const activeMetrics = competitionRules ? getActiveMetrics() : [];
+
     return (
       <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
         <Helmet>
@@ -590,8 +621,8 @@ const Competition = () => {
                 <h3 className="text-xl font-semibold text-gray-900">Scoring</h3>
               </div>
               <div className="space-y-2">
-                {competitionRules &&
-                  Object.entries(competitionRules).map(([key, value], idx) => {
+                {activeMetrics.length > 0 ? (
+                  activeMetrics.map((metric, idx) => {
                     const bgColors = [
                       "from-orange-50 to-orange-100 border-orange-200",
                       "from-blue-50 to-blue-100 border-blue-200",
@@ -609,33 +640,31 @@ const Competition = () => {
                       "text-pink-600",
                     ];
 
-                    const label = key
-                      .replace("Weight", "")
-                      .replace(/([A-Z])/g, " $1")
-                      .trim();
-                    const capitalizedLabel =
-                      label.charAt(0).toUpperCase() + label.slice(1);
-
                     return (
                       <div
-                        key={key}
+                        key={metric.key}
                         className={`flex items-center justify-between p-3 bg-gradient-to-br ${
                           bgColors[idx % 6]
                         } rounded-lg border`}
                       >
                         <span className="text-sm text-gray-700">
-                          {capitalizedLabel}
+                          {metric.name}
                         </span>
                         <span
                           className={`text-sm font-semibold ${
                             textColors[idx % 6]
                           }`}
                         >
-                          {value}%
+                          {metric.weight}%
                         </span>
                       </div>
                     );
-                  })}
+                  })
+                ) : (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    No scoring criteria configured
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -680,6 +709,8 @@ const Competition = () => {
       </div>
     );
   }
+
+  const activeMetrics = getActiveMetrics();
 
   // Main Competition View
   return (
@@ -820,60 +851,78 @@ const Competition = () => {
               </div>
             )}
 
-            {/* Key Metrics */}
-            {userRank && (
+            {/* Key Metrics - Only show active ones */}
+            {userRank && activeMetrics.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
                 <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <Activity className="w-5 h-5 text-blue-600" />
                   Key Metrics
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Users className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 truncate">
-                        Direct Referrals
-                      </span>
-                    </div>
-                    <span className="font-semibold text-gray-900 ml-2 flex-shrink-0">
-                      {userRank.metrics.directReferrals}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <DollarSign className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 truncate">
-                        Trading Volume
-                      </span>
-                    </div>
-                    <span className="font-semibold text-gray-900 ml-2 flex-shrink-0 text-right">
-                      $
-                      {userRank.metrics.tradingVolumeDollars?.toLocaleString() ||
-                        0}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <TrendingUp className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 truncate">
-                        Win Rate
-                      </span>
-                    </div>
-                    <span className="font-semibold text-gray-900 ml-2 flex-shrink-0">
-                      {userRank.metrics.winRate?.toFixed(1) || 0}%
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Users className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 truncate">
-                        Team Size
-                      </span>
-                    </div>
-                    <span className="font-semibold text-gray-900 ml-2 flex-shrink-0">
-                      {userRank.metrics.nupipsTeamSize}
-                    </span>
-                  </div>
+                  {activeMetrics.map((metric, index) => {
+                    const colors = [
+                      {
+                        bg: "from-orange-50 to-orange-100",
+                        border: "border-orange-200",
+                        icon: "text-orange-600",
+                      },
+                      {
+                        bg: "from-green-50 to-green-100",
+                        border: "border-green-200",
+                        icon: "text-green-600",
+                      },
+                      {
+                        bg: "from-blue-50 to-blue-100",
+                        border: "border-blue-200",
+                        icon: "text-blue-600",
+                      },
+                      {
+                        bg: "from-purple-50 to-purple-100",
+                        border: "border-purple-200",
+                        icon: "text-purple-600",
+                      },
+                      {
+                        bg: "from-indigo-50 to-indigo-100",
+                        border: "border-indigo-200",
+                        icon: "text-indigo-600",
+                      },
+                      {
+                        bg: "from-pink-50 to-pink-100",
+                        border: "border-pink-200",
+                        icon: "text-pink-600",
+                      },
+                    ];
+                    const colorScheme = colors[index % colors.length];
+                    const Icon = metric.icon;
+                    const value = userRank.metrics?.[metric.metricKey] || 0;
+                    const displayValue =
+                      metric.format === "currency"
+                        ? `$${value.toLocaleString()}`
+                        : metric.format === "boolean"
+                        ? value
+                          ? "Yes"
+                          : "No"
+                        : value.toLocaleString();
+
+                    return (
+                      <div
+                        key={metric.key}
+                        className={`flex items-center justify-between p-3 bg-gradient-to-br ${colorScheme.bg} rounded-xl border ${colorScheme.border}`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Icon
+                            className={`w-4 h-4 ${colorScheme.icon} flex-shrink-0`}
+                          />
+                          <span className="text-sm text-gray-700 truncate">
+                            {metric.name}
+                          </span>
+                        </div>
+                        <span className="font-semibold text-gray-900 ml-2 flex-shrink-0 text-right">
+                          {displayValue}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -901,6 +950,12 @@ const Competition = () => {
                     userRank && entry.userId === userRank.userId;
                   const { icon: RankIcon, color } = getRankIcon(entry.rank);
                   const badgeColor = getRankBadgeColor(entry.rank);
+
+                  // Get active metrics for this user
+                  const userActiveMetrics = activeMetrics.filter((m) => {
+                    const value = entry.metrics?.[m.metricKey];
+                    return value !== undefined && value !== null;
+                  });
 
                   return (
                     <div
@@ -944,18 +999,32 @@ const Competition = () => {
                                 </span>
                               )}
                             </div>
-                            <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                              <span className="flex items-center gap-1">
-                                <Users className="w-3 h-3 flex-shrink-0" />
-                                {entry.metrics.directReferrals} refs
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <DollarSign className="w-3 h-3 flex-shrink-0" />
-                                $
-                                {entry.metrics.tradingVolumeDollars?.toLocaleString() ||
-                                  0}
-                              </span>
-                            </div>
+                            {/* Show first 2 active metrics inline */}
+                            {userActiveMetrics.length > 0 && (
+                              <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                                {userActiveMetrics
+                                  .slice(0, 2)
+                                  .map((metric, idx) => {
+                                    const Icon = metric.icon;
+                                    const value =
+                                      entry.metrics[metric.metricKey];
+                                    const displayValue =
+                                      metric.format === "currency"
+                                        ? `$${value?.toLocaleString() || 0}`
+                                        : value?.toLocaleString() || 0;
+
+                                    return (
+                                      <span
+                                        key={idx}
+                                        className="flex items-center gap-1"
+                                      >
+                                        <Icon className="w-3 h-3 flex-shrink-0" />
+                                        {displayValue}
+                                      </span>
+                                    );
+                                  })}
+                              </div>
+                            )}
                           </div>
 
                           <div className="text-right flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -965,52 +1034,68 @@ const Competition = () => {
                                 {entry.score.toFixed(1)}
                               </p>
                             </div>
-                            <button
-                              onClick={() =>
-                                setExpandedUser(
-                                  isExpanded ? null : entry.userId
-                                )
-                              }
-                              className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                            >
-                              {isExpanded ? (
-                                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                              ) : (
-                                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                              )}
-                            </button>
+                            {userActiveMetrics.length > 0 && (
+                              <button
+                                onClick={() =>
+                                  setExpandedUser(
+                                    isExpanded ? null : entry.userId
+                                  )
+                                }
+                                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                              >
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
+                                )}
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
 
-                      {isExpanded && (
+                      {isExpanded && userActiveMetrics.length > 0 && (
                         <div className="px-3 sm:px-4 pb-3 sm:pb-4">
                           <div className="bg-white rounded-xl p-4 border border-gray-200">
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                              <div className="bg-white p-3 rounded-lg border border-gray-200">
-                                <p className="text-xs text-gray-600 mb-1">
-                                  Direct Referrals
-                                </p>
-                                <p className="text-lg font-bold text-orange-600">
-                                  {entry.metrics.directReferrals}
-                                </p>
-                              </div>
-                              <div className="bg-white p-3 rounded-lg border border-gray-200">
-                                <p className="text-xs text-gray-600 mb-1">
-                                  Team Size
-                                </p>
-                                <p className="text-lg font-bold text-green-600">
-                                  {entry.metrics.nupipsTeamSize}
-                                </p>
-                              </div>
-                              <div className="bg-white p-3 rounded-lg border border-gray-200 col-span-2 sm:col-span-1">
-                                <p className="text-xs text-gray-600 mb-1">
-                                  Win Rate
-                                </p>
-                                <p className="text-lg font-bold text-purple-600">
-                                  {entry.metrics.winRate?.toFixed(1) || 0}%
-                                </p>
-                              </div>
+                              {userActiveMetrics.map((metric, idx) => {
+                                const value = entry.metrics[metric.metricKey];
+                                const displayValue =
+                                  metric.format === "currency"
+                                    ? `$${value?.toLocaleString() || 0}`
+                                    : metric.format === "boolean"
+                                    ? value
+                                      ? "Yes"
+                                      : "No"
+                                    : value?.toLocaleString() || 0;
+
+                                const colorClasses = [
+                                  "text-orange-600",
+                                  "text-green-600",
+                                  "text-blue-600",
+                                  "text-purple-600",
+                                  "text-indigo-600",
+                                  "text-pink-600",
+                                ];
+
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="bg-white p-3 rounded-lg border border-gray-200"
+                                  >
+                                    <p className="text-xs text-gray-600 mb-1">
+                                      {metric.name}
+                                    </p>
+                                    <p
+                                      className={`text-lg font-bold ${
+                                        colorClasses[idx % colorClasses.length]
+                                      }`}
+                                    >
+                                      {displayValue}
+                                    </p>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         </div>
