@@ -33,11 +33,13 @@ const Subadmins = () => {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [modalError, setModalError] = useState("");
+  const [modalSuccess, setModalSuccess] = useState("");
   const [subadmins, setSubadmins] = useState([]);
   const [availablePages, setAvailablePages] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [modalMode, setModalMode] = useState("create"); // 'create' or 'edit'
+  const [modalMode, setModalMode] = useState("create");
   const [selectedSubadmin, setSelectedSubadmin] = useState(null);
   const [subadminToDelete, setSubadminToDelete] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -81,6 +83,8 @@ const Subadmins = () => {
   // Open create modal
   const handleCreate = () => {
     setModalMode("create");
+    setModalError("");
+    setModalSuccess("");
     setFormData({
       name: "",
       username: "",
@@ -97,6 +101,8 @@ const Subadmins = () => {
   const handleEdit = (subadmin) => {
     setModalMode("edit");
     setSelectedSubadmin(subadmin);
+    setModalError("");
+    setModalSuccess("");
     setFormData({
       name: subadmin.name || "",
       username: subadmin.username || "",
@@ -113,33 +119,39 @@ const Subadmins = () => {
 
   // Handle save (create or update)
   const handleSave = async () => {
-    setError("");
+    setModalError("");
+    setModalSuccess("");
     setSaving(true);
 
     try {
       if (modalMode === "create") {
-        // Create new subadmin
         const res = await api.post("/admin/subadmins", formData);
         if (res.data.success) {
-          setSuccess("Subadmin created successfully!");
-          setShowModal(false);
-          loadData();
+          setModalSuccess("Subadmin created successfully!");
+          setTimeout(() => {
+            setShowModal(false);
+            setSuccess("Subadmin created successfully!");
+            loadData();
+            setTimeout(() => setSuccess(""), 3000);
+          }, 1500);
         }
       } else {
-        // Update existing subadmin
         const res = await api.patch(
           `/admin/subadmins/${selectedSubadmin._id}`,
           formData
         );
         if (res.data.success) {
-          setSuccess("Subadmin updated successfully!");
-          setShowModal(false);
-          loadData();
+          setModalSuccess("Subadmin updated successfully!");
+          setTimeout(() => {
+            setShowModal(false);
+            setSuccess("Subadmin updated successfully!");
+            loadData();
+            setTimeout(() => setSuccess(""), 3000);
+          }, 1500);
         }
       }
-      setTimeout(() => setSuccess(""), 3000);
     } catch (e) {
-      setError(e.response?.data?.message || "Failed to save subadmin");
+      setModalError(e.response?.data?.message || "Failed to save subadmin");
     } finally {
       setSaving(false);
     }
@@ -148,6 +160,7 @@ const Subadmins = () => {
   // Open delete confirmation modal
   const handleDeleteClick = (subadmin) => {
     setSubadminToDelete(subadmin);
+    setModalError("");
     setShowDeleteModal(true);
   };
 
@@ -155,20 +168,19 @@ const Subadmins = () => {
   const handleDeleteConfirm = async () => {
     if (!subadminToDelete) return;
 
+    setModalError("");
     setDeleting(true);
     try {
       const res = await api.delete(`/admin/subadmins/${subadminToDelete._id}`);
       if (res.data.success) {
-        setSuccess("Subadmin deleted successfully!");
         setShowDeleteModal(false);
         setSubadminToDelete(null);
+        setSuccess("Subadmin deleted successfully!");
         loadData();
         setTimeout(() => setSuccess(""), 3000);
       }
     } catch (e) {
-      setError(e.response?.data?.message || "Failed to delete subadmin");
-      setShowDeleteModal(false);
-      setSubadminToDelete(null);
+      setModalError(e.response?.data?.message || "Failed to delete subadmin");
     } finally {
       setDeleting(false);
     }
@@ -178,6 +190,14 @@ const Subadmins = () => {
   const handleDeleteCancel = () => {
     setShowDeleteModal(false);
     setSubadminToDelete(null);
+    setModalError("");
+  };
+
+  // Close modal handler
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setModalError("");
+    setModalSuccess("");
   };
 
   // Toggle permission
@@ -464,24 +484,42 @@ const Subadmins = () => {
 
       {/* Create/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full my-8">
+            {/* Modal Header - Fixed */}
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
               <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                 <UserCog className="w-6 h-6 text-orange-600" />
                 {modalMode === "create" ? "Create Subadmin" : "Edit Subadmin"}
               </h2>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={handleCloseModal}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                disabled={saving}
               >
                 <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 space-y-6">
+            {/* Modal Alerts */}
+            {modalError && (
+              <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700 flex-1">{modalError}</p>
+                <button onClick={() => setModalError("")}>
+                  <X className="w-4 h-4 text-red-600" />
+                </button>
+              </div>
+            )}
+            {modalSuccess && (
+              <div className="mx-6 mt-4 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-green-700">{modalSuccess}</p>
+              </div>
+            )}
+
+            {/* Modal Body - Scrollable */}
+            <div className="p-6 space-y-6 max-h-[calc(90vh-200px)] overflow-y-auto">
               {/* Basic Information */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -522,7 +560,7 @@ const Subadmins = () => {
                           })
                         }
                         placeholder="johndoe"
-                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                         disabled={modalMode === "edit"}
                       />
                     </div>
@@ -624,12 +662,14 @@ const Subadmins = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={selectAllPermissions}
+                      type="button"
                       className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
                     >
                       Select All
                     </button>
                     <button
                       onClick={clearAllPermissions}
+                      type="button"
                       className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                     >
                       Clear All
@@ -637,7 +677,7 @@ const Subadmins = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-80 overflow-y-auto p-4 bg-gray-50 rounded-xl border border-gray-200">
                   {availablePages.map((page) => {
                     const isChecked = formData.permissions.pages.includes(
                       page.key
@@ -677,18 +717,19 @@ const Subadmins = () => {
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3">
+            {/* Modal Footer - Fixed */}
+            <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 rounded-b-2xl">
               <button
-                onClick={() => setShowModal(false)}
-                className="px-6 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                onClick={handleCloseModal}
+                disabled={saving}
+                className="px-6 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {saving ? (
                   <>
@@ -729,6 +770,17 @@ const Subadmins = () => {
                 </div>
               </div>
             </div>
+
+            {/* Modal Alert */}
+            {modalError && (
+              <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-700 flex-1">{modalError}</p>
+                <button onClick={() => setModalError("")}>
+                  <X className="w-4 h-4 text-red-600" />
+                </button>
+              </div>
+            )}
 
             {/* Modal Body */}
             <div className="p-6">
@@ -777,14 +829,14 @@ const Subadmins = () => {
               <button
                 onClick={handleDeleteCancel}
                 disabled={deleting}
-                className="px-6 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                className="px-6 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteConfirm}
                 disabled={deleting}
-                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center gap-2"
+                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {deleting ? (
                   <>
