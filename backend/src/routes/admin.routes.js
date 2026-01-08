@@ -901,13 +901,18 @@ router.get('/users/:id/tree', async (req, res) => {
 
 // ==================== GTC MEMBERS ROUTES ====================
 
+// ============================================
+// GET: Fetch all GTC members with filters
+// ============================================
 router.get('/gtc-members', async (req, res) => {
     try {
-        const { level, hasParent, search, page = 1, limit = 20 } = req.query;
+        const { page = 1, limit = 20, level, hasParent, search } = req.query;
 
         const filter = {};
 
-        if (level) filter.level = parseInt(level);
+        if (level) {
+            filter.level = parseInt(level);
+        }
 
         if (hasParent === 'true') {
             filter.parentGtcUserId = { $ne: null };
@@ -920,7 +925,7 @@ router.get('/gtc-members', async (req, res) => {
                 { gtcUserId: { $regex: search, $options: 'i' } },
                 { username: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
-                { name: { $regex: search, $options: 'i' } }
+                { name: { $regex: search, $options: 'i' } },
             ];
         }
 
@@ -931,19 +936,26 @@ router.get('/gtc-members', async (req, res) => {
                 .sort({ joinedAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
+                .populate('onboardingDoneBy', 'name email username userType')
                 .lean(),
             GTCMember.countDocuments(filter),
             GTCMember.aggregate([
                 {
                     $facet: {
                         totalMembers: [{ $count: 'count' }],
-                        withParent: [{ $match: { parentGtcUserId: { $ne: null } } }, { $count: 'count' }],
-                        rootMembers: [{ $match: { parentGtcUserId: null } }, { $count: 'count' }],
+                        withParent: [
+                            { $match: { parentGtcUserId: { $ne: null } } },
+                            { $count: 'count' },
+                        ],
+                        rootMembers: [
+                            { $match: { parentGtcUserId: null } },
+                            { $count: 'count' },
+                        ],
                         avgLevel: [{ $group: { _id: null, avg: { $avg: '$level' } } }],
-                        maxLevel: [{ $group: { _id: null, max: { $max: '$level' } } }]
-                    }
-                }
-            ])
+                        maxLevel: [{ $group: { _id: null, max: { $max: '$level' } } }],
+                    },
+                },
+            ]),
         ]);
 
         const formattedStats = {
@@ -951,7 +963,7 @@ router.get('/gtc-members', async (req, res) => {
             withParent: stats[0].withParent[0]?.count || 0,
             rootMembers: stats[0].rootMembers[0]?.count || 0,
             avgLevel: stats[0].avgLevel[0]?.avg || 0,
-            maxLevel: stats[0].maxLevel[0]?.max || 0
+            maxLevel: stats[0].maxLevel[0]?.max || 0,
         };
 
         res.status(200).json({
@@ -962,66 +974,80 @@ router.get('/gtc-members', async (req, res) => {
                 page: parseInt(page),
                 limit: parseInt(limit),
                 total,
-                pages: Math.ceil(total / parseInt(limit))
-            }
+                pages: Math.ceil(total / parseInt(limit)),
+            },
         });
     } catch (error) {
         console.error('Failed to fetch GTC members:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch GTC members',
-            error: error.message
+            error: error.message,
         });
     }
 });
 
+r// ============================================
+// GET: Fetch single member by ID
+// ============================================
 router.get('/gtc-members/:id', async (req, res) => {
     try {
         const { id } = req.params;
         let member;
 
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
-            member = await GTCMember.findById(id).lean();
+            member = await GTCMember.findById(id)
+                .populate('onboardingDoneBy', 'name email username userType')
+                .lean();
         } else {
-            member = await GTCMember.findOne({ gtcUserId: id }).lean();
+            member = await GTCMember.findOne({ gtcUserId: id })
+                .populate('onboardingDoneBy', 'name email username userType')
+                .lean();
         }
 
         if (!member) {
             return res.status(404).json({
                 success: false,
-                message: 'GTC member not found'
+                message: 'GTC member not found',
             });
         }
 
         res.status(200).json({
             success: true,
-            data: member
+            data: member,
         });
     } catch (error) {
         console.error('Failed to fetch GTC member:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch GTC member',
-            error: error.message
+            error: error.message,
         });
     }
 });
 
+// ============================================
+// GET: Fetch member tree/hierarchy
+// ============================================
 router.get('/gtc-members/:id/tree', async (req, res) => {
     try {
         const { id } = req.params;
         let rootMember;
 
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
-            rootMember = await GTCMember.findById(id).lean();
+            rootMember = await GTCMember.findById(id)
+                .populate('onboardingDoneBy', 'name email username')
+                .lean();
         } else {
-            rootMember = await GTCMember.findOne({ gtcUserId: id }).lean();
+            rootMember = await GTCMember.findOne({ gtcUserId: id })
+                .populate('onboardingDoneBy', 'name email username')
+                .lean();
         }
 
         if (!rootMember) {
             return res.status(404).json({
                 success: false,
-                message: 'GTC member not found'
+                message: 'GTC member not found',
             });
         }
 
@@ -1029,15 +1055,17 @@ router.get('/gtc-members/:id/tree', async (req, res) => {
             if (level > maxLevel) return [];
 
             const children = await GTCMember.find({
-                parentGtcUserId: gtcUserId
-            }).lean();
+                parentGtcUserId: gtcUserId,
+            })
+                .populate('onboardingDoneBy', 'name email username')
+                .lean();
 
             const tree = [];
             for (const child of children) {
                 tree.push({
                     ...child,
                     level,
-                    children: await buildTree(child.gtcUserId, level + 1, maxLevel)
+                    children: await buildTree(child.gtcUserId, level + 1, maxLevel),
                 });
             }
             return tree;
@@ -1049,15 +1077,15 @@ router.get('/gtc-members/:id/tree', async (req, res) => {
             success: true,
             data: {
                 root: rootMember,
-                tree
-            }
+                tree,
+            },
         });
     } catch (error) {
-        console.error('Failed to fetch GTC member tree:', error);
+        console.error('Failed to fetch member tree:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch GTC member tree',
-            error: error.message
+            message: 'Failed to fetch member tree',
+            error: error.message,
         });
     }
 });
@@ -1129,12 +1157,14 @@ router.get('/gtc-members/stats/overview', async (req, res) => {
     }
 });
 
-// Toggle onboardedWithCall status
+// ============================================
+// PATCH: Toggle onboarded with call status
+// ============================================
 router.patch('/gtc-members/:id/toggle-call', async (req, res) => {
     try {
         const { id } = req.params;
-
         let member;
+
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
             member = await GTCMember.findById(id);
         } else {
@@ -1144,37 +1174,129 @@ router.patch('/gtc-members/:id/toggle-call', async (req, res) => {
         if (!member) {
             return res.status(404).json({
                 success: false,
-                message: 'GTC member not found'
+                message: 'GTC member not found',
             });
         }
 
         // Toggle the status
         member.onboardedWithCall = !member.onboardedWithCall;
+
+        // Auto-assign onboardingDoneBy if not set and turning ON
+        if (member.onboardedWithCall && !member.onboardingDoneBy) {
+            member.onboardingDoneBy = req.user._id || req.user.userId;
+        }
+
+        // Set completion date if both are done
+        if (
+            member.onboardedWithCall &&
+            member.onboardedWithMessage &&
+            !member.onboardingCompletedAt
+        ) {
+            member.onboardingCompletedAt = new Date();
+        }
+
+        // Clear completion date if unchecking
+        if (!member.onboardedWithCall || !member.onboardedWithMessage) {
+            member.onboardingCompletedAt = null;
+        }
+
         member.lastUpdated = new Date();
         await member.save();
+        await member.populate('onboardingDoneBy', 'name email username userType');
 
         res.status(200).json({
             success: true,
             message: `Onboarded with call status updated to ${member.onboardedWithCall}`,
-            data: {
-                onboardedWithCall: member.onboardedWithCall,
-                member
-            }
+            data: member.toObject(),
         });
     } catch (error) {
         console.error('Toggle call status error:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to toggle call status',
-            error: error.message
+            error: error.message,
         });
     }
 });
 
-// Toggle onboardedWithMessage status
+// ============================================
+// PATCH: Toggle onboarded with message status
+// ============================================
 router.patch('/gtc-members/:id/toggle-message', async (req, res) => {
     try {
         const { id } = req.params;
+        let member;
+
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            member = await GTCMember.findById(id);
+        } else {
+            member = await GTCMember.findOne({ gtcUserId: id });
+        }
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC member not found',
+            });
+        }
+
+        // Toggle the status
+        member.onboardedWithMessage = !member.onboardedWithMessage;
+
+        // Auto-assign onboardingDoneBy if not set and turning ON
+        if (member.onboardedWithMessage && !member.onboardingDoneBy) {
+            member.onboardingDoneBy = req.user._id || req.user.userId;
+        }
+
+        // Set completion date if both are done
+        if (
+            member.onboardedWithCall &&
+            member.onboardedWithMessage &&
+            !member.onboardingCompletedAt
+        ) {
+            member.onboardingCompletedAt = new Date();
+        }
+
+        // Clear completion date if unchecking
+        if (!member.onboardedWithCall || !member.onboardedWithMessage) {
+            member.onboardingCompletedAt = null;
+        }
+
+        member.lastUpdated = new Date();
+        await member.save();
+        await member.populate('onboardingDoneBy', 'name email username userType');
+
+        res.status(200).json({
+            success: true,
+            message: `Onboarded with message status updated to ${member.onboardedWithMessage}`,
+            data: member.toObject(),
+        });
+    } catch (error) {
+        console.error('Toggle message status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to toggle message status',
+            error: error.message,
+        });
+    }
+});
+
+// ============================================
+// PATCH: Update onboarding details (NEW ROUTE)
+// Admin/Subadmin only
+// ============================================
+router.patch('/gtc-members/:id/onboarding-details', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { onboardingDoneBy, onboardingNotes } = req.body;
+
+        // Only admin and subadmin can update
+        if (!['admin', 'subadmin'].includes(req.user.userType)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin or Subadmin privileges required.',
+            });
+        }
 
         let member;
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
@@ -1186,29 +1308,93 @@ router.patch('/gtc-members/:id/toggle-message', async (req, res) => {
         if (!member) {
             return res.status(404).json({
                 success: false,
-                message: 'GTC member not found'
+                message: 'GTC member not found',
             });
         }
 
-        // Toggle the status
-        member.onboardedWithMessage = !member.onboardedWithMessage;
+        // Update onboardingDoneBy field
+        if (onboardingDoneBy !== undefined) {
+            if (onboardingDoneBy) {
+                // Validate if it's a valid user ID
+                const user = await User.findById(onboardingDoneBy);
+                if (!user) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Invalid user ID for onboardingDoneBy',
+                    });
+                }
+                member.onboardingDoneBy = onboardingDoneBy;
+            } else {
+                // Allow clearing by passing null
+                member.onboardingDoneBy = null;
+            }
+        }
+
+        // Update onboarding notes
+        if (onboardingNotes !== undefined) {
+            member.onboardingNotes = onboardingNotes.trim();
+        }
+
+        // Auto-set completion date if both call and message are done
+        if (
+            member.onboardedWithCall &&
+            member.onboardedWithMessage &&
+            !member.onboardingCompletedAt
+        ) {
+            member.onboardingCompletedAt = new Date();
+        }
+
+        // Clear completion date if either is unchecked
+        if (!member.onboardedWithCall || !member.onboardedWithMessage) {
+            member.onboardingCompletedAt = null;
+        }
+
         member.lastUpdated = new Date();
         await member.save();
 
+        // Populate the user details
+        await member.populate('onboardingDoneBy', 'name email username userType');
+
         res.status(200).json({
             success: true,
-            message: `Onboarded with message status updated to ${member.onboardedWithMessage}`,
-            data: {
-                onboardedWithMessage: member.onboardedWithMessage,
-                member
-            }
+            message: 'Onboarding details updated successfully',
+            data: member.toObject(),
         });
     } catch (error) {
-        console.error('Toggle message status error:', error);
+        console.error('Update onboarding details error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to toggle message status',
-            error: error.message
+            message: 'Failed to update onboarding details',
+            error: error.message,
+        });
+    }
+});
+
+
+// ============================================
+// GET: Fetch all users for assignment dropdown (NEW ROUTE)
+// Returns only admin and subadmin users
+// ============================================
+router.get('/users/list', async (req, res) => {
+    try {
+        const users = await User.find({
+            userType: { $in: ['admin', 'subadmin'] },
+            status: 'active',
+        })
+            .select('_id name email username userType')
+            .sort({ name: 1 })
+            .lean();
+
+        res.status(200).json({
+            success: true,
+            data: users,
+        });
+    } catch (error) {
+        console.error('Failed to fetch users:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch users',
+            error: error.message,
         });
     }
 });
@@ -1253,7 +1439,9 @@ router.patch('/gtc-members/bulk/onboarding', async (req, res) => {
     }
 });
 
-// Get onboarding statistics
+// ============================================
+// GET: Fetch onboarding statistics
+// ============================================
 router.get('/gtc-members/stats/onboarding', async (req, res) => {
     try {
         const stats = await GTCMember.aggregate([
@@ -1262,22 +1450,43 @@ router.get('/gtc-members/stats/onboarding', async (req, res) => {
                     total: [{ $count: 'count' }],
                     onboardedWithCall: [
                         { $match: { onboardedWithCall: true } },
-                        { $count: 'count' }
+                        { $count: 'count' },
                     ],
                     onboardedWithMessage: [
                         { $match: { onboardedWithMessage: true } },
-                        { $count: 'count' }
+                        { $count: 'count' },
                     ],
                     bothOnboarded: [
-                        { $match: { onboardedWithCall: true, onboardedWithMessage: true } },
-                        { $count: 'count' }
+                        {
+                            $match: {
+                                onboardedWithCall: true,
+                                onboardedWithMessage: true,
+                            },
+                        },
+                        { $count: 'count' },
                     ],
                     notOnboarded: [
-                        { $match: { onboardedWithCall: false, onboardedWithMessage: false } },
-                        { $count: 'count' }
-                    ]
-                }
-            }
+                        {
+                            $match: {
+                                onboardedWithCall: false,
+                                onboardedWithMessage: false,
+                            },
+                        },
+                        { $count: 'count' },
+                    ],
+                    partialOnboarded: [
+                        {
+                            $match: {
+                                $or: [
+                                    { onboardedWithCall: true, onboardedWithMessage: false },
+                                    { onboardedWithCall: false, onboardedWithMessage: true },
+                                ],
+                            },
+                        },
+                        { $count: 'count' },
+                    ],
+                },
+            },
         ]);
 
         const formattedStats = {
@@ -1285,19 +1494,20 @@ router.get('/gtc-members/stats/onboarding', async (req, res) => {
             onboardedWithCall: stats[0].onboardedWithCall[0]?.count || 0,
             onboardedWithMessage: stats[0].onboardedWithMessage[0]?.count || 0,
             bothOnboarded: stats[0].bothOnboarded[0]?.count || 0,
-            notOnboarded: stats[0].notOnboarded[0]?.count || 0
+            notOnboarded: stats[0].notOnboarded[0]?.count || 0,
+            partialOnboarded: stats[0].partialOnboarded[0]?.count || 0,
         };
 
         res.status(200).json({
             success: true,
-            data: formattedStats
+            data: formattedStats,
         });
     } catch (error) {
-        console.error('Get onboarding stats error:', error);
+        console.error('Failed to fetch onboarding stats:', error);
         res.status(500).json({
             success: false,
             message: 'Failed to fetch onboarding statistics',
-            error: error.message
+            error: error.message,
         });
     }
 });

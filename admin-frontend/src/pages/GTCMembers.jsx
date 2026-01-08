@@ -33,6 +33,9 @@ import {
   Users,
   MessageCircle,
   PhoneCall,
+  Edit2,
+  Save,
+  FileText,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -65,13 +68,14 @@ const GTCMembers = () => {
     onboardedWithMessage: 0,
     bothOnboarded: 0,
     notOnboarded: 0,
+    partialOnboarded: 0,
   });
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [filterLevel, setFilterLevel] = useState("");
   const [filterHasParent, setFilterHasParent] = useState("");
-  const [filterOnboardingStatus, setFilterOnboardingStatus] = useState(""); // NEW
+  const [filterOnboardingStatus, setFilterOnboardingStatus] = useState("");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -97,9 +101,18 @@ const GTCMembers = () => {
   const [togglingCall, setTogglingCall] = useState({});
   const [togglingMessage, setTogglingMessage] = useState({});
 
+  // NEW: Onboarding management states
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesInput, setNotesInput] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [assigningUser, setAssigningUser] = useState(false);
+
   useEffect(() => {
     fetchMembers();
     fetchOnboardingStats();
+    fetchAvailableUsers();
   }, [currentPage, filterLevel, filterHasParent, filterOnboardingStatus]);
 
   const fetchMembers = async () => {
@@ -172,6 +185,17 @@ const GTCMembers = () => {
     }
   };
 
+  const fetchAvailableUsers = async () => {
+    try {
+      const response = await api.get("/admin/users/list");
+      if (response.data.success) {
+        setAvailableUsers(response.data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchMembers();
@@ -236,12 +260,7 @@ const GTCMembers = () => {
       if (response.data.success) {
         setMembers((prev) =>
           prev.map((m) =>
-            (m._id || m.gtcUserId) === memberId
-              ? {
-                  ...m,
-                  onboardedWithCall: response.data.data.onboardedWithCall,
-                }
-              : m
+            (m._id || m.gtcUserId) === memberId ? response.data.data : m
           )
         );
 
@@ -249,10 +268,7 @@ const GTCMembers = () => {
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
         ) {
-          setSelectedMember((prev) => ({
-            ...prev,
-            onboardedWithCall: response.data.data.onboardedWithCall,
-          }));
+          setSelectedMember(response.data.data);
         }
 
         setSuccess(response.data.message);
@@ -277,12 +293,7 @@ const GTCMembers = () => {
       if (response.data.success) {
         setMembers((prev) =>
           prev.map((m) =>
-            (m._id || m.gtcUserId) === memberId
-              ? {
-                  ...m,
-                  onboardedWithMessage: response.data.data.onboardedWithMessage,
-                }
-              : m
+            (m._id || m.gtcUserId) === memberId ? response.data.data : m
           )
         );
 
@@ -290,10 +301,7 @@ const GTCMembers = () => {
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
         ) {
-          setSelectedMember((prev) => ({
-            ...prev,
-            onboardedWithMessage: response.data.data.onboardedWithMessage,
-          }));
+          setSelectedMember(response.data.data);
         }
 
         setSuccess(response.data.message);
@@ -308,6 +316,56 @@ const GTCMembers = () => {
     }
   };
 
+  const updateOnboardingDetails = async (memberId, updates) => {
+    setSavingNotes(true);
+    setError(null);
+
+    try {
+      const response = await api.patch(
+        `/admin/gtc-members/${memberId}/onboarding-details`,
+        updates
+      );
+
+      if (response.data.success) {
+        setSuccess("Onboarding details updated successfully");
+        setSelectedMember(response.data.data);
+        setEditingNotes(false);
+
+        // Update in members list
+        setMembers((prev) =>
+          prev.map((m) =>
+            (m._id || m.gtcUserId) === memberId ? response.data.data : m
+          )
+        );
+
+        await fetchMembers();
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Failed to update onboarding details"
+      );
+    } finally {
+      setSavingNotes(false);
+      setAssigningUser(false);
+    }
+  };
+
+  const handleAssignUser = async () => {
+    if (!selectedUserId) {
+      setError("Please select a user");
+      return;
+    }
+
+    setAssigningUser(true);
+    await updateOnboardingDetails(
+      selectedMember._id || selectedMember.gtcUserId,
+      {
+        onboardingDoneBy: selectedUserId,
+      }
+    );
+    setSelectedUserId("");
+  };
+
   const openDetailModal = async (member) => {
     try {
       const memberId = member._id || member.gtcUserId;
@@ -315,6 +373,8 @@ const GTCMembers = () => {
       if (response.data.success) {
         setSelectedMember(response.data.data);
         setShowDetailModal(true);
+        setNotesInput(response.data.data.onboardingNotes || "");
+        setSelectedUserId(response.data.data.onboardingDoneBy?._id || "");
       }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load member details");
@@ -588,6 +648,9 @@ const GTCMembers = () => {
         "Parent GTC ID",
         "Onboarded With Call",
         "Onboarded With Message",
+        "Onboarding Done By",
+        "Onboarding Notes",
+        "Onboarding Completed At",
         "Joined At",
       ],
       ...members.map((m) => [
@@ -602,6 +665,11 @@ const GTCMembers = () => {
         m.parentGtcUserId || "Root",
         m.onboardedWithCall ? "Yes" : "No",
         m.onboardedWithMessage ? "Yes" : "No",
+        m.onboardingDoneBy?.name || "N/A",
+        m.onboardingNotes || "N/A",
+        m.onboardingCompletedAt
+          ? new Date(m.onboardingCompletedAt).toLocaleDateString()
+          : "N/A",
         new Date(m.joinedAt).toLocaleDateString(),
       ]),
     ];
@@ -616,7 +684,7 @@ const GTCMembers = () => {
   };
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("en-IN", {
+    return new Date(date).toLocaleString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -711,7 +779,7 @@ const GTCMembers = () => {
           </div>
         )}
 
-        {/* Stats Cards - Row 1 */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
@@ -851,7 +919,7 @@ const GTCMembers = () => {
                 className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="">All Levels</option>
-                {Array.from({ length: stats.maxLevel || 10 }, (_, i) => (
+                {Array.from({ length: stats.maxLevel + 10 }, (_, i) => (
                   <option key={i} value={i}>
                     Level {i}
                   </option>
@@ -887,6 +955,7 @@ const GTCMembers = () => {
                 <option value="both">Both Completed</option>
                 <option value="call">Call Only</option>
                 <option value="message">Message Only</option>
+                <option value="partial">Partial</option>
                 <option value="none">Not Started</option>
               </select>
             </div>
@@ -930,7 +999,7 @@ const GTCMembers = () => {
                     Level
                   </th>
                   <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
-                    Onboarding Status
+                    Onboarding
                   </th>
                   <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
                     Actions
@@ -940,7 +1009,7 @@ const GTCMembers = () => {
               <tbody>
                 {members.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="px-6 py-16 text-center">
+                    <td colSpan="7" className="px-6 py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                           <Globe className="w-8 h-8 text-gray-400" />
@@ -1006,7 +1075,7 @@ const GTCMembers = () => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-3">
-                            {/* Onboarded with Call Toggle */}
+                            {/* Call Toggle */}
                             <div className="flex items-center justify-center gap-2">
                               <PhoneCall className="w-4 h-4 text-cyan-600" />
                               <span className="text-xs text-gray-600 min-w-[40px]">
@@ -1035,7 +1104,7 @@ const GTCMembers = () => {
                               </button>
                             </div>
 
-                            {/* Onboarded with Message Toggle */}
+                            {/* Message Toggle */}
                             <div className="flex items-center justify-center gap-2">
                               <MessageCircle className="w-4 h-4 text-indigo-600" />
                               <span className="text-xs text-gray-600 min-w-[40px]">
@@ -1105,7 +1174,6 @@ const GTCMembers = () => {
             <p className="text-sm text-gray-600">
               Showing {members.length} of {totalCount} members
             </p>
-
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
@@ -1131,10 +1199,11 @@ const GTCMembers = () => {
         )}
       </div>
 
-      {/* Detail Modal - Enhanced with Onboarding Toggles */}
+      {/* Detail Modal */}
       {showDetailModal && selectedMember && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
             <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -1159,6 +1228,7 @@ const GTCMembers = () => {
               </div>
             </div>
 
+            {/* Modal Body */}
             <div className="flex-1 overflow-y-auto p-6">
               {/* Onboarding Status Section */}
               <div className="bg-gradient-to-br from-orange-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-6 border-2 border-orange-200">
@@ -1166,8 +1236,9 @@ const GTCMembers = () => {
                   <UserCheck className="w-4 h-4" />
                   Onboarding Status
                 </h3>
+
                 <div className="space-y-4">
-                  {/* Onboarded with Call */}
+                  {/* Call Status */}
                   <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-cyan-100 rounded-full flex items-center justify-center">
@@ -1213,7 +1284,7 @@ const GTCMembers = () => {
                     </button>
                   </div>
 
-                  {/* Onboarded with Message */}
+                  {/* Message Status */}
                   <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
@@ -1266,11 +1337,196 @@ const GTCMembers = () => {
                         <div className="flex items-center gap-2">
                           <CheckCircle className="w-5 h-5 text-emerald-600" />
                           <p className="text-sm font-semibold text-emerald-900">
-                            Onboarding Completed ✓
+                            ✓ Onboarding Completed
                           </p>
                         </div>
                       </div>
                     )}
+                </div>
+              </div>
+
+              {/* Onboarding Management Section - Admin/Subadmin Only */}
+              <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-6 mb-6 border-2 border-blue-200">
+                <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Onboarding Management
+                </h3>
+
+                <div className="space-y-4">
+                  {/* Onboarded By */}
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Onboarded By
+                    </label>
+                    {selectedMember.onboardingDoneBy ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <User className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {selectedMember.onboardingDoneBy.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              @{selectedMember.onboardingDoneBy.username} •{" "}
+                              {selectedMember.onboardingDoneBy.userType}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() =>
+                            updateOnboardingDetails(
+                              selectedMember._id || selectedMember.gtcUserId,
+                              { onboardingDoneBy: null }
+                            )
+                          }
+                          disabled={savingNotes}
+                          className="text-xs text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-sm text-gray-500 italic mb-3">
+                          Not assigned yet
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={selectedUserId}
+                            onChange={(e) => setSelectedUserId(e.target.value)}
+                            className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={assigningUser}
+                          >
+                            <option value="">Select User...</option>
+                            {availableUsers.map((user) => (
+                              <option key={user._id} value={user._id}>
+                                {user.name} (@{user.username}) - {user.userType}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={handleAssignUser}
+                            disabled={!selectedUserId || assigningUser}
+                            className="px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {assigningUser ? "Assigning..." : "Assign"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Onboarding Notes */}
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        <FileText className="w-4 h-4 inline-block mr-1" />
+                        Onboarding Notes
+                      </label>
+                      {!editingNotes && (
+                        <button
+                          onClick={() => {
+                            setEditingNotes(true);
+                            setNotesInput(selectedMember.onboardingNotes || "");
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          Edit
+                        </button>
+                      )}
+                    </div>
+
+                    {editingNotes ? (
+                      <div className="space-y-2">
+                        <textarea
+                          value={notesInput}
+                          onChange={(e) => setNotesInput(e.target.value)}
+                          placeholder="Add notes about onboarding process, follow-ups, special requirements..."
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                          rows="5"
+                          maxLength="2000"
+                        />
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-gray-500">
+                            {notesInput.length}/2000 characters
+                          </span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingNotes(false);
+                                setNotesInput(
+                                  selectedMember.onboardingNotes || ""
+                                );
+                              }}
+                              disabled={savingNotes}
+                              className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() =>
+                                updateOnboardingDetails(
+                                  selectedMember._id ||
+                                    selectedMember.gtcUserId,
+                                  { onboardingNotes: notesInput }
+                                )
+                              }
+                              disabled={savingNotes}
+                              className="px-3 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-1"
+                            >
+                              {savingNotes ? (
+                                <>
+                                  <Loader className="w-3 h-3 animate-spin" />
+                                  Saving...
+                                </>
+                              ) : (
+                                <>
+                                  <Save className="w-3 h-3" />
+                                  Save
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2">
+                        {selectedMember.onboardingNotes ? (
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            {selectedMember.onboardingNotes}
+                          </p>
+                        ) : (
+                          <p className="text-sm italic text-gray-500">
+                            No notes added yet
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Completion Date */}
+                  {selectedMember.onboardingCompletedAt && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-600" />
+                        <div>
+                          <p className="text-sm font-medium text-green-900">
+                            Onboarding completed on{" "}
+                            {formatDate(selectedMember.onboardingCompletedAt)}
+                          </p>
+                          {selectedMember.onboardingDoneBy && (
+                            <p className="text-xs text-green-700 mt-1">
+                              Completed by{" "}
+                              {selectedMember.onboardingDoneBy.name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1302,7 +1558,8 @@ const GTCMembers = () => {
                   {selectedMember.phone && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 flex items-center gap-1">
-                        <Phone className="w-3 h-3" /> Phone
+                        <Phone className="w-3 h-3" />
+                        Phone
                       </span>
                       <span className="text-sm font-medium text-gray-900">
                         {selectedMember.phone}
@@ -1318,7 +1575,8 @@ const GTCMembers = () => {
                   {selectedMember.userType && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 flex items-center gap-1">
-                        <UserCheck className="w-3 h-3" /> User Type
+                        <UserCheck className="w-3 h-3" />
+                        User Type
                       </span>
                       <span
                         className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
@@ -1336,7 +1594,8 @@ const GTCMembers = () => {
                   {selectedMember.amount !== undefined && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" /> Amount
+                        <DollarSign className="w-3 h-3" />
+                        Amount
                       </span>
                       <span className="text-sm font-bold text-emerald-700">
                         ${selectedMember.amount.toFixed(2)}
@@ -1447,6 +1706,7 @@ const GTCMembers = () => {
               </div>
             </div>
 
+            {/* Modal Footer */}
             <div className="p-6 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={() => setShowDetailModal(false)}
@@ -1463,6 +1723,7 @@ const GTCMembers = () => {
       {showTreeModal && treeData && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            {/* Tree Header */}
             <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
               <div className="flex items-center justify-between">
                 <div>
@@ -1475,12 +1736,12 @@ const GTCMembers = () => {
                     hierarchy
                     {treeData.tree && treeData.tree.length > 0 && (
                       <span className="ml-2 text-orange-600 font-semibold">
-                        ({treeData.tree.length} direct •{" "}
+                        {treeData.tree.length} direct •{" "}
                         {treeData.tree.reduce(
                           (sum, node) => sum + countTotalDescendants(node),
                           0
                         )}{" "}
-                        total)
+                        total
                       </span>
                     )}
                   </p>
@@ -1508,6 +1769,7 @@ const GTCMembers = () => {
               </div>
             </div>
 
+            {/* Tree Body */}
             <div className="flex-1 overflow-y-auto p-6">
               <div className="mb-6">
                 {renderTreeNode(

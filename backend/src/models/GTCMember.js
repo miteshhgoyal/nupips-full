@@ -1,4 +1,3 @@
-// backend/src/models/GTCMember.js
 import mongoose from 'mongoose';
 
 const UplineSchema = new mongoose.Schema(
@@ -46,7 +45,7 @@ const GTCMemberSchema = new mongoose.Schema(
             default: 'agent',
         },
 
-        // NEW: Onboarding Status Fields
+        // Onboarding Status Fields
         onboardedWithCall: {
             type: Boolean,
             default: false,
@@ -56,7 +55,24 @@ const GTCMemberSchema = new mongoose.Schema(
             default: false,
         },
 
-        // Tree parent info
+        // NEW: Onboarding Management Fields
+        onboardingDoneBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+            index: true,
+        },
+        onboardingNotes: {
+            type: String,
+            default: '',
+            maxLength: 2000,
+        },
+        onboardingCompletedAt: {
+            type: Date,
+            default: null,
+        },
+
+        // Tree/parent info
         parentGtcUserId: {
             type: String,
             default: null,
@@ -87,8 +103,11 @@ const GTCMemberSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
+// Indexes
 GTCMemberSchema.index({ gtcUserId: 1, level: 1 });
 GTCMemberSchema.index({ parentGtcUserId: 1 });
 GTCMemberSchema.index({ userType: 1 });
+GTCMemberSchema.index({ onboardedWithCall: 1, onboardedWithMessage: 1 });
+GTCMemberSchema.index({ onboardingDoneBy: 1 });
 
 export default mongoose.model('GTCMember', GTCMemberSchema);
