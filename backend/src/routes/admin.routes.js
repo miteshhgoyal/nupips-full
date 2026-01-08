@@ -987,7 +987,7 @@ router.get('/gtc-members', async (req, res) => {
     }
 });
 
-r// ============================================
+// ============================================
 // GET: Fetch single member by ID
 // ============================================
 router.get('/gtc-members/:id', async (req, res) => {
