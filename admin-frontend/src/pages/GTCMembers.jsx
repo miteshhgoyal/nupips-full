@@ -100,7 +100,7 @@ const GTCMembers = () => {
   const [togglingCall, setTogglingCall] = useState({});
   const [togglingMessage, setTogglingMessage] = useState({});
 
-  // NEW: For inline notes editing in table
+  // NEW: For inlineonboarding notes editing in table
   const [editingNotesId, setEditingNotesId] = useState(null);
   const [editingNotesValue, setEditingNotesValue] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
@@ -110,7 +110,7 @@ const GTCMembers = () => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [assigningUser, setAssigningUser] = useState(false);
 
-  // NEW: For modal notes editing
+  // NEW: For modalonboarding notes editing
   const [editingModalNotes, setEditingModalNotes] = useState(false);
   const [modalNotesValue, setModalNotesValue] = useState("");
 
@@ -470,8 +470,8 @@ const GTCMembers = () => {
         setSuccess("Notes saved successfully");
       }
     } catch (err) {
-      console.error("Save notes error:", err);
-      setError(err.response?.data?.message || "Failed to save notes");
+      console.error("Saveonboarding notes error:", err);
+      setError(err.response?.data?.message || "Failed to saveonboarding notes");
     } finally {
       setSavingNotes(false);
     }
@@ -484,7 +484,7 @@ const GTCMembers = () => {
       if (response.data.success) {
         setSelectedMember(response.data.data);
         setShowDetailModal(true);
-        setModalNotesValue(response.data.data.notes || "");
+        setModalNotesValue(response.data.data.onboardingNotes || "");
       }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load member details");
@@ -775,7 +775,7 @@ const GTCMembers = () => {
         m.onboardedWithCall ? "Yes" : "No",
         m.onboardedWithMessage ? "Yes" : "No",
         m.onboardingDoneBy?.name || "N/A",
-        m.notes || "N/A",
+        m.onboardingNotes || "N/A",
         new Date(m.joinedAt).toLocaleDateString(),
       ]),
     ];
@@ -1301,7 +1301,7 @@ const GTCMembers = () => {
                                 onChange={(e) =>
                                   setEditingNotesValue(e.target.value)
                                 }
-                                placeholder="Add notes..."
+                                placeholder="Addonboarding notes..."
                                 className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                                 autoFocus
                               />
@@ -1328,22 +1328,24 @@ const GTCMembers = () => {
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
-                              {member.notes ? (
+                              {member.onboardingNotes ? (
                                 <div className="flex items-center gap-2">
                                   <FileText className="w-4 h-4 text-gray-400" />
                                   <span className="text-sm text-gray-700 truncate max-w-[150px]">
-                                    {member.notes}
+                                    {member.onboardingNotes}
                                   </span>
                                 </div>
                               ) : (
                                 <span className="text-sm text-gray-400 italic">
-                                  No notes
+                                  Noonboarding notes
                                 </span>
                               )}
                               <button
                                 onClick={() => {
                                   setEditingNotesId(memberId);
-                                  setEditingNotesValue(member.notes || "");
+                                  setEditingNotesValue(
+                                    member.onboardingNotes || ""
+                                  );
                                 }}
                                 className="p-1.5 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
                                 title="Edit Notes"
@@ -1480,7 +1482,8 @@ const GTCMembers = () => {
                         ] ||
                         (currentUser?.userType === "subadmin" &&
                           selectedMember.onboardingDoneBy &&
-                          selectedMember.onboardingDoneBy._id !== currentUser._id)
+                          selectedMember.onboardingDoneBy._id !==
+                            currentUser._id)
                       }
                       className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
                         selectedMember.onboardedWithCall
@@ -1529,7 +1532,8 @@ const GTCMembers = () => {
                         ] ||
                         (currentUser?.userType === "subadmin" &&
                           selectedMember.onboardingDoneBy &&
-                          selectedMember.onboardingDoneBy._id !== currentUser._id)
+                          selectedMember.onboardingDoneBy._id !==
+                            currentUser._id)
                       }
                       className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
                         selectedMember.onboardedWithMessage
@@ -1638,7 +1642,7 @@ const GTCMembers = () => {
                         <textarea
                           value={modalNotesValue}
                           onChange={(e) => setModalNotesValue(e.target.value)}
-                          placeholder="Add notes about this member..."
+                          placeholder="Addonboarding notes about this member..."
                           rows={4}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
                         />
@@ -1659,7 +1663,9 @@ const GTCMembers = () => {
                           <button
                             onClick={() => {
                               setEditingModalNotes(false);
-                              setModalNotesValue(selectedMember.notes || "");
+                              setModalNotesValue(
+                                selectedMember.onboardingNotes || ""
+                              );
                             }}
                             className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
                           >
@@ -1670,15 +1676,15 @@ const GTCMembers = () => {
                       </div>
                     ) : (
                       <div>
-                        {selectedMember.notes ? (
+                        {selectedMember.onboardingNotes ? (
                           <div className="p-3 bg-gray-50 rounded-lg mb-3">
                             <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                              {selectedMember.notes}
+                              {selectedMember.onboardingNotes}
                             </p>
                           </div>
                         ) : (
                           <p className="text-sm text-gray-400 italic mb-3">
-                            No notes added yet
+                            Noonboarding notes added yet
                           </p>
                         )}
                         <button
@@ -1686,7 +1692,9 @@ const GTCMembers = () => {
                           className="flex items-center gap-2 px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg font-medium transition-colors"
                         >
                           <Edit2 className="w-4 h-4" />
-                          {selectedMember.notes ? "Edit Notes" : "Add Notes"}
+                          {selectedMember.onboardingNotes
+                            ? "Edit Notes"
+                            : "Add Notes"}
                         </button>
                       </div>
                     )}

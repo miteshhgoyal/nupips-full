@@ -1521,14 +1521,7 @@ router.patch('/gtc-members/:id/notes', async (req, res) => {
         }
 
         const { id } = req.params;
-        console.log("notes for member ::::::", id);
-        let member;
-
-        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
-            member = await GTCMember.findById(id);
-        } else {
-            member = await GTCMember.findOne({ gtcUserId: id });
-        }
+        const member = await GTCMember.findById(id);
 
         if (!member) {
             return res.status(404).json({
@@ -1537,7 +1530,7 @@ router.patch('/gtc-members/:id/notes', async (req, res) => {
             });
         }
 
-        member.notes = notes || '';
+        member.onboardingNotes = notes || '';
         await member.save();
 
         // Return with populated field
