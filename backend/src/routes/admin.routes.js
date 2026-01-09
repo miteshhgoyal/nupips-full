@@ -998,7 +998,7 @@ router.get('/gtc-members', async (req, res) => {
                 .skip(skip)
                 .limit(parseInt(limit))
                 .populate('onboardingDoneBy', 'name email username userType')
-                .populate('onboardedBy', 'name email username userType')
+                .populate('onboardingDoneBy', 'name email username userType')
                 .lean(),
             GTCMember.countDocuments(filter),
             GTCMember.aggregate([
@@ -1060,7 +1060,7 @@ router.get('/gtc-members/:id', async (req, res) => {
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
             member = await GTCMember.findById(id)
                 .populate('onboardingDoneBy', 'name email username userType')
-                .populate('onboardedBy', 'name email username userType')
+                .populate('onboardingDoneBy', 'name email username userType')
                 .lean();
         } else {
             member = await GTCMember.findOne({ gtcUserId: id })
@@ -1091,7 +1091,7 @@ router.get('/gtc-members/:id', async (req, res) => {
 
 router.patch('/gtc-members/:id/onboarding', async (req, res) => {
     try {
-        const { onboardedWithCall, onboardedWithMessage, onboardedBy } = req.body;
+        const { onboardedWithCall, onboardedWithMessage, onboardingDoneBy } = req.body;
 
         const member = await GTCMember.findOne({
             $or: [
@@ -1110,7 +1110,7 @@ router.patch('/gtc-members/:id/onboarding', async (req, res) => {
         // Check permissions for subadmin
         if (req.user.userType === 'subadmin') {
             // Subadmin can only toggle if they are the one who onboarded OR if no one has onboarded yet
-            if (member.onboardedBy && member.onboardedBy.toString() !== req.user._id.toString()) {
+            if (member.onboardingDoneBy && member.onboardingDoneBy.toString() !== req.user._id.toString()) {
                 return res.status(403).json({
                     success: false,
                     message: 'You can only modify onboarding status for members you onboarded'
@@ -1126,27 +1126,27 @@ router.patch('/gtc-members/:id/onboarding', async (req, res) => {
             member.onboardedWithMessage = onboardedWithMessage;
         }
 
-        // Handle onboardedBy assignment
-        if (onboardedBy !== undefined) {
-            // Only admin can change onboardedBy
+        // Handle onboardingDoneBy assignment
+        if (onboardingDoneBy !== undefined) {
+            // Only admin can change onboardingDoneBy
             if (req.user.userType !== 'admin') {
                 return res.status(403).json({
                     success: false,
                     message: 'Only admins can change who onboarded a member'
                 });
             }
-            member.onboardedBy = onboardedBy || null;
+            member.onboardingDoneBy = onboardingDoneBy || null;
         } else {
             // Auto-assign if toggling ON and not already assigned
-            if ((onboardedWithCall || onboardedWithMessage) && !member.onboardedBy) {
-                member.onboardedBy = req.user._id;
+            if ((onboardedWithCall || onboardedWithMessage) && !member.onboardingDoneBy) {
+                member.onboardingDoneBy = req.user._id;
             }
         }
 
         await member.save();
 
-        // Populate onboardedBy before returning
-        await member.populate('onboardedBy', 'name username email');
+        // Populate onboardingDoneBy before returning
+        await member.populate('onboardingDoneBy', 'name username email');
 
         res.status(200).json({
             success: true,
@@ -1541,7 +1541,7 @@ router.patch('/gtc-members/:id/notes', async (req, res) => {
 
         // Return with populated field
         const updatedMember = await GTCMember.findById(member._id)
-            .populate('onboardedBy', 'name email username userType')
+            .populate('onboardingDoneBy', 'name email username userType')
             .lean();
 
         res.status(200).json({
@@ -1565,7 +1565,7 @@ router.patch('/gtc-members/:id/assign-onboarded-by', async (req, res) => {
         const User = mongoose.model('User');
         const { userId } = req.body;
 
-        // Only main admin can assign onboardedBy
+        // Only main admin can assign onboardingDoneBy
         if (req.user.userType !== 'admin') {
             return res.status(403).json({
                 success: false,
@@ -1603,17 +1603,17 @@ router.patch('/gtc-members/:id/assign-onboarded-by', async (req, res) => {
                 });
             }
 
-            member.onboardedBy = userId;
+            member.onboardingDoneBy = userId;
         } else {
             // Allow clearing the assignment
-            member.onboardedBy = null;
+            member.onboardingDoneBy = null;
         }
 
         await member.save();
 
         // Return with populated field
         const updatedMember = await GTCMember.findById(member._id)
-            .populate('onboardedBy', 'name email username userType')
+            .populate('onboardingDoneBy', 'name email username userType')
             .lean();
 
         res.status(200).json({

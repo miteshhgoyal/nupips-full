@@ -278,8 +278,8 @@ const GTCMembers = () => {
         {
           onboardedWithCall: newValue,
           // Auto-assign current user if toggling ON and not already assigned
-          ...(newValue && !member.onboardedBy && currentUser
-            ? { onboardedBy: currentUser._id }
+          ...(newValue && !member.onboardingDoneBy && currentUser
+            ? { onboardingDoneBy: currentUser._id }
             : {}),
         }
       );
@@ -292,9 +292,9 @@ const GTCMembers = () => {
               return {
                 ...m,
                 onboardedWithCall: newValue,
-                // Update onboardedBy if it was set
-                ...(response.data.data.onboardedBy
-                  ? { onboardedBy: response.data.data.onboardedBy }
+                // Update onboardingDoneBy if it was set
+                ...(response.data.data.onboardingDoneBy
+                  ? { onboardingDoneBy: response.data.data.onboardingDoneBy }
                   : {}),
               };
             }
@@ -336,8 +336,8 @@ const GTCMembers = () => {
         {
           onboardedWithMessage: newValue,
           // Auto-assign current user if toggling ON and not already assigned
-          ...(newValue && !member.onboardedBy && currentUser
-            ? { onboardedBy: currentUser._id }
+          ...(newValue && !member.onboardingDoneBy && currentUser
+            ? { onboardingDoneBy: currentUser._id }
             : {}),
         }
       );
@@ -350,9 +350,9 @@ const GTCMembers = () => {
               return {
                 ...m,
                 onboardedWithMessage: newValue,
-                // Update onboardedBy if it was set
-                ...(response.data.data.onboardedBy
-                  ? { onboardedBy: response.data.data.onboardedBy }
+                // Update onboardingDoneBy if it was set
+                ...(response.data.data.onboardingDoneBy
+                  ? { onboardingDoneBy: response.data.data.onboardingDoneBy }
                   : {}),
               };
             }
@@ -381,7 +381,7 @@ const GTCMembers = () => {
     }
   };
 
-  const handleAssignOnboardedBy = async (memberId, newUserId) => {
+  const handleAssignonboardingDoneBy = async (memberId, newUserId) => {
     if (currentUser?.userType !== "admin") {
       setError("Only admins can change who onboarded a member");
       return;
@@ -394,7 +394,7 @@ const GTCMembers = () => {
       const response = await api.patch(
         `/admin/gtc-members/${memberId}/onboarding`,
         {
-          onboardedBy: newUserId || null,
+          onboardingDoneBy: newUserId || null,
         }
       );
 
@@ -405,7 +405,7 @@ const GTCMembers = () => {
             if (mId === memberId) {
               return {
                 ...m,
-                onboardedBy: response.data.data.onboardedBy,
+                onboardingDoneBy: response.data.data.onboardingDoneBy,
               };
             }
             return m;
@@ -1265,9 +1265,9 @@ const GTCMembers = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           {currentUser?.userType === "admin" ? (
                             <select
-                              value={member.onboardedBy?._id || ""}
+                              value={member.onboardingDoneBy?._id || ""}
                               onChange={(e) =>
-                                handleAssignOnboardedBy(
+                                handleAssignonboardingDoneBy(
                                   member._id || member.gtcUserId,
                                   e.target.value
                                 )
@@ -1284,8 +1284,8 @@ const GTCMembers = () => {
                             </select>
                           ) : (
                             <div className="text-sm text-gray-900">
-                              {member.onboardedBy?.name ||
-                                member.onboardedBy?.username ||
+                              {member.onboardingDoneBy?.name ||
+                                member.onboardingDoneBy?.username ||
                                 "Not Assigned"}
                             </div>
                           )}
@@ -1479,8 +1479,8 @@ const GTCMembers = () => {
                           selectedMember._id || selectedMember.gtcUserId
                         ] ||
                         (currentUser?.userType === "subadmin" &&
-                          selectedMember.onboardedBy &&
-                          selectedMember.onboardedBy._id !== currentUser._id)
+                          selectedMember.onboardingDoneBy &&
+                          selectedMember.onboardingDoneBy._id !== currentUser._id)
                       }
                       className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
                         selectedMember.onboardedWithCall
@@ -1528,8 +1528,8 @@ const GTCMembers = () => {
                           selectedMember._id || selectedMember.gtcUserId
                         ] ||
                         (currentUser?.userType === "subadmin" &&
-                          selectedMember.onboardedBy &&
-                          selectedMember.onboardedBy._id !== currentUser._id)
+                          selectedMember.onboardingDoneBy &&
+                          selectedMember.onboardingDoneBy._id !== currentUser._id)
                       }
                       className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
                         selectedMember.onboardedWithMessage
@@ -1587,7 +1587,7 @@ const GTCMembers = () => {
                         value={selectedMember.onboardingDoneBy?._id || ""}
                         onChange={(e) => {
                           if (e.target.value) {
-                            handleAssignOnboardedBy(
+                            handleAssignonboardingDoneBy(
                               selectedMember._id || selectedMember.gtcUserId,
                               e.target.value
                             );
