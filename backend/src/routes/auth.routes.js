@@ -337,6 +337,19 @@ router.get('/verify', authenticateToken, async (req, res) => {
     }
 });
 
+// Verify Token Route
+router.get('/me', authenticateToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId).select('-password');
+        if (!user || user.status !== 'active') {
+            return res.status(403).json({ valid: false, message: 'Invalid user' });
+        }
+        res.json({ success: true, user });
+    } catch (error) {
+        res.status(401).json({ success: false, message: 'Failed' });
+    }
+});
+
 // Logout Route
 router.post('/logout', (req, res) => {
     res.json({ message: 'Logged out' });
