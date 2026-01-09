@@ -1521,6 +1521,7 @@ router.patch('/gtc-members/:id/notes', async (req, res) => {
         }
 
         const { id } = req.params;
+        console.log("notes for member ::::::", id);
         let member;
 
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
