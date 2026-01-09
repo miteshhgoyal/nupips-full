@@ -1,4 +1,4 @@
-// pages/admin/GTCMembers.jsx - COMPLETE UPDATED VERSION
+// pages/admin/GTCMembers.jsx
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -101,13 +101,20 @@ const GTCMembers = () => {
   const [togglingCall, setTogglingCall] = useState({});
   const [togglingMessage, setTogglingMessage] = useState({});
 
-  // NEW: User info and management states
+  // Onboarding management states
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesInput, setNotesInput] = useState("");
+  const [savingNotes, setSavingNotes] = useState(false);
+
   const [currentUser, setCurrentUser] = useState(null);
-  const [editingNotes, setEditingNotes] = useState({});
-  const [notesInput, setNotesInput] = useState({});
-  const [savingNotes, setSavingNotes] = useState({});
+
   const [availableUsers, setAvailableUsers] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
   const [assigningUser, setAssigningUser] = useState(false);
+
+  // NEW: Inline notes editing
+  const [editingNotesId, setEditingNotesId] = useState(null);
+  const [editingNotesValue, setEditingNotesValue] = useState("");
 
   useEffect(() => {
     fetchCurrentUser();
@@ -115,17 +122,6 @@ const GTCMembers = () => {
     fetchOnboardingStats();
     fetchAvailableUsers();
   }, [currentPage, filterLevel, filterHasParent, filterOnboardingStatus]);
-
-  const fetchCurrentUser = async () => {
-    try {
-      const response = await api.get("/auth/me");
-      if (response.data.success) {
-        setCurrentUser(response.data.user);
-      }
-    } catch (err) {
-      console.error("Failed to fetch current user:", err);
-    }
-  };
 
   const fetchMembers = async () => {
     setLoading(true);
@@ -183,6 +179,17 @@ const GTCMembers = () => {
       setError(err.response?.data?.message || "Failed to load GTC members");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await api.get("/auth/me");
+      if (response.data.success) {
+        setCurrentUser(response.data.user);
+      }
+    } catch (err) {
+      console.error("Failed to fetch current user:", err);
     }
   };
 
@@ -266,25 +273,35 @@ const GTCMembers = () => {
 
     try {
       const response = await api.patch(
-        `/admin/gtc-members/${memberId}/toggle-call`
+        `/admin/gtc-members/${memberId}/toggle-onboarded-call`
       );
 
       if (response.data.success) {
+        setSuccess(response.data.message);
+
+        // Update members list
         setMembers((prev) =>
           prev.map((m) =>
-            (m._id || m.gtcUserId) === memberId ? response.data.data : m
+            (m._id || m.gtcUserId) === memberId
+              ? { ...m, ...response.data.data }
+              : m
           )
         );
 
+        // Update selected member if in modal
         if (
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
         ) {
           setSelectedMember(response.data.data);
         }
+
+        await fetchOnboardingStats();
       }
     } catch (err) {
-      setError("Failed to update call status");
+      setError(
+        err.response?.data?.message || "Failed to toggle onboarded with call"
+      );
     } finally {
       setTogglingCall((prev) => ({ ...prev, [memberId]: false }));
     }
@@ -296,16 +313,67 @@ const GTCMembers = () => {
 
     try {
       const response = await api.patch(
-        `/admin/gtc-members/${memberId}/toggle-message`
+        `/admin/gtc-members/${memberId}/toggle-onboarded-message`
       );
 
       if (response.data.success) {
+        setSuccess(response.data.message);
+
+        // Update members list
         setMembers((prev) =>
           prev.map((m) =>
-            (m._id || m.gtcUserId) === memberId ? response.data.data : m
+            (m._id || m.gtcUserId) === memberId
+              ? { ...m, ...response.data.data }
+              : m
           )
         );
 
+        // Update selected member if in modal
+        if (
+          selectedMember &&
+          (selectedMember._id || selectedMember.gtcUserId) === memberId
+        ) {
+          setSelectedMember(response.data.data);
+        }
+
+        await fetchOnboardingStats();
+      }
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Failed to toggle onboarded with message"
+      );
+    } finally {
+      setTogglingMessage((prev) => ({ ...prev, [memberId]: false }));
+    }
+  };
+
+  // NEW: Assign onboardedBy (Admin only)
+  const handleAssignOnboardedBy = async (memberId, userId) => {
+    if (currentUser?.userType !== "admin") {
+      setError("Only admins can assign onboarded by");
+      return;
+    }
+
+    setAssigningUser(true);
+    try {
+      const response = await api.patch(
+        `/admin/gtc-members/${memberId}/assign-onboarded-by`,
+        { onboardedBy: userId }
+      );
+
+      if (response.data.success) {
+        setSuccess("Onboarded by assigned successfully");
+
+        // Update members list
+        setMembers((prev) =>
+          prev.map((m) =>
+            (m._id || m.gtcUserId) === memberId
+              ? { ...m, ...response.data.data }
+              : m
+          )
+        );
+
+        // Update selected member if in modal
         if (
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
@@ -314,122 +382,77 @@ const GTCMembers = () => {
         }
       }
     } catch (err) {
-      setError("Failed to update message status");
-    } finally {
-      setTogglingMessage((prev) => ({ ...prev, [memberId]: false }));
-    }
-  };
-
-  // NEW: Save notes handler
-  const handleSaveNotes = async (memberId) => {
-    setSavingNotes((prev) => ({ ...prev, [memberId]: true }));
-    setError(null);
-
-    try {
-      const response = await api.patch(`/admin/gtc-members/${memberId}/notes`, {
-        notes: notesInput[memberId] || "",
-      });
-
-      if (response.data.success) {
-        setMembers((prev) =>
-          prev.map((m) => (m._id === memberId ? response.data.data : m))
-        );
-
-        if (selectedMember && selectedMember._id === memberId) {
-          setSelectedMember(response.data.data);
-        }
-
-        setEditingNotes((prev) => ({ ...prev, [memberId]: false }));
-        setSuccess("Notes updated successfully");
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to update notes");
-    } finally {
-      setSavingNotes((prev) => ({ ...prev, [memberId]: false }));
-    }
-  };
-
-  // NEW: Assign onboarded by handler
-  const handleAssignOnboardedBy = async (memberId, userId) => {
-    if (currentUser?.userType !== "admin") {
-      setError("Only main admin can assign onboarded by");
-      return;
-    }
-
-    setAssigningUser(true);
-    setError(null);
-
-    try {
-      const response = await api.patch(
-        `/admin/gtc-members/${memberId}/assign-onboarded-by`,
-        { userId: userId || null }
-      );
-
-      if (response.data.success) {
-        setMembers((prev) =>
-          prev.map((m) => (m._id === memberId ? response.data.data : m))
-        );
-
-        if (selectedMember && selectedMember._id === memberId) {
-          setSelectedMember(response.data.data);
-        }
-
-        setSuccess("Onboarded by assigned successfully");
-      }
-    } catch (err) {
       setError(err.response?.data?.message || "Failed to assign onboarded by");
     } finally {
       setAssigningUser(false);
     }
   };
 
-  // NEW: Notes editing helpers
-  const handleStartEditNotes = (memberId, currentNotes) => {
-    setEditingNotes((prev) => ({ ...prev, [memberId]: true }));
-    setNotesInput((prev) => ({ ...prev, [memberId]: currentNotes || "" }));
+  // NEW: Save notes (Admin & Subadmin)
+  const handleSaveNotes = async (memberId, notes) => {
+    setSavingNotes(true);
+    try {
+      const response = await api.patch(`/admin/gtc-members/${memberId}/notes`, {
+        notes,
+      });
+
+      if (response.data.success) {
+        setSuccess("Notes updated successfully");
+
+        // Update members list
+        setMembers((prev) =>
+          prev.map((m) =>
+            (m._id || m.gtcUserId) === memberId
+              ? { ...m, ...response.data.data }
+              : m
+          )
+        );
+
+        // Update selected member if in modal
+        if (
+          selectedMember &&
+          (selectedMember._id || selectedMember.gtcUserId) === memberId
+        ) {
+          setSelectedMember(response.data.data);
+          setNotesInput(response.data.data.notes || "");
+        }
+
+        // Clear inline editing
+        setEditingNotesId(null);
+        setEditingNotesValue("");
+        setEditingNotes(false);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update notes");
+    } finally {
+      setSavingNotes(false);
+    }
   };
 
-  const handleCancelEditNotes = (memberId) => {
-    setEditingNotes((prev) => ({ ...prev, [memberId]: false }));
-    setNotesInput((prev) => ({ ...prev, [memberId]: "" }));
-  };
-
-  const openDetailModal = async (member) => {
+  const openDetailModal = (member) => {
     setSelectedMember(member);
     setShowDetailModal(true);
+    setNotesInput(member.notes || "");
+    setSelectedUserId(member.onboardingDoneBy?._id || "");
   };
 
   const loadMemberTree = async (memberId) => {
     setLoadingTree(true);
-    setShowTreeModal(true);
+    setError(null);
 
     try {
       const response = await api.get(`/admin/gtc-members/${memberId}/tree`);
+
       if (response.data.success) {
         setTreeData(response.data.data);
-        setSelectedMember(response.data.data.root);
+        setShowTreeModal(true);
+        setExpandedNodes(new Set([response.data.data.root.gtcUserId]));
       }
     } catch (err) {
-      setError("Failed to load member tree");
+      setError(err.response?.data?.message || "Failed to load member tree");
     } finally {
       setLoadingTree(false);
     }
-  };
-
-  const closeDetailModal = () => {
-    setShowDetailModal(false);
-    setSelectedMember(null);
-  };
-
-  const closeTreeModal = () => {
-    setShowTreeModal(false);
-    setTreeData(null);
-    setExpandedNodes(new Set());
-  };
-
-  const closeSyncModal = () => {
-    setShowSyncModal(false);
-    setSyncToken("");
   };
 
   const toggleNodeExpansion = (nodeId) => {
@@ -444,342 +467,334 @@ const GTCMembers = () => {
     });
   };
 
-  const renderTreeNode = (node, depth = 0) => {
-    if (!node) return null;
+  const countTotalDescendants = (node) => {
+    if (!node.children || node.children.length === 0) return 0;
+    return node.children.reduce(
+      (sum, child) => sum + 1 + countTotalDescendants(child),
+      0
+    );
+  };
 
+  const renderTreeNode = (node, isRoot = false, depth = 0) => {
+    const isExpanded = expandedNodes.has(node.gtcUserId);
     const hasChildren = node.children && node.children.length > 0;
-    const isExpanded = expandedNodes.has(node._id);
+    const totalDescendants = countTotalDescendants(node);
 
     return (
-      <div key={node._id} style={{ marginLeft: `${depth * 20}px` }}>
-        <div className="flex items-center gap-2 py-2 px-3 hover:bg-gray-50 rounded-lg transition-colors">
-          {hasChildren ? (
-            <button
-              onClick={() => toggleNodeExpansion(node._id)}
-              className="p-1 hover:bg-gray-200 rounded transition-colors"
-            >
-              {isExpanded ? (
-                <ChevronDown className="w-4 h-4 text-gray-600" />
-              ) : (
-                <ChevronRightIcon className="w-4 h-4 text-gray-600" />
-              )}
-            </button>
-          ) : (
-            <div className="w-6" />
-          )}
+      <div
+        key={node.gtcUserId}
+        className={`${depth > 0 ? "ml-6 mt-2" : ""} transition-all`}
+      >
+        <div
+          className={`p-4 rounded-xl border-2 ${
+            isRoot
+              ? "bg-gradient-to-r from-orange-500 to-orange-600 border-orange-700 shadow-lg"
+              : "bg-white border-gray-200 hover:border-orange-300 hover:shadow-md"
+          } transition-all`}
+        >
+          <div className="flex items-center justify-between gap-4">
+            {hasChildren && (
+              <button
+                onClick={() => toggleNodeExpansion(node.gtcUserId)}
+                className={`w-6 h-6 flex items-center justify-center rounded ${
+                  isRoot ? "bg-white/20" : "bg-gray-100"
+                } transition-transform`}
+              >
+                <ChevronRightIcon
+                  className={`w-4 h-4 ${
+                    isRoot ? "text-white" : "text-gray-600"
+                  } transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                />
+              </button>
+            )}
 
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-gray-900 truncate">
-              {node.name || node.username || "Unknown"}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <User
+                  className={`w-4 h-4 ${
+                    isRoot ? "text-white" : "text-orange-600"
+                  }`}
+                />
+                <p
+                  className={`font-bold truncate ${
+                    isRoot ? "text-white" : "text-gray-900"
+                  }`}
+                >
+                  {node.name || node.username}
+                </p>
+              </div>
+              <p
+                className={`text-xs font-mono truncate ${
+                  isRoot ? "text-white/80" : "text-gray-500"
+                }`}
+              >
+                {node.gtcUserId}
+              </p>
             </div>
-            <div className="text-sm text-gray-500 flex items-center gap-2">
-              <span>Level {node.level}</span>
-              <span>•</span>
-              <span className="font-mono text-xs">{node.gtcUserId}</span>
+
+            <div className="text-right">
+              <p
+                className={`text-xs mb-1 ${
+                  isRoot ? "text-white/80" : "text-gray-500"
+                }`}
+              >
+                {hasChildren ? "Team Size" : "Email"}
+              </p>
+              {hasChildren ? (
+                <div
+                  className={`text-sm font-bold ${
+                    isRoot ? "text-white" : "text-gray-900"
+                  }`}
+                >
+                  <span className="text-lg">{node.children.length}</span>
+                  <span className="text-xs ml-1">direct</span>
+                  {totalDescendants > node.children.length && (
+                    <div className="text-xs font-normal">
+                      ({totalDescendants} total)
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p
+                  className={`text-sm font-medium truncate max-w-[200px] ${
+                    isRoot ? "text-white" : "text-gray-900"
+                  }`}
+                >
+                  {node.email}
+                </p>
+              )}
             </div>
+
+            <button
+              onClick={() => openDetailModal(node)}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                isRoot
+                  ? "bg-white/20 hover:bg-white/30"
+                  : "bg-gray-100 hover:bg-orange-100"
+              }`}
+              title="View Details"
+            >
+              <Eye
+                className={`w-4 h-4 ${
+                  isRoot ? "text-white" : "text-gray-600 hover:text-orange-600"
+                }`}
+              />
+            </button>
           </div>
 
-          {hasChildren && (
-            <div className="text-sm text-gray-500 flex-shrink-0">
-              {node.children.length}{" "}
-              {node.children.length === 1 ? "child" : "children"}
+          {hasChildren && isExpanded && (
+            <div className="mt-2 space-y-2 pl-4 border-l-2 border-gray-200">
+              {node.children.map((child) =>
+                renderTreeNode(child, false, depth + 1)
+              )}
             </div>
           )}
         </div>
-
-        {isExpanded && hasChildren && (
-          <div className="ml-4">
-            {node.children.map((child) => renderTreeNode(child, depth + 1))}
-          </div>
-        )}
       </div>
     );
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
+  const exportToCSV = () => {
+    const csvData = [
+      [
+        "GTC User ID",
+        "Username",
+        "Name",
+        "Email",
+        "Phone",
+        "Level",
+        "User Type",
+        "Amount",
+        "Parent GTC ID",
+        "Onboarded With Call",
+        "Onboarded With Message",
+        "Onboarding Done By",
+        "Notes",
+        "Joined At",
+      ],
+      ...members.map((m) => [
+        m.gtcUserId,
+        m.username,
+        m.name || "N/A",
+        m.email,
+        m.phone || "N/A",
+        m.level,
+        m.userType || "agent",
+        m.amount || 0,
+        m.parentGtcUserId || "Root",
+        m.onboardedWithCall ? "Yes" : "No",
+        m.onboardedWithMessage ? "Yes" : "No",
+        m.onboardingDoneBy?.name || "N/A",
+        m.notes || "N/A",
+        new Date(m.joinedAt).toLocaleDateString(),
+      ]),
+    ];
+
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      csvData.map((row) => row.join(",")).join("\n");
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", `gtc-members-${new Date().getTime()}.csv`);
+    link.click();
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleString("en-IN", {
+      day: "2-digit",
       month: "short",
-      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
-  // Permission helpers
-  const isAdmin = currentUser?.userType === "admin";
-  const canEditNotes =
-    currentUser?.userType === "admin" || currentUser?.userType === "subadmin";
-
-  // Auto-dismiss alerts
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
-
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
+  if (loading && members.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="flex flex-col items-center gap-4">
+          <Loader className="w-12 h-12 text-orange-600 animate-spin" />
+          <p className="text-gray-600 font-medium">Loading GTC members...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-50">
+    <>
       <Helmet>
-        <title>GTC Members Management | Admin</title>
+        <title>GTC Members - Admin</title>
       </Helmet>
 
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate("/admin")}
-                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
-              </button>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-purple-600 rounded-xl flex items-center justify-center">
-                    <UsersIcon className="w-6 h-6 text-white" />
-                  </div>
-                  GTC Members
-                </h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  Manage and track member hierarchy and onboarding
-                </p>
-              </div>
+      <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <Globe className="w-8 h-8 text-orange-600" />
+                GTC Members
+              </h1>
+              <p className="text-gray-600 mt-2">
+                View and manage GTC FX platform members
+              </p>
             </div>
 
             <div className="flex items-center gap-3">
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors disabled:opacity-50"
               >
                 <RefreshCw
-                  className={`w-4 h-4 text-gray-600 ${
-                    refreshing ? "animate-spin" : ""
-                  }`}
+                  className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
                 />
-                <span className="text-sm font-medium text-gray-700">
-                  Refresh
-                </span>
+                Refresh
               </button>
-
               <button
-                onClick={() => setShowSyncModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 text-white rounded-xl hover:from-orange-600 hover:to-purple-700 transition-all shadow-sm"
+                onClick={exportToCSV}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
               >
-                <RefreshCw className="w-4 h-4" />
-                <span className="text-sm font-medium">Sync from GTC</span>
+                <Download className="w-5 h-5" />
+                Export
               </button>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Alerts */}
-      {error && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+        {/* Alerts */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-red-800 font-medium">{error}</p>
+              <p className="text-sm text-red-700">{error}</p>
             </div>
-            <button
-              onClick={() => setError(null)}
-              className="text-red-600 hover:text-red-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
+            <button onClick={() => setError(null)}>
+              <X className="w-4 h-4 text-red-600" />
             </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {success && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
             <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-green-800 font-medium">{success}</p>
+              <p className="text-sm text-green-700">{success}</p>
             </div>
-            <button
-              onClick={() => setSuccess(null)}
-              className="text-green-600 hover:text-green-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
+            <button onClick={() => setSuccess(null)}>
+              <X className="w-4 h-4 text-green-600" />
             </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-sm">
-                <Users className="w-6 h-6 text-white" />
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Members */}
+          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <UsersIcon className="w-6 h-6" />
               </div>
+              <TrendingUp className="w-5 h-5 opacity-80" />
             </div>
-            <p className="text-sm font-medium text-blue-900 mb-1">
-              Total Members
-            </p>
-            <p className="text-3xl font-bold text-blue-900">{stats.total}</p>
+            <h3 className="text-2xl font-bold mb-1">{stats.total}</h3>
+            <p className="text-orange-100 text-sm">Total Members</p>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-sm">
-                <Network className="w-6 h-6 text-white" />
+          {/* Root Members */}
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <User className="w-6 h-6" />
               </div>
+              <Shield className="w-5 h-5 opacity-80" />
             </div>
-            <p className="text-sm font-medium text-green-900 mb-1">
-              With Parent
-            </p>
-            <p className="text-3xl font-bold text-green-900">
-              {stats.withParent}
-            </p>
+            <h3 className="text-2xl font-bold mb-1">{stats.rootMembers}</h3>
+            <p className="text-purple-100 text-sm">Root Members</p>
           </div>
 
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center shadow-sm">
-                <TrendingUp className="w-6 h-6 text-white" />
+          {/* Max Level */}
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <Layers className="w-6 h-6" />
               </div>
+              <ChevronRightIcon className="w-5 h-5 opacity-80" />
             </div>
-            <p className="text-sm font-medium text-purple-900 mb-1">
-              Root Members
-            </p>
-            <p className="text-3xl font-bold text-purple-900">
-              {stats.rootMembers}
-            </p>
+            <h3 className="text-2xl font-bold mb-1">{stats.maxLevel}</h3>
+            <p className="text-blue-100 text-sm">Maximum Level</p>
           </div>
 
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-sm">
-                <Layers className="w-6 h-6 text-white" />
+          {/* Onboarded */}
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                <CheckCircle className="w-6 h-6" />
               </div>
+              <UserCheck className="w-5 h-5 opacity-80" />
             </div>
-            <p className="text-sm font-medium text-orange-900 mb-1">
-              Avg Level
-            </p>
-            <p className="text-3xl font-bold text-orange-900">
-              {stats.avgLevel}
-            </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-sm">
-                <Hash className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            <p className="text-sm font-medium text-red-900 mb-1">Max Level</p>
-            <p className="text-3xl font-bold text-red-900">{stats.maxLevel}</p>
-          </div>
-        </div>
-
-        {/* Onboarding Stats */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-orange-600" />
-            Onboarding Status Overview
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center">
-                  <Users className="w-5 h-5 text-white" />
-                </div>
-                <p className="text-sm font-medium text-gray-900">Total</p>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">
-                {onboardingStats.total}
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-xl p-6 border border-cyan-200">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center">
-                  <PhoneCall className="w-5 h-5 text-white" />
-                </div>
-                <p className="text-sm font-medium text-cyan-900">Call</p>
-              </div>
-              <p className="text-2xl font-bold text-cyan-900">
-                {onboardingStats.onboardedWithCall}
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
-                  <MessageCircle className="w-5 h-5 text-white" />
-                </div>
-                <p className="text-sm font-medium text-indigo-900">Message</p>
-              </div>
-              <p className="text-2xl font-bold text-indigo-900">
-                {onboardingStats.onboardedWithMessage}
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-white" />
-                </div>
-                <p className="text-sm font-medium text-emerald-900">Both</p>
-              </div>
-              <p className="text-2xl font-bold text-emerald-900">
-                {onboardingStats.bothOnboarded}
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-white" />
-                </div>
-                <p className="text-sm font-medium text-amber-900">Partial</p>
-              </div>
-              <p className="text-2xl font-bold text-amber-900">
-                {onboardingStats.partialOnboarded}
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
-                  <AlertCircle className="w-5 h-5 text-white" />
-                </div>
-                <p className="text-sm font-medium text-red-900">None</p>
-              </div>
-              <p className="text-2xl font-bold text-red-900">
-                {onboardingStats.notOnboarded}
-              </p>
-            </div>
+            <h3 className="text-2xl font-bold mb-1">
+              {onboardingStats.bothOnboarded}
+            </h3>
+            <p className="text-green-100 text-sm">Fully Onboarded</p>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-orange-600" />
-            <h2 className="text-lg font-bold text-gray-900">Filters</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="md:col-span-2">
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Search */}
+            <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search
+                Search Members
               </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -787,31 +802,33 @@ const GTCMembers = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                  placeholder="Search by GTC ID, email, or username..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  placeholder="Search by name, email, or GTC ID..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
               </div>
             </div>
 
+            {/* Level Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Level
+                Filter by Level
               </label>
               <select
                 value={filterLevel}
                 onChange={(e) => setFilterLevel(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               >
                 <option value="">All Levels</option>
-                {Array.from({ length: stats.maxLevel + 10 }, (_, i) => (
-                  <option key={i} value={i}>
-                    Level {i}
+                {[...Array(stats.maxLevel || 10)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    Level {i + 1}
                   </option>
                 ))}
               </select>
             </div>
 
+            {/* Parent Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Parent Status
@@ -819,14 +836,15 @@ const GTCMembers = () => {
               <select
                 value={filterHasParent}
                 onChange={(e) => setFilterHasParent(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               >
-                <option value="">All</option>
-                <option value="true">Has Parent</option>
-                <option value="false">Root Members</option>
+                <option value="">All Members</option>
+                <option value="true">With Parent</option>
+                <option value="false">Root Only</option>
               </select>
             </div>
 
+            {/* Onboarding Status Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Onboarding Status
@@ -834,30 +852,32 @@ const GTCMembers = () => {
               <select
                 value={filterOnboardingStatus}
                 onChange={(e) => setFilterOnboardingStatus(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               >
                 <option value="">All Status</option>
                 <option value="both">Both Completed</option>
                 <option value="call">Call Only</option>
                 <option value="message">Message Only</option>
                 <option value="partial">Partial</option>
-                <option value="none">Not Started</option>
+                <option value="none">Not Onboarded</option>
               </select>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex items-center gap-3 mt-4">
             <button
               onClick={handleSearch}
-              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
             >
+              <Search className="w-4 h-4" />
               Search
             </button>
             <button
               onClick={handleClearFilters}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
             >
-              Clear
+              <X className="w-4 h-4" />
+              Clear Filters
             </button>
           </div>
         </div>
@@ -865,296 +885,298 @@ const GTCMembers = () => {
         {/* Members Table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Loader className="w-12 h-12 animate-spin text-orange-600 mb-4" />
-                <p className="text-gray-600 font-medium">Loading members...</p>
-              </div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Joining Date
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Member
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      GTC User ID
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Email
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Level
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
-                      Onboarding
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Onboarded By
-                    </th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                      Notes
-                    </th>
-                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.length === 0 ? (
-                    <tr>
-                      <td colSpan="9" className="px-6 py-16 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Globe className="w-8 h-8 text-gray-400" />
-                          </div>
-                          <p className="text-gray-600 font-medium">
-                            No GTC members found
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Try adjusting your filters or syncing from GTC API
-                          </p>
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Joining Date
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Member
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    GTC User ID
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Email
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Level
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                    Onboarding
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Onboarded By
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Notes
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {members.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="px-6 py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                          <Globe className="w-8 h-8 text-gray-400" />
                         </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    members.map((member) => {
-                      const memberId = member._id || member.gtcUserId;
-                      return (
-                        <tr
-                          key={member._id}
-                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-600 text-nowrap">
-                              {formatDate(member.joinedAt)}
+                        <p className="text-gray-600 font-medium">
+                          No GTC members found
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Try adjusting your filters or syncing from GTC API
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  members.map((member) => {
+                    const memberId = member._id || member.gtcUserId;
+                    const isEditingThisNotes = editingNotesId === memberId;
+
+                    return (
+                      <tr
+                        key={member._id}
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                      >
+                        {/* Joining Date */}
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-600 text-nowrap">
+                            {formatDate(member.joinedAt)}
+                          </div>
+                        </td>
+
+                        {/* Member */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 shrink-0 bg-orange-100 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-orange-600" />
                             </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 shrink-0 bg-orange-100 rounded-full flex items-center justify-center">
-                                <User className="w-5 h-5 text-orange-600" />
+                            <div>
+                              <p className="font-medium text-gray-900 text-nowrap">
+                                {member.name || "N/A"}
+                              </p>
+                              <p className="text-xs font-mono text-gray-500 text-nowrap">
+                                @{member.username}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* GTC User ID */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <Hash className="w-4 h-4 text-gray-400" />
+                            <span className="font-mono text-sm text-gray-900 text-nowrap">
+                              {member.gtcUserId}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Email */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Mail className="w-4 h-4 text-gray-400" />
+                            <span className="truncate max-w-[200px] text-nowrap">
+                              {member.email}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Level */}
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 text-nowrap">
+                            <Layers className="w-3 h-3" />
+                            Level {member.level}
+                          </span>
+                        </td>
+
+                        {/* Onboarding Toggles */}
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col gap-3">
+                            {/* Call Toggle */}
+                            <div className="flex items-center justify-center gap-2">
+                              <PhoneCall className="w-4 h-4 text-cyan-600" />
+                              <span className="text-xs text-gray-600 min-w-[40px]">
+                                Call
+                              </span>
+                              <button
+                                onClick={() => toggleOnboardedWithCall(member)}
+                                disabled={togglingCall[memberId]}
+                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
+                                  member.onboardedWithCall
+                                    ? "bg-cyan-600"
+                                    : "bg-gray-300"
+                                } ${
+                                  togglingCall[memberId]
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
+                                }`}
+                              >
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                                    member.onboardedWithCall
+                                      ? "translate-x-6"
+                                      : "translate-x-1"
+                                  }`}
+                                />
+                              </button>
+                            </div>
+
+                            {/* Message Toggle */}
+                            <div className="flex items-center justify-center gap-2">
+                              <MessageCircle className="w-4 h-4 text-indigo-600" />
+                              <span className="text-xs text-gray-600 min-w-[40px]">
+                                Msg
+                              </span>
+                              <button
+                                onClick={() =>
+                                  toggleOnboardedWithMessage(member)
+                                }
+                                disabled={togglingMessage[memberId]}
+                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                                  member.onboardedWithMessage
+                                    ? "bg-indigo-600"
+                                    : "bg-gray-300"
+                                } ${
+                                  togglingMessage[memberId]
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : ""
+                                }`}
+                              >
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                                    member.onboardedWithMessage
+                                      ? "translate-x-6"
+                                      : "translate-x-1"
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* NEW: Onboarded By Column */}
+                        <td className="px-6 py-4">
+                          {member.onboardingDoneBy ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <User className="w-4 h-4 text-blue-600" />
                               </div>
                               <div>
-                                <p className="font-medium text-gray-900 text-nowrap">
-                                  {member.name || "N/A"}
+                                <p className="text-sm font-medium text-gray-900 text-nowrap">
+                                  {member.onboardingDoneBy.name}
                                 </p>
-                                <p className="text-xs font-mono text-gray-500 text-nowrap">
-                                  @{member.username}
+                                <p className="text-xs text-gray-500 text-nowrap">
+                                  {member.onboardingDoneBy.userType}
                                 </p>
                               </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <Hash className="w-4 h-4 text-gray-400" />
-                              <span className="font-mono text-sm text-gray-900 text-nowrap">
-                                {member.gtcUserId}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Mail className="w-4 h-4 text-gray-400" />
-                              <span className="truncate max-w-[200px] text-nowrap">
-                                {member.email}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 text-nowrap">
-                              <Layers className="w-3 h-3" />
-                              Level {member.level}
+                          ) : (
+                            <span className="text-sm text-gray-400 italic">
+                              Not Assigned
                             </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col gap-3">
-                              {/* Call Toggle */}
-                              <div className="flex items-center justify-center gap-2">
-                                <PhoneCall className="w-4 h-4 text-cyan-600" />
-                                <span className="text-xs text-gray-600 min-w-[40px]">
-                                  Call
-                                </span>
-                                <button
-                                  onClick={() =>
-                                    toggleOnboardedWithCall(member)
-                                  }
-                                  disabled={togglingCall[memberId]}
-                                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
-                                    member.onboardedWithCall
-                                      ? "bg-cyan-600"
-                                      : "bg-gray-300"
-                                  } ${
-                                    togglingCall[memberId]
-                                      ? "opacity-50 cursor-not-allowed"
-                                      : ""
-                                  }`}
-                                >
-                                  <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
-                                      member.onboardedWithCall
-                                        ? "translate-x-6"
-                                        : "translate-x-1"
-                                    }`}
-                                  />
-                                </button>
-                              </div>
+                          )}
+                        </td>
 
-                              {/* Message Toggle */}
-                              <div className="flex items-center justify-center gap-2">
-                                <MessageCircle className="w-4 h-4 text-indigo-600" />
-                                <span className="text-xs text-gray-600 min-w-[40px]">
-                                  Msg
-                                </span>
-                                <button
-                                  onClick={() =>
-                                    toggleOnboardedWithMessage(member)
-                                  }
-                                  disabled={togglingMessage[memberId]}
-                                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                                    member.onboardedWithMessage
-                                      ? "bg-indigo-600"
-                                      : "bg-gray-300"
-                                  } ${
-                                    togglingMessage[memberId]
-                                      ? "opacity-50 cursor-not-allowed"
-                                      : ""
-                                  }`}
-                                >
-                                  <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
-                                      member.onboardedWithMessage
-                                        ? "translate-x-6"
-                                        : "translate-x-1"
-                                    }`}
-                                  />
-                                </button>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* NEW: Onboarded By Column */}
-                          <td className="px-6 py-4">
-                            {member.onboardedBy ? (
-                              <div className="text-sm">
-                                <div className="font-medium text-gray-900">
-                                  {member.onboardedBy.name}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {member.onboardedBy.userType === "admin" ? (
-                                    <span className="text-red-600 font-medium">
-                                      Main Admin
-                                    </span>
-                                  ) : (
-                                    <span className="text-blue-600 font-medium">
-                                      Subadmin
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-gray-400 italic">
-                                Not assigned
-                              </span>
-                            )}
-                          </td>
-
-                          {/* NEW: Notes Column with Edit */}
-                          <td className="px-6 py-4">
-                            {editingNotes[member._id] ? (
-                              <div className="flex gap-2 items-start min-w-[200px]">
-                                <textarea
-                                  value={notesInput[member._id] || ""}
-                                  onChange={(e) =>
-                                    setNotesInput((prev) => ({
-                                      ...prev,
-                                      [member._id]: e.target.value,
-                                    }))
-                                  }
-                                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                  rows={2}
-                                  placeholder="Add notes..."
-                                />
-                                <div className="flex flex-col gap-1">
-                                  <button
-                                    onClick={() => handleSaveNotes(member._id)}
-                                    disabled={savingNotes[member._id]}
-                                    className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
-                                    title="Save"
-                                  >
-                                    <Save className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleCancelEditNotes(member._id)
-                                    }
-                                    className="p-1 text-gray-600 hover:bg-gray-50 rounded transition-colors"
-                                    title="Cancel"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2 min-w-[200px]">
-                                <div className="flex-1 text-sm text-gray-600 truncate max-w-[180px]">
-                                  {member.notes || (
-                                    <span className="italic text-gray-400">
-                                      No notes
-                                    </span>
-                                  )}
-                                </div>
-                                {canEditNotes && (
-                                  <button
-                                    onClick={() =>
-                                      handleStartEditNotes(
-                                        member._id,
-                                        member.notes
-                                      )
-                                    }
-                                    className="p-1 text-blue-600 hover:bg-blue-50 rounded shrink-0 transition-colors"
-                                    title="Edit notes"
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </td>
-
-                          <td className="px-6 py-4">
-                            <div className="flex items-center justify-center gap-2">
+                        {/* NEW: Notes Column */}
+                        <td className="px-6 py-4">
+                          {isEditingThisNotes ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={editingNotesValue}
+                                onChange={(e) =>
+                                  setEditingNotesValue(e.target.value)
+                                }
+                                placeholder="Add notes..."
+                                className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                autoFocus
+                              />
                               <button
-                                onClick={() => openDetailModal(member)}
-                                className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
-                                title="View Details"
+                                onClick={() =>
+                                  handleSaveNotes(memberId, editingNotesValue)
+                                }
+                                disabled={savingNotes}
+                                className="p-1.5 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition-colors disabled:opacity-50"
+                                title="Save Notes"
                               >
-                                <Eye className="w-4 h-4" />
+                                <Save className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => loadMemberTree(member._id)}
-                                disabled={loadingTree}
-                                className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors disabled:opacity-50"
-                                title="View Tree"
+                                onClick={() => {
+                                  setEditingNotesId(null);
+                                  setEditingNotesValue("");
+                                }}
+                                className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
+                                title="Cancel"
                               >
-                                {loadingTree ? (
-                                  <Loader className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Network className="w-4 h-4" />
-                                )}
+                                <X className="w-4 h-4" />
                               </button>
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            )}
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              {member.notes ? (
+                                <div className="flex items-center gap-2">
+                                  <FileText className="w-4 h-4 text-gray-400" />
+                                  <span className="text-sm text-gray-700 truncate max-w-[150px]">
+                                    {member.notes}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-400 italic">
+                                  No notes
+                                </span>
+                              )}
+                              <button
+                                onClick={() => {
+                                  setEditingNotesId(memberId);
+                                  setEditingNotesValue(member.notes || "");
+                                }}
+                                className="p-1.5 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
+                                title="Edit Notes"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => openDetailModal(member)}
+                              className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
+                              title="View Details"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => loadMemberTree(member._id)}
+                              disabled={loadingTree}
+                              className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors disabled:opacity-50"
+                              title="View Tree"
+                            >
+                              {loadingTree ? (
+                                <Loader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Network className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -1191,242 +1213,309 @@ const GTCMembers = () => {
 
       {/* Detail Modal */}
       {showDetailModal && selectedMember && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-purple-600 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <User className="w-6 h-6" />
-                Member Details
-              </h2>
-              <button
-                onClick={closeDetailModal}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-white" />
-              </button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center">
+                    <User className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {selectedMember.name || "GTC Member"}
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      @{selectedMember.username}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="p-2 hover:bg-white rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
             </div>
 
-            <div className="p-6">
-              <div className="grid grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Full Name
-                  </label>
-                  <p className="text-gray-900 font-medium">
-                    {selectedMember.name}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Username
-                  </label>
-                  <p className="text-gray-900 font-medium">
-                    @{selectedMember.username}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    GTC User ID
-                  </label>
-                  <p className="text-gray-900 font-mono">
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Basic Info Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500 mb-1">GTC User ID</p>
+                  <p className="font-mono font-semibold text-gray-900">
                     {selectedMember.gtcUserId}
                   </p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Email
-                  </label>
-                  <p className="text-gray-900">{selectedMember.email}</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Level
-                  </label>
-                  <p className="text-gray-900 font-semibold">
-                    {selectedMember.level}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500 mb-1">Email</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedMember.email}
                   </p>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">
-                    Joined Date
-                  </label>
-                  <p className="text-gray-900">
-                    {formatDate(selectedMember.joinedAt)}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500 mb-1">Phone</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedMember.phone || "N/A"}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500 mb-1">Level</p>
+                  <p className="font-semibold text-gray-900">
+                    Level {selectedMember.level}
                   </p>
                 </div>
               </div>
 
-              {/* Onboarding Status */}
-              <div className="border-t border-gray-200 pt-6 mb-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-orange-600" />
+              {/* Onboarding Status Section */}
+              <div className="bg-gradient-to-br from-orange-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-6 border-2 border-orange-200">
+                <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4" />
                   Onboarding Status
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => toggleOnboardedWithCall(selectedMember)}
-                    disabled={togglingCall[selectedMember._id]}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      selectedMember.onboardedWithCall
-                        ? "border-cyan-600 bg-cyan-50"
-                        : "border-gray-300 bg-white"
-                    } hover:opacity-75 disabled:opacity-50`}
-                  >
-                    <PhoneCall
-                      className={`w-6 h-6 mx-auto mb-2 ${
-                        selectedMember.onboardedWithCall
-                          ? "text-cyan-600"
-                          : "text-gray-400"
-                      }`}
-                    />
-                    <p className="text-sm font-medium">Onboarded with Call</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {selectedMember.onboardedWithCall ? "Yes" : "No"}
-                    </p>
-                  </button>
 
-                  <button
-                    onClick={() => toggleOnboardedWithMessage(selectedMember)}
-                    disabled={togglingMessage[selectedMember._id]}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      selectedMember.onboardedWithMessage
-                        ? "border-indigo-600 bg-indigo-50"
-                        : "border-gray-300 bg-white"
-                    } hover:opacity-75 disabled:opacity-50`}
-                  >
-                    <MessageCircle
-                      className={`w-6 h-6 mx-auto mb-2 ${
-                        selectedMember.onboardedWithMessage
-                          ? "text-indigo-600"
-                          : "text-gray-400"
+                <div className="space-y-4">
+                  {/* Call Status */}
+                  <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-cyan-100 rounded-full flex items-center justify-center">
+                        <PhoneCall className="w-5 h-5 text-cyan-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          Onboarded with Call
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {selectedMember.onboardedWithCall
+                            ? "Completed"
+                            : "Pending"}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleOnboardedWithCall(selectedMember)}
+                      disabled={
+                        togglingCall[
+                          selectedMember._id || selectedMember.gtcUserId
+                        ]
+                      }
+                      className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
+                        selectedMember.onboardedWithCall
+                          ? "bg-cyan-600"
+                          : "bg-gray-300"
+                      } ${
+                        togglingCall[
+                          selectedMember._id || selectedMember.gtcUserId
+                        ]
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
                       }`}
-                    />
-                    <p className="text-sm font-medium">
-                      Onboarded with Message
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {selectedMember.onboardedWithMessage ? "Yes" : "No"}
-                    </p>
-                  </button>
+                    >
+                      <span
+                        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                          selectedMember.onboardedWithCall
+                            ? "translate-x-7"
+                            : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Message Status */}
+                  <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <MessageCircle className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          Onboarded with Message
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {selectedMember.onboardedWithMessage
+                            ? "Completed"
+                            : "Pending"}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleOnboardedWithMessage(selectedMember)}
+                      disabled={
+                        togglingMessage[
+                          selectedMember._id || selectedMember.gtcUserId
+                        ]
+                      }
+                      className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                        selectedMember.onboardedWithMessage
+                          ? "bg-indigo-600"
+                          : "bg-gray-300"
+                      } ${
+                        togglingMessage[
+                          selectedMember._id || selectedMember.gtcUserId
+                        ]
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                          selectedMember.onboardedWithMessage
+                            ? "translate-x-7"
+                            : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Overall Status */}
+                  {selectedMember.onboardedWithCall &&
+                    selectedMember.onboardedWithMessage && (
+                      <div className="p-3 bg-emerald-50 border-2 border-emerald-200 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-5 h-5 text-emerald-600" />
+                          <p className="text-sm font-semibold text-emerald-900">
+                            ✓ Onboarding Completed
+                          </p>
+                        </div>
+                      </div>
+                    )}
                 </div>
               </div>
 
-              {/* NEW: Onboarded By Assignment - Admin Only */}
-              {isAdmin && (
-                <div className="border-t border-gray-200 pt-6 mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <UserCheck className="w-4 h-4 text-orange-600" />
-                    Assign Onboarded By (Admin Only)
-                  </label>
-                  <select
-                    value={selectedMember.onboardedBy?._id || ""}
-                    onChange={(e) =>
-                      handleAssignOnboardedBy(
-                        selectedMember._id,
-                        e.target.value
-                      )
-                    }
-                    disabled={assigningUser}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <option value="">-- Not Assigned --</option>
-                    {availableUsers.map((user) => (
-                      <option key={user._id} value={user._id}>
-                        {user.name} ({user.username}) -{" "}
-                        {user.userType === "admin" ? "Main Admin" : "Subadmin"}
-                      </option>
-                    ))}
-                  </select>
-                  {assigningUser && (
-                    <p className="text-sm text-gray-500 mt-2">Assigning...</p>
-                  )}
-                </div>
-              )}
+              {/* Onboarding Management Section */}
+              <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-6 mb-6 border-2 border-blue-200">
+                <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Onboarding Management
+                </h3>
 
-              {/* NEW: Notes Section - Admin & Subadmin */}
-              {canEditNotes && (
-                <div className="border-t border-gray-200 pt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-orange-600" />
-                    Notes
-                  </label>
-                  {editingNotes[selectedMember._id] ? (
-                    <div className="space-y-3">
-                      <textarea
-                        value={notesInput[selectedMember._id] || ""}
-                        onChange={(e) =>
-                          setNotesInput((prev) => ({
-                            ...prev,
-                            [selectedMember._id]: e.target.value,
-                          }))
-                        }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                        rows={5}
-                        placeholder="Add notes about this member..."
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleSaveNotes(selectedMember._id)}
-                          disabled={savingNotes[selectedMember._id]}
-                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                        >
-                          <Save className="w-4 h-4" />
-                          {savingNotes[selectedMember._id]
-                            ? "Saving..."
-                            : "Save Notes"}
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleCancelEditNotes(selectedMember._id)
+                <div className="space-y-4">
+                  {/* Onboarded By Assignment */}
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      Assign Onboarded By{" "}
+                      {currentUser?.userType !== "admin" && "(Admin Only)"}
+                    </label>
+                    {currentUser?.userType === "admin" ? (
+                      <select
+                        value={selectedUserId}
+                        onChange={(e) => {
+                          setSelectedUserId(e.target.value);
+                          if (e.target.value) {
+                            handleAssignOnboardedBy(
+                              selectedMember._id || selectedMember.gtcUserId,
+                              e.target.value
+                            );
                           }
-                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors"
-                        >
-                          Cancel
-                        </button>
+                        }}
+                        disabled={assigningUser}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
+                      >
+                        <option value="">Select Admin/Subadmin</option>
+                        {availableUsers.map((user) => (
+                          <option key={user._id} value={user._id}>
+                            {user.name} (@{user.username}) - {user.userType}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="flex items-center gap-2 text-gray-500">
+                        <Shield className="w-4 h-4" />
+                        <span className="text-sm italic">
+                          Only admins can assign onboarded by
+                        </span>
                       </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="bg-gray-50 rounded-xl p-4 mb-3 min-h-[120px] border border-gray-200">
-                        {selectedMember.notes ? (
-                          <p className="text-gray-900 whitespace-pre-wrap">
-                            {selectedMember.notes}
+                    )}
+                    {selectedMember.onboardingDoneBy && (
+                      <div className="mt-3 flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                        <User className="w-4 h-4 text-blue-600" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {selectedMember.onboardingDoneBy.name}
                           </p>
+                          <p className="text-xs text-gray-500">
+                            @{selectedMember.onboardingDoneBy.username} •{" "}
+                            {selectedMember.onboardingDoneBy.userType}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notes Section */}
+                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Notes
+                    </label>
+                    {editingNotes ? (
+                      <div>
+                        <textarea
+                          value={notesInput}
+                          onChange={(e) => setNotesInput(e.target.value)}
+                          placeholder="Add notes about this member..."
+                          rows={4}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
+                        />
+                        <div className="flex items-center gap-2 mt-3">
+                          <button
+                            onClick={() =>
+                              handleSaveNotes(
+                                selectedMember._id || selectedMember.gtcUserId,
+                                notesInput
+                              )
+                            }
+                            disabled={savingNotes}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
+                          >
+                            <Save className="w-4 h-4" />
+                            {savingNotes ? "Saving..." : "Save Notes"}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingNotes(false);
+                              setNotesInput(selectedMember.notes || "");
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        {selectedMember.notes ? (
+                          <div className="p-3 bg-gray-50 rounded-lg mb-3">
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                              {selectedMember.notes}
+                            </p>
+                            {selectedMember.notesUpdatedBy && (
+                              <p className="text-xs text-gray-500 mt-2">
+                                Updated by {selectedMember.notesUpdatedBy.name}{" "}
+                                on {formatDate(selectedMember.notesUpdatedAt)}
+                              </p>
+                            )}
+                          </div>
                         ) : (
-                          <p className="text-gray-400 italic">
+                          <p className="text-sm text-gray-400 italic mb-3">
                             No notes added yet
                           </p>
                         )}
+                        <button
+                          onClick={() => setEditingNotes(true)}
+                          className="flex items-center gap-2 px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg font-medium transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          {selectedMember.notes ? "Edit Notes" : "Add Notes"}
+                        </button>
                       </div>
-                      <button
-                        onClick={() =>
-                          handleStartEditNotes(
-                            selectedMember._id,
-                            selectedMember.notes
-                          )
-                        }
-                        className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                        Edit Notes
-                      </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              )}
-
-              <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end">
-                <button
-                  onClick={closeDetailModal}
-                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Close
-                </button>
               </div>
             </div>
           </div>
@@ -1434,112 +1523,40 @@ const GTCMembers = () => {
       )}
 
       {/* Tree Modal */}
-      {showTreeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-purple-500 to-indigo-600 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <Network className="w-6 h-6" />
-                Member Tree - {selectedMember?.name || selectedMember?.username}
-              </h2>
-              <button
-                onClick={closeTreeModal}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-white" />
-              </button>
+      {showTreeModal && treeData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-6xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Network className="w-6 h-6 text-purple-600" />
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Member Network Tree
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setShowTreeModal(false)}
+                  className="p-2 hover:bg-white rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
             </div>
 
-            <div className="p-6">
-              {loadingTree ? (
-                <div className="flex flex-col items-center justify-center py-16">
-                  <Loader className="w-12 h-12 animate-spin text-purple-600 mb-4" />
-                  <p className="text-gray-600 font-medium">Loading tree...</p>
-                </div>
-              ) : treeData ? (
-                <div className="space-y-2">
-                  {renderTreeNode(treeData.root || treeData)}
-                  {treeData.tree && treeData.tree.length > 0 && (
-                    <div className="ml-4">
-                      {treeData.tree.map((child) => renderTreeNode(child, 1))}
-                    </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {renderTreeNode(treeData.root, true)}
+              {treeData.tree.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {treeData.tree.map((child) =>
+                    renderTreeNode(child, false, 1)
                   )}
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <Network className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">
-                    No tree data available
-                  </p>
                 </div>
               )}
             </div>
           </div>
         </div>
       )}
-
-      {/* Sync Modal */}
-      {showSyncModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-            <div className="bg-gradient-to-r from-orange-500 to-purple-600 px-6 py-4 flex items-center justify-between rounded-t-xl">
-              <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                <RefreshCw className="w-6 h-6" />
-                Sync from GTC API
-              </h2>
-              <button
-                onClick={closeSyncModal}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-white" />
-              </button>
-            </div>
-
-            <div className="p-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                GTC JWT Token
-              </label>
-              <textarea
-                value={syncToken}
-                onChange={(e) => setSyncToken(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
-                rows={4}
-                placeholder="Paste your GTC JWT token here..."
-              />
-              <p className="text-sm text-gray-500 mt-2">
-                This will fetch and sync member data from the GTC API
-              </p>
-
-              <div className="mt-6 flex gap-3">
-                <button
-                  onClick={handleSync}
-                  disabled={syncing || !syncToken.trim()}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-purple-600 text-white rounded-xl hover:from-orange-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm"
-                >
-                  {syncing ? (
-                    <>
-                      <Loader className="w-5 h-5 animate-spin" />
-                      Syncing...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-5 h-5" />
-                      Start Sync
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={closeSyncModal}
-                  className="px-4 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 
