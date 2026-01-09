@@ -50,9 +50,7 @@ router.get('/dashboard', async (req, res) => {
                         newUsersThisMonth: [
                             {
                                 $match: {
-                                    createdAt: {
-                                        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-                                    }
+                                    createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
                                 }
                             },
                             { $count: 'count' }
@@ -60,93 +58,175 @@ router.get('/dashboard', async (req, res) => {
                     }
                 }
             ]),
+
             Deposit.aggregate([
                 {
                     $facet: {
-                        totalDeposits: [{ $count: 'count' }],
-                        totalAmount: [{ $group: { _id: null, total: { $sum: '$amount' } } }],
-                        byStatus: [{ $group: { _id: '$status', count: { $sum: 1 }, amount: { $sum: '$amount' } } }],
-                        pending: [
-                            { $match: { status: 'pending' } },
-                            { $count: 'count' }
+                        totalDeposits: [
+                            { $match: { status: 'completed' } },
+                            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
                         ],
-                        todayDeposits: [
+                        pendingDeposits: [
+                            { $match: { status: { $in: ['pending', 'processing'] } } },
+                            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+                        ],
+                        depositsByMethod: [
+                            { $match: { status: 'completed' } },
+                            { $group: { _id: '$paymentMethod', total: { $sum: '$amount' }, count: { $sum: 1 } } }
+                        ],
+                        depositsToday: [
                             {
                                 $match: {
-                                    createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+                                    status: 'completed',
+                                    completedAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
                                 }
                             },
-                            { $group: { _id: null, count: { $sum: 1 }, amount: { $sum: '$amount' } } }
+                            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+                        ],
+                        depositsThisMonth: [
+                            {
+                                $match: {
+                                    status: 'completed',
+                                    completedAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
+                                }
+                            },
+                            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+                        ],
+                        last7DaysDeposits: [
+                            {
+                                $match: {
+                                    status: 'completed',
+                                    completedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+                                }
+                            },
+                            {
+                                $group: {
+                                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$completedAt' } },
+                                    total: { $sum: '$amount' },
+                                    count: { $sum: 1 }
+                                }
+                            },
+                            { $sort: { _id: 1 } }
                         ]
                     }
                 }
             ]),
+
             Withdrawal.aggregate([
                 {
                     $facet: {
-                        totalWithdrawals: [{ $count: 'count' }],
-                        totalAmount: [{ $group: { _id: null, total: { $sum: '$amount' } } }],
-                        byStatus: [{ $group: { _id: '$status', count: { $sum: 1 }, amount: { $sum: '$amount' } } }],
-                        pending: [
-                            { $match: { status: 'pending' } },
-                            { $count: 'count' }
+                        totalWithdrawals: [
+                            { $match: { status: 'completed' } },
+                            { $group: { _id: null, total: { $sum: '$netAmount' }, count: { $sum: 1 } } }
                         ],
-                        todayWithdrawals: [
+                        pendingWithdrawals: [
+                            { $match: { status: { $in: ['pending', 'processing'] } } },
+                            { $group: { _id: null, total: { $sum: '$netAmount' }, count: { $sum: 1 } } }
+                        ],
+                        withdrawalsByMethod: [
+                            { $match: { status: 'completed' } },
+                            { $group: { _id: '$withdrawalMethod', total: { $sum: '$netAmount' }, count: { $sum: 1 } } }
+                        ],
+                        withdrawalsToday: [
                             {
                                 $match: {
-                                    createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+                                    status: 'completed',
+                                    completedAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
                                 }
                             },
-                            { $group: { _id: null, count: { $sum: 1 }, amount: { $sum: '$amount' } } }
+                            { $group: { _id: null, total: { $sum: '$netAmount' }, count: { $sum: 1 } } }
+                        ],
+                        withdrawalsThisMonth: [
+                            {
+                                $match: {
+                                    status: 'completed',
+                                    completedAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
+                                }
+                            },
+                            { $group: { _id: null, total: { $sum: '$netAmount' }, count: { $sum: 1 } } }
+                        ],
+                        last7DaysWithdrawals: [
+                            {
+                                $match: {
+                                    status: 'completed',
+                                    completedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+                                }
+                            },
+                            {
+                                $group: {
+                                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$completedAt' } },
+                                    total: { $sum: '$netAmount' },
+                                    count: { $sum: 1 }
+                                }
+                            },
+                            { $sort: { _id: 1 } }
                         ]
                     }
                 }
             ]),
+
             Order.aggregate([
                 {
                     $facet: {
-                        totalOrders: [{ $count: 'count' }],
-                        totalRevenue: [{ $group: { _id: null, total: { $sum: '$totalAmount' } } }],
-                        byStatus: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
-                        todayOrders: [
+                        totalOrders: [{ $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }],
+                        ordersByStatus: [{ $group: { _id: '$status', total: { $sum: '$amount' }, count: { $sum: 1 } } }],
+                        ordersToday: [
                             {
                                 $match: {
                                     createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
                                 }
                             },
-                            { $count: 'count' }
+                            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+                        ],
+                        ordersThisMonth: [
+                            {
+                                $match: {
+                                    createdAt: { $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1) }
+                                }
+                            },
+                            { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
+                        ],
+                        last7DaysOrders: [
+                            {
+                                $match: {
+                                    createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+                                }
+                            },
+                            {
+                                $group: {
+                                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+                                    total: { $sum: '$amount' },
+                                    count: { $sum: 1 }
+                                }
+                            },
+                            { $sort: { _id: 1 } }
                         ]
                     }
                 }
             ]),
+
             Product.aggregate([
                 {
                     $facet: {
                         totalProducts: [{ $count: 'count' }],
-                        activeProducts: [
-                            { $match: { status: 'active' } },
-                            { $count: 'count' }
-                        ],
-                        totalStock: [{ $group: { _id: null, total: { $sum: '$stock' } } }],
-                        lowStock: [
-                            { $match: { stock: { $lt: 10 } } },
-                            { $count: 'count' }
-                        ]
+                        productsByCategory: [{ $group: { _id: '$category', count: { $sum: 1 } } }],
+                        bestsellers: [{ $match: { bestseller: true } }, { $count: 'count' }],
+                        averagePrice: [{ $group: { _id: null, avg: { $avg: '$price' } } }]
                     }
                 }
             ]),
+
             Course.aggregate([
                 {
                     $facet: {
                         totalCourses: [{ $count: 'count' }],
-                        publishedCourses: [
-                            { $match: { status: 'published' } },
-                            { $count: 'count' }
-                        ],
-                        totalEnrollments: [{ $group: { _id: null, total: { $sum: '$enrollments' } } }]
+                        publishedCourses: [{ $match: { isPublished: true } }, { $count: 'count' }],
+                        totalVideos: [{ $unwind: '$videos' }, { $count: 'count' }],
+                        coursesByCategory: [{ $group: { _id: '$category', count: { $sum: 1 } } }]
                     }
                 }
             ]),
+
             IncomeExpense.aggregate([
                 {
                     $facet: {
@@ -158,125 +238,151 @@ router.get('/dashboard', async (req, res) => {
                             { $match: { type: 'expense' } },
                             { $group: { _id: null, total: { $sum: '$amount' } } }
                         ],
-                        thisMonthIncome: [
+                        incomeByCategory: [
+                            { $match: { type: 'income' } },
+                            { $group: { _id: '$category', total: { $sum: '$amount' } } }
+                        ],
+                        expenseByCategory: [
+                            { $match: { type: 'expense' } },
+                            { $group: { _id: '$category', total: { $sum: '$amount' } } }
+                        ],
+                        last30DaysIncome: [
                             {
                                 $match: {
                                     type: 'income',
-                                    date: {
-                                        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-                                    }
+                                    date: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
                                 }
                             },
-                            { $group: { _id: null, total: { $sum: '$amount' } } }
+                            {
+                                $group: {
+                                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+                                    total: { $sum: '$amount' }
+                                }
+                            },
+                            { $sort: { _id: 1 } }
                         ],
-                        thisMonthExpense: [
+                        last30DaysExpense: [
                             {
                                 $match: {
                                     type: 'expense',
-                                    date: {
-                                        $gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-                                    }
+                                    date: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
                                 }
                             },
-                            { $group: { _id: null, total: { $sum: '$amount' } } }
+                            {
+                                $group: {
+                                    _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
+                                    total: { $sum: '$amount' }
+                                }
+                            },
+                            { $sort: { _id: 1 } }
                         ]
                     }
                 }
             ]),
+
             Promise.all([
-                User.find()
+                Deposit.find({ status: { $in: ['pending', 'processing'] } })
                     .sort({ createdAt: -1 })
                     .limit(5)
-                    .select('name email username userType createdAt')
-                    .lean(),
-                Deposit.find()
+                    .select('transactionId amount status createdAt userId')
+                    .populate('userId', 'name email'),
+                Withdrawal.find({ status: { $in: ['pending', 'processing'] } })
                     .sort({ createdAt: -1 })
                     .limit(5)
-                    .populate('user', 'name username')
-                    .select('user amount status createdAt')
-                    .lean(),
-                Withdrawal.find()
-                    .sort({ createdAt: -1 })
-                    .limit(5)
-                    .populate('user', 'name username')
-                    .select('user amount status createdAt')
-                    .lean(),
+                    .select('transactionId netAmount status createdAt userId')
+                    .populate('userId', 'name email'),
                 Order.find()
                     .sort({ createdAt: -1 })
                     .limit(5)
-                    .populate('user', 'name username')
-                    .select('user orderNumber totalAmount status createdAt')
-                    .lean()
+                    .select('_id amount status createdAt userId')
+                    .populate('userId', 'name email')
             ]),
-            SystemConfig.findOne().lean()
+
+            SystemConfig.getOrCreateConfig()
         ]);
 
-        const dashboard = {
-            users: {
-                total: userStats[0].totalUsers[0]?.count || 0,
-                byType: userStats[0].usersByType,
-                byStatus: userStats[0].usersByStatus,
+        const dashboardData = {
+            success: true,
+            timestamp: new Date(),
+            overview: {
+                totalUsers: userStats[0].totalUsers[0]?.count || 0,
                 totalWalletBalance: userStats[0].totalWalletBalance[0]?.total || 0,
-                newToday: userStats[0].newUsersToday[0]?.count || 0,
-                newThisMonth: userStats[0].newUsersThisMonth[0]?.count || 0
+                newUsersToday: userStats[0].newUsersToday[0]?.count || 0,
+                newUsersThisMonth: userStats[0].newUsersThisMonth[0]?.count || 0,
+                totalDeposits: depositStats[0].totalDeposits[0]?.total || 0,
+                totalDepositCount: depositStats[0].totalDeposits[0]?.count || 0,
+                pendingDeposits: depositStats[0].pendingDeposits[0]?.total || 0,
+                pendingDepositCount: depositStats[0].pendingDeposits[0]?.count || 0,
+                totalWithdrawals: withdrawalStats[0].totalWithdrawals[0]?.total || 0,
+                totalWithdrawalCount: withdrawalStats[0].totalWithdrawals[0]?.count || 0,
+                pendingWithdrawals: withdrawalStats[0].pendingWithdrawals[0]?.total || 0,
+                pendingWithdrawalCount: withdrawalStats[0].pendingWithdrawals[0]?.count || 0,
+                totalOrders: orderStats[0].totalOrders[0]?.total || 0,
+                totalOrderCount: orderStats[0].totalOrders[0]?.count || 0,
+                netRevenue: (depositStats[0].totalDeposits[0]?.total || 0) - (withdrawalStats[0].totalWithdrawals[0]?.total || 0)
             },
-            deposits: {
-                total: depositStats[0].totalDeposits[0]?.count || 0,
-                totalAmount: depositStats[0].totalAmount[0]?.total || 0,
-                byStatus: depositStats[0].byStatus,
-                pending: depositStats[0].pending[0]?.count || 0,
-                today: {
-                    count: depositStats[0].todayDeposits[0]?.count || 0,
-                    amount: depositStats[0].todayDeposits[0]?.amount || 0
+            users: {
+                byType: userStats[0].usersByType,
+                byStatus: userStats[0].usersByStatus
+            },
+            financial: {
+                deposits: {
+                    today: depositStats[0].depositsToday[0] || { total: 0, count: 0 },
+                    thisMonth: depositStats[0].depositsThisMonth[0] || { total: 0, count: 0 },
+                    byMethod: depositStats[0].depositsByMethod,
+                    last7Days: depositStats[0].last7DaysDeposits
+                },
+                withdrawals: {
+                    today: withdrawalStats[0].withdrawalsToday[0] || { total: 0, count: 0 },
+                    thisMonth: withdrawalStats[0].withdrawalsThisMonth[0] || { total: 0, count: 0 },
+                    byMethod: withdrawalStats[0].withdrawalsByMethod,
+                    last7Days: withdrawalStats[0].last7DaysWithdrawals
                 }
             },
-            withdrawals: {
-                total: withdrawalStats[0].totalWithdrawals[0]?.count || 0,
-                totalAmount: withdrawalStats[0].totalAmount[0]?.total || 0,
-                byStatus: withdrawalStats[0].byStatus,
-                pending: withdrawalStats[0].pending[0]?.count || 0,
-                today: {
-                    count: withdrawalStats[0].todayWithdrawals[0]?.count || 0,
-                    amount: withdrawalStats[0].todayWithdrawals[0]?.amount || 0
+            ecommerce: {
+                orders: {
+                    today: orderStats[0].ordersToday[0] || { total: 0, count: 0 },
+                    thisMonth: orderStats[0].ordersThisMonth[0] || { total: 0, count: 0 },
+                    byStatus: orderStats[0].ordersByStatus,
+                    last7Days: orderStats[0].last7DaysOrders
+                },
+                products: {
+                    total: productStats[0].totalProducts[0]?.count || 0,
+                    byCategory: productStats[0].productsByCategory,
+                    bestsellers: productStats[0].bestsellers[0]?.count || 0,
+                    averagePrice: productStats[0].averagePrice[0]?.avg || 0
                 }
-            },
-            orders: {
-                total: orderStats[0].totalOrders[0]?.count || 0,
-                totalRevenue: orderStats[0].totalRevenue[0]?.total || 0,
-                byStatus: orderStats[0].byStatus,
-                today: orderStats[0].todayOrders[0]?.count || 0
-            },
-            products: {
-                total: productStats[0].totalProducts[0]?.count || 0,
-                active: productStats[0].activeProducts[0]?.count || 0,
-                totalStock: productStats[0].totalStock[0]?.total || 0,
-                lowStock: productStats[0].lowStock[0]?.count || 0
             },
             courses: {
                 total: courseStats[0].totalCourses[0]?.count || 0,
                 published: courseStats[0].publishedCourses[0]?.count || 0,
-                totalEnrollments: courseStats[0].totalEnrollments[0]?.total || 0
+                totalVideos: courseStats[0].totalVideos[0]?.count || 0,
+                byCategory: courseStats[0].coursesByCategory
             },
-            finance: {
+            incomeExpense: {
                 totalIncome: incomeExpenseStats[0].totalIncome[0]?.total || 0,
                 totalExpense: incomeExpenseStats[0].totalExpense[0]?.total || 0,
-                thisMonthIncome: incomeExpenseStats[0].thisMonthIncome[0]?.total || 0,
-                thisMonthExpense: incomeExpenseStats[0].thisMonthExpense[0]?.total || 0,
-                netProfit: (incomeExpenseStats[0].totalIncome[0]?.total || 0) - (incomeExpenseStats[0].totalExpense[0]?.total || 0)
+                netProfit: (incomeExpenseStats[0].totalIncome[0]?.total || 0) - (incomeExpenseStats[0].totalExpense[0]?.total || 0),
+                incomeByCategory: incomeExpenseStats[0].incomeByCategory,
+                expenseByCategory: incomeExpenseStats[0].expenseByCategory,
+                last30Days: {
+                    income: incomeExpenseStats[0].last30DaysIncome,
+                    expense: incomeExpenseStats[0].last30DaysExpense
+                }
             },
             recentActivity: {
-                users: recentActivity[0],
-                deposits: recentActivity[1],
-                withdrawals: recentActivity[2],
-                orders: recentActivity[3]
+                pendingDeposits: recentActivity[0],
+                pendingWithdrawals: recentActivity[1],
+                recentOrders: recentActivity[2]
             },
-            systemConfig: systemConfig || {}
+            systemConfig: {
+                systemPercentage: systemConfig.systemPercentage,
+                traderPercentage: systemConfig.traderPercentage,
+                performanceFeeFrequency: systemConfig.performanceFeeFrequency
+            }
         };
 
-        res.status(200).json({
-            success: true,
-            data: dashboard
-        });
+        res.status(200).json(dashboardData);
     } catch (error) {
         console.error('Dashboard error:', error);
         res.status(500).json({
@@ -287,55 +393,25 @@ router.get('/dashboard', async (req, res) => {
     }
 });
 
-// ==================== DEPOSITS ROUTES ====================
+// ==================== DEPOSIT ROUTES ====================
 
 router.get('/deposits', async (req, res) => {
     try {
-        const { page = 1, limit = 20, status, search, startDate, endDate } = req.query;
+        const { status, userId, page = 1, limit = 20 } = req.query;
 
         const filter = {};
-
-        if (status) {
-            filter.status = status;
-        }
-
-        if (search) {
-            const users = await User.find({
-                $or: [
-                    { name: { $regex: search, $options: 'i' } },
-                    { username: { $regex: search, $options: 'i' } },
-                    { email: { $regex: search, $options: 'i' } }
-                ]
-            }).select('_id');
-
-            const userIds = users.map(u => u._id);
-
-            filter.$or = [
-                { user: { $in: userIds } },
-                { transactionId: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        if (startDate || endDate) {
-            filter.createdAt = {};
-            if (startDate) filter.createdAt.$gte = new Date(startDate);
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                filter.createdAt.$lte = end;
-            }
-        }
+        if (status) filter.status = status;
+        if (userId) filter.userId = userId;
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const [deposits, total] = await Promise.all([
             Deposit.find(filter)
-                .populate('user', 'name username email phone')
-                .populate('processedBy', 'name username')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
-                .lean(),
+                .populate('userId', 'name email username')
+                .populate('processedBy', 'name email'),
             Deposit.countDocuments(filter)
         ]);
 
@@ -362,9 +438,8 @@ router.get('/deposits', async (req, res) => {
 router.get('/deposits/:id', async (req, res) => {
     try {
         const deposit = await Deposit.findById(req.params.id)
-            .populate('user', 'name username email phone walletBalance')
-            .populate('processedBy', 'name username email')
-            .lean();
+            .populate('userId', 'name email username')
+            .populate('processedBy', 'name email');
 
         if (!deposit) {
             return res.status(404).json({
@@ -389,7 +464,7 @@ router.get('/deposits/:id', async (req, res) => {
 
 router.patch('/deposits/:id', async (req, res) => {
     try {
-        const { status, adminNote } = req.body;
+        const { status, adminNotes } = req.body;
 
         const deposit = await Deposit.findById(req.params.id);
 
@@ -400,15 +475,19 @@ router.patch('/deposits/:id', async (req, res) => {
             });
         }
 
-        if (deposit.status !== 'pending') {
-            return res.status(400).json({
-                success: false,
-                message: 'Only pending deposits can be updated'
-            });
+        const previousStatus = deposit.status;
+
+        if (status) deposit.status = status;
+        if (adminNotes) deposit.adminNotes = adminNotes;
+
+        if (status && ['completed', 'processing'].includes(status)) {
+            deposit.processedBy = req.user.userId;
+            deposit.processedAt = new Date();
         }
 
-        if (status === 'approved') {
-            const user = await User.findById(deposit.user);
+        if (status === 'completed' && previousStatus !== 'completed') {
+            const user = await User.findById(deposit.userId);
+
             if (!user) {
                 return res.status(404).json({
                     success: false,
@@ -417,39 +496,27 @@ router.patch('/deposits/:id', async (req, res) => {
             }
 
             user.walletBalance += deposit.amount;
+            user.financials.totalDeposits += deposit.amount;
+            user.financials.depositHistory.push({
+                amount: deposit.amount,
+                date: new Date(),
+                transactionId: deposit.transactionId,
+                method: deposit.paymentMethod
+            });
+
             await user.save();
-
-            deposit.status = 'approved';
-            deposit.processedBy = req.user._id;
-            deposit.processedAt = new Date();
-            if (adminNote) deposit.adminNote = adminNote;
-
-            await deposit.save();
-
-            res.status(200).json({
-                success: true,
-                message: 'Deposit approved successfully',
-                data: deposit
-            });
-        } else if (status === 'rejected') {
-            deposit.status = 'rejected';
-            deposit.processedBy = req.user._id;
-            deposit.processedAt = new Date();
-            if (adminNote) deposit.adminNote = adminNote;
-
-            await deposit.save();
-
-            res.status(200).json({
-                success: true,
-                message: 'Deposit rejected successfully',
-                data: deposit
-            });
-        } else {
-            res.status(400).json({
-                success: false,
-                message: 'Invalid status'
-            });
+            deposit.completedAt = new Date();
         }
+
+        await deposit.save();
+
+        res.status(200).json({
+            success: true,
+            message: status === 'completed' && previousStatus !== 'completed'
+                ? `Deposit completed successfully. $${deposit.amount} added to user's wallet.`
+                : 'Deposit updated successfully',
+            data: deposit
+        });
     } catch (error) {
         console.error('Update deposit error:', error);
         res.status(500).json({
@@ -460,55 +527,59 @@ router.patch('/deposits/:id', async (req, res) => {
     }
 });
 
-// ==================== WITHDRAWALS ROUTES ====================
+router.delete('/deposits/:id', async (req, res) => {
+    try {
+        const deposit = await Deposit.findById(req.params.id);
+
+        if (!deposit) {
+            return res.status(404).json({
+                success: false,
+                message: 'Deposit not found'
+            });
+        }
+
+        if (deposit.status === 'completed') {
+            return res.status(403).json({
+                success: false,
+                message: 'Cannot delete completed deposits'
+            });
+        }
+
+        await Deposit.findByIdAndDelete(req.params.id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Deposit deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete deposit error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete deposit',
+            error: error.message
+        });
+    }
+});
+
+// ==================== WITHDRAWAL ROUTES ====================
 
 router.get('/withdrawals', async (req, res) => {
     try {
-        const { page = 1, limit = 20, status, search, startDate, endDate } = req.query;
+        const { status, userId, page = 1, limit = 20 } = req.query;
 
         const filter = {};
-
-        if (status) {
-            filter.status = status;
-        }
-
-        if (search) {
-            const users = await User.find({
-                $or: [
-                    { name: { $regex: search, $options: 'i' } },
-                    { username: { $regex: search, $options: 'i' } },
-                    { email: { $regex: search, $options: 'i' } }
-                ]
-            }).select('_id');
-
-            const userIds = users.map(u => u._id);
-
-            filter.$or = [
-                { user: { $in: userIds } },
-                { transactionId: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        if (startDate || endDate) {
-            filter.createdAt = {};
-            if (startDate) filter.createdAt.$gte = new Date(startDate);
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                filter.createdAt.$lte = end;
-            }
-        }
+        if (status) filter.status = status;
+        if (userId) filter.userId = userId;
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const [withdrawals, total] = await Promise.all([
             Withdrawal.find(filter)
-                .populate('user', 'name username email phone')
-                .populate('processedBy', 'name username')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
-                .lean(),
+                .populate('userId', 'name email username')
+                .populate('processedBy', 'name email'),
             Withdrawal.countDocuments(filter)
         ]);
 
@@ -535,9 +606,8 @@ router.get('/withdrawals', async (req, res) => {
 router.get('/withdrawals/:id', async (req, res) => {
     try {
         const withdrawal = await Withdrawal.findById(req.params.id)
-            .populate('user', 'name username email phone walletBalance')
-            .populate('processedBy', 'name username email')
-            .lean();
+            .populate('userId', 'name email username')
+            .populate('processedBy', 'name email');
 
         if (!withdrawal) {
             return res.status(404).json({
@@ -562,7 +632,7 @@ router.get('/withdrawals/:id', async (req, res) => {
 
 router.patch('/withdrawals/:id', async (req, res) => {
     try {
-        const { status, adminNote, transactionId } = req.body;
+        const { status, adminNotes, rejectionReason } = req.body;
 
         const withdrawal = await Withdrawal.findById(req.params.id);
 
@@ -573,57 +643,22 @@ router.patch('/withdrawals/:id', async (req, res) => {
             });
         }
 
-        if (withdrawal.status !== 'pending') {
-            return res.status(400).json({
-                success: false,
-                message: 'Only pending withdrawals can be updated'
-            });
+        if (status) withdrawal.status = status;
+        if (adminNotes) withdrawal.adminNotes = adminNotes;
+        if (rejectionReason) withdrawal.rejectionReason = rejectionReason;
+
+        if (status && ['completed', 'processing', 'rejected'].includes(status)) {
+            withdrawal.processedBy = req.user.userId;
+            withdrawal.processedAt = new Date();
         }
 
-        if (status === 'approved') {
-            withdrawal.status = 'approved';
-            withdrawal.processedBy = req.user._id;
-            withdrawal.processedAt = new Date();
-            if (adminNote) withdrawal.adminNote = adminNote;
-            if (transactionId) withdrawal.transactionId = transactionId;
+        await withdrawal.save();
 
-            await withdrawal.save();
-
-            res.status(200).json({
-                success: true,
-                message: 'Withdrawal approved successfully',
-                data: withdrawal
-            });
-        } else if (status === 'rejected') {
-            const user = await User.findById(withdrawal.user);
-            if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'User not found'
-                });
-            }
-
-            user.walletBalance += withdrawal.amount;
-            await user.save();
-
-            withdrawal.status = 'rejected';
-            withdrawal.processedBy = req.user._id;
-            withdrawal.processedAt = new Date();
-            if (adminNote) withdrawal.adminNote = adminNote;
-
-            await withdrawal.save();
-
-            res.status(200).json({
-                success: true,
-                message: 'Withdrawal rejected and amount refunded',
-                data: withdrawal
-            });
-        } else {
-            res.status(400).json({
-                success: false,
-                message: 'Invalid status'
-            });
-        }
+        res.status(200).json({
+            success: true,
+            message: 'Withdrawal updated successfully',
+            data: withdrawal
+        });
     } catch (error) {
         console.error('Update withdrawal error:', error);
         res.status(500).json({
@@ -634,577 +669,103 @@ router.patch('/withdrawals/:id', async (req, res) => {
     }
 });
 
-// ==================== INCOME/EXPENSE ROUTES ====================
-
-router.get('/system-incomes', async (req, res) => {
+router.delete('/withdrawals/:id', async (req, res) => {
     try {
-        const { page = 1, limit = 20, type, category, startDate, endDate } = req.query;
+        const withdrawal = await Withdrawal.findById(req.params.id);
 
-        const filter = {};
-
-        if (type) {
-            filter.type = type;
+        if (!withdrawal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Withdrawal not found'
+            });
         }
 
-        if (category) {
-            filter.category = category;
+        if (withdrawal.status === 'completed') {
+            return res.status(403).json({
+                success: false,
+                message: 'Cannot delete completed withdrawals'
+            });
         }
 
-        if (startDate || endDate) {
-            filter.date = {};
-            if (startDate) filter.date.$gte = new Date(startDate);
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                filter.date.$lte = end;
+        if (withdrawal.status === 'processing') {
+            const user = await User.findById(withdrawal.userId);
+            if (user) {
+                user.walletBalance += withdrawal.amount;
+                await user.save();
             }
         }
 
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        const [records, total] = await Promise.all([
-            IncomeExpense.find(filter)
-                .populate('createdBy', 'name username')
-                .sort({ date: -1 })
-                .skip(skip)
-                .limit(parseInt(limit))
-                .lean(),
-            IncomeExpense.countDocuments(filter)
-        ]);
+        await Withdrawal.findByIdAndDelete(req.params.id);
 
         res.status(200).json({
             success: true,
-            data: records,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total,
-                pages: Math.ceil(total / parseInt(limit))
-            }
+            message: 'Withdrawal deleted successfully'
         });
     } catch (error) {
-        console.error('Get income/expense error:', error);
+        console.error('Delete withdrawal error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch income/expense records',
+            message: 'Failed to delete withdrawal',
             error: error.message
         });
     }
 });
 
-router.post('/system-incomes', async (req, res) => {
-    try {
-        const { type, category, amount, description, date } = req.body;
-
-        const record = new IncomeExpense({
-            type,
-            category,
-            amount,
-            description,
-            date: date ? new Date(date) : new Date(),
-            createdBy: req.user._id
-        });
-
-        await record.save();
-
-        res.status(201).json({
-            success: true,
-            message: 'Record created successfully',
-            data: record
-        });
-    } catch (error) {
-        console.error('Create income/expense error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create income/expense record',
-            error: error.message
-        });
-    }
-});
-
-router.delete('/system-incomes/:id', async (req, res) => {
-    try {
-        const record = await IncomeExpense.findByIdAndDelete(req.params.id);
-
-        if (!record) {
-            return res.status(404).json({
-                success: false,
-                message: 'Record not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Record deleted successfully'
-        });
-    } catch (error) {
-        console.error('Delete income/expense error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to delete income/expense record',
-            error: error.message
-        });
-    }
-});
-
-// ==================== PRODUCTS ROUTES ====================
-
-router.get('/products', async (req, res) => {
-    try {
-        const { page = 1, limit = 20, status, category, search } = req.query;
-
-        const filter = {};
-
-        if (status) {
-            filter.status = status;
-        }
-
-        if (category) {
-            filter.category = category;
-        }
-
-        if (search) {
-            filter.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } },
-                { sku: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        const [products, total] = await Promise.all([
-            Product.find(filter)
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(parseInt(limit))
-                .lean(),
-            Product.countDocuments(filter)
-        ]);
-
-        res.status(200).json({
-            success: true,
-            data: products,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total,
-                pages: Math.ceil(total / parseInt(limit))
-            }
-        });
-    } catch (error) {
-        console.error('Get products error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch products',
-            error: error.message
-        });
-    }
-});
-
-router.post('/products', async (req, res) => {
-    try {
-        const productData = req.body;
-
-        const product = new Product(productData);
-        await product.save();
-
-        res.status(201).json({
-            success: true,
-            message: 'Product created successfully',
-            data: product
-        });
-    } catch (error) {
-        console.error('Create product error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create product',
-            error: error.message
-        });
-    }
-});
-
-router.patch('/products/:id', async (req, res) => {
-    try {
-        const product = await Product.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
-        );
-
-        if (!product) {
-            return res.status(404).json({
-                success: false,
-                message: 'Product not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Product updated successfully',
-            data: product
-        });
-    } catch (error) {
-        console.error('Update product error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to update product',
-            error: error.message
-        });
-    }
-});
-
-router.delete('/products/:id', async (req, res) => {
-    try {
-        const product = await Product.findByIdAndDelete(req.params.id);
-
-        if (!product) {
-            return res.status(404).json({
-                success: false,
-                message: 'Product not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Product deleted successfully'
-        });
-    } catch (error) {
-        console.error('Delete product error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to delete product',
-            error: error.message
-        });
-    }
-});
-
-// ==================== ORDERS ROUTES ====================
-
-router.get('/orders', async (req, res) => {
-    try {
-        const { page = 1, limit = 20, status, search, startDate, endDate } = req.query;
-
-        const filter = {};
-
-        if (status) {
-            filter.status = status;
-        }
-
-        if (search) {
-            const users = await User.find({
-                $or: [
-                    { name: { $regex: search, $options: 'i' } },
-                    { username: { $regex: search, $options: 'i' } }
-                ]
-            }).select('_id');
-
-            const userIds = users.map(u => u._id);
-
-            filter.$or = [
-                { user: { $in: userIds } },
-                { orderNumber: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        if (startDate || endDate) {
-            filter.createdAt = {};
-            if (startDate) filter.createdAt.$gte = new Date(startDate);
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                filter.createdAt.$lte = end;
-            }
-        }
-
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        const [orders, total] = await Promise.all([
-            Order.find(filter)
-                .populate('user', 'name username email phone')
-                .populate('items.product', 'name price images')
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(parseInt(limit))
-                .lean(),
-            Order.countDocuments(filter)
-        ]);
-
-        res.status(200).json({
-            success: true,
-            data: orders,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total,
-                pages: Math.ceil(total / parseInt(limit))
-            }
-        });
-    } catch (error) {
-        console.error('Get orders error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch orders',
-            error: error.message
-        });
-    }
-});
-
-router.patch('/orders/:id', async (req, res) => {
-    try {
-        const { status } = req.body;
-
-        const order = await Order.findByIdAndUpdate(
-            req.params.id,
-            { status },
-            { new: true }
-        );
-
-        if (!order) {
-            return res.status(404).json({
-                success: false,
-                message: 'Order not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Order updated successfully',
-            data: order
-        });
-    } catch (error) {
-        console.error('Update order error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to update order',
-            error: error.message
-        });
-    }
-});
-
-// ==================== COURSES ROUTES ====================
-
-router.get('/courses', async (req, res) => {
-    try {
-        const { page = 1, limit = 20, status, search } = req.query;
-
-        const filter = {};
-
-        if (status) {
-            filter.status = status;
-        }
-
-        if (search) {
-            filter.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } }
-            ];
-        }
-
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
-        const [courses, total] = await Promise.all([
-            Course.find(filter)
-                .populate('instructor', 'name email')
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(parseInt(limit))
-                .lean(),
-            Course.countDocuments(filter)
-        ]);
-
-        res.status(200).json({
-            success: true,
-            data: courses,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total,
-                pages: Math.ceil(total / parseInt(limit))
-            }
-        });
-    } catch (error) {
-        console.error('Get courses error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch courses',
-            error: error.message
-        });
-    }
-});
-
-router.post('/courses', async (req, res) => {
-    try {
-        const courseData = req.body;
-
-        const course = new Course(courseData);
-        await course.save();
-
-        res.status(201).json({
-            success: true,
-            message: 'Course created successfully',
-            data: course
-        });
-    } catch (error) {
-        console.error('Create course error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create course',
-            error: error.message
-        });
-    }
-});
-
-router.patch('/courses/:id', async (req, res) => {
-    try {
-        const course = await Course.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
-        );
-
-        if (!course) {
-            return res.status(404).json({
-                success: false,
-                message: 'Course not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Course updated successfully',
-            data: course
-        });
-    } catch (error) {
-        console.error('Update course error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to update course',
-            error: error.message
-        });
-    }
-});
-
-router.delete('/courses/:id', async (req, res) => {
-    try {
-        const course = await Course.findByIdAndDelete(req.params.id);
-
-        if (!course) {
-            return res.status(404).json({
-                success: false,
-                message: 'Course not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Course deleted successfully'
-        });
-    } catch (error) {
-        console.error('Delete course error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to delete course',
-            error: error.message
-        });
-    }
-});
-
-// ==================== SYSTEM CONFIG ROUTES ====================
-
-router.get('/system-configuration', async (req, res) => {
-    try {
-        let config = await SystemConfig.findOne().lean();
-
-        if (!config) {
-            config = await SystemConfig.create({
-                siteName: 'NuPips',
-                maintenance: false
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: config
-        });
-    } catch (error) {
-        console.error('Get system config error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch system configuration',
-            error: error.message
-        });
-    }
-});
-
-router.patch('/system-configuration', async (req, res) => {
-    try {
-        let config = await SystemConfig.findOne();
-
-        if (!config) {
-            config = new SystemConfig(req.body);
-        } else {
-            Object.assign(config, req.body);
-        }
-
-        await config.save();
-
-        res.status(200).json({
-            success: true,
-            message: 'System configuration updated successfully',
-            data: config
-        });
-    } catch (error) {
-        console.error('Update system config error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to update system configuration',
-            error: error.message
-        });
-    }
-});
-
-// ==================== USERS ROUTES ====================
+// ==================== USER ROUTES ====================
 
 router.get('/users', async (req, res) => {
     try {
-        const { page = 1, limit = 20, userType, status, search } = req.query;
+        const { status, userType, search, page = 1, limit = 20 } = req.query;
 
-        const filter = {};
-
-        if (userType) {
-            filter.userType = userType;
-        }
-
-        if (status) {
-            filter.status = status;
-        }
+        const filter = { email: { $ne: process.env.ADMIN_EMAIL }, userType: { $ne: 'subadmin' } };
+        if (status) filter.status = status;
+        if (userType) filter.userType = userType;
 
         if (search) {
             filter.$or = [
                 { name: { $regex: search, $options: 'i' } },
                 { username: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { phone: { $regex: search, $options: 'i' } }
+                { email: { $regex: search, $options: 'i' } }
             ];
         }
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const [users, total] = await Promise.all([
+        const [users, total, stats] = await Promise.all([
             User.find(filter)
                 .select('-password -gtcfx.accessToken -gtcfx.refreshToken')
-                .populate('referralDetails.referredBy', 'name username')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
                 .lean(),
-            User.countDocuments(filter)
+            User.countDocuments(filter),
+            User.aggregate([
+                {
+                    $facet: {
+                        totalUsers: [{ $count: 'count' }],
+                        activeUsers: [{ $match: { status: 'active' } }, { $count: 'count' }],
+                        inactiveUsers: [{ $match: { status: 'inactive' } }, { $count: 'count' }],
+                        agentUsers: [{ $match: { userType: 'agent' } }, { $count: 'count' }],
+                        traderUsers: [{ $match: { userType: 'trader' } }, { $count: 'count' }],
+                        totalWalletBalance: [{ $group: { _id: null, total: { $sum: '$walletBalance' } } }]
+                    }
+                }
+            ])
         ]);
+
+        const formattedStats = {
+            total: stats[0].totalUsers[0]?.count || 0,
+            active: stats[0].activeUsers[0]?.count || 0,
+            inactive: stats[0].inactiveUsers[0]?.count || 0,
+            agents: stats[0].agentUsers[0]?.count || 0,
+            traders: stats[0].traderUsers[0]?.count || 0,
+            totalBalance: stats[0].totalWalletBalance[0]?.total || 0
+        };
 
         res.status(200).json({
             success: true,
             data: users,
+            stats: formattedStats,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -1361,9 +922,45 @@ router.get('/users/:id/tree', async (req, res) => {
     }
 });
 
+router.get('/gtc-members/export', async (req, res) => {
+    try {
+        const members = await GTCMember.find()
+            .populate('onboardingDoneBy', 'name email username')
+            .sort({ joinedAt: -1 })
+            .lean();
+
+        const exportData = members.map(member => ({
+            'GTC User ID': member.gtcUserId,
+            'Name': member.name || '-',
+            'Username': member.username || '-',
+            'Email': member.email || '-',
+            'Phone': member.phone || '-',
+            'Level': member.level,
+            'Parent ID': member.parentGtcUserId || '-',
+            'Balance': member.balance || 0,
+            'Status': member.status,
+            'Onboarded (Call)': member.onboardedWithCall ? 'Yes' : 'No',
+            'Onboarded (Message)': member.onboardedWithMessage ? 'Yes' : 'No',
+            'Onboarded By': member.onboardingDoneBy?.name || '-',
+            'Joined Date': member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : '-'
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: exportData,
+            message: `Exported ${exportData.length} members`
+        });
+    } catch (error) {
+        console.error('Failed to export GTC members:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to export GTC members',
+            error: error.message
+        });
+    }
+});
+
 // ==================== GTC MEMBERS ROUTES ====================
-// CRITICAL: Specific routes MUST come BEFORE parameterized routes
-// Order matters: /stats, /tree, /export, /lookup BEFORE /:id
 
 // ============================================
 // GET: Fetch all GTC members with filters
@@ -1401,6 +998,7 @@ router.get('/gtc-members', async (req, res) => {
                 .skip(skip)
                 .limit(parseInt(limit))
                 .populate('onboardingDoneBy', 'name email username userType')
+                .populate('onboardedBy', 'name email username userType')
                 .lean(),
             GTCMember.countDocuments(filter),
             GTCMember.aggregate([
@@ -1452,266 +1050,40 @@ router.get('/gtc-members', async (req, res) => {
 });
 
 // ============================================
-// GET: Fetch onboarding statistics (BEFORE :id route)
+// GET: Fetch single member by ID
 // ============================================
-router.get('/gtc-members/stats/onboarding', async (req, res) => {
-    try {
-        const stats = await GTCMember.aggregate([
-            {
-                $facet: {
-                    total: [{ $count: 'count' }],
-                    onboardedWithCall: [
-                        { $match: { onboardedWithCall: true } },
-                        { $count: 'count' }
-                    ],
-                    onboardedWithMessage: [
-                        { $match: { onboardedWithMessage: true } },
-                        { $count: 'count' }
-                    ],
-                    bothOnboarded: [
-                        {
-                            $match: {
-                                onboardedWithCall: true,
-                                onboardedWithMessage: true
-                            }
-                        },
-                        { $count: 'count' }
-                    ],
-                    notOnboarded: [
-                        {
-                            $match: {
-                                onboardedWithCall: false,
-                                onboardedWithMessage: false
-                            }
-                        },
-                        { $count: 'count' }
-                    ],
-                    partialOnboarded: [
-                        {
-                            $match: {
-                                $or: [
-                                    {
-                                        onboardedWithCall: true,
-                                        onboardedWithMessage: false
-                                    },
-                                    {
-                                        onboardedWithCall: false,
-                                        onboardedWithMessage: true
-                                    }
-                                ]
-                            }
-                        },
-                        { $count: 'count' }
-                    ]
-                }
-            }
-        ]);
-
-        const formattedStats = {
-            total: stats[0].total[0]?.count || 0,
-            onboardedWithCall: stats[0].onboardedWithCall[0]?.count || 0,
-            onboardedWithMessage: stats[0].onboardedWithMessage[0]?.count || 0,
-            bothOnboarded: stats[0].bothOnboarded[0]?.count || 0,
-            notOnboarded: stats[0].notOnboarded[0]?.count || 0,
-            partialOnboarded: stats[0].partialOnboarded[0]?.count || 0
-        };
-
-        res.status(200).json({
-            success: true,
-            data: formattedStats
-        });
-    } catch (error) {
-        console.error('Failed to fetch onboarding stats:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch onboarding statistics',
-            error: error.message
-        });
-    }
-});
-
-// ============================================
-// GET: Fetch overview statistics (BEFORE :id route)
-// ============================================
-router.get('/gtc-members/stats/overview', async (req, res) => {
-    try {
-        const stats = await GTCMember.aggregate([
-            {
-                $facet: {
-                    totalMembers: [{ $count: 'count' }],
-                    activeMembers: [
-                        { $match: { status: 'active' } },
-                        { $count: 'count' }
-                    ],
-                    withParent: [
-                        { $match: { parentGtcUserId: { $ne: null } } },
-                        { $count: 'count' }
-                    ],
-                    rootMembers: [
-                        { $match: { parentGtcUserId: null } },
-                        { $count: 'count' }
-                    ],
-                    avgLevel: [{ $group: { _id: null, avg: { $avg: '$level' } } }],
-                    maxLevel: [{ $group: { _id: null, max: { $max: '$level' } } }],
-                    totalBalance: [{ $group: { _id: null, total: { $sum: '$balance' } } }]
-                }
-            }
-        ]);
-
-        const formattedStats = {
-            total: stats[0].totalMembers[0]?.count || 0,
-            active: stats[0].activeMembers[0]?.count || 0,
-            withParent: stats[0].withParent[0]?.count || 0,
-            rootMembers: stats[0].rootMembers[0]?.count || 0,
-            avgLevel: stats[0].avgLevel[0]?.avg || 0,
-            maxLevel: stats[0].maxLevel[0]?.max || 0,
-            totalBalance: stats[0].totalBalance[0]?.total || 0
-        };
-
-        res.status(200).json({
-            success: true,
-            data: formattedStats
-        });
-    } catch (error) {
-        console.error('Failed to fetch overview stats:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch overview statistics',
-            error: error.message
-        });
-    }
-});
-
-// ============================================
-// GET: Export GTC members to Excel (BEFORE :id route)
-// ============================================
-router.get('/gtc-members/export', async (req, res) => {
-    try {
-        const members = await GTCMember.find()
-            .populate('onboardingDoneBy', 'name email username')
-            .sort({ joinedAt: -1 })
-            .lean();
-
-        const exportData = members.map(member => ({
-            'GTC User ID': member.gtcUserId,
-            'Name': member.name || '-',
-            'Username': member.username || '-',
-            'Email': member.email || '-',
-            'Phone': member.phone || '-',
-            'Level': member.level,
-            'Parent ID': member.parentGtcUserId || '-',
-            'Balance': member.balance || 0,
-            'Status': member.status,
-            'Onboarded (Call)': member.onboardedWithCall ? 'Yes' : 'No',
-            'Onboarded (Message)': member.onboardedWithMessage ? 'Yes' : 'No',
-            'Onboarded By': member.onboardingDoneBy?.name || '-',
-            'Joined Date': member.joinedAt ? new Date(member.joinedAt).toLocaleDateString() : '-'
-        }));
-
-        res.status(200).json({
-            success: true,
-            data: exportData,
-            message: `Exported ${exportData.length} members`
-        });
-    } catch (error) {
-        console.error('Failed to export GTC members:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to export GTC members',
-            error: error.message
-        });
-    }
-});
-
-// ============================================
-// GET: Lookup member by gtcUserId (BEFORE :id route)
-// ============================================
-router.get('/gtc-members/lookup/:gtcUserId', async (req, res) => {
-    try {
-        const member = await GTCMember.findOne({ gtcUserId: req.params.gtcUserId })
-            .populate('onboardingDoneBy', 'name email username userType')
-            .lean();
-
-        if (!member) {
-            return res.status(404).json({
-                success: false,
-                message: 'GTC member not found'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: member
-        });
-    } catch (error) {
-        console.error('Failed to lookup GTC member:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to lookup GTC member',
-            error: error.message
-        });
-    }
-});
-
-// ============================================
-// GET: Fetch member tree/hierarchy (BEFORE :id route)
-// ============================================
-router.get('/gtc-members/:id/tree', async (req, res) => {
+router.get('/gtc-members/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        let rootMember;
+        let member;
 
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
-            rootMember = await GTCMember.findById(id)
-                .populate('onboardingDoneBy', 'name email username')
+            member = await GTCMember.findById(id)
+                .populate('onboardingDoneBy', 'name email username userType')
+                .populate('onboardedBy', 'name email username userType')
                 .lean();
         } else {
-            rootMember = await GTCMember.findOne({ gtcUserId: id })
-                .populate('onboardingDoneBy', 'name email username')
+            member = await GTCMember.findOne({ gtcUserId: id })
+                .populate('onboardingDoneBy', 'name email username userType')
                 .lean();
         }
 
-        if (!rootMember) {
+        if (!member) {
             return res.status(404).json({
                 success: false,
                 message: 'GTC member not found',
             });
         }
 
-        async function buildTree(gtcUserId, level = 1, maxLevel = 10) {
-            if (level > maxLevel) return [];
-
-            const children = await GTCMember.find({
-                parentGtcUserId: gtcUserId,
-            })
-                .populate('onboardingDoneBy', 'name email username')
-                .lean();
-
-            const tree = [];
-            for (const child of children) {
-                tree.push({
-                    ...child,
-                    level,
-                    children: await buildTree(child.gtcUserId, level + 1, maxLevel),
-                });
-            }
-            return tree;
-        }
-
-        const tree = await buildTree(rootMember.gtcUserId);
-
         res.status(200).json({
             success: true,
-            data: {
-                root: rootMember,
-                tree,
-            },
+            data: member,
         });
     } catch (error) {
-        console.error('Failed to fetch GTC member tree:', error);
+        console.error('Failed to fetch GTC member:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch GTC member tree',
+            message: 'Failed to fetch GTC member',
             error: error.message,
         });
     }
@@ -1791,16 +1163,75 @@ router.patch('/gtc-members/:id/onboarding', async (req, res) => {
     }
 });
 
-router.patch('/gtc-members/:id/notes', async (req, res) => {
+// ============================================
+// GET: Fetch member tree/hierarchy
+// ============================================
+router.get('/gtc-members/:id/tree', async (req, res) => {
     try {
-        const { notes } = req.body;
+        const { id } = req.params;
+        let rootMember;
 
-        const member = await GTCMember.findOne({
-            $or: [
-                { _id: req.params.id },
-                { gtcUserId: req.params.id }
-            ]
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            rootMember = await GTCMember.findById(id)
+                .populate('onboardingDoneBy', 'name email username')
+                .lean();
+        } else {
+            rootMember = await GTCMember.findOne({ gtcUserId: id })
+                .populate('onboardingDoneBy', 'name email username')
+                .lean();
+        }
+
+        if (!rootMember) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC member not found',
+            });
+        }
+
+        async function buildTree(gtcUserId, level = 1, maxLevel = 10) {
+            if (level > maxLevel) return [];
+
+            const children = await GTCMember.find({
+                parentGtcUserId: gtcUserId,
+            })
+                .populate('onboardingDoneBy', 'name email username')
+                .lean();
+
+            const tree = [];
+            for (const child of children) {
+                tree.push({
+                    ...child,
+                    level,
+                    children: await buildTree(child.gtcUserId, level + 1, maxLevel),
+                });
+            }
+            return tree;
+        }
+
+        const tree = await buildTree(rootMember.gtcUserId);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                root: rootMember,
+                tree,
+            },
         });
+    } catch (error) {
+        console.error('Failed to fetch member tree:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch member tree',
+            error: error.message,
+        });
+    }
+});
+
+router.get('/gtc-members/lookup/:gtcUserId', async (req, res) => {
+    try {
+        const member = await GTCMember.findOne({
+            gtcUserId: req.params.gtcUserId
+        }).lean();
 
         if (!member) {
             return res.status(404).json({
@@ -1809,17 +1240,314 @@ router.patch('/gtc-members/:id/notes', async (req, res) => {
             });
         }
 
-        // Both admin and subadmin can update notes
+        res.status(200).json({
+            success: true,
+            data: member
+        });
+    } catch (error) {
+        console.error('Failed to lookup GTC member:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to lookup GTC member',
+            error: error.message
+        });
+    }
+});
+
+router.get('/gtc-members/stats/overview', async (req, res) => {
+    try {
+        const stats = await GTCMember.aggregate([
+            {
+                $facet: {
+                    total: [{ $count: 'count' }],
+                    byLevel: [{ $group: { _id: '$level', count: { $sum: 1 } } }, { $sort: { _id: 1 } }],
+                    withParent: [{ $match: { parentGtcUserId: { $ne: null } } }, { $count: 'count' }],
+                    rootMembers: [{ $match: { parentGtcUserId: null } }, { $count: 'count' }],
+                    recentJoins: [
+                        { $sort: { joinedAt: -1 } },
+                        { $limit: 10 },
+                        { $project: { name: 1, username: 1, email: 1, joinedAt: 1, level: 1 } }
+                    ]
+                }
+            }
+        ]);
+
+        const formattedData = {
+            total: stats[0].total[0]?.count || 0,
+            byLevel: stats[0].byLevel,
+            withParent: stats[0].withParent[0]?.count || 0,
+            rootMembers: stats[0].rootMembers[0]?.count || 0,
+            recentJoins: stats[0].recentJoins
+        };
+
+        res.status(200).json({
+            success: true,
+            data: formattedData
+        });
+    } catch (error) {
+        console.error('Failed to fetch GTC statistics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch GTC statistics',
+            error: error.message
+        });
+    }
+});
+
+// ============================================
+// PATCH: Toggle onboarded with call status
+// ============================================
+router.patch('/gtc-members/:id/toggle-call', async (req, res) => {
+    try {
+        const { id } = req.params;
+        let member;
+
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            member = await GTCMember.findById(id);
+        } else {
+            member = await GTCMember.findOne({ gtcUserId: id });
+        }
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC member not found',
+            });
+        }
+
+        // Toggle the status
+        member.onboardedWithCall = !member.onboardedWithCall;
+
+        // Auto-assign onboardingDoneBy if not set and turning ON
+        if (member.onboardedWithCall && !member.onboardingDoneBy) {
+            member.onboardingDoneBy = req.user._id || req.user.userId;
+        }
+
+        // Set completion date if both are done
+        if (
+            member.onboardedWithCall &&
+            member.onboardedWithMessage &&
+            !member.onboardingCompletedAt
+        ) {
+            member.onboardingCompletedAt = new Date();
+        }
+
+        // Clear completion date if unchecking
+        if (!member.onboardedWithCall || !member.onboardedWithMessage) {
+            member.onboardingCompletedAt = null;
+        }
+
+        member.lastUpdated = new Date();
+        await member.save();
+        await member.populate('onboardingDoneBy', 'name email username userType');
+
+        res.status(200).json({
+            success: true,
+            message: `Onboarded with call status updated to ${member.onboardedWithCall}`,
+            data: member.toObject(),
+        });
+    } catch (error) {
+        console.error('Toggle call status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to toggle call status',
+            error: error.message,
+        });
+    }
+});
+
+// ============================================
+// PATCH: Toggle onboarded with message status
+// ============================================
+router.patch('/gtc-members/:id/toggle-message', async (req, res) => {
+    try {
+        const { id } = req.params;
+        let member;
+
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            member = await GTCMember.findById(id);
+        } else {
+            member = await GTCMember.findOne({ gtcUserId: id });
+        }
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC member not found',
+            });
+        }
+
+        // Toggle the status
+        member.onboardedWithMessage = !member.onboardedWithMessage;
+
+        // Auto-assign onboardingDoneBy if not set and turning ON
+        if (member.onboardedWithMessage && !member.onboardingDoneBy) {
+            member.onboardingDoneBy = req.user._id || req.user.userId;
+        }
+
+        // Set completion date if both are done
+        if (
+            member.onboardedWithCall &&
+            member.onboardedWithMessage &&
+            !member.onboardingCompletedAt
+        ) {
+            member.onboardingCompletedAt = new Date();
+        }
+
+        // Clear completion date if unchecking
+        if (!member.onboardedWithCall || !member.onboardedWithMessage) {
+            member.onboardingCompletedAt = null;
+        }
+
+        member.lastUpdated = new Date();
+        await member.save();
+        await member.populate('onboardingDoneBy', 'name email username userType');
+
+        res.status(200).json({
+            success: true,
+            message: `Onboarded with message status updated to ${member.onboardedWithMessage}`,
+            data: member.toObject(),
+        });
+    } catch (error) {
+        console.error('Toggle message status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to toggle message status',
+            error: error.message,
+        });
+    }
+});
+
+// ============================================
+// PATCH: Update onboarding details (NEW ROUTE)
+// Admin/Subadmin only
+// ============================================
+router.patch('/gtc-members/:id/onboarding-details', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { onboardingDoneBy, onboardingNotes } = req.body;
+
+        // Only admin and subadmin can update
+        if (!['admin', 'subadmin'].includes(req.user.userType)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin or Subadmin privileges required.',
+            });
+        }
+
+        let member;
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            member = await GTCMember.findById(id);
+        } else {
+            member = await GTCMember.findOne({ gtcUserId: id });
+        }
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC member not found',
+            });
+        }
+
+        // Update onboardingDoneBy field
+        if (onboardingDoneBy !== undefined) {
+            if (onboardingDoneBy) {
+                // Validate if it's a valid user ID
+                const user = await User.findById(onboardingDoneBy);
+                if (!user) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Invalid user ID for onboardingDoneBy',
+                    });
+                }
+                member.onboardingDoneBy = onboardingDoneBy;
+            } else {
+                // Allow clearing by passing null
+                member.onboardingDoneBy = null;
+            }
+        }
+
+        // Update onboarding notes
+        if (onboardingNotes !== undefined) {
+            member.onboardingNotes = onboardingNotes.trim();
+        }
+
+        // Auto-set completion date if both call and message are done
+        if (
+            member.onboardedWithCall &&
+            member.onboardedWithMessage &&
+            !member.onboardingCompletedAt
+        ) {
+            member.onboardingCompletedAt = new Date();
+        }
+
+        // Clear completion date if either is unchecked
+        if (!member.onboardedWithCall || !member.onboardedWithMessage) {
+            member.onboardingCompletedAt = null;
+        }
+
+        member.lastUpdated = new Date();
+        await member.save();
+
+        // Populate the user details
+        await member.populate('onboardingDoneBy', 'name email username userType');
+
+        res.status(200).json({
+            success: true,
+            message: 'Onboarding details updated successfully',
+            data: member.toObject(),
+        });
+    } catch (error) {
+        console.error('Update onboarding details error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update onboarding details',
+            error: error.message,
+        });
+    }
+});
+
+router.patch('/gtc-members/:id/notes', async (req, res) => {
+    try {
+        const GTCMember = mongoose.model('GTCMember');
+        const { notes } = req.body;
+
+        // Both admin and subadmin can edit notes
+        if (!['admin', 'subadmin'].includes(req.user.userType)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin or subadmin only.'
+            });
+        }
+
+        const { id } = req.params;
+        let member;
+
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            member = await GTCMember.findById(id);
+        } else {
+            member = await GTCMember.findOne({ gtcUserId: id });
+        }
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'Member not found'
+            });
+        }
+
         member.notes = notes || '';
         await member.save();
 
-        // Populate onboardedBy before returning
-        await member.populate('onboardedBy', 'name username email');
+        // Return with populated field
+        const updatedMember = await GTCMember.findById(member._id)
+            .populate('onboardedBy', 'name email username userType')
+            .lean();
 
         res.status(200).json({
             success: true,
             message: 'Notes updated successfully',
-            data: member
+            data: updatedMember
         });
     } catch (error) {
         console.error('Update notes error:', error);
@@ -1831,41 +1559,186 @@ router.patch('/gtc-members/:id/notes', async (req, res) => {
     }
 });
 
-// ============================================
-// GET: Fetch single member by ID (MUST BE LAST)
-// This route MUST come AFTER all specific routes
-// ============================================
-router.get('/gtc-members/:id', async (req, res) => {
+router.patch('/gtc-members/:id/assign-onboarded-by', async (req, res) => {
     try {
+        const GTCMember = mongoose.model('GTCMember');
+        const User = mongoose.model('User');
+        const { userId } = req.body;
+
+        // Only main admin can assign onboardedBy
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Only main admin can assign onboarded by.'
+            });
+        }
+
         const { id } = req.params;
         let member;
 
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
-            member = await GTCMember.findById(id)
-                .populate('onboardingDoneBy', 'name email username userType')
-                .lean();
+            member = await GTCMember.findById(id);
         } else {
-            member = await GTCMember.findOne({ gtcUserId: id })
-                .populate('onboardingDoneBy', 'name email username userType')
-                .lean();
+            member = await GTCMember.findOne({ gtcUserId: id });
         }
 
         if (!member) {
             return res.status(404).json({
                 success: false,
-                message: 'GTC member not found',
+                message: 'Member not found'
             });
         }
 
+        // If userId is provided, validate it
+        if (userId) {
+            const user = await User.findOne({
+                _id: userId,
+                userType: { $in: ['admin', 'subadmin'] }
+            });
+
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found or is not an admin/subadmin'
+                });
+            }
+
+            member.onboardedBy = userId;
+        } else {
+            // Allow clearing the assignment
+            member.onboardedBy = null;
+        }
+
+        await member.save();
+
+        // Return with populated field
+        const updatedMember = await GTCMember.findById(member._id)
+            .populate('onboardedBy', 'name email username userType')
+            .lean();
+
         res.status(200).json({
             success: true,
-            data: member,
+            message: 'Onboarded by assigned successfully',
+            data: updatedMember
         });
     } catch (error) {
-        console.error('Failed to fetch GTC member:', error);
+        console.error('Assign onboarded by error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch GTC member',
+            message: 'Failed to assign onboarded by',
+            error: error.message
+        });
+    }
+});
+
+// Bulk update onboarding status
+router.patch('/gtc-members/bulk/onboarding', async (req, res) => {
+    try {
+        const { memberIds, onboardedWithCall, onboardedWithMessage } = req.body;
+
+        if (!memberIds || !Array.isArray(memberIds) || memberIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'memberIds array is required'
+            });
+        }
+
+        const updateFields = {};
+        if (onboardedWithCall !== undefined) updateFields.onboardedWithCall = onboardedWithCall;
+        if (onboardedWithMessage !== undefined) updateFields.onboardedWithMessage = onboardedWithMessage;
+        updateFields.lastUpdated = new Date();
+
+        const result = await GTCMember.updateMany(
+            { gtcUserId: { $in: memberIds } },
+            { $set: updateFields }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: `Updated ${result.modifiedCount} members`,
+            data: {
+                matchedCount: result.matchedCount,
+                modifiedCount: result.modifiedCount
+            }
+        });
+    } catch (error) {
+        console.error('Bulk update error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to bulk update onboarding status',
+            error: error.message
+        });
+    }
+});
+
+// ============================================
+// GET: Fetch onboarding statistics
+// ============================================
+router.get('/gtc-members/stats/onboarding', async (req, res) => {
+    try {
+        const stats = await GTCMember.aggregate([
+            {
+                $facet: {
+                    total: [{ $count: 'count' }],
+                    onboardedWithCall: [
+                        { $match: { onboardedWithCall: true } },
+                        { $count: 'count' },
+                    ],
+                    onboardedWithMessage: [
+                        { $match: { onboardedWithMessage: true } },
+                        { $count: 'count' },
+                    ],
+                    bothOnboarded: [
+                        {
+                            $match: {
+                                onboardedWithCall: true,
+                                onboardedWithMessage: true,
+                            },
+                        },
+                        { $count: 'count' },
+                    ],
+                    notOnboarded: [
+                        {
+                            $match: {
+                                onboardedWithCall: false,
+                                onboardedWithMessage: false,
+                            },
+                        },
+                        { $count: 'count' },
+                    ],
+                    partialOnboarded: [
+                        {
+                            $match: {
+                                $or: [
+                                    { onboardedWithCall: true, onboardedWithMessage: false },
+                                    { onboardedWithCall: false, onboardedWithMessage: true },
+                                ],
+                            },
+                        },
+                        { $count: 'count' },
+                    ],
+                },
+            },
+        ]);
+
+        const formattedStats = {
+            total: stats[0].total[0]?.count || 0,
+            onboardedWithCall: stats[0].onboardedWithCall[0]?.count || 0,
+            onboardedWithMessage: stats[0].onboardedWithMessage[0]?.count || 0,
+            bothOnboarded: stats[0].bothOnboarded[0]?.count || 0,
+            notOnboarded: stats[0].notOnboarded[0]?.count || 0,
+            partialOnboarded: stats[0].partialOnboarded[0]?.count || 0,
+        };
+
+        res.status(200).json({
+            success: true,
+            data: formattedStats,
+        });
+    } catch (error) {
+        console.error('Failed to fetch onboarding stats:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch onboarding statistics',
             error: error.message,
         });
     }
@@ -1876,6 +1749,9 @@ router.get('/gtc-members/:id', async (req, res) => {
 // Get all subadmins
 router.get('/subadmins', async (req, res) => {
     try {
+        const { status, search, page = 1, limit = 20 } = req.query;
+
+        // Only admin can access this
         if (req.user.userType !== 'admin') {
             return res.status(403).json({
                 success: false,
@@ -1883,13 +1759,8 @@ router.get('/subadmins', async (req, res) => {
             });
         }
 
-        const { page = 1, limit = 20, status, search } = req.query;
-
         const filter = { userType: 'subadmin' };
-
-        if (status) {
-            filter.status = status;
-        }
+        if (status) filter.status = status;
 
         if (search) {
             filter.$or = [
@@ -1931,7 +1802,82 @@ router.get('/subadmins', async (req, res) => {
     }
 });
 
-// Create subadmin
+
+// Get available pages list
+router.get('/subadmins/available-pages', async (req, res) => {
+    try {
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const availablePages = [
+            { key: 'dashboard', name: 'Dashboard', description: 'Main analytics dashboard' },
+            { key: 'deposits', name: 'Deposits', description: 'Manage user deposits' },
+            { key: 'withdrawals', name: 'Withdrawals', description: 'Manage user withdrawals' },
+            { key: 'system-incomes', name: 'System Incomes', description: 'View system income/expense' },
+            { key: 'products', name: 'Products', description: 'Manage products in marketing shop' },
+            { key: 'orders', name: 'Orders', description: 'Manage product orders' },
+            { key: 'competition', name: 'Competition', description: 'View and manage competitions' },
+            { key: 'gtc-members', name: 'GTC Members', description: 'Manage GTC members' },
+            { key: 'users', name: 'Users', description: 'Manage all users' },
+            { key: 'courses', name: 'Courses', description: 'Manage courses and videos' },
+            { key: 'system-configuration', name: 'System Configuration', description: 'Configure system settings' }
+        ];
+
+        res.status(200).json({
+            success: true,
+            data: availablePages
+        });
+    } catch (error) {
+        console.error('Get available pages error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch available pages',
+            error: error.message
+        });
+    }
+});
+
+// Get single subadmin
+router.get('/subadmins/:id', async (req, res) => {
+    try {
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin only.'
+            });
+        }
+
+        const subadmin = await User.findOne({
+            _id: req.params.id,
+            userType: 'subadmin'
+        }).select('-password -gtcfx.accessToken -gtcfx.refreshToken');
+
+        if (!subadmin) {
+            return res.status(404).json({
+                success: false,
+                message: 'Subadmin not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            data: subadmin
+        });
+    } catch (error) {
+        console.error('Get subadmin error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch subadmin',
+            error: error.message
+        });
+    }
+});
+
+// Create new subadmin
 router.post('/subadmins', async (req, res) => {
     try {
         if (req.user.userType !== 'admin') {
@@ -1943,30 +1889,30 @@ router.post('/subadmins', async (req, res) => {
 
         const { name, username, email, phone, password, permissions } = req.body;
 
-        // Validate required fields
-        if (!name || !username || !email || !password) {
+        // Validation
+        if (!name || !username || !email || !phone || !password) {
             return res.status(400).json({
                 success: false,
-                message: 'Name, username, email, and password are required'
+                message: 'All fields are required: name, username, email, phone, password'
             });
         }
 
-        // Validate permissions pages
-        if (permissions?.pages) {
-            const validPages = [
-                'dashboard',
-                'deposits',
-                'withdrawals',
-                'system-incomes',
-                'products',
-                'orders',
-                'competition',
-                'gtc-members',
-                'users',
-                'courses',
-                'system-configuration'
-            ];
+        // Validate permissions
+        const validPages = [
+            'dashboard',
+            'deposits',
+            'withdrawals',
+            'system-incomes',
+            'products',
+            'orders',
+            'competition',
+            'gtc-members',
+            'users',
+            'courses',
+            'system-configuration'
+        ];
 
+        if (permissions?.pages) {
             const invalidPages = permissions.pages.filter(p => !validPages.includes(p));
             if (invalidPages.length > 0) {
                 return res.status(400).json({
