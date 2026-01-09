@@ -1337,7 +1337,7 @@ const GTCMembers = () => {
                                 </div>
                               ) : (
                                 <span className="text-sm text-gray-400 italic">
-                                  Noonboarding notes
+                                  No onboarding notes
                                 </span>
                               )}
                               <button
@@ -1684,7 +1684,7 @@ const GTCMembers = () => {
                           </div>
                         ) : (
                           <p className="text-sm text-gray-400 italic mb-3">
-                            Noonboarding notes added yet
+                            No onboarding notes added yet
                           </p>
                         )}
                         <button
