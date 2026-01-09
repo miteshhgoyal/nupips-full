@@ -783,6 +783,33 @@ router.get('/users', async (req, res) => {
     }
 });
 
+// ============================================
+// GET: Fetch all users for assignment dropdown (NEW ROUTE)
+// Returns only admin and subadmin users
+// ============================================
+router.get('/users/list', async (req, res) => {
+    try {
+        const User = mongoose.model('User');
+
+        const users = await User.find(
+            { userType: { $in: ['admin', 'subadmin'] } },
+            { _id: 1, name: 1, username: 1, email: 1, userType: 1 }
+        ).sort({ name: 1 });
+
+        res.status(200).json({
+            success: true,
+            data: users
+        });
+    } catch (error) {
+        console.error('Get users list error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch users list',
+            error: error.message
+        });
+    }
+});
+
 router.get('/users/:id', async (req, res) => {
     try {
         const user = await User.findById(req.params.id)
@@ -937,6 +964,7 @@ router.get('/gtc-members', async (req, res) => {
                 .skip(skip)
                 .limit(parseInt(limit))
                 .populate('onboardingDoneBy', 'name email username userType')
+                .populate('onboardedBy', 'name email username userType')
                 .lean(),
             GTCMember.countDocuments(filter),
             GTCMember.aggregate([
@@ -998,6 +1026,7 @@ router.get('/gtc-members/:id', async (req, res) => {
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
             member = await GTCMember.findById(id)
                 .populate('onboardingDoneBy', 'name email username userType')
+                .populate('onboardedBy', 'name email username userType')
                 .lean();
         } else {
             member = await GTCMember.findOne({ gtcUserId: id })
@@ -1370,31 +1399,126 @@ router.patch('/gtc-members/:id/onboarding-details', async (req, res) => {
     }
 });
 
-
-// ============================================
-// GET: Fetch all users for assignment dropdown (NEW ROUTE)
-// Returns only admin and subadmin users
-// ============================================
-router.get('/users/list', async (req, res) => {
+router.patch('/gtc-members/:id/notes', async (req, res) => {
     try {
-        const users = await User.find({
-            userType: { $in: ['admin', 'subadmin'] },
-            status: 'active',
-        })
-            .select('_id name email username userType')
-            .sort({ name: 1 })
+        const GTCMember = mongoose.model('GTCMember');
+        const { notes } = req.body;
+
+        // Both admin and subadmin can edit notes
+        if (!['admin', 'subadmin'].includes(req.user.userType)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Admin or subadmin only.'
+            });
+        }
+
+        const { id } = req.params;
+        let member;
+
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            member = await GTCMember.findById(id);
+        } else {
+            member = await GTCMember.findOne({ gtcUserId: id });
+        }
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'Member not found'
+            });
+        }
+
+        member.notes = notes || '';
+        await member.save();
+
+        // Return with populated field
+        const updatedMember = await GTCMember.findById(member._id)
+            .populate('onboardedBy', 'name email username userType')
             .lean();
 
         res.status(200).json({
             success: true,
-            data: users,
+            message: 'Notes updated successfully',
+            data: updatedMember
         });
     } catch (error) {
-        console.error('Failed to fetch users:', error);
+        console.error('Update notes error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch users',
-            error: error.message,
+            message: 'Failed to update notes',
+            error: error.message
+        });
+    }
+});
+
+router.patch('/gtc-members/:id/assign-onboarded-by', async (req, res) => {
+    try {
+        const GTCMember = mongoose.model('GTCMember');
+        const User = mongoose.model('User');
+        const { userId } = req.body;
+
+        // Only main admin can assign onboardedBy
+        if (req.user.userType !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. Only main admin can assign onboarded by.'
+            });
+        }
+
+        const { id } = req.params;
+        let member;
+
+        if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+            member = await GTCMember.findById(id);
+        } else {
+            member = await GTCMember.findOne({ gtcUserId: id });
+        }
+
+        if (!member) {
+            return res.status(404).json({
+                success: false,
+                message: 'Member not found'
+            });
+        }
+
+        // If userId is provided, validate it
+        if (userId) {
+            const user = await User.findOne({
+                _id: userId,
+                userType: { $in: ['admin', 'subadmin'] }
+            });
+
+            if (!user) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'User not found or is not an admin/subadmin'
+                });
+            }
+
+            member.onboardedBy = userId;
+        } else {
+            // Allow clearing the assignment
+            member.onboardedBy = null;
+        }
+
+        await member.save();
+
+        // Return with populated field
+        const updatedMember = await GTCMember.findById(member._id)
+            .populate('onboardedBy', 'name email username userType')
+            .lean();
+
+        res.status(200).json({
+            success: true,
+            message: 'Onboarded by assigned successfully',
+            data: updatedMember
+        });
+    } catch (error) {
+        console.error('Assign onboarded by error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to assign onboarded by',
+            error: error.message
         });
     }
 });

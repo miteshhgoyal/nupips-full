@@ -1,4 +1,4 @@
-// pages/admin/GTCMembers.jsx
+// pages/admin/GTCMembers.jsx - COMPLETE UPDATED VERSION
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -101,19 +101,31 @@ const GTCMembers = () => {
   const [togglingCall, setTogglingCall] = useState({});
   const [togglingMessage, setTogglingMessage] = useState({});
 
-  // NEW: Onboarding management states
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [notesInput, setNotesInput] = useState("");
-  const [savingNotes, setSavingNotes] = useState(false);
+  // NEW: User info and management states
+  const [currentUser, setCurrentUser] = useState(null);
+  const [editingNotes, setEditingNotes] = useState({});
+  const [notesInput, setNotesInput] = useState({});
+  const [savingNotes, setSavingNotes] = useState({});
   const [availableUsers, setAvailableUsers] = useState([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
   const [assigningUser, setAssigningUser] = useState(false);
 
   useEffect(() => {
+    fetchCurrentUser();
     fetchMembers();
     fetchOnboardingStats();
     fetchAvailableUsers();
   }, [currentPage, filterLevel, filterHasParent, filterOnboardingStatus]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await api.get("/auth/me");
+      if (response.data.success) {
+        setCurrentUser(response.data.user);
+      }
+    } catch (err) {
+      console.error("Failed to fetch current user:", err);
+    }
+  };
 
   const fetchMembers = async () => {
     setLoading(true);
@@ -270,12 +282,9 @@ const GTCMembers = () => {
         ) {
           setSelectedMember(response.data.data);
         }
-
-        setSuccess(response.data.message);
-        await fetchOnboardingStats();
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to toggle call status");
+      setError("Failed to update call status");
     } finally {
       setTogglingCall((prev) => ({ ...prev, [memberId]: false }));
     }
@@ -303,100 +312,102 @@ const GTCMembers = () => {
         ) {
           setSelectedMember(response.data.data);
         }
-
-        setSuccess(response.data.message);
-        await fetchOnboardingStats();
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to toggle message status"
-      );
+      setError("Failed to update message status");
     } finally {
       setTogglingMessage((prev) => ({ ...prev, [memberId]: false }));
     }
   };
 
-  const updateOnboardingDetails = async (memberId, updates) => {
-    setSavingNotes(true);
+  // NEW: Save notes handler
+  const handleSaveNotes = async (memberId) => {
+    setSavingNotes((prev) => ({ ...prev, [memberId]: true }));
     setError(null);
 
     try {
-      const response = await api.patch(
-        `/admin/gtc-members/${memberId}/onboarding-details`,
-        updates
-      );
+      const response = await api.patch(`/admin/gtc-members/${memberId}/notes`, {
+        notes: notesInput[memberId] || "",
+      });
 
       if (response.data.success) {
-        setSuccess("Onboarding details updated successfully");
-        setSelectedMember(response.data.data);
-        setEditingNotes(false);
-
-        // Update in members list
         setMembers((prev) =>
-          prev.map((m) =>
-            (m._id || m.gtcUserId) === memberId ? response.data.data : m
-          )
+          prev.map((m) => (m._id === memberId ? response.data.data : m))
         );
 
-        await fetchMembers();
+        if (selectedMember && selectedMember._id === memberId) {
+          setSelectedMember(response.data.data);
+        }
+
+        setEditingNotes((prev) => ({ ...prev, [memberId]: false }));
+        setSuccess("Notes updated successfully");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to update onboarding details"
-      );
+      setError(err.response?.data?.message || "Failed to update notes");
     } finally {
-      setSavingNotes(false);
-      setAssigningUser(false);
+      setSavingNotes((prev) => ({ ...prev, [memberId]: false }));
     }
   };
 
-  const handleAssignUser = async () => {
-    if (!selectedUserId) {
-      setError("Please select a user");
+  // NEW: Assign onboarded by handler
+  const handleAssignOnboardedBy = async (memberId, userId) => {
+    if (currentUser?.userType !== "admin") {
+      setError("Only main admin can assign onboarded by");
       return;
     }
 
     setAssigningUser(true);
-    await updateOnboardingDetails(
-      selectedMember._id || selectedMember.gtcUserId,
-      {
-        onboardingDoneBy: selectedUserId,
+    setError(null);
+
+    try {
+      const response = await api.patch(
+        `/admin/gtc-members/${memberId}/assign-onboarded-by`,
+        { userId: userId || null }
+      );
+
+      if (response.data.success) {
+        setMembers((prev) =>
+          prev.map((m) => (m._id === memberId ? response.data.data : m))
+        );
+
+        if (selectedMember && selectedMember._id === memberId) {
+          setSelectedMember(response.data.data);
+        }
+
+        setSuccess("Onboarded by assigned successfully");
       }
-    );
-    setSelectedUserId("");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to assign onboarded by");
+    } finally {
+      setAssigningUser(false);
+    }
+  };
+
+  // NEW: Notes editing helpers
+  const handleStartEditNotes = (memberId, currentNotes) => {
+    setEditingNotes((prev) => ({ ...prev, [memberId]: true }));
+    setNotesInput((prev) => ({ ...prev, [memberId]: currentNotes || "" }));
+  };
+
+  const handleCancelEditNotes = (memberId) => {
+    setEditingNotes((prev) => ({ ...prev, [memberId]: false }));
+    setNotesInput((prev) => ({ ...prev, [memberId]: "" }));
   };
 
   const openDetailModal = async (member) => {
-    try {
-      const memberId = member._id || member.gtcUserId;
-      const response = await api.get(`/admin/gtc-members/${memberId}`);
-      if (response.data.success) {
-        setSelectedMember(response.data.data);
-        setShowDetailModal(true);
-        setNotesInput(response.data.data.onboardingNotes || "");
-        setSelectedUserId(response.data.data.onboardingDoneBy?._id || "");
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load member details");
-    }
+    setSelectedMember(member);
+    setShowDetailModal(true);
   };
 
   const loadMemberTree = async (memberId) => {
     setLoadingTree(true);
-    setError(null);
-    setExpandedNodes(new Set());
+    setShowTreeModal(true);
 
     try {
       const response = await api.get(`/admin/gtc-members/${memberId}/tree`);
       if (response.data.success) {
         setTreeData(response.data.data);
-        setShowTreeModal(true);
-        if (response.data.data.tree?.length > 0) {
-          const firstLevelIds = response.data.data.tree.map(
-            (child) => child._id
-          );
-          setExpandedNodes(new Set(firstLevelIds));
-        }
+        setSelectedMember(response.data.data.root);
       }
     } catch (err) {
       setError("Failed to load member tree");
@@ -405,7 +416,23 @@ const GTCMembers = () => {
     }
   };
 
-  const toggleNode = (nodeId) => {
+  const closeDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedMember(null);
+  };
+
+  const closeTreeModal = () => {
+    setShowTreeModal(false);
+    setTreeData(null);
+    setExpandedNodes(new Set());
+  };
+
+  const closeSyncModal = () => {
+    setShowSyncModal(false);
+    setSyncToken("");
+  };
+
+  const toggleNodeExpansion = (nodeId) => {
     setExpandedNodes((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(nodeId)) {
@@ -417,470 +444,328 @@ const GTCMembers = () => {
     });
   };
 
-  const expandAll = () => {
-    const getAllIds = (node) => {
-      let ids = [node._id];
-      if (node.children && node.children.length > 0) {
-        node.children.forEach((child) => {
-          ids = [...ids, ...getAllIds(child)];
-        });
-      }
-      return ids;
-    };
+  const renderTreeNode = (node, depth = 0) => {
+    if (!node) return null;
 
-    if (treeData && treeData.tree) {
-      const allIds = treeData.tree.flatMap(getAllIds);
-      setExpandedNodes(new Set(allIds));
-    }
-  };
-
-  const collapseAll = () => {
-    setExpandedNodes(new Set());
-  };
-
-  const countTotalDescendants = (node) => {
-    if (!node.children || node.children.length === 0) return 0;
-    return node.children.reduce(
-      (sum, child) => sum + 1 + countTotalDescendants(child),
-      0
-    );
-  };
-
-  const renderTreeNode = (node, isRoot = false, depth = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(node._id);
-    const totalDescendants = hasChildren ? countTotalDescendants(node) : 0;
 
     return (
-      <div
-        key={node._id}
-        className={`${!isRoot && depth > 0 ? "ml-8" : ""} relative`}
-      >
-        {!isRoot && depth > 0 && (
-          <div className="absolute left-0 top-0 w-4 h-6 border-l-2 border-b-2 border-gray-300 rounded-bl-lg -ml-4"></div>
-        )}
-
-        <div
-          className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-            isRoot
-              ? "bg-gradient-to-r from-orange-500 to-orange-600 border-orange-700 shadow-lg"
-              : "bg-white border-gray-200 hover:border-orange-300 hover:shadow-sm"
-          } mb-2`}
-        >
+      <div key={node._id} style={{ marginLeft: `${depth * 20}px` }}>
+        <div className="flex items-center gap-2 py-2 px-3 hover:bg-gray-50 rounded-lg transition-colors">
           {hasChildren ? (
             <button
-              onClick={() => toggleNode(node._id)}
-              className={`flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg transition-all ${
-                isRoot
-                  ? "bg-white/20 hover:bg-white/30"
-                  : "bg-gray-100 hover:bg-gray-200"
-              }`}
+              onClick={() => toggleNodeExpansion(node._id)}
+              className="p-1 hover:bg-gray-200 rounded transition-colors"
             >
               {isExpanded ? (
-                <ChevronDown
-                  className={`w-4 h-4 ${
-                    isRoot ? "text-white" : "text-gray-700"
-                  }`}
-                />
+                <ChevronDown className="w-4 h-4 text-gray-600" />
               ) : (
-                <ChevronRightIcon
-                  className={`w-4 h-4 ${
-                    isRoot ? "text-white" : "text-gray-700"
-                  }`}
-                />
+                <ChevronRightIcon className="w-4 h-4 text-gray-600" />
               )}
             </button>
           ) : (
-            <div className="w-7 h-7 flex items-center justify-center">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isRoot ? "bg-white/50" : "bg-gray-300"
-                }`}
-              ></div>
-            </div>
+            <div className="w-6" />
           )}
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  isRoot ? "bg-white/20" : "bg-orange-100"
-                }`}
-              >
-                <User
-                  className={`w-4 h-4 ${
-                    isRoot ? "text-white" : "text-orange-600"
-                  }`}
-                />
-              </div>
-              <p
-                className={`font-semibold truncate ${
-                  isRoot ? "text-white" : "text-gray-900"
-                }`}
-              >
-                {node.name || "N/A"}
-              </p>
-              <span
-                className={`text-xs font-mono ${
-                  isRoot ? "text-white/80" : "text-gray-500"
-                }`}
-              >
-                @{node.username}
-              </span>
+            <div className="font-medium text-gray-900 truncate">
+              {node.name || node.username || "Unknown"}
             </div>
-
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  isRoot
-                    ? "bg-white/20 text-white"
-                    : "bg-orange-100 text-orange-700"
-                }`}
-              >
-                ID: {node.gtcUserId}
-              </span>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  isRoot
-                    ? "bg-white/20 text-white"
-                    : "bg-purple-100 text-purple-700"
-                }`}
-              >
-                Level {node.level}
-              </span>
-              {node.userType && (
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    node.userType === "agent"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-orange-100 text-orange-700"
-                  }`}
-                >
-                  {node.userType === "agent" ? "Agent" : "Direct"}
-                </span>
-              )}
-              {node.amount > 0 && (
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    isRoot
-                      ? "bg-white/20 text-white"
-                      : "bg-emerald-100 text-emerald-700"
-                  }`}
-                >
-                  ${node.amount.toFixed(2)}
-                </span>
-              )}
+            <div className="text-sm text-gray-500 flex items-center gap-2">
+              <span>Level {node.level}</span>
+              <span>•</span>
+              <span className="font-mono text-xs">{node.gtcUserId}</span>
             </div>
           </div>
 
-          <div className="text-right">
-            <p
-              className={`text-xs ${
-                isRoot ? "text-white/80" : "text-gray-500"
-              } mb-0.5`}
-            >
-              {hasChildren ? "Team Size" : "Email"}
-            </p>
-            {hasChildren ? (
-              <div
-                className={`text-sm font-bold ${
-                  isRoot ? "text-white" : "text-gray-900"
-                }`}
-              >
-                <span className="text-lg">{node.children.length}</span>
-                <span className="text-xs ml-1">direct</span>
-                {totalDescendants > node.children.length && (
-                  <div className="text-xs font-normal">
-                    ({totalDescendants} total)
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p
-                className={`text-sm font-medium truncate max-w-[200px] ${
-                  isRoot ? "text-white" : "text-gray-900"
-                }`}
-              >
-                {node.email}
-              </p>
-            )}
-          </div>
-
-          <button
-            onClick={() => openDetailModal(node)}
-            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-              isRoot
-                ? "bg-white/20 hover:bg-white/30"
-                : "bg-gray-100 hover:bg-orange-100"
-            }`}
-            title="View Details"
-          >
-            <Eye
-              className={`w-4 h-4 ${
-                isRoot ? "text-white" : "text-gray-600 hover:text-orange-600"
-              }`}
-            />
-          </button>
+          {hasChildren && (
+            <div className="text-sm text-gray-500 flex-shrink-0">
+              {node.children.length}{" "}
+              {node.children.length === 1 ? "child" : "children"}
+            </div>
+          )}
         </div>
 
-        {hasChildren && isExpanded && (
-          <div className="mt-2 space-y-2 pl-4 border-l-2 border-gray-200">
-            {node.children.map((child) =>
-              renderTreeNode(child, false, depth + 1)
-            )}
+        {isExpanded && hasChildren && (
+          <div className="ml-4">
+            {node.children.map((child) => renderTreeNode(child, depth + 1))}
           </div>
         )}
       </div>
     );
   };
 
-  const exportToCSV = () => {
-    const csvData = [
-      [
-        "GTC User ID",
-        "Username",
-        "Name",
-        "Email",
-        "Phone",
-        "Level",
-        "User Type",
-        "Amount",
-        "Parent GTC ID",
-        "Onboarded With Call",
-        "Onboarded With Message",
-        "Onboarding Done By",
-        "Onboarding Notes",
-        "Onboarding Completed At",
-        "Joined At",
-      ],
-      ...members.map((m) => [
-        m.gtcUserId,
-        m.username,
-        m.name || "N/A",
-        m.email,
-        m.phone || "N/A",
-        m.level,
-        m.userType || "agent",
-        m.amount || 0,
-        m.parentGtcUserId || "Root",
-        m.onboardedWithCall ? "Yes" : "No",
-        m.onboardedWithMessage ? "Yes" : "No",
-        m.onboardingDoneBy?.name || "N/A",
-        m.onboardingNotes || "N/A",
-        m.onboardingCompletedAt
-          ? new Date(m.onboardingCompletedAt).toLocaleDateString()
-          : "N/A",
-        new Date(m.joinedAt).toLocaleDateString(),
-      ]),
-    ];
-
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      csvData.map((row) => row.join(",")).join("\n");
-    const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", `gtc-members-${new Date().getTime()}.csv`);
-    link.click();
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleString("en-IN", {
-      day: "2-digit",
-      month: "short",
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      month: "short",
+      day: "numeric",
     });
   };
 
-  if (loading && members.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex flex-col items-center gap-4">
-          <Loader className="w-12 h-12 text-orange-600 animate-spin" />
-          <p className="text-gray-600 font-medium">Loading GTC members...</p>
-        </div>
-      </div>
-    );
-  }
+  // Permission helpers
+  const isAdmin = currentUser?.userType === "admin";
+  const canEditNotes =
+    currentUser?.userType === "admin" || currentUser?.userType === "subadmin";
+
+  // Auto-dismiss alerts
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
 
   return (
-    <>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-purple-50">
       <Helmet>
-        <title>GTC Members - Admin</title>
+        <title>GTC Members Management | Admin</title>
       </Helmet>
 
-      <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <Globe className="w-8 h-8 text-orange-600" />
-                GTC Members
-              </h1>
-              <p className="text-gray-600 mt-2">
-                View and manage GTC FX platform members
-              </p>
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate("/admin")}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-purple-600 rounded-xl flex items-center justify-center">
+                    <UsersIcon className="w-6 h-6 text-white" />
+                  </div>
+                  GTC Members
+                </h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Manage and track member hierarchy and onboarding
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 shadow-sm"
               >
                 <RefreshCw
-                  className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`}
+                  className={`w-4 h-4 text-gray-600 ${
+                    refreshing ? "animate-spin" : ""
+                  }`}
                 />
-                Refresh
+                <span className="text-sm font-medium text-gray-700">
+                  Refresh
+                </span>
               </button>
+
               <button
-                onClick={exportToCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                onClick={() => setShowSyncModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-purple-600 text-white rounded-xl hover:from-orange-600 hover:to-purple-700 transition-all shadow-sm"
               >
-                <Download className="w-5 h-5" />
-                Export
+                <RefreshCw className="w-4 h-4" />
+                <span className="text-sm font-medium">Sync from GTC</span>
               </button>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Alerts */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+      {/* Alerts */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
             <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm text-red-700">{error}</p>
+              <p className="text-red-800 font-medium">{error}</p>
             </div>
-            <button onClick={() => setError(null)}>
-              <X className="w-4 h-4 text-red-600" />
+            <button
+              onClick={() => setError(null)}
+              className="text-red-600 hover:text-red-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
+      {success && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3 shadow-sm">
             <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm text-green-700">{success}</p>
+              <p className="text-green-800 font-medium">{success}</p>
             </div>
-            <button onClick={() => setSuccess(null)}>
-              <X className="w-4 h-4 text-green-600" />
+            <button
+              onClick={() => setSuccess(null)}
+              className="text-green-600 hover:text-green-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                <UsersIcon className="w-5 h-5 text-white" />
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-sm">
+                <Users className="w-6 h-6 text-white" />
               </div>
-              <p className="text-sm font-medium text-orange-900">
-                Total Members
-              </p>
             </div>
-            <p className="text-2xl font-bold text-orange-900">{stats.total}</p>
+            <p className="text-sm font-medium text-blue-900 mb-1">
+              Total Members
+            </p>
+            <p className="text-3xl font-bold text-blue-900">{stats.total}</p>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                <Network className="w-5 h-5 text-white" />
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-sm">
+                <Network className="w-6 h-6 text-white" />
               </div>
-              <p className="text-sm font-medium text-green-900">With Parent</p>
             </div>
-            <p className="text-2xl font-bold text-green-900">
+            <p className="text-sm font-medium text-green-900 mb-1">
+              With Parent
+            </p>
+            <p className="text-3xl font-bold text-green-900">
               {stats.withParent}
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                <Layers className="w-5 h-5 text-white" />
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center shadow-sm">
+                <TrendingUp className="w-6 h-6 text-white" />
               </div>
-              <p className="text-sm font-medium text-blue-900">Avg Level</p>
             </div>
-            <p className="text-2xl font-bold text-blue-900">
-              {stats.avgLevel.toFixed(1)}
+            <p className="text-sm font-medium text-purple-900 mb-1">
+              Root Members
+            </p>
+            <p className="text-3xl font-bold text-purple-900">
+              {stats.rootMembers}
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-6 border border-pink-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-white" />
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-sm">
+                <Layers className="w-6 h-6 text-white" />
               </div>
-              <p className="text-sm font-medium text-pink-900">Max Level</p>
             </div>
-            <p className="text-2xl font-bold text-pink-900">{stats.maxLevel}</p>
+            <p className="text-sm font-medium text-orange-900 mb-1">
+              Avg Level
+            </p>
+            <p className="text-3xl font-bold text-orange-900">
+              {stats.avgLevel}
+            </p>
           </div>
 
-          <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-xl p-6 border border-cyan-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center">
-                <PhoneCall className="w-5 h-5 text-white" />
+          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-sm">
+                <Hash className="w-6 h-6 text-white" />
               </div>
-              <p className="text-sm font-medium text-cyan-900">
-                Onboarded via Call
+            </div>
+            <p className="text-sm font-medium text-red-900 mb-1">Max Level</p>
+            <p className="text-3xl font-bold text-red-900">{stats.maxLevel}</p>
+          </div>
+        </div>
+
+        {/* Onboarding Stats */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-orange-600" />
+            Onboarding Status Overview
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-sm font-medium text-gray-900">Total</p>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">
+                {onboardingStats.total}
               </p>
             </div>
-            <p className="text-2xl font-bold text-cyan-900">
-              {onboardingStats.onboardedWithCall}
-            </p>
-          </div>
 
-          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-white" />
+            <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-xl p-6 border border-cyan-200">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center">
+                  <PhoneCall className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-sm font-medium text-cyan-900">Call</p>
               </div>
-              <p className="text-sm font-medium text-indigo-900">
-                Onboarded via Message
+              <p className="text-2xl font-bold text-cyan-900">
+                {onboardingStats.onboardedWithCall}
               </p>
             </div>
-            <p className="text-2xl font-bold text-indigo-900">
-              {onboardingStats.onboardedWithMessage}
-            </p>
-          </div>
 
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-white" />
+            <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-sm font-medium text-indigo-900">Message</p>
               </div>
-              <p className="text-sm font-medium text-emerald-900">
-                Both Completed
+              <p className="text-2xl font-bold text-indigo-900">
+                {onboardingStats.onboardedWithMessage}
               </p>
             </div>
-            <p className="text-2xl font-bold text-emerald-900">
-              {onboardingStats.bothOnboarded}
-            </p>
-          </div>
 
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-white" />
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-sm font-medium text-emerald-900">Both</p>
               </div>
-              <p className="text-sm font-medium text-amber-900">
-                Not Onboarded
+              <p className="text-2xl font-bold text-emerald-900">
+                {onboardingStats.bothOnboarded}
               </p>
             </div>
-            <p className="text-2xl font-bold text-amber-900">
-              {onboardingStats.notOnboarded}
-            </p>
+
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-sm font-medium text-amber-900">Partial</p>
+              </div>
+              <p className="text-2xl font-bold text-amber-900">
+                {onboardingStats.partialOnboarded}
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                  <AlertCircle className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-sm font-medium text-red-900">None</p>
+              </div>
+              <p className="text-2xl font-bold text-red-900">
+                {onboardingStats.notOnboarded}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -964,7 +849,7 @@ const GTCMembers = () => {
           <div className="flex items-center gap-2 mt-4">
             <button
               onClick={handleSearch}
-              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors shadow-sm"
             >
               Search
             </button>
@@ -980,191 +865,296 @@ const GTCMembers = () => {
         {/* Members Table */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Joining Date
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Member
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    GTC User ID
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Email
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Level
-                  </th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
-                    Onboarding
-                  </th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="px-6 py-16 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                          <Globe className="w-8 h-8 text-gray-400" />
-                        </div>
-                        <p className="text-gray-600 font-medium">
-                          No GTC members found
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Try adjusting your filters or syncing from GTC API
-                        </p>
-                      </div>
-                    </td>
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-16">
+                <Loader className="w-12 h-12 animate-spin text-orange-600 mb-4" />
+                <p className="text-gray-600 font-medium">Loading members...</p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Joining Date
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Member
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      GTC User ID
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Email
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Level
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                      Onboarding
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Onboarded By
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Notes
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                      Actions
+                    </th>
                   </tr>
-                ) : (
-                  members.map((member) => {
-                    const memberId = member._id || member.gtcUserId;
-                    return (
-                      <tr
-                        key={member._id}
-                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                      >
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-600 text-nowrap">
-                            {formatDate(member.joinedAt)}
+                </thead>
+                <tbody>
+                  {members.length === 0 ? (
+                    <tr>
+                      <td colSpan="9" className="px-6 py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                            <Globe className="w-8 h-8 text-gray-400" />
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 shrink-0 bg-orange-100 rounded-full flex items-center justify-center">
-                              <User className="w-5 h-5 text-orange-600" />
+                          <p className="text-gray-600 font-medium">
+                            No GTC members found
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Try adjusting your filters or syncing from GTC API
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    members.map((member) => {
+                      const memberId = member._id || member.gtcUserId;
+                      return (
+                        <tr
+                          key={member._id}
+                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-600 text-nowrap">
+                              {formatDate(member.joinedAt)}
                             </div>
-                            <div>
-                              <p className="font-medium text-gray-900 text-nowrap">
-                                {member.name || "N/A"}
-                              </p>
-                              <p className="text-xs font-mono text-gray-500 text-nowrap">
-                                @{member.username}
-                              </p>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 shrink-0 bg-orange-100 rounded-full flex items-center justify-center">
+                                <User className="w-5 h-5 text-orange-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900 text-nowrap">
+                                  {member.name || "N/A"}
+                                </p>
+                                <p className="text-xs font-mono text-gray-500 text-nowrap">
+                                  @{member.username}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <Hash className="w-4 h-4 text-gray-400" />
-                            <span className="font-mono text-sm text-gray-900 text-nowrap">
-                              {member.gtcUserId}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Mail className="w-4 h-4 text-gray-400" />
-                            <span className="truncate max-w-[200px] text-nowrap">
-                              {member.email}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 text-nowrap">
-                            <Layers className="w-3 h-3" />
-                            Level {member.level}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-3">
-                            {/* Call Toggle */}
-                            <div className="flex items-center justify-center gap-2">
-                              <PhoneCall className="w-4 h-4 text-cyan-600" />
-                              <span className="text-xs text-gray-600 min-w-[40px]">
-                                Call
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <Hash className="w-4 h-4 text-gray-400" />
+                              <span className="font-mono text-sm text-gray-900 text-nowrap">
+                                {member.gtcUserId}
                               </span>
-                              <button
-                                onClick={() => toggleOnboardedWithCall(member)}
-                                disabled={togglingCall[memberId]}
-                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
-                                  member.onboardedWithCall
-                                    ? "bg-cyan-600"
-                                    : "bg-gray-300"
-                                } ${
-                                  togglingCall[memberId]
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : ""
-                                }`}
-                              >
-                                <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Mail className="w-4 h-4 text-gray-400" />
+                              <span className="truncate max-w-[200px] text-nowrap">
+                                {member.email}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 text-nowrap">
+                              <Layers className="w-3 h-3" />
+                              Level {member.level}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-3">
+                              {/* Call Toggle */}
+                              <div className="flex items-center justify-center gap-2">
+                                <PhoneCall className="w-4 h-4 text-cyan-600" />
+                                <span className="text-xs text-gray-600 min-w-[40px]">
+                                  Call
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    toggleOnboardedWithCall(member)
+                                  }
+                                  disabled={togglingCall[memberId]}
+                                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
                                     member.onboardedWithCall
-                                      ? "translate-x-6"
-                                      : "translate-x-1"
+                                      ? "bg-cyan-600"
+                                      : "bg-gray-300"
+                                  } ${
+                                    togglingCall[memberId]
+                                      ? "opacity-50 cursor-not-allowed"
+                                      : ""
                                   }`}
-                                />
-                              </button>
-                            </div>
+                                >
+                                  <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                                      member.onboardedWithCall
+                                        ? "translate-x-6"
+                                        : "translate-x-1"
+                                    }`}
+                                  />
+                                </button>
+                              </div>
 
-                            {/* Message Toggle */}
-                            <div className="flex items-center justify-center gap-2">
-                              <MessageCircle className="w-4 h-4 text-indigo-600" />
-                              <span className="text-xs text-gray-600 min-w-[40px]">
-                                Msg
-                              </span>
-                              <button
-                                onClick={() =>
-                                  toggleOnboardedWithMessage(member)
-                                }
-                                disabled={togglingMessage[memberId]}
-                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                                  member.onboardedWithMessage
-                                    ? "bg-indigo-600"
-                                    : "bg-gray-300"
-                                } ${
-                                  togglingMessage[memberId]
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : ""
-                                }`}
-                              >
-                                <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                              {/* Message Toggle */}
+                              <div className="flex items-center justify-center gap-2">
+                                <MessageCircle className="w-4 h-4 text-indigo-600" />
+                                <span className="text-xs text-gray-600 min-w-[40px]">
+                                  Msg
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    toggleOnboardedWithMessage(member)
+                                  }
+                                  disabled={togglingMessage[memberId]}
+                                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
                                     member.onboardedWithMessage
-                                      ? "translate-x-6"
-                                      : "translate-x-1"
+                                      ? "bg-indigo-600"
+                                      : "bg-gray-300"
+                                  } ${
+                                    togglingMessage[memberId]
+                                      ? "opacity-50 cursor-not-allowed"
+                                      : ""
                                   }`}
+                                >
+                                  <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                                      member.onboardedWithMessage
+                                        ? "translate-x-6"
+                                        : "translate-x-1"
+                                    }`}
+                                  />
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* NEW: Onboarded By Column */}
+                          <td className="px-6 py-4">
+                            {member.onboardedBy ? (
+                              <div className="text-sm">
+                                <div className="font-medium text-gray-900">
+                                  {member.onboardedBy.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {member.onboardedBy.userType === "admin" ? (
+                                    <span className="text-red-600 font-medium">
+                                      Main Admin
+                                    </span>
+                                  ) : (
+                                    <span className="text-blue-600 font-medium">
+                                      Subadmin
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-400 italic">
+                                Not assigned
+                              </span>
+                            )}
+                          </td>
+
+                          {/* NEW: Notes Column with Edit */}
+                          <td className="px-6 py-4">
+                            {editingNotes[member._id] ? (
+                              <div className="flex gap-2 items-start min-w-[200px]">
+                                <textarea
+                                  value={notesInput[member._id] || ""}
+                                  onChange={(e) =>
+                                    setNotesInput((prev) => ({
+                                      ...prev,
+                                      [member._id]: e.target.value,
+                                    }))
+                                  }
+                                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                  rows={2}
+                                  placeholder="Add notes..."
                                 />
+                                <div className="flex flex-col gap-1">
+                                  <button
+                                    onClick={() => handleSaveNotes(member._id)}
+                                    disabled={savingNotes[member._id]}
+                                    className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors disabled:opacity-50"
+                                    title="Save"
+                                  >
+                                    <Save className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleCancelEditNotes(member._id)
+                                    }
+                                    className="p-1 text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                                    title="Cancel"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 min-w-[200px]">
+                                <div className="flex-1 text-sm text-gray-600 truncate max-w-[180px]">
+                                  {member.notes || (
+                                    <span className="italic text-gray-400">
+                                      No notes
+                                    </span>
+                                  )}
+                                </div>
+                                {canEditNotes && (
+                                  <button
+                                    onClick={() =>
+                                      handleStartEditNotes(
+                                        member._id,
+                                        member.notes
+                                      )
+                                    }
+                                    className="p-1 text-blue-600 hover:bg-blue-50 rounded shrink-0 transition-colors"
+                                    title="Edit notes"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </td>
+
+                          <td className="px-6 py-4">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => openDetailModal(member)}
+                                className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
+                                title="View Details"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => loadMemberTree(member._id)}
+                                disabled={loadingTree}
+                                className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors disabled:opacity-50"
+                                title="View Tree"
+                              >
+                                {loadingTree ? (
+                                  <Loader className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Network className="w-4 h-4" />
+                                )}
                               </button>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => openDetailModal(member)}
-                              className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
-                              title="View Details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => loadMemberTree(member._id)}
-                              disabled={loadingTree}
-                              className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors disabled:opacity-50"
-                              title="View Tree"
-                            >
-                              {loadingTree ? (
-                                <Loader className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Network className="w-4 h-4" />
-                              )}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -1201,596 +1191,285 @@ const GTCMembers = () => {
 
       {/* Detail Modal */}
       {showDetailModal && selectedMember && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center">
-                    <User className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900">
-                      {selectedMember.name || "GTC Member"}
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      @{selectedMember.username}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="p-2 hover:bg-white rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-purple-600 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <User className="w-6 h-6" />
+                Member Details
+              </h2>
+              <button
+                onClick={closeDetailModal}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-6">
-              {/* Onboarding Status Section */}
-              <div className="bg-gradient-to-br from-orange-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-6 border-2 border-orange-200">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
-                  <UserCheck className="w-4 h-4" />
-                  Onboarding Status
-                </h3>
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Full Name
+                  </label>
+                  <p className="text-gray-900 font-medium">
+                    {selectedMember.name}
+                  </p>
+                </div>
 
-                <div className="space-y-4">
-                  {/* Call Status */}
-                  <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-cyan-100 rounded-full flex items-center justify-center">
-                        <PhoneCall className="w-5 h-5 text-cyan-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          Onboarded with Call
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {selectedMember.onboardedWithCall
-                            ? "Completed"
-                            : "Pending"}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => toggleOnboardedWithCall(selectedMember)}
-                      disabled={
-                        togglingCall[
-                          selectedMember._id || selectedMember.gtcUserId
-                        ]
-                      }
-                      className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
-                        selectedMember.onboardedWithCall
-                          ? "bg-cyan-600"
-                          : "bg-gray-300"
-                      } ${
-                        togglingCall[
-                          selectedMember._id || selectedMember.gtcUserId
-                        ]
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
-                          selectedMember.onboardedWithCall
-                            ? "translate-x-7"
-                            : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Username
+                  </label>
+                  <p className="text-gray-900 font-medium">
+                    @{selectedMember.username}
+                  </p>
+                </div>
 
-                  {/* Message Status */}
-                  <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                        <MessageCircle className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">
-                          Onboarded with Message
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {selectedMember.onboardedWithMessage
-                            ? "Completed"
-                            : "Pending"}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => toggleOnboardedWithMessage(selectedMember)}
-                      disabled={
-                        togglingMessage[
-                          selectedMember._id || selectedMember.gtcUserId
-                        ]
-                      }
-                      className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                        selectedMember.onboardedWithMessage
-                          ? "bg-indigo-600"
-                          : "bg-gray-300"
-                      } ${
-                        togglingMessage[
-                          selectedMember._id || selectedMember.gtcUserId
-                        ]
-                          ? "opacity-50 cursor-not-allowed"
-                          : ""
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
-                          selectedMember.onboardedWithMessage
-                            ? "translate-x-7"
-                            : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    GTC User ID
+                  </label>
+                  <p className="text-gray-900 font-mono">
+                    {selectedMember.gtcUserId}
+                  </p>
+                </div>
 
-                  {/* Overall Status */}
-                  {selectedMember.onboardedWithCall &&
-                    selectedMember.onboardedWithMessage && (
-                      <div className="p-3 bg-emerald-50 border-2 border-emerald-200 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-5 h-5 text-emerald-600" />
-                          <p className="text-sm font-semibold text-emerald-900">
-                            ✓ Onboarding Completed
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Email
+                  </label>
+                  <p className="text-gray-900">{selectedMember.email}</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Level
+                  </label>
+                  <p className="text-gray-900 font-semibold">
+                    {selectedMember.level}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">
+                    Joined Date
+                  </label>
+                  <p className="text-gray-900">
+                    {formatDate(selectedMember.joinedAt)}
+                  </p>
                 </div>
               </div>
 
-              {/* Onboarding Management Section - Admin/Subadmin Only */}
-              <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-6 mb-6 border-2 border-blue-200">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  Onboarding Management
+              {/* Onboarding Status */}
+              <div className="border-t border-gray-200 pt-6 mb-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-orange-600" />
+                  Onboarding Status
                 </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => toggleOnboardedWithCall(selectedMember)}
+                    disabled={togglingCall[selectedMember._id]}
+                    className={`p-4 rounded-xl border-2 transition-all ${
+                      selectedMember.onboardedWithCall
+                        ? "border-cyan-600 bg-cyan-50"
+                        : "border-gray-300 bg-white"
+                    } hover:opacity-75 disabled:opacity-50`}
+                  >
+                    <PhoneCall
+                      className={`w-6 h-6 mx-auto mb-2 ${
+                        selectedMember.onboardedWithCall
+                          ? "text-cyan-600"
+                          : "text-gray-400"
+                      }`}
+                    />
+                    <p className="text-sm font-medium">Onboarded with Call</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {selectedMember.onboardedWithCall ? "Yes" : "No"}
+                    </p>
+                  </button>
 
-                <div className="space-y-4">
-                  {/* Onboarded By */}
-                  <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      Onboarded By
-                    </label>
-                    {selectedMember.onboardingDoneBy ? (
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <User className="w-4 h-4 text-blue-600" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">
-                              {selectedMember.onboardingDoneBy.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              @{selectedMember.onboardingDoneBy.username} •{" "}
-                              {selectedMember.onboardingDoneBy.userType}
-                            </p>
-                          </div>
-                        </div>
+                  <button
+                    onClick={() => toggleOnboardedWithMessage(selectedMember)}
+                    disabled={togglingMessage[selectedMember._id]}
+                    className={`p-4 rounded-xl border-2 transition-all ${
+                      selectedMember.onboardedWithMessage
+                        ? "border-indigo-600 bg-indigo-50"
+                        : "border-gray-300 bg-white"
+                    } hover:opacity-75 disabled:opacity-50`}
+                  >
+                    <MessageCircle
+                      className={`w-6 h-6 mx-auto mb-2 ${
+                        selectedMember.onboardedWithMessage
+                          ? "text-indigo-600"
+                          : "text-gray-400"
+                      }`}
+                    />
+                    <p className="text-sm font-medium">
+                      Onboarded with Message
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {selectedMember.onboardedWithMessage ? "Yes" : "No"}
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* NEW: Onboarded By Assignment - Admin Only */}
+              {isAdmin && (
+                <div className="border-t border-gray-200 pt-6 mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-orange-600" />
+                    Assign Onboarded By (Admin Only)
+                  </label>
+                  <select
+                    value={selectedMember.onboardedBy?._id || ""}
+                    onChange={(e) =>
+                      handleAssignOnboardedBy(
+                        selectedMember._id,
+                        e.target.value
+                      )
+                    }
+                    disabled={assigningUser}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">-- Not Assigned --</option>
+                    {availableUsers.map((user) => (
+                      <option key={user._id} value={user._id}>
+                        {user.name} ({user.username}) -{" "}
+                        {user.userType === "admin" ? "Main Admin" : "Subadmin"}
+                      </option>
+                    ))}
+                  </select>
+                  {assigningUser && (
+                    <p className="text-sm text-gray-500 mt-2">Assigning...</p>
+                  )}
+                </div>
+              )}
+
+              {/* NEW: Notes Section - Admin & Subadmin */}
+              {canEditNotes && (
+                <div className="border-t border-gray-200 pt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-orange-600" />
+                    Notes
+                  </label>
+                  {editingNotes[selectedMember._id] ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={notesInput[selectedMember._id] || ""}
+                        onChange={(e) =>
+                          setNotesInput((prev) => ({
+                            ...prev,
+                            [selectedMember._id]: e.target.value,
+                          }))
+                        }
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        rows={5}
+                        placeholder="Add notes about this member..."
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSaveNotes(selectedMember._id)}
+                          disabled={savingNotes[selectedMember._id]}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                        >
+                          <Save className="w-4 h-4" />
+                          {savingNotes[selectedMember._id]
+                            ? "Saving..."
+                            : "Save Notes"}
+                        </button>
                         <button
                           onClick={() =>
-                            updateOnboardingDetails(
-                              selectedMember._id || selectedMember.gtcUserId,
-                              { onboardingDoneBy: null }
-                            )
+                            handleCancelEditNotes(selectedMember._id)
                           }
-                          disabled={savingNotes}
-                          className="text-xs text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
+                          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors"
                         >
-                          Clear
+                          Cancel
                         </button>
                       </div>
-                    ) : (
-                      <div>
-                        <p className="text-sm text-gray-500 italic mb-3">
-                          Not assigned yet
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <select
-                            value={selectedUserId}
-                            onChange={(e) => setSelectedUserId(e.target.value)}
-                            className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            disabled={assigningUser}
-                          >
-                            <option value="">Select User...</option>
-                            {availableUsers.map((user) => (
-                              <option key={user._id} value={user._id}>
-                                {user.name} (@{user.username}) - {user.userType}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={handleAssignUser}
-                            disabled={!selectedUserId || assigningUser}
-                            className="px-3 py-2 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {assigningUser ? "Assigning..." : "Assign"}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Onboarding Notes */}
-                  <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-semibold text-gray-700">
-                        <FileText className="w-4 h-4 inline-block mr-1" />
-                        Onboarding Notes
-                      </label>
-                      {!editingNotes && (
-                        <button
-                          onClick={() => {
-                            setEditingNotes(true);
-                            setNotesInput(selectedMember.onboardingNotes || "");
-                          }}
-                          className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                          Edit
-                        </button>
-                      )}
                     </div>
-
-                    {editingNotes ? (
-                      <div className="space-y-2">
-                        <textarea
-                          value={notesInput}
-                          onChange={(e) => setNotesInput(e.target.value)}
-                          placeholder="Add notes about onboarding process, follow-ups, special requirements..."
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                          rows="5"
-                          maxLength="2000"
-                        />
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">
-                            {notesInput.length}/2000 characters
-                          </span>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => {
-                                setEditingNotes(false);
-                                setNotesInput(
-                                  selectedMember.onboardingNotes || ""
-                                );
-                              }}
-                              disabled={savingNotes}
-                              className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={() =>
-                                updateOnboardingDetails(
-                                  selectedMember._id ||
-                                    selectedMember.gtcUserId,
-                                  { onboardingNotes: notesInput }
-                                )
-                              }
-                              disabled={savingNotes}
-                              className="px-3 py-1.5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-1"
-                            >
-                              {savingNotes ? (
-                                <>
-                                  <Loader className="w-3 h-3 animate-spin" />
-                                  Saving...
-                                </>
-                              ) : (
-                                <>
-                                  <Save className="w-3 h-3" />
-                                  Save
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-2">
-                        {selectedMember.onboardingNotes ? (
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded-lg border border-gray-200">
-                            {selectedMember.onboardingNotes}
+                  ) : (
+                    <div>
+                      <div className="bg-gray-50 rounded-xl p-4 mb-3 min-h-[120px] border border-gray-200">
+                        {selectedMember.notes ? (
+                          <p className="text-gray-900 whitespace-pre-wrap">
+                            {selectedMember.notes}
                           </p>
                         ) : (
-                          <p className="text-sm italic text-gray-500">
+                          <p className="text-gray-400 italic">
                             No notes added yet
                           </p>
                         )}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Completion Date */}
-                  {selectedMember.onboardingCompletedAt && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        <div>
-                          <p className="text-sm font-medium text-green-900">
-                            Onboarding completed on{" "}
-                            {formatDate(selectedMember.onboardingCompletedAt)}
-                          </p>
-                          {selectedMember.onboardingDoneBy && (
-                            <p className="text-xs text-green-700 mt-1">
-                              Completed by{" "}
-                              {selectedMember.onboardingDoneBy.name}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* GTC Info */}
-              <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3 flex items-center gap-2">
-                  <Hash className="w-4 h-4" />
-                  GTC Platform Information
-                </h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">GTC User ID</span>
-                    <span className="font-mono text-sm font-semibold text-gray-900">
-                      {selectedMember.gtcUserId}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Username</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      @{selectedMember.username}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Email</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {selectedMember.email}
-                    </span>
-                  </div>
-                  {selectedMember.phone && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 flex items-center gap-1">
-                        <Phone className="w-3 h-3" />
-                        Phone
-                      </span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {selectedMember.phone}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Level</span>
-                    <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
-                      Level {selectedMember.level}
-                    </span>
-                  </div>
-                  {selectedMember.userType && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 flex items-center gap-1">
-                        <UserCheck className="w-3 h-3" />
-                        User Type
-                      </span>
-                      <span
-                        className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                          selectedMember.userType === "agent"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-orange-100 text-orange-800"
-                        }`}
+                      <button
+                        onClick={() =>
+                          handleStartEditNotes(
+                            selectedMember._id,
+                            selectedMember.notes
+                          )
+                        }
+                        className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors"
                       >
-                        {selectedMember.userType === "agent"
-                          ? "Agent"
-                          : "Direct"}
-                      </span>
-                    </div>
-                  )}
-                  {selectedMember.amount !== undefined && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600 flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" />
-                        Amount
-                      </span>
-                      <span className="text-sm font-bold text-emerald-700">
-                        ${selectedMember.amount.toFixed(2)}
-                      </span>
+                        <Edit2 className="w-4 h-4" />
+                        Edit Notes
+                      </button>
                     </div>
                   )}
                 </div>
+              )}
+
+              <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end">
+                <button
+                  onClick={closeDetailModal}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Close
+                </button>
               </div>
-
-              {/* Hierarchy Info */}
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Network className="w-5 h-5 text-green-600" />
-                    <p className="text-xs font-semibold text-green-900 uppercase">
-                      Parent GTC ID
-                    </p>
-                  </div>
-                  <p className="text-lg font-bold text-green-900 font-mono truncate">
-                    {selectedMember.parentGtcUserId || "Root Member"}
-                  </p>
-                </div>
-
-                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Layers className="w-5 h-5 text-orange-600" />
-                    <p className="text-xs font-semibold text-orange-900 uppercase">
-                      Upline Chain
-                    </p>
-                  </div>
-                  <p className="text-lg font-bold text-orange-900">
-                    {selectedMember.uplineChain?.length || 0} Levels
-                  </p>
-                </div>
-              </div>
-
-              {/* Upline Chain */}
-              {selectedMember.uplineChain &&
-                selectedMember.uplineChain.length > 0 && (
-                  <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3 flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      Upline Chain ({selectedMember.uplineChain.length})
-                    </h3>
-                    <div className="space-y-2">
-                      {selectedMember.uplineChain.map((upline, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                              <User className="w-4 h-4 text-orange-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                @{upline.username}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {upline.email}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700 font-semibold">
-                              L{upline.level}
-                            </span>
-                            <p className="text-xs font-mono text-gray-500 mt-1">
-                              {upline.gtcUserId}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              {/* Timestamps */}
-              <div className="bg-gray-50 rounded-xl p-4">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3 flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Timestamps
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Joined At</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatDate(selectedMember.joinedAt)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Last Updated</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatDate(selectedMember.lastUpdated)}
-                    </span>
-                  </div>
-                  {selectedMember.createdAt && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
-                        Record Created
-                      </span>
-                      <span className="text-sm font-medium text-gray-900">
-                        {formatDate(selectedMember.createdAt)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-6 bg-gray-50 border-t border-gray-200">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md"
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Tree Modal */}
-      {showTreeModal && treeData && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            {/* Tree Header */}
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <Network className="w-6 h-6 text-orange-600" />
-                    GTC Team Tree
-                  </h2>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {treeData.root.name || treeData.root.username}'s downline
-                    hierarchy
-                    {treeData.tree && treeData.tree.length > 0 && (
-                      <span className="ml-2 text-orange-600 font-semibold">
-                        {treeData.tree.length} direct •{" "}
-                        {treeData.tree.reduce(
-                          (sum, node) => sum + countTotalDescendants(node),
-                          0
-                        )}{" "}
-                        total
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={expandAll}
-                    className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Expand All
-                  </button>
-                  <button
-                    onClick={collapseAll}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Collapse All
-                  </button>
-                  <button
-                    onClick={() => setShowTreeModal(false)}
-                    className="p-2 hover:bg-white rounded-lg transition-colors"
-                  >
-                    <X className="w-6 h-6 text-gray-600" />
-                  </button>
-                </div>
-              </div>
+      {showTreeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-purple-500 to-indigo-600 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <Network className="w-6 h-6" />
+                Member Tree - {selectedMember?.name || selectedMember?.username}
+              </h2>
+              <button
+                onClick={closeTreeModal}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
             </div>
 
-            {/* Tree Body */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="mb-6">
-                {renderTreeNode(
-                  {
-                    ...treeData.root,
-                    _id: "root",
-                    children: treeData.tree,
-                  },
-                  true,
-                  0
-                )}
-              </div>
-
-              {(!treeData.tree || treeData.tree.length === 0) && (
-                <div className="text-center py-12 bg-gray-50 rounded-xl">
-                  <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 font-medium">
-                    No downline members yet
-                  </p>
-                  <p className="text-sm text-gray-400 mt-2">
-                    This member hasn't recruited anyone to their team
+            <div className="p-6">
+              {loadingTree ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                  <Loader className="w-12 h-12 animate-spin text-purple-600 mb-4" />
+                  <p className="text-gray-600 font-medium">Loading tree...</p>
+                </div>
+              ) : treeData ? (
+                <div className="space-y-2">
+                  {renderTreeNode(treeData.root || treeData)}
+                  {treeData.tree && treeData.tree.length > 0 && (
+                    <div className="ml-4">
+                      {treeData.tree.map((child) => renderTreeNode(child, 1))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <Network className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">
+                    No tree data available
                   </p>
                 </div>
               )}
@@ -1798,7 +1477,69 @@ const GTCMembers = () => {
           </div>
         </div>
       )}
-    </>
+
+      {/* Sync Modal */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="bg-gradient-to-r from-orange-500 to-purple-600 px-6 py-4 flex items-center justify-between rounded-t-xl">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <RefreshCw className="w-6 h-6" />
+                Sync from GTC API
+              </h2>
+              <button
+                onClick={closeSyncModal}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                GTC JWT Token
+              </label>
+              <textarea
+                value={syncToken}
+                onChange={(e) => setSyncToken(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono text-sm"
+                rows={4}
+                placeholder="Paste your GTC JWT token here..."
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                This will fetch and sync member data from the GTC API
+              </p>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={handleSync}
+                  disabled={syncing || !syncToken.trim()}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-purple-600 text-white rounded-xl hover:from-orange-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm"
+                >
+                  {syncing ? (
+                    <>
+                      <Loader className="w-5 h-5 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-5 h-5" />
+                      Start Sync
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={closeSyncModal}
+                  className="px-4 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
