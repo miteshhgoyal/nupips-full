@@ -267,23 +267,39 @@ const GTCMembers = () => {
 
   const toggleOnboardedWithCall = async (member) => {
     const memberId = member._id || member.gtcUserId;
+    const newValue = !member.onboardedWithCall;
+
     setTogglingCall((prev) => ({ ...prev, [memberId]: true }));
+    setError(null);
 
     try {
       const response = await api.patch(
-        `/admin/gtc-members/${memberId}/toggle-onboarded-call`
+        `/admin/gtc-members/${memberId}/onboarding`,
+        {
+          onboardedWithCall: newValue,
+          // Auto-assign current user if toggling ON and not already assigned
+          ...(newValue && !member.onboardedBy && currentUser
+            ? { onboardedBy: currentUser._id }
+            : {}),
+        }
       );
 
       if (response.data.success) {
-        setSuccess(response.data.message);
-
-        // Update members list
         setMembers((prev) =>
-          prev.map((m) =>
-            (m._id || m.gtcUserId) === memberId
-              ? { ...m, ...response.data.data }
-              : m
-          )
+          prev.map((m) => {
+            const mId = m._id || m.gtcUserId;
+            if (mId === memberId) {
+              return {
+                ...m,
+                onboardedWithCall: newValue,
+                // Update onboardedBy if it was set
+                ...(response.data.data.onboardedBy
+                  ? { onboardedBy: response.data.data.onboardedBy }
+                  : {}),
+              };
+            }
+            return m;
+          })
         );
 
         // Update selected member if in modal
@@ -294,10 +310,14 @@ const GTCMembers = () => {
           setSelectedMember(response.data.data);
         }
 
+        setSuccess(`Onboarded with call status updated successfully`);
         await fetchOnboardingStats();
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to toggle call status");
+      console.error("Toggle onboarded with call error:", err);
+      setError(
+        err.response?.data?.message || "Failed to update onboarding status"
+      );
     } finally {
       setTogglingCall((prev) => ({ ...prev, [memberId]: false }));
     }
@@ -305,23 +325,39 @@ const GTCMembers = () => {
 
   const toggleOnboardedWithMessage = async (member) => {
     const memberId = member._id || member.gtcUserId;
+    const newValue = !member.onboardedWithMessage;
+
     setTogglingMessage((prev) => ({ ...prev, [memberId]: true }));
+    setError(null);
 
     try {
       const response = await api.patch(
-        `/admin/gtc-members/${memberId}/toggle-onboarded-message`
+        `/admin/gtc-members/${memberId}/onboarding`,
+        {
+          onboardedWithMessage: newValue,
+          // Auto-assign current user if toggling ON and not already assigned
+          ...(newValue && !member.onboardedBy && currentUser
+            ? { onboardedBy: currentUser._id }
+            : {}),
+        }
       );
 
       if (response.data.success) {
-        setSuccess(response.data.message);
-
-        // Update members list
         setMembers((prev) =>
-          prev.map((m) =>
-            (m._id || m.gtcUserId) === memberId
-              ? { ...m, ...response.data.data }
-              : m
-          )
+          prev.map((m) => {
+            const mId = m._id || m.gtcUserId;
+            if (mId === memberId) {
+              return {
+                ...m,
+                onboardedWithMessage: newValue,
+                // Update onboardedBy if it was set
+                ...(response.data.data.onboardedBy
+                  ? { onboardedBy: response.data.data.onboardedBy }
+                  : {}),
+              };
+            }
+            return m;
+          })
         );
 
         // Update selected member if in modal
@@ -332,41 +368,48 @@ const GTCMembers = () => {
           setSelectedMember(response.data.data);
         }
 
+        setSuccess(`Onboarded with message status updated successfully`);
         await fetchOnboardingStats();
       }
     } catch (err) {
+      console.error("Toggle onboarded with message error:", err);
       setError(
-        err.response?.data?.message || "Failed to toggle message status"
+        err.response?.data?.message || "Failed to update onboarding status"
       );
     } finally {
       setTogglingMessage((prev) => ({ ...prev, [memberId]: false }));
     }
   };
 
-  // NEW: Assign onboarded by (Admin only)
-  const handleAssignOnboardedBy = async (memberId, userId) => {
+  const handleAssignOnboardedBy = async (memberId, newUserId) => {
     if (currentUser?.userType !== "admin") {
-      setError("Only admins can assign onboarded by");
+      setError("Only admins can change who onboarded a member");
       return;
     }
 
     setAssigningUser(true);
+    setError(null);
+
     try {
       const response = await api.patch(
-        `/admin/gtc-members/${memberId}/assign-onboarded-by`,
-        { onboardedBy: userId }
+        `/admin/gtc-members/${memberId}/onboarding`,
+        {
+          onboardedBy: newUserId || null,
+        }
       );
 
       if (response.data.success) {
-        setSuccess("Onboarded by assigned successfully");
-
-        // Update members list
         setMembers((prev) =>
-          prev.map((m) =>
-            (m._id || m.gtcUserId) === memberId
-              ? { ...m, ...response.data.data }
-              : m
-          )
+          prev.map((m) => {
+            const mId = m._id || m.gtcUserId;
+            if (mId === memberId) {
+              return {
+                ...m,
+                onboardedBy: response.data.data.onboardedBy,
+              };
+            }
+            return m;
+          })
         );
 
         // Update selected member if in modal
@@ -376,32 +419,38 @@ const GTCMembers = () => {
         ) {
           setSelectedMember(response.data.data);
         }
+
+        setSuccess("Onboarded by updated successfully");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to assign onboarded by");
+      console.error("Update onboarded by error:", err);
+      setError(err.response?.data?.message || "Failed to update onboarded by");
     } finally {
       setAssigningUser(false);
     }
   };
 
-  // NEW: Save notes
   const handleSaveNotes = async (memberId, notes) => {
     setSavingNotes(true);
+    setError(null);
+
     try {
       const response = await api.patch(`/admin/gtc-members/${memberId}/notes`, {
         notes,
       });
 
       if (response.data.success) {
-        setSuccess("Notes updated successfully");
-
-        // Update members list
         setMembers((prev) =>
-          prev.map((m) =>
-            (m._id || m.gtcUserId) === memberId
-              ? { ...m, ...response.data.data }
-              : m
-          )
+          prev.map((m) => {
+            const mId = m._id || m.gtcUserId;
+            if (mId === memberId) {
+              return {
+                ...m,
+                notes: notes,
+              };
+            }
+            return m;
+          })
         );
 
         // Update selected member if in modal
@@ -409,17 +458,20 @@ const GTCMembers = () => {
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
         ) {
-          setSelectedMember(response.data.data);
-          setModalNotesValue(response.data.data.notes || "");
+          setSelectedMember((prev) => ({ ...prev, notes }));
+          setModalNotesValue(notes);
         }
 
         // Clear inline editing
         setEditingNotesId(null);
         setEditingNotesValue("");
         setEditingModalNotes(false);
+
+        setSuccess("Notes saved successfully");
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update notes");
+      console.error("Save notes error:", err);
+      setError(err.response?.data?.message || "Failed to save notes");
     } finally {
       setSavingNotes(false);
     }
@@ -1209,26 +1261,33 @@ const GTCMembers = () => {
                           </div>
                         </td>
 
-                        {/* NEW: Onboarded By Column */}
-                        <td className="px-6 py-4">
-                          {member.onboardingDoneBy ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <User className="w-4 h-4 text-blue-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-gray-900 text-nowrap">
-                                  {member.onboardingDoneBy.name}
-                                </p>
-                                <p className="text-xs text-gray-500 text-nowrap">
-                                  {member.onboardingDoneBy.userType}
-                                </p>
-                              </div>
-                            </div>
+                        {/* Onboarded By Column */}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {currentUser?.userType === "admin" ? (
+                            <select
+                              value={member.onboardedBy?._id || ""}
+                              onChange={(e) =>
+                                handleAssignOnboardedBy(
+                                  member._id || member.gtcUserId,
+                                  e.target.value
+                                )
+                              }
+                              disabled={assigningUser}
+                              className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              <option value="">Not Assigned</option>
+                              {availableUsers.map((user) => (
+                                <option key={user._id} value={user._id}>
+                                  {user.name || user.username}
+                                </option>
+                              ))}
+                            </select>
                           ) : (
-                            <span className="text-sm text-gray-400 italic">
-                              Not Assigned
-                            </span>
+                            <div className="text-sm text-gray-900">
+                              {member.onboardedBy?.name ||
+                                member.onboardedBy?.username ||
+                                "Not Assigned"}
+                            </div>
                           )}
                         </td>
 
@@ -1418,7 +1477,10 @@ const GTCMembers = () => {
                       disabled={
                         togglingCall[
                           selectedMember._id || selectedMember.gtcUserId
-                        ]
+                        ] ||
+                        (currentUser?.userType === "subadmin" &&
+                          selectedMember.onboardedBy &&
+                          selectedMember.onboardedBy._id !== currentUser._id)
                       }
                       className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
                         selectedMember.onboardedWithCall
@@ -1464,7 +1526,10 @@ const GTCMembers = () => {
                       disabled={
                         togglingMessage[
                           selectedMember._id || selectedMember.gtcUserId
-                        ]
+                        ] ||
+                        (currentUser?.userType === "subadmin" &&
+                          selectedMember.onboardedBy &&
+                          selectedMember.onboardedBy._id !== currentUser._id)
                       }
                       className={`relative inline-flex h-8 w-14 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
                         selectedMember.onboardedWithMessage
