@@ -1913,14 +1913,15 @@ router.patch('/gtc-members/:id/notes', async (req, res) => {
         }
 
         member.notes = notes;
-        member.notesUpdatedBy = req.user._id;
-        member.notesUpdatedAt = new Date();
+        // Note: notesUpdatedBy and notesUpdatedAt fields don't exist in schema yet
+        // Uncomment these when schema is updated:
+        // member.notesUpdatedBy = req.user._id;
+        // member.notesUpdatedAt = new Date();
 
         await member.save();
 
         const updatedMember = await GTCMember.findById(member._id)
             .populate('onboardingDoneBy', 'name email username userType')
-            .populate('notesUpdatedBy', 'name email username userType')
             .lean();
 
         res.status(200).json({
@@ -1950,12 +1951,10 @@ router.get('/gtc-members/:id', async (req, res) => {
         if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
             member = await GTCMember.findById(id)
                 .populate('onboardingDoneBy', 'name email username userType')
-                .populate('notesUpdatedBy', 'name email username userType')
                 .lean();
         } else {
             member = await GTCMember.findOne({ gtcUserId: id })
                 .populate('onboardingDoneBy', 'name email username userType')
-                .populate('notesUpdatedBy', 'name email username userType')
                 .lean();
         }
 
