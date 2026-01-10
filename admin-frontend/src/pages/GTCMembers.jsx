@@ -440,38 +440,47 @@ const GTCMembers = () => {
       });
 
       if (response.data.success) {
+        // ✅ FIX: Update with correct field name 'onboardingNotes'
         setMembers((prev) =>
           prev.map((m) => {
             const mId = m._id || m.gtcUserId;
             if (mId === memberId) {
               return {
                 ...m,
-                notes: notes,
+                onboardingNotes: notes, // ✅ FIXED: Use 'onboardingNotes'
               };
             }
             return m;
           })
         );
 
-        // Update selected member if in modal
+        // ✅ FIX: Update selected member with correct field name
         if (
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
         ) {
-          setSelectedMember((prev) => ({ ...prev, notes }));
+          setSelectedMember((prev) => ({
+            ...prev,
+            onboardingNotes: notes, // ✅ FIXED: Use 'onboardingNotes'
+          }));
           setModalNotesValue(notes);
         }
 
-        // Clear inline editing
+        // Clear editing state
         setEditingNotesId(null);
         setEditingNotesValue("");
         setEditingModalNotes(false);
 
         setSuccess("Notes saved successfully");
+
+        // ✅ NEW: Auto-clear success message after 3 seconds
+        setTimeout(() => setSuccess(null), 3000);
       }
     } catch (err) {
-      console.error("Saveonboarding notes error:", err);
-      setError(err.response?.data?.message || "Failed to saveonboarding notes");
+      console.error("Save onboarding notes error:", err);
+      setError(
+        err.response?.data?.message || "Failed to save onboarding notes"
+      );
     } finally {
       setSavingNotes(false);
     }
@@ -1291,53 +1300,60 @@ const GTCMembers = () => {
                           )}
                         </td>
 
-                        {/* NEW: Notes Column */}
+                        {/* Notes Column - FIXED */}
                         <td className="px-6 py-4">
                           {isEditingThisNotes ? (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="text"
+                            <div className="flex items-start gap-2">
+                              <textarea
                                 value={editingNotesValue}
                                 onChange={(e) =>
                                   setEditingNotesValue(e.target.value)
                                 }
-                                placeholder="Addonboarding notes..."
-                                className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                placeholder="Add onboarding notes..."
+                                rows={3}
+                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none min-w-[250px]"
                                 autoFocus
                               />
-                              <button
-                                onClick={() =>
-                                  handleSaveNotes(memberId, editingNotesValue)
-                                }
-                                disabled={savingNotes}
-                                className="p-1.5 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition-colors disabled:opacity-50"
-                                title="Save Notes"
-                              >
-                                <Save className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingNotesId(null);
-                                  setEditingNotesValue("");
-                                }}
-                                className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
-                                title="Cancel"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
+                              <div className="flex flex-col gap-1">
+                                <button
+                                  onClick={() =>
+                                    handleSaveNotes(memberId, editingNotesValue)
+                                  }
+                                  disabled={savingNotes}
+                                  className="p-1.5 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition-colors disabled:opacity-50"
+                                  title="Save Notes"
+                                >
+                                  {savingNotes ? (
+                                    <Loader className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Save className="w-4 h-4" />
+                                  )}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingNotesId(null);
+                                    setEditingNotesValue("");
+                                  }}
+                                  disabled={savingNotes}
+                                  className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors disabled:opacity-50"
+                                  title="Cancel"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-start gap-2 min-w-[250px]">
                               {member.onboardingNotes ? (
-                                <div className="flex items-center gap-2">
-                                  <FileText className="w-4 h-4 text-gray-400" />
-                                  <span className="text-sm text-gray-700 truncate max-w-[150px]">
+                                <div className="flex-1 flex items-start gap-2">
+                                  <FileText className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                  <span className="text-sm text-gray-700 line-clamp-2">
                                     {member.onboardingNotes}
                                   </span>
                                 </div>
                               ) : (
                                 <span className="text-sm text-gray-400 italic">
-                                  No onboarding notes
+                                  No notes
                                 </span>
                               )}
                               <button
@@ -1347,7 +1363,7 @@ const GTCMembers = () => {
                                     member.onboardingNotes || ""
                                   );
                                 }}
-                                className="p-1.5 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
+                                className="p-1.5 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors flex-shrink-0"
                                 title="Edit Notes"
                               >
                                 <Edit2 className="w-4 h-4" />
