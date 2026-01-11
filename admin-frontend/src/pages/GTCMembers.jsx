@@ -1198,7 +1198,7 @@ const GTCMembers = () => {
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Phone className="w-4 h-4 text-gray-400" />
                             <span className="truncate max-w-[200px] text-nowrap">
-                              {member.phone}
+                              {member.phone ? member.phone : "Not Available"}
                             </span>
                           </div>
                         </td>
