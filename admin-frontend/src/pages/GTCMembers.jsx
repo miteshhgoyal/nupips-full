@@ -1472,9 +1472,9 @@ const GTCMembers = () => {
                   <UserCheck className="w-4 h-4" />
                   Onboarding Status
                 </h3>
-                <div className="flex-col sm:flex-row gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
                   {/* Onboarded with Call */}
-                  <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-cyan-100 rounded-full flex items-center justify-center">
                         <PhoneCall className="w-5 h-5 text-cyan-600" />
@@ -1514,7 +1514,7 @@ const GTCMembers = () => {
                       }`}
                     >
                       <span
-                        className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
+                        className={`inline-block h-6 w-6 transform rounded-full bg-gray-50 shadow-lg transition duration-200 ease-in-out ${
                           selectedMember.onboardedWithCall
                             ? "translate-x-7"
                             : "translate-x-1"
@@ -1584,7 +1584,7 @@ const GTCMembers = () => {
 
                 <div className="space-y-4">
                   {/* Assign Onboarded By */}
-                  <div className="bg-white rounded-lg p-4 shadow-sm">
+                  <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
                     <label className="block text-sm font-semibold text-gray-700 mb-3">
                       Assign Onboarded By{" "}
                       {currentUser?.userType !== "admin" && "(Admin Only)"}
@@ -1635,8 +1635,8 @@ const GTCMembers = () => {
                   </div>
 
                   {/* Notes Section */}
-                  <div className="bg-white rounded-lg p-4 shadow-sm">
-                    <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <div className="bg-gray-50 rounded-lg p-4 shadow-sm">
+                    <label className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                       <FileText className="w-4 h-4" />
                       Notes
                     </label>
