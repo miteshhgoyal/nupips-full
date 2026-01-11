@@ -1467,12 +1467,12 @@ const GTCMembers = () => {
 
             <div className="flex-1 overflow-y-auto p-6">
               {/* Onboarding Status Section */}
-              <div className="bg-gradient-to-br from-orange-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-6 border-2 border-orange-200">
+              <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
                   <UserCheck className="w-4 h-4" />
                   Onboarding Status
                 </h3>
-                <div className="space-y-4">
+                <div className="flex-col sm:flex-row gap-4">
                   {/* Onboarded with Call */}
                   <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
                     <div className="flex items-center gap-3">
@@ -1572,24 +1572,11 @@ const GTCMembers = () => {
                       />
                     </button>
                   </div>
-
-                  {/* Overall Status */}
-                  {selectedMember.onboardedWithCall &&
-                    selectedMember.onboardedWithMessage && (
-                      <div className="p-3 bg-emerald-50 border-2 border-emerald-200 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="w-5 h-5 text-emerald-600" />
-                          <p className="text-sm font-semibold text-emerald-900">
-                            Onboarding Completed ✓
-                          </p>
-                        </div>
-                      </div>
-                    )}
                 </div>
               </div>
 
               {/* NEW: Onboarding Management Section */}
-              <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl p-6 mb-6 border-2 border-blue-200">
+              <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
                   <Shield className="w-4 h-4" />
                   Onboarding Management
