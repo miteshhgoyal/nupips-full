@@ -646,6 +646,13 @@ const GTCMembers = () => {
               >
                 @{node.username}
               </span>
+              <span
+                className={`text-xs font-mono ${
+                  isRoot ? "text-white/80" : "text-gray-500"
+                }`}
+              >
+                ({node.phone})
+              </span>
             </div>
 
             <div className="flex items-center gap-2 mt-1 flex-wrap">
