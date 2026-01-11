@@ -1107,7 +1107,7 @@ const GTCMembers = () => {
                     GTC User ID
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Email
+                    Contacts
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     Level
@@ -1189,10 +1189,16 @@ const GTCMembers = () => {
 
                         {/* Email */}
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-0.5">
                             <Mail className="w-4 h-4 text-gray-400" />
                             <span className="truncate max-w-[200px] text-nowrap">
                               {member.email}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Phone className="w-4 h-4 text-gray-400" />
+                            <span className="truncate max-w-[200px] text-nowrap">
+                              {member.phone}
                             </span>
                           </div>
                         </td>
