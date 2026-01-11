@@ -1472,9 +1472,9 @@ const GTCMembers = () => {
                   <UserCheck className="w-4 h-4" />
                   Onboarding Status
                 </h3>
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Onboarded with Call */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg shadow-sm">
+                  <div className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-lg shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-cyan-100 rounded-full flex items-center justify-center">
                         <PhoneCall className="w-5 h-5 text-cyan-600" />
@@ -1524,7 +1524,7 @@ const GTCMembers = () => {
                   </div>
 
                   {/* Onboarded with Message */}
-                  <div className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
+                  <div className="w-full flex items-center justify-between p-4 bg-white rounded-lg shadow-sm">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
                         <MessageCircle className="w-5 h-5 text-indigo-600" />
