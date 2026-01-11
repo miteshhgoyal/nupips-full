@@ -11,7 +11,6 @@ import {
   Edit2,
   ToggleLeft,
   ToggleRight,
-  History,
   Copy,
   AlertCircle,
   CheckCircle,
@@ -34,8 +33,6 @@ const AdminCompetition = () => {
   const [saving, setSaving] = useState(false);
   const [config, setConfig] = useState(null);
   const [activeTab, setActiveTab] = useState("rules");
-  const [showHistory, setShowHistory] = useState(false);
-  const [history, setHistory] = useState([]);
   const [message, setMessage] = useState(null);
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -107,17 +104,6 @@ const AdminCompetition = () => {
       console.error("Error fetching config:", error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchHistory = async () => {
-    try {
-      const response = await api.get("/competition/admin/history?limit=20");
-      if (response.data.success) {
-        setHistory(response.data.configs);
-      }
-    } catch (error) {
-      console.error("Error fetching history:", error);
     }
   };
 
@@ -348,17 +334,6 @@ const AdminCompetition = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => {
-                  setShowHistory(!showHistory);
-                  if (!showHistory) fetchHistory();
-                }}
-                className="px-4 py-2 bg-white border border-gray-200 hover:border-orange-500 rounded-xl font-medium text-gray-700 hover:text-orange-600 transition-all flex items-center gap-2"
-              >
-                <History className="w-4 h-4" />
-                <span className="hidden sm:inline">History</span>
-              </button>
-
               {config && (
                 <button
                   onClick={handleToggleCompetition}
@@ -408,36 +383,6 @@ const AdminCompetition = () => {
             </div>
           )}
         </div>
-
-        {/* History Sidebar */}
-        {showHistory && (
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Configuration History
-            </h3>
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {history.map((item) => (
-                <div
-                  key={item._id}
-                  className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-orange-300 transition-all"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium text-gray-900">
-                      {item.period.description}
-                    </p>
-                    <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                      v{item.version}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    {new Date(item.createdAt).toLocaleDateString()} -{" "}
-                    {item.competitionEnabled ? "Enabled" : "Disabled"}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Tabs and Content Card */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

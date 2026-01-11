@@ -560,8 +560,8 @@ router.get('/admin/leaderboard', authenticateToken, requireAdmin, async (req, re
             'gtcfx.accessToken': { $ne: null },
             status: 'active',
         })
-        .select('name username email gtcfx referralDetails userType')
-        .lean();
+            .select('name username email gtcfx referralDetails userType')
+            .lean();
 
         if (users.length === 0) {
             return res.json({
@@ -612,8 +612,8 @@ router.get('/admin/leaderboard', authenticateToken, requireAdmin, async (req, re
             if (index > 0 && user.score < scoredUsers[index - 1].score) {
                 currentRank = index + 1;
             }
-            return { 
-                ...user, 
+            return {
+                ...user,
                 rank: currentRank,
                 eligibleReward: getRewardForRank(currentRank, config.rewards)
             };
@@ -622,7 +622,7 @@ router.get('/admin/leaderboard', authenticateToken, requireAdmin, async (req, re
         const topRankers = rankedUsers.slice(0, parseInt(limit));
 
         // Filter reward-eligible users (those with valid rewards for their rank)
-        const rewardEligible = rankedUsers.filter(user => 
+        const rewardEligible = rankedUsers.filter(user =>
             user.eligibleReward && user.rank <= 50 // Top 50 for rewards
         ).slice(0, 25);
 
@@ -672,43 +672,6 @@ router.get('/admin/config', authenticateToken, requireAdmin, async (req, res) =>
         res.status(500).json({
             success: false,
             message: 'Failed to fetch competition configuration',
-            error: error.message,
-        });
-    }
-});
-
-/**
- * GET /competition/admin/history
- */
-router.get('/admin/history', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const { page = 1, limit = 10 } = req.query;
-
-        const configs = await Competition.find()
-            .sort({ createdAt: -1 })
-            .limit(limit * 1)
-            .skip((page - 1) * limit)
-            .populate('createdBy', 'name username email')
-            .populate('updatedBy', 'name username email')
-            .lean();
-
-        const total = await Competition.countDocuments();
-
-        res.json({
-            success: true,
-            configs,
-            pagination: {
-                total,
-                page: parseInt(page),
-                limit: parseInt(limit),
-                pages: Math.ceil(total / limit),
-            },
-        });
-    } catch (error) {
-        console.error('Error fetching competition history:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch competition history',
             error: error.message,
         });
     }
