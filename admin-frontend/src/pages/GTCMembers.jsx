@@ -1,4 +1,4 @@
-// pages/admin/GTCMembers.jsx
+// pages/admin/GTCMembers.jsx - Complete version with Sync functionality
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -36,6 +36,8 @@ import {
   Edit2,
   Save,
   FileText,
+  Shuffle,
+  Key,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -100,17 +102,17 @@ const GTCMembers = () => {
   const [togglingCall, setTogglingCall] = useState({});
   const [togglingMessage, setTogglingMessage] = useState({});
 
-  // NEW: For inlineonboarding notes editing in table
+  // For inline onboarding notes editing in table
   const [editingNotesId, setEditingNotesId] = useState(null);
   const [editingNotesValue, setEditingNotesValue] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
 
-  // NEW: For onboarded by assignment
+  // For onboarded by assignment
   const [currentUser, setCurrentUser] = useState(null);
   const [availableUsers, setAvailableUsers] = useState([]);
   const [assigningUser, setAssigningUser] = useState(false);
 
-  // NEW: For modalonboarding notes editing
+  // For modal onboarding notes editing
   const [editingModalNotes, setEditingModalNotes] = useState(false);
   const [modalNotesValue, setModalNotesValue] = useState("");
 
@@ -242,6 +244,7 @@ const GTCMembers = () => {
 
     setSyncing(true);
     setError(null);
+    setSuccess(null);
 
     try {
       const response = await api.post("/gtcfx/sync-member-tree", {
@@ -250,11 +253,13 @@ const GTCMembers = () => {
 
       if (response.data.success) {
         setSuccess(
-          `Synced ${response.data.syncResult.stats.totalMembers} members in ${response.data.syncResult.stats.duration}!`
+          `Successfully synced ${response.data.syncResult.stats.totalMembers} members in ${response.data.syncResult.stats.duration}!`
         );
         setShowSyncModal(false);
         setSyncToken("");
+        // Refresh data after sync
         await fetchMembers();
+        await fetchOnboardingStats();
       }
     } catch (err) {
       setError(
@@ -381,7 +386,7 @@ const GTCMembers = () => {
     }
   };
 
-  const handleAssignonboardingDoneBy = async (memberId, newUserId) => {
+  const handleAssignOnboardingDoneBy = async (memberId, newUserId) => {
     if (currentUser?.userType !== "admin") {
       setError("Only admins can change who onboarded a member");
       return;
@@ -440,28 +445,26 @@ const GTCMembers = () => {
       });
 
       if (response.data.success) {
-        // ✅ FIX: Update with correct field name 'onboardingNotes'
         setMembers((prev) =>
           prev.map((m) => {
             const mId = m._id || m.gtcUserId;
             if (mId === memberId) {
               return {
                 ...m,
-                onboardingNotes: notes, // ✅ FIXED: Use 'onboardingNotes'
+                onboardingNotes: notes,
               };
             }
             return m;
           })
         );
 
-        // ✅ FIX: Update selected member with correct field name
         if (
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
         ) {
           setSelectedMember((prev) => ({
             ...prev,
-            onboardingNotes: notes, // ✅ FIXED: Use 'onboardingNotes'
+            onboardingNotes: notes,
           }));
           setModalNotesValue(notes);
         }
@@ -473,7 +476,7 @@ const GTCMembers = () => {
 
         setSuccess("Notes saved successfully");
 
-        // ✅ NEW: Auto-clear success message after 3 seconds
+        // Auto-clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
       }
     } catch (err) {
@@ -858,6 +861,13 @@ const GTCMembers = () => {
 
             <div className="flex items-center gap-3">
               <button
+                onClick={() => setShowSyncModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md"
+              >
+                <Shuffle className="w-5 h-5" />
+                Sync GTC
+              </button>
+              <button
                 onClick={handleRefresh}
                 disabled={refreshing}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors disabled:opacity-50"
@@ -903,7 +913,7 @@ const GTCMembers = () => {
           </div>
         )}
 
-        {/* Stats Cards - Row 1 */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
@@ -1196,7 +1206,7 @@ const GTCMembers = () => {
                           </div>
                         </td>
 
-                        {/* Email */}
+                        {/* Contacts */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2 text-sm text-gray-600 mb-0.5">
                             <Mail className="w-4 h-4 text-gray-400" />
@@ -1291,7 +1301,7 @@ const GTCMembers = () => {
                             <select
                               value={member.onboardingDoneBy?._id || ""}
                               onChange={(e) =>
-                                handleAssignonboardingDoneBy(
+                                handleAssignOnboardingDoneBy(
                                   member._id || member.gtcUserId,
                                   e.target.value
                                 )
@@ -1315,7 +1325,7 @@ const GTCMembers = () => {
                           )}
                         </td>
 
-                        {/* Notes Column - FIXED */}
+                        {/* Notes Column */}
                         <td className="px-6 py-4">
                           {isEditingThisNotes ? (
                             <div className="flex items-start gap-2">
@@ -1451,6 +1461,114 @@ const GTCMembers = () => {
           </div>
         )}
       </div>
+
+      {/* Sync Modal */}
+      {showSyncModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                    <Shuffle className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Sync GTC Members
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      Import latest data from GTC API
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowSyncModal(false);
+                    setSyncToken("");
+                    setError(null);
+                  }}
+                  className="p-2 hover:bg-blue-200 rounded-lg transition-colors"
+                  disabled={syncing}
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Key className="w-4 h-4" />
+                    GTC JWT Token
+                  </div>
+                </label>
+                <textarea
+                  value={syncToken}
+                  onChange={(e) => setSyncToken(e.target.value)}
+                  placeholder="Paste your GTC JWT authentication token here..."
+                  rows={6}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none font-mono text-sm"
+                  disabled={syncing}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  This token is used to authenticate with the GTC API and fetch
+                  the latest member tree data.
+                </p>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSync}
+                  disabled={syncing || !syncToken.trim()}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {syncing ? (
+                    <>
+                      <Loader className="w-5 h-5 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <Shuffle className="w-5 h-5" />
+                      Start Sync
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSyncModal(false);
+                    setSyncToken("");
+                    setError(null);
+                  }}
+                  disabled={syncing}
+                  className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 bg-blue-50 border-t border-blue-200">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-700">
+                  <strong>Note:</strong> The sync process will fetch all members
+                  from the GTC API and update the local database. This may take
+                  a few moments depending on the size of your member tree.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Detail Modal - Enhanced with Onboarding Management */}
       {showDetailModal && selectedMember && (
@@ -1590,7 +1708,7 @@ const GTCMembers = () => {
                 </div>
               </div>
 
-              {/* NEW: Onboarding Management Section */}
+              {/* Onboarding Management Section */}
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
                   <Shield className="w-4 h-4" />
@@ -1609,7 +1727,7 @@ const GTCMembers = () => {
                         value={selectedMember.onboardingDoneBy?._id || ""}
                         onChange={(e) => {
                           if (e.target.value) {
-                            handleAssignonboardingDoneBy(
+                            handleAssignOnboardingDoneBy(
                               selectedMember._id || selectedMember.gtcUserId,
                               e.target.value
                             );
@@ -1660,7 +1778,7 @@ const GTCMembers = () => {
                         <textarea
                           value={modalNotesValue}
                           onChange={(e) => setModalNotesValue(e.target.value)}
-                          placeholder="Addonboarding notes about this member..."
+                          placeholder="Add onboarding notes about this member..."
                           rows={4}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none"
                         />
