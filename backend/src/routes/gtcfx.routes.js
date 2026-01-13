@@ -639,28 +639,49 @@ router.post('/sync-member-tree', async (req, res) => {
             });
         }
 
-        // Step 1: Fetch tree data from GTC API
+        // Step 1: Fetch tree data from GTC API using the configured gtcAxios instance
         console.log('Fetching tree from GTC API...');
 
-        const response = await axios.post(
-            'https://apiv1.gtctrader100.app/api/v3/agent/member_tree',
+        const response = await gtcAxios.post(
+            '/api/v3/agent/member_tree', 
             {},
             {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                }
+                },
+                timeout: 3000000  // 60 seconds for large trees
             }
         );
 
+        console.log('GTC API Response Code:', response.data.code);
+
+        // Step 2: Check response
         if (response.data.code !== 200) {
-            throw new Error(`GTC API error: ${response.data.message}`);
+            console.error('❌ GTC API Error:', response.data);
+            return res.status(400).json({
+                success: false,
+                message: response.data.message || 'GTC API returned an error',
+                code: response.data.code,
+                details: response.data
+            });
         }
 
-        // Step 2: Sync the tree to database
+        if (!response.data.data) {
+            console.error('❌ No data in GTC API response');
+            return res.status(400).json({
+                success: false,
+                message: 'No data returned from GTC API'
+            });
+        }
+
+        console.log('Processing tree data...');
+
+        // Step 3: Sync the tree to database
         const result = await syncMemberTreeFromAPI(response.data);
 
-        // Step 3: Get updated statistics
+        console.log('Sync complete:', result.stats);
+
+        // Step 4: Get updated statistics
         const stats = await getTreeStats();
 
         res.status(200).json({
@@ -671,8 +692,45 @@ router.post('/sync-member-tree', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Error in sync-member-tree:', error);
+        console.error('Error in sync-member-tree:', error);
 
+        // Handle specific error types
+        if (error.response) {
+            // GTC API returned an error response
+            console.error('GTC API Error Response:', {
+                status: error.response.status,
+                statusText: error.response.statusText,
+                data: error.response.data
+            });
+
+            const errorMessage = error.response.data?.message ||
+                error.response.data?.msg ||
+                error.response.statusText ||
+                'GTC API error';
+
+            return res.status(error.response.status || 500).json({
+                success: false,
+                message: errorMessage,
+                code: error.response.data?.code,
+                details: process.env.NODE_ENV === 'development' ? error.response.data : undefined
+            });
+        }
+
+        if (error.code === 'ECONNREFUSED') {
+            return res.status(503).json({
+                success: false,
+                message: 'Unable to connect to GTC API. Please check if the API is accessible.'
+            });
+        }
+
+        if (error.code === 'ETIMEDOUT') {
+            return res.status(504).json({
+                success: false,
+                message: 'Request to GTC API timed out. Please try again.'
+            });
+        }
+
+        // Generic error
         res.status(500).json({
             success: false,
             message: error.message || 'Failed to sync member tree',
