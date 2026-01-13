@@ -407,6 +407,7 @@ router.post('/webhook/user-tree', async (req, res) => {
                     uplineChain,
                     joinedAt,
                     rawData,
+                    phoneNumber,
                 } = m;
 
                 if (!gtcUserId || !email || !username) {
@@ -421,6 +422,7 @@ router.post('/webhook/user-tree', async (req, res) => {
                         $set: {
                             email,
                             username,
+                            phone: phoneNumber || '',
                             name: name || null,
                             parentGtcUserId: parentGtcUserId || null,
                             level: level || 1,
@@ -472,6 +474,7 @@ router.post('/webhook/member-update', async (req, res) => {
             uplineChain,
             joinedAt,
             rawData,
+            phoneNumber
         } = req.body;
 
         if (!gtcUserId || !email || !username) {
@@ -488,6 +491,7 @@ router.post('/webhook/member-update', async (req, res) => {
                 $set: {
                     email,
                     username,
+                    phone: phoneNumber || '',
                     name: name || null,
                     parentGtcUserId: parentGtcUserId || null,
                     level: level || 1,
