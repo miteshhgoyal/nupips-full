@@ -643,7 +643,7 @@ router.post('/sync-member-tree', async (req, res) => {
         console.log('Fetching tree from GTC API...');
 
         const response = await axios.post(
-            'https://apiv1.mygtc.app/api/v3/agent/member_tree',
+            'https://apiv1.gtctrader100.app/api/v3/agent/member_tree',
             {},
             {
                 headers: {
