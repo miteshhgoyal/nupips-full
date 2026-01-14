@@ -1110,7 +1110,7 @@ router.patch('/gtc-members/:id/onboarding', async (req, res) => {
         // Check permissions for subadmin
         if (req.user.userType === 'subadmin') {
             // Subadmin can only toggle if they are the one who onboarded OR if no one has onboarded yet
-            if (member.onboardingDoneBy && member.onboardingDoneBy.toString() !== req.user._id.toString()) {
+            if (member.onboardingDoneBy && member.onboardingDoneBy.toString() !== req.user.userId.toString()) {
                 return res.status(403).json({
                     success: false,
                     message: 'You can only modify onboarding status for members you onboarded'
