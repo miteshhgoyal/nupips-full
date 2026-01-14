@@ -66,7 +66,7 @@ async function fetchGTCData(user) {
 
         const authHeader = { Authorization: `Bearer ${user.gtcfx.accessToken}` };
 
-        // Fetch Account Info
+        // Fetch Account Info (for member_id and other data)
         const accountResponse = await gtcAxios.post(
             '/api/v3/account_info',
             {},
@@ -79,6 +79,49 @@ async function fetchGTCData(user) {
         }
 
         const accountData = accountResponse.data.data;
+        const memberId = accountData.id || accountData.member_id;
+
+        // NEW: Fetch child accounts to get accurate balance
+        let walletBalance = 0;
+        let tradingBalance = 0;
+        let totalGTCBalance = 0;
+
+        try {
+            const childAccountsResponse = await gtcAxios.post(
+                '/api/v3/agent/query_child_accounts',
+                { member_id: memberId },
+                { headers: authHeader }
+            );
+
+            if (childAccountsResponse.data.code === 200) {
+                const childData = childAccountsResponse.data.data;
+
+                // Get wallet balance
+                walletBalance = parseFloat(childData.wallet?.amount || 0);
+
+                // Get total trading balance from all MT accounts
+                if (childData.mt_account && Array.isArray(childData.mt_account)) {
+                    tradingBalance = childData.mt_account.reduce((sum, account) => {
+                        return sum + parseFloat(account.balance || 0);
+                    }, 0);
+                }
+
+                // Total GTC Balance = Wallet + All MT Account Balances
+                totalGTCBalance = walletBalance + tradingBalance;
+            } else {
+                console.warn('Could not fetch child accounts, using fallback balance');
+                // Fallback to account_info balance if child accounts API fails
+                totalGTCBalance = parseFloat(accountData.amount || 0);
+                walletBalance = totalGTCBalance;
+                tradingBalance = 0;
+            }
+        } catch (err) {
+            console.warn('Error fetching child accounts:', err.message);
+            // Fallback to account_info balance
+            totalGTCBalance = parseFloat(accountData.amount || 0);
+            walletBalance = totalGTCBalance;
+            tradingBalance = 0;
+        }
 
         // Fetch Profit Logs
         let profitLogs = [];
@@ -112,14 +155,15 @@ async function fetchGTCData(user) {
             console.warn('Could not fetch member data:', err.message);
         }
 
-        // Calculate metrics
+        // Calculate metrics using account_info data for profit/loss
         const totalProfit = parseFloat(accountData.total_profit || 0);
         const totalLoss = parseFloat(accountData.total_loss || 0);
-        const balance = parseFloat(accountData.amount || 0);
-        const equity = parseFloat(accountData.equity || balance);
+
+        // Use totalGTCBalance from child accounts instead of accountData.amount
+        const equity = parseFloat(accountData.equity || totalGTCBalance);
 
         const netProfit = totalProfit - totalLoss;
-        const profitPercent = balance > 0 ? (netProfit / balance) * 100 : 0;
+        const profitPercent = totalGTCBalance > 0 ? (netProfit / totalGTCBalance) * 100 : 0;
         const winRate = totalProfit + totalLoss > 0 ? (totalProfit / (totalProfit + totalLoss)) * 100 : 0;
 
         // Trading volume
@@ -132,7 +176,12 @@ async function fetchGTCData(user) {
         const gtcDirectMembers = memberData?.list?.filter(m => m.level === 1).length || 0;
 
         return {
-            accountBalance: balance,
+            // Use total GTC balance (wallet + all MT accounts)
+            accountBalance: totalGTCBalance, // For backward compatibility
+            walletBalance: walletBalance,
+            tradingBalance: tradingBalance,
+            totalGTCBalance: totalGTCBalance,
+
             equity: equity,
             margin: parseFloat(accountData.margin || 0),
             freeMargin: parseFloat(accountData.free_margin || 0),
@@ -200,8 +249,8 @@ async function calculateCompetitionScore(user, gtcData, competition) {
     const profitabilityScore = (winRate / 100) * 0.5 + (Math.min(profitPercent / normalizationTargets.profitPercentTarget, 1)) * 0.5;
     scores.profitability = profitabilityScore * rules.profitabilityWeight;
 
-    // 5. Account Balance Score
-    const accountBalance = gtcData?.accountBalance || 0;
+    // 5. Account Balance Score - USE TOTAL GTC BALANCE
+    const accountBalance = gtcData?.totalGTCBalance || 0;
     scores.accountBalance = Math.min(
         accountBalance / normalizationTargets.accountBalanceTarget,
         1
@@ -228,7 +277,11 @@ async function calculateCompetitionScore(user, gtcData, competition) {
             tradingVolumeDollars: parseFloat((volumeInDollars).toFixed(2)),
             profitPercent: parseFloat((gtcData?.profitPercent || 0).toFixed(2)),
             winRate: parseFloat((gtcData?.winRate || 0).toFixed(2)),
-            accountBalance: parseFloat((gtcData?.accountBalance || 0).toFixed(2)),
+            // Show total GTC balance in metrics
+            totalGTCBalance: parseFloat((gtcData?.totalGTCBalance || 0).toFixed(2)),
+            walletBalance: parseFloat((gtcData?.walletBalance || 0).toFixed(2)),
+            tradingBalance: parseFloat((gtcData?.tradingBalance || 0).toFixed(2)),
+            accountBalance: parseFloat((gtcData?.totalGTCBalance || 0).toFixed(2)), // For backward compatibility
             equity: parseFloat((gtcData?.equity || 0).toFixed(2)),
             totalTrades: gtcData?.totalTrades || 0,
             isAgent: gtcData?.isAgent || false,
@@ -638,7 +691,10 @@ router.get('/:slug/my-stats', authenticateToken, async (req, res) => {
             breakdown: participant.scoreBreakdown?.breakdown,
             metrics: participant.scoreBreakdown?.metrics,
             gtcAccountInfo: gtcData ? {
-                balance: gtcData.accountBalance,
+                // Show total balance only
+                balance: gtcData.totalGTCBalance,
+                walletBalance: gtcData.walletBalance,
+                tradingBalance: gtcData.tradingBalance,
                 equity: gtcData.equity,
                 margin: gtcData.margin,
                 freeMargin: gtcData.freeMargin,
