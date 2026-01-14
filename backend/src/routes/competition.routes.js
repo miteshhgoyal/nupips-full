@@ -144,7 +144,6 @@ async function fetchGTCData(user) {
             winRate: winRate,
             totalVolumeLots: totalVolumeLots,
             totalTrades: profitLogs.length,
-            kycStatus: parseInt(accountData.kyc_status || 0),
             accountLevel: parseInt(accountData.level || 0),
             isAgent: accountData.user_type === 'agent' || accountData.is_agent === 1,
             gtcTeamSize: gtcTeamSize,
@@ -158,10 +157,10 @@ async function fetchGTCData(user) {
 }
 
 /**
- * Calculate competition score using dynamic config
+ * Calculate competition score using competition config
  */
-async function calculateCompetitionScore(user, gtcData, config) {
-    const { rules, bonusMultipliers, normalizationTargets } = config;
+async function calculateCompetitionScore(user, gtcData, competition) {
+    const { rules, normalizationTargets } = competition;
 
     let scores = {
         directReferrals: 0,
@@ -169,10 +168,7 @@ async function calculateCompetitionScore(user, gtcData, config) {
         tradingVolume: 0,
         profitability: 0,
         accountBalance: 0,
-        kycCompletion: 0,
     };
-
-    let bonusMultiplier = 1.0;
 
     // 1. Direct Referrals Score
     const directReferrals = user.referralDetails?.totalDirectReferrals || 0;
@@ -211,29 +207,18 @@ async function calculateCompetitionScore(user, gtcData, config) {
         1
     ) * rules.accountBalanceWeight;
 
-    // 6. KYC Completion Score
-    const isKYCVerified = gtcData?.kycStatus === 1;
-    scores.kycCompletion = isKYCVerified ? rules.kycCompletionWeight : 0;
-
-    // Apply KYC bonus multiplier
-    if (isKYCVerified) {
-        bonusMultiplier *= bonusMultipliers.kycVerified;
-    }
-
     const baseScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
-    const totalScore = baseScore * bonusMultiplier;
+    const totalScore = baseScore;
 
     return {
         totalScore: parseFloat(totalScore.toFixed(2)),
         baseScore: parseFloat(baseScore.toFixed(2)),
-        bonusMultiplier: parseFloat(bonusMultiplier.toFixed(2)),
         breakdown: {
             directReferralsScore: parseFloat(scores.directReferrals.toFixed(2)),
             teamSizeScore: parseFloat(scores.teamSize.toFixed(2)),
             tradingVolumeScore: parseFloat(scores.tradingVolume.toFixed(2)),
             profitabilityScore: parseFloat(scores.profitability.toFixed(2)),
             accountBalanceScore: parseFloat(scores.accountBalance.toFixed(2)),
-            kycCompletionScore: parseFloat(scores.kycCompletion.toFixed(2)),
         },
         metrics: {
             directReferrals,
@@ -246,9 +231,11 @@ async function calculateCompetitionScore(user, gtcData, config) {
             accountBalance: parseFloat((gtcData?.accountBalance || 0).toFixed(2)),
             equity: parseFloat((gtcData?.equity || 0).toFixed(2)),
             totalTrades: gtcData?.totalTrades || 0,
-            isKYCVerified,
             isAgent: gtcData?.isAgent || false,
-        }
+        },
+        username: user.username,
+        name: user.name,
+        email: user.email,
     };
 }
 
@@ -256,51 +243,132 @@ async function calculateCompetitionScore(user, gtcData, config) {
  * Helper function to determine reward for a given rank
  */
 function getRewardForRank(rank, rewards) {
+    if (!rank || !rewards || rewards.length === 0) return null;
     const reward = rewards.find(r => rank >= r.minRank && rank <= r.maxRank);
     return reward || null;
+}
+
+/**
+ * Generate slug from title
+ */
+function generateSlug(title) {
+    return title
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .trim();
 }
 
 // ==================== USER ROUTES ====================
 
 /**
- * GET /competition/status
+ * GET /competition/list - Get all competitions
  */
-router.get('/status', authenticateToken, async (req, res) => {
+router.get('/list', authenticateToken, async (req, res) => {
     try {
-        const config = await Competition.getActiveConfig();
+        const { status, includeAll = 'false' } = req.query;
+        const userId = req.user.userId;
+
+        let query = {};
+
+        if (status) {
+            query.status = status;
+        } else if (includeAll === 'false') {
+            query.status = { $in: ['active', 'upcoming'] };
+        }
+
+        const competitions = await Competition.find(query)
+            .select('-participants -stats')
+            .sort({ startDate: -1 })
+            .lean();
+
+        const user = await User.findById(userId)
+            .select('gtcfx')
+            .lean();
+
+        const hasGTCAccount = !!(user?.gtcfx?.accessToken);
+
+        const enrichedCompetitions = competitions.map(comp => ({
+            ...comp,
+            isActive: comp.status === 'active',
+            isUpcoming: comp.status === 'upcoming',
+            isCompleted: comp.status === 'completed',
+            canView: !(comp.requirements?.requiresGTCAccount) || hasGTCAccount,
+            requiresConnection: (comp.requirements?.requiresGTCAccount) && !hasGTCAccount,
+            userParticipating: false,
+        }));
 
         res.json({
             success: true,
-            status: config.competitionEnabled && config.isActive(),
-            config: {
-                enabled: config.competitionEnabled,
-                periodActive: config.period.active,
-                startDate: config.period.startDate,
-                endDate: config.period.endDate,
-                description: config.period.description,
-            },
+            competitions: enrichedCompetitions,
         });
     } catch (error) {
-        console.error('Error fetching competition status:', error);
+        console.error('Error fetching competitions:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch competition status',
+            message: 'Failed to fetch competitions',
+            error: error.message,
         });
     }
 });
 
 /**
- * GET /competition/leaderboard
+ * GET /competition/:slug - Get specific competition details
  */
-router.get('/leaderboard', authenticateToken, async (req, res) => {
+router.get('/:slug', authenticateToken, async (req, res) => {
     try {
-        const currentUserId = req.user.userId;
+        const { slug } = req.params;
+
+        const competition = await Competition.findOne({ slug })
+            .select('-participants')
+            .lean();
+
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition not found',
+            });
+        }
+
+        res.json({
+            success: true,
+            competition: {
+                ...competition,
+                isActive: competition.status === 'active',
+                isUpcoming: competition.status === 'upcoming',
+                isCompleted: competition.status === 'completed',
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching competition:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch competition',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * GET /competition/:slug/leaderboard
+ */
+router.get('/:slug/leaderboard', authenticateToken, async (req, res) => {
+    try {
+        const { slug } = req.params;
         const { limit = 100 } = req.query;
+        const currentUserId = req.user.userId;
 
-        // Get active competition config
-        const config = await Competition.getActiveConfig();
+        const competition = await Competition.findOne({ slug });
 
-        if (!config.competitionEnabled || !config.isActive()) {
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition not found',
+            });
+        }
+
+        if (!competition.isActive() && !competition.isCompleted()) {
             return res.json({
                 success: true,
                 active: false,
@@ -310,114 +378,107 @@ router.get('/leaderboard', authenticateToken, async (req, res) => {
             });
         }
 
-        const users = await User.find({
-            'gtcfx.accessToken': { $ne: null },
-            status: 'active',
-        })
-            .select('name username email gtcfx referralDetails userType')
+        const currentUser = await User.findById(currentUserId)
+            .select('gtcfx')
             .lean();
 
-        if (users.length === 0) {
-            return res.json({
-                success: true,
-                leaderboard: [],
-                userRank: null,
-                rules: config.rules,
-                rewards: config.rewards,
-                period: config.period,
-                stats: { totalParticipants: 0 },
+        const hasGTCAccount = !!(currentUser?.gtcfx?.accessToken);
+
+        if (competition.requirements?.requiresGTCAccount && !hasGTCAccount) {
+            return res.status(403).json({
+                success: false,
+                message: 'GTC account connection required to view this leaderboard',
+                requiresConnection: true,
             });
         }
 
-        const scorePromises = users.map(async (user) => {
-            try {
-                const gtcData = await fetchGTCData(user);
-                if (!gtcData) return null;
+        const leaderboard = competition.participants
+            .sort((a, b) => b.score - a.score)
+            .slice(0, parseInt(limit))
+            .map(p => ({
+                userId: p.userId.toString(),
+                name: p.name,
+                username: p.username,
+                email: p.email,
+                rank: p.rank,
+                score: p.score,
+                baseScore: p.scoreBreakdown?.baseScore,
+                breakdown: p.scoreBreakdown?.breakdown,
+                metrics: p.scoreBreakdown?.metrics,
+                isAgent: p.scoreBreakdown?.metrics?.isAgent,
+                lastCalculated: p.lastCalculated,
+            }));
 
-                const scoreData = await calculateCompetitionScore(user, gtcData, config);
+        const userParticipant = competition.participants.find(
+            p => p.userId.toString() === currentUserId
+        );
 
-                return {
-                    userId: user._id.toString(),
-                    name: user.name,
-                    username: user.username,
-                    email: user.email,
-                    userType: user.userType,
-                    score: scoreData.totalScore,
-                    baseScore: scoreData.baseScore,
-                    bonusMultiplier: scoreData.bonusMultiplier,
-                    breakdown: scoreData.breakdown,
-                    metrics: scoreData.metrics,
-                    isVerified: scoreData.metrics.isKYCVerified,
-                    isAgent: scoreData.metrics.isAgent,
-                };
-            } catch (error) {
-                console.error(`Error processing user ${user.username}:`, error.message);
-                return null;
-            }
-        });
-
-        const scoredUsersResults = await Promise.all(scorePromises);
-        const scoredUsers = scoredUsersResults.filter(u => u !== null);
-
-        scoredUsers.sort((a, b) => b.score - a.score);
-
-        let currentRank = 1;
-        const leaderboard = scoredUsers.map((user, index) => {
-            if (index > 0 && user.score < scoredUsers[index - 1].score) {
-                currentRank = index + 1;
-            }
-            return { ...user, rank: currentRank };
-        });
-
-        const limitedLeaderboard = leaderboard.slice(0, parseInt(limit));
-
-        const userRankIndex = leaderboard.findIndex(u => u.userId === currentUserId);
-        let userRank = userRankIndex >= 0 ? leaderboard[userRankIndex] : null;
-
-        if (userRank) {
+        let userRank = null;
+        if (userParticipant) {
             userRank = {
-                ...userRank,
-                eligibleReward: getRewardForRank(userRank.rank, config.rewards)
+                userId: userParticipant.userId.toString(),
+                name: userParticipant.name,
+                username: userParticipant.username,
+                rank: userParticipant.rank,
+                score: userParticipant.score,
+                baseScore: userParticipant.scoreBreakdown?.baseScore,
+                breakdown: userParticipant.scoreBreakdown?.breakdown,
+                metrics: userParticipant.scoreBreakdown?.metrics,
+                eligibleReward: getRewardForRank(userParticipant.rank, competition.rewards),
+                lastCalculated: userParticipant.lastCalculated,
             };
         }
 
-        const stats = {
-            totalParticipants: leaderboard.length,
-            averageScore: parseFloat((leaderboard.reduce((sum, u) => sum + u.score, 0) / leaderboard.length).toFixed(2)),
-            highestScore: leaderboard[0]?.score || 0,
-            kycVerifiedCount: leaderboard.filter(u => u.isVerified).length,
-            agentCount: leaderboard.filter(u => u.isAgent).length,
-        };
-
         res.json({
             success: true,
-            leaderboard: limitedLeaderboard,
+            competition: {
+                id: competition._id,
+                title: competition.title,
+                slug: competition.slug,
+                status: competition.status,
+                startDate: competition.startDate,
+                endDate: competition.endDate,
+            },
+            leaderboard,
             userRank,
-            rules: config.rules,
-            rewards: config.rewards,
-            period: config.period,
-            stats,
+            stats: competition.stats,
+            rules: competition.rules,
+            rewards: competition.rewards,
         });
 
     } catch (error) {
         console.error('Competition leaderboard error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch competition data',
+            message: 'Failed to fetch competition leaderboard',
             error: error.message,
         });
     }
 });
 
 /**
- * GET /competition/my-stats
+ * POST /competition/:slug/calculate-my-score
  */
-router.get('/my-stats', authenticateToken, async (req, res) => {
+router.post('/:slug/calculate-my-score', authenticateToken, async (req, res) => {
     try {
+        const { slug } = req.params;
         const userId = req.user.userId;
 
-        // Get active competition config
-        const config = await Competition.getActiveConfig();
+        const competition = await Competition.findOne({ slug });
+
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition not found',
+            });
+        }
+
+        if (!competition.isActive()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Competition is not currently active',
+            });
+        }
 
         const user = await User.findById(userId)
             .select('name username email gtcfx referralDetails userType')
@@ -430,70 +491,159 @@ router.get('/my-stats', authenticateToken, async (req, res) => {
             });
         }
 
-        if (!user.gtcfx?.accessToken) {
-            return res.json({
-                success: true,
-                connected: false,
-                message: 'GTC FX not connected',
+        if (competition.requirements?.requiresGTCAccount && !user.gtcfx?.accessToken) {
+            return res.status(403).json({
+                success: false,
+                message: 'GTC account connection required',
+                requiresConnection: true,
             });
         }
 
         const gtcData = await fetchGTCData(user);
 
-        if (!gtcData) {
-            return res.json({
-                success: true,
-                connected: true,
+        if (competition.requirements?.requiresGTCAccount && !gtcData) {
+            return res.status(400).json({
+                success: false,
                 message: 'Unable to fetch GTC FX data',
-                hasToken: true,
             });
         }
 
-        const scoreData = await calculateCompetitionScore(user, gtcData, config);
-
-        // Calculate rank
-        const allUsers = await User.find({
-            'gtcfx.accessToken': { $ne: null },
-            status: 'active',
-        }).select('_id gtcfx referralDetails').lean();
-
-        let rank = 1;
-        for (const otherUser of allUsers) {
-            if (otherUser._id.toString() === userId) continue;
-
-            const otherGtcData = await fetchGTCData(otherUser);
-            if (!otherGtcData) continue;
-
-            const otherScore = await calculateCompetitionScore(otherUser, otherGtcData, config);
-            if (otherScore.totalScore > scoreData.totalScore) {
-                rank++;
-            }
+        const participationCheck = competition.canUserParticipate(user, gtcData);
+        if (!participationCheck.canParticipate) {
+            return res.status(403).json({
+                success: false,
+                message: participationCheck.reason,
+            });
         }
+
+        const scoreData = await calculateCompetitionScore(user, gtcData, competition);
+
+        competition.updateParticipantScore(userId, scoreData);
+
+        await competition.save();
+
+        const updatedParticipant = competition.participants.find(
+            p => p.userId.toString() === userId
+        );
 
         res.json({
             success: true,
+            message: 'Score calculated and updated successfully',
+            ranking: {
+                rank: updatedParticipant.rank,
+                score: scoreData.totalScore,
+                baseScore: scoreData.baseScore,
+                eligibleReward: getRewardForRank(updatedParticipant.rank, competition.rewards),
+            },
+            breakdown: scoreData.breakdown,
+            metrics: scoreData.metrics,
+        });
+
+    } catch (error) {
+        console.error('Calculate score error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to calculate score',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * GET /competition/:slug/my-stats
+ */
+router.get('/:slug/my-stats', authenticateToken, async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const userId = req.user.userId;
+
+        const competition = await Competition.findOne({ slug });
+
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition not found',
+            });
+        }
+
+        const user = await User.findById(userId)
+            .select('name username email gtcfx userType')
+            .lean();
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found',
+            });
+        }
+
+        const hasGTCAccount = !!(user.gtcfx?.accessToken);
+
+        if (competition.requirements?.requiresGTCAccount && !hasGTCAccount) {
+            return res.json({
+                success: true,
+                connected: false,
+                message: 'GTC account connection required',
+                requiresConnection: true,
+                competition: {
+                    title: competition.title,
+                    slug: competition.slug,
+                    status: competition.status,
+                },
+            });
+        }
+
+        const participant = competition.participants.find(
+            p => p.userId.toString() === userId
+        );
+
+        if (!participant) {
+            return res.json({
+                success: true,
+                participating: false,
+                message: 'You have not participated in this competition yet. Calculate your score to participate.',
+                competition: {
+                    title: competition.title,
+                    slug: competition.slug,
+                    status: competition.status,
+                },
+            });
+        }
+
+        const gtcData = await fetchGTCData(user);
+
+        res.json({
+            success: true,
+            participating: true,
             connected: true,
             user: {
                 name: user.name,
                 username: user.username,
                 userType: user.userType,
             },
-            ranking: {
-                rank,
-                score: scoreData.totalScore,
-                baseScore: scoreData.baseScore,
-                bonusMultiplier: scoreData.bonusMultiplier,
-                eligibleReward: getRewardForRank(rank, config.rewards),
+            competition: {
+                title: competition.title,
+                slug: competition.slug,
+                status: competition.status,
+                startDate: competition.startDate,
+                endDate: competition.endDate,
             },
-            breakdown: scoreData.breakdown,
-            metrics: scoreData.metrics,
-            gtcAccountInfo: {
+            ranking: {
+                rank: participant.rank,
+                score: participant.score,
+                baseScore: participant.scoreBreakdown?.baseScore,
+                eligibleReward: getRewardForRank(participant.rank, competition.rewards),
+                lastCalculated: participant.lastCalculated,
+            },
+            breakdown: participant.scoreBreakdown?.breakdown,
+            metrics: participant.scoreBreakdown?.metrics,
+            gtcAccountInfo: gtcData ? {
                 balance: gtcData.accountBalance,
                 equity: gtcData.equity,
                 margin: gtcData.margin,
                 freeMargin: gtcData.freeMargin,
                 marginLevel: gtcData.marginLevel,
-            },
+            } : null,
         });
 
     } catch (error) {
@@ -506,244 +656,51 @@ router.get('/my-stats', authenticateToken, async (req, res) => {
     }
 });
 
-/**
- * GET /competition/config
- */
-router.get('/config', async (req, res) => {
-    try {
-        const config = await Competition.getActiveConfig();
-
-        res.json({
-            success: true,
-            config: {
-                competitionEnabled: config.competitionEnabled,
-                rules: config.rules,
-                rewards: config.rewards,
-                period: config.period,
-                bonusMultipliers: config.bonusMultipliers,
-                isActive: config.isActive(),
-            },
-        });
-    } catch (error) {
-        console.error('Config error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch config',
-        });
-    }
-});
-
 // ==================== ADMIN ROUTES ====================
 
 /**
- * GET /competition/admin/leaderboard - Admin Top Rankers (Top 25 + Reward Eligible)
+ * POST /competition/admin/create
  */
-router.get('/admin/leaderboard', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const { limit = 25, showRewards = 'true' } = req.query;
-
-        // Get active competition config
-        const config = await Competition.getActiveConfig();
-
-        if (!config.competitionEnabled || !config.isActive()) {
-            return res.json({
-                success: true,
-                active: false,
-                message: 'Competition is not currently active',
-                topRankers: [],
-                rewardEligible: [],
-                stats: { totalParticipants: 0 }
-            });
-        }
-
-        const users = await User.find({
-            'gtcfx.accessToken': { $ne: null },
-            status: 'active',
-        })
-            .select('name username email gtcfx referralDetails userType')
-            .lean();
-
-        if (users.length === 0) {
-            return res.json({
-                success: true,
-                topRankers: [],
-                rewardEligible: [],
-                rules: config.rules,
-                rewards: config.rewards,
-                stats: { totalParticipants: 0 },
-            });
-        }
-
-        const scorePromises = users.map(async (user) => {
-            try {
-                const gtcData = await fetchGTCData(user);
-                if (!gtcData) return null;
-
-                const scoreData = await calculateCompetitionScore(user, gtcData, config);
-
-                return {
-                    userId: user._id.toString(),
-                    name: user.name,
-                    username: user.username,
-                    email: user.email,
-                    userType: user.userType,
-                    score: scoreData.totalScore,
-                    baseScore: scoreData.baseScore,
-                    bonusMultiplier: scoreData.bonusMultiplier,
-                    breakdown: scoreData.breakdown,
-                    metrics: scoreData.metrics,
-                    isVerified: scoreData.metrics.isKYCVerified,
-                    isAgent: scoreData.metrics.isAgent,
-                    eligibleReward: getRewardForRank(currentRank, config.rewards), // Will be set later
-                };
-            } catch (error) {
-                console.error(`Error processing user ${user.username}:`, error.message);
-                return null;
-            }
-        });
-
-        const scoredUsersResults = await Promise.all(scorePromises);
-        const scoredUsers = scoredUsersResults.filter(u => u !== null);
-
-        scoredUsers.sort((a, b) => b.score - a.score);
-
-        let currentRank = 1;
-        const rankedUsers = scoredUsers.map((user, index) => {
-            if (index > 0 && user.score < scoredUsers[index - 1].score) {
-                currentRank = index + 1;
-            }
-            return {
-                ...user,
-                rank: currentRank,
-                eligibleReward: getRewardForRank(currentRank, config.rewards)
-            };
-        });
-
-        const topRankers = rankedUsers.slice(0, parseInt(limit));
-
-        // Filter reward-eligible users (those with valid rewards for their rank)
-        const rewardEligible = rankedUsers.filter(user =>
-            user.eligibleReward && user.rank <= 50 // Top 50 for rewards
-        ).slice(0, 25);
-
-        const stats = {
-            totalParticipants: rankedUsers.length,
-            averageScore: parseFloat((rankedUsers.reduce((sum, u) => sum + u.score, 0) / rankedUsers.length).toFixed(2)),
-            highestScore: rankedUsers[0]?.score || 0,
-            kycVerifiedCount: rankedUsers.filter(u => u.isVerified).length,
-            agentCount: rankedUsers.filter(u => u.isAgent).length,
-            rewardEligibleCount: rewardEligible.length,
-        };
-
-        res.json({
-            success: true,
-            topRankers,
-            rewardEligible,
-            rules: config.rules,
-            rewards: config.rewards,
-            period: config.period,
-            stats,
-        });
-
-    } catch (error) {
-        console.error('Admin leaderboard error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch admin leaderboard data',
-            error: error.message,
-        });
-    }
-});
-
-/**
- * GET /competition/admin/config
- */
-router.get('/admin/config', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const config = await Competition.getActiveConfig();
-
-        res.json({
-            success: true,
-            config,
-            isActive: config.isActive(),
-        });
-    } catch (error) {
-        console.error('Error fetching competition config:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch competition configuration',
-            error: error.message,
-        });
-    }
-});
-
-/**
- * POST /competition/admin/config
- */
-router.post('/admin/config', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/admin/create', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.userId;
-        const configData = req.body;
+        const competitionData = req.body;
 
-        // Validate that weights sum to 100
-        const totalWeight =
-            (configData.rules?.directReferralsWeight || 0) +
-            (configData.rules?.teamSizeWeight || 0) +
-            (configData.rules?.tradingVolumeWeight || 0) +
-            (configData.rules?.profitabilityWeight || 0) +
-            (configData.rules?.accountBalanceWeight || 0) +
-            (configData.rules?.kycCompletionWeight || 0);
-
-        if (totalWeight !== 100) {
+        // Validate required fields
+        if (!competitionData.title || !competitionData.description) {
             return res.status(400).json({
                 success: false,
-                message: `Total weight must equal 100%. Current total: ${totalWeight}%`,
+                message: 'Title and description are required',
             });
         }
 
-        // Create new configuration
-        const newConfig = new Competition({
-            ...configData,
-            createdBy: userId,
-            updatedBy: userId,
-            version: 1,
-        });
+        if (!competitionData.startDate || !competitionData.endDate) {
+            return res.status(400).json({
+                success: false,
+                message: 'Start date and end date are required',
+            });
+        }
 
-        await newConfig.save();
+        // Generate slug
+        const slug = competitionData.slug || generateSlug(competitionData.title);
 
-        res.status(201).json({
-            success: true,
-            message: 'Competition configuration created successfully',
-            config: newConfig,
-        });
-    } catch (error) {
-        console.error('Error creating competition config:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create competition configuration',
-            error: error.message,
-        });
-    }
-});
+        // Check if slug exists
+        const existingCompetition = await Competition.findOne({ slug });
+        if (existingCompetition) {
+            return res.status(400).json({
+                success: false,
+                message: 'A competition with this slug already exists',
+            });
+        }
 
-/**
- * PUT /competition/admin/config/:id
- */
-router.put('/admin/config/:id', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user.userId;
-        const updateData = req.body;
-
-        // Validate that weights sum to 100 if rules are being updated
-        if (updateData.rules) {
+        // Validate that weights sum to 100
+        if (competitionData.rules) {
             const totalWeight =
-                (updateData.rules.directReferralsWeight || 0) +
-                (updateData.rules.teamSizeWeight || 0) +
-                (updateData.rules.tradingVolumeWeight || 0) +
-                (updateData.rules.profitabilityWeight || 0) +
-                (updateData.rules.accountBalanceWeight || 0) +
-                (updateData.rules.kycCompletionWeight || 0);
+                (competitionData.rules.directReferralsWeight || 0) +
+                (competitionData.rules.teamSizeWeight || 0) +
+                (competitionData.rules.tradingVolumeWeight || 0) +
+                (competitionData.rules.profitabilityWeight || 0) +
+                (competitionData.rules.accountBalanceWeight || 0);
 
             if (totalWeight !== 100) {
                 return res.status(400).json({
@@ -753,377 +710,631 @@ router.put('/admin/config/:id', authenticateToken, requireAdmin, async (req, res
             }
         }
 
-        const config = await Competition.findById(id);
-
-        if (!config) {
-            return res.status(404).json({
-                success: false,
-                message: 'Competition configuration not found',
-            });
-        }
-
-        // Update fields
-        Object.keys(updateData).forEach(key => {
-            if (key !== '_id' && key !== 'createdAt' && key !== 'createdBy') {
-                config[key] = updateData[key];
+        // Validate rewards
+        if (competitionData.rewards && competitionData.rewards.length > 0) {
+            for (const reward of competitionData.rewards) {
+                if (!reward.minRank || !reward.maxRank || !reward.title || !reward.prize) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'All reward fields are required',
+                    });
+                }
+                if (reward.minRank > reward.maxRank) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Min rank cannot be greater than max rank',
+                    });
+                }
             }
-        });
-
-        config.updatedBy = userId;
-        config.version += 1;
-
-        await config.save();
-
-        res.json({
-            success: true,
-            message: 'Competition configuration updated successfully',
-            config,
-        });
-    } catch (error) {
-        console.error('Error updating competition config:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to update competition configuration',
-            error: error.message,
-        });
-    }
-});
-
-/**
- * PATCH /competition/admin/config/:id/toggle
- */
-router.patch('/admin/config/:id/toggle', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user.userId;
-
-        const config = await Competition.findById(id);
-
-        if (!config) {
-            return res.status(404).json({
-                success: false,
-                message: 'Competition configuration not found',
-            });
         }
 
-        config.competitionEnabled = !config.competitionEnabled;
-        config.updatedBy = userId;
-        await config.save();
+        const competition = new Competition({
+            ...competitionData,
+            slug,
+            createdBy: userId,
+            updatedBy: userId,
+        });
 
-        res.json({
+        await competition.save();
+
+        res.status(201).json({
             success: true,
-            message: `Competition ${config.competitionEnabled ? 'enabled' : 'disabled'} successfully`,
-            config,
+            message: 'Competition created successfully',
+            competition,
         });
     } catch (error) {
-        console.error('Error toggling competition status:', error);
+        console.error('Error creating competition:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to toggle competition status',
+            message: error.message || 'Failed to create competition',
             error: error.message,
         });
     }
 });
 
 /**
- * PATCH /competition/admin/config/:id/rewards
+ * GET /competition/admin/list
  */
-router.patch('/admin/config/:id/rewards', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/admin/list', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { status } = req.query;
+
+        let query = {};
+        if (status) {
+            query.status = status;
+        }
+
+        const competitions = await Competition.find(query)
+            .select('-participants')
+            .sort({ createdAt: -1 })
+            .populate('createdBy', 'name username')
+            .populate('updatedBy', 'name username')
+            .lean();
+
+        res.json({
+            success: true,
+            competitions,
+        });
+    } catch (error) {
+        console.error('Error fetching competitions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch competitions',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * GET /competition/admin/:id
+ */
+router.get('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { rewards } = req.body;
-        const userId = req.user.userId;
 
-        if (!Array.isArray(rewards)) {
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
-                message: 'Rewards must be an array',
+                message: 'Invalid competition ID',
             });
         }
 
-        const config = await Competition.findById(id);
+        const competition = await Competition.findById(id)
+            .populate('createdBy', 'name username email')
+            .populate('updatedBy', 'name username email')
+            .lean();
 
-        if (!config) {
+        if (!competition) {
             return res.status(404).json({
                 success: false,
-                message: 'Competition configuration not found',
+                message: 'Competition not found',
             });
         }
-
-        config.rewards = rewards;
-        config.updatedBy = userId;
-        config.version += 1;
-
-        await config.save();
 
         res.json({
             success: true,
-            message: 'Rewards updated successfully',
-            config,
+            competition,
         });
     } catch (error) {
-        console.error('Error updating rewards:', error);
+        console.error('Error fetching competition:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to update rewards',
+            message: 'Failed to fetch competition',
             error: error.message,
         });
     }
 });
 
 /**
- * PATCH /competition/admin/config/:id/rules
+ * PUT /competition/admin/:id
  */
-router.patch('/admin/config/:id/rules', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { rules } = req.body;
         const userId = req.user.userId;
+        const updateData = req.body;
 
-        // Validate that weights sum to 100
-        const totalWeight =
-            (rules.directReferralsWeight || 0) +
-            (rules.teamSizeWeight || 0) +
-            (rules.tradingVolumeWeight || 0) +
-            (rules.profitabilityWeight || 0) +
-            (rules.accountBalanceWeight || 0) +
-            (rules.kycCompletionWeight || 0);
-
-        if (totalWeight !== 100) {
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
-                message: `Total weight must equal 100%. Current total: ${totalWeight}%`,
+                message: 'Invalid competition ID',
             });
         }
 
-        const config = await Competition.findById(id);
+        const competition = await Competition.findById(id);
 
-        if (!config) {
+        if (!competition) {
             return res.status(404).json({
                 success: false,
-                message: 'Competition configuration not found',
+                message: 'Competition not found',
             });
         }
 
-        config.rules = rules;
-        config.updatedBy = userId;
-        config.version += 1;
+        // Prevent updating completed competitions
+        if (competition.status === 'completed' && updateData.status !== 'completed') {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot modify completed competition',
+            });
+        }
 
-        await config.save();
+        // If slug is empty, generate from title
+        if (updateData.slug === '' && updateData.title) {
+            updateData.slug = generateSlug(updateData.title);
+        }
 
-        res.json({
-            success: true,
-            message: 'Scoring rules updated successfully',
-            config,
-        });
-    } catch (error) {
-        console.error('Error updating rules:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to update scoring rules',
-            error: error.message,
-        });
-    }
-});
+        // Validate that weights sum to 100 if rules are being updated
+        if (updateData.rules) {
+            const totalWeight =
+                (updateData.rules.directReferralsWeight || 0) +
+                (updateData.rules.teamSizeWeight || 0) +
+                (updateData.rules.tradingVolumeWeight || 0) +
+                (updateData.rules.profitabilityWeight || 0) +
+                (updateData.rules.accountBalanceWeight || 0);
 
-/**
- * PATCH /competition/admin/config/:id/period
- */
-router.patch('/admin/config/:id/period', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { period } = req.body;
-        const userId = req.user.userId;
-
-        // Validate dates
-        if (period.startDate && period.endDate) {
-            const startDate = new Date(period.startDate);
-            const endDate = new Date(period.endDate);
-
-            if (endDate <= startDate) {
+            if (totalWeight !== 100) {
                 return res.status(400).json({
                     success: false,
-                    message: 'End date must be after start date',
+                    message: `Total weight must equal 100%. Current total: ${totalWeight}%`,
                 });
             }
         }
 
-        const config = await Competition.findById(id);
-
-        if (!config) {
-            return res.status(404).json({
-                success: false,
-                message: 'Competition configuration not found',
-            });
+        // Validate rewards if provided
+        if (updateData.rewards && updateData.rewards.length > 0) {
+            for (const reward of updateData.rewards) {
+                if (!reward.minRank || !reward.maxRank || !reward.title || !reward.prize) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'All reward fields are required',
+                    });
+                }
+                if (reward.minRank > reward.maxRank) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Min rank cannot be greater than max rank',
+                    });
+                }
+            }
         }
 
-        config.period = { ...config.period, ...period };
-        config.updatedBy = userId;
-        config.version += 1;
+        // Update fields
+        Object.keys(updateData).forEach(key => {
+            if (key !== '_id' && key !== 'createdAt' && key !== 'createdBy' && key !== 'participants' && key !== 'stats') {
+                competition[key] = updateData[key];
+            }
+        });
 
-        await config.save();
+        competition.updatedBy = userId;
+        competition.version += 1;
+
+        await competition.save();
 
         res.json({
             success: true,
-            message: 'Competition period updated successfully',
-            config,
+            message: 'Competition updated successfully',
+            competition,
         });
     } catch (error) {
-        console.error('Error updating period:', error);
+        console.error('Error updating competition:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to update competition period',
+            message: error.message || 'Failed to update competition',
             error: error.message,
         });
     }
 });
 
 /**
- * DELETE /competition/admin/config/:id
+ * DELETE /competition/admin/:id
  */
-router.delete('/admin/config/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
 
-        const config = await Competition.findById(id);
-
-        if (!config) {
-            return res.status(404).json({
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
                 success: false,
-                message: 'Competition configuration not found',
+                message: 'Invalid competition ID',
             });
         }
 
-        // Soft delete - just disable it
-        config.competitionEnabled = false;
-        config.period.active = false;
-        await config.save();
+        const competition = await Competition.findById(id);
+
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition not found',
+            });
+        }
+
+        // Soft delete - cancel it
+        competition.status = 'cancelled';
+        await competition.save();
 
         res.json({
             success: true,
-            message: 'Competition configuration deleted successfully',
+            message: 'Competition cancelled successfully',
         });
     } catch (error) {
-        console.error('Error deleting competition config:', error);
+        console.error('Error deleting competition:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to delete competition configuration',
+            message: 'Failed to delete competition',
             error: error.message,
         });
     }
 });
 
 /**
- * GET /competition/admin/stats
+ * POST /competition/admin/:id/duplicate
  */
-router.get('/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const totalConfigs = await Competition.countDocuments();
-        const activeConfigs = await Competition.countDocuments({
-            competitionEnabled: true,
-            'period.active': true
-        });
-
-        const latestConfig = await Competition.getActiveConfig();
-
-        res.json({
-            success: true,
-            stats: {
-                totalConfigs,
-                activeConfigs,
-                latestVersion: latestConfig?.version || 0,
-                isCurrentlyActive: latestConfig?.isActive() || false,
-            },
-            latestConfig,
-        });
-    } catch (error) {
-        console.error('Error fetching competition stats:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch competition statistics',
-            error: error.message,
-        });
-    }
-});
-
-/**
- * POST /competition/admin/config/:id/duplicate
- */
-router.post('/admin/config/:id/duplicate', authenticateToken, requireAdmin, async (req, res) => {
+router.post('/admin/:id/duplicate', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const userId = req.user.userId;
 
-        const originalConfig = await Competition.findById(id).lean();
-
-        if (!originalConfig) {
-            return res.status(404).json({
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
                 success: false,
-                message: 'Competition configuration not found',
+                message: 'Invalid competition ID',
             });
         }
 
-        // Remove _id and timestamps
-        delete originalConfig._id;
-        delete originalConfig.createdAt;
-        delete originalConfig.updatedAt;
+        const originalCompetition = await Competition.findById(id).lean();
 
-        // Create new config based on original
-        const newConfig = new Competition({
-            ...originalConfig,
+        if (!originalCompetition) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition not found',
+            });
+        }
+
+        // Remove _id, timestamps, and participants
+        delete originalCompetition._id;
+        delete originalCompetition.createdAt;
+        delete originalCompetition.updatedAt;
+        delete originalCompetition.participants;
+        delete originalCompetition.stats;
+
+        // Generate new slug
+        const newSlug = `${originalCompetition.slug}-copy-${Date.now()}`;
+
+        const newCompetition = new Competition({
+            ...originalCompetition,
+            title: `${originalCompetition.title} (Copy)`,
+            slug: newSlug,
+            status: 'draft',
             createdBy: userId,
             updatedBy: userId,
             version: 1,
-            period: {
-                ...originalConfig.period,
-                description: `${originalConfig.period.description} (Copy)`,
-            },
         });
 
-        await newConfig.save();
+        await newCompetition.save();
 
         res.status(201).json({
             success: true,
-            message: 'Competition configuration duplicated successfully',
-            config: newConfig,
+            message: 'Competition duplicated successfully',
+            competition: newCompetition,
         });
     } catch (error) {
-        console.error('Error duplicating competition config:', error);
+        console.error('Error duplicating competition:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to duplicate competition configuration',
+            message: 'Failed to duplicate competition',
             error: error.message,
         });
     }
 });
 
 /**
- * POST /competition/admin/seed
- * Manually trigger seeding of default configuration
+ * GET /competition/admin/:id/participants
  */
-router.post('/admin/seed', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/admin/:id/participants', authenticateToken, requireAdmin, async (req, res) => {
     try {
-        const existingConfig = await Competition.findOne();
+        const { id } = req.params;
+        const { limit = 100, sortBy = 'rank' } = req.query;
 
-        if (existingConfig) {
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
-                message: 'Configuration already exists. Use duplicate or create new instead.',
+                message: 'Invalid competition ID',
             });
         }
 
-        const config = await Competition.seedDefaultConfig();
+        const competition = await Competition.findById(id);
 
-        res.status(201).json({
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition not found',
+            });
+        }
+
+        let participants = [...competition.participants];
+
+        // Sort
+        if (sortBy === 'score') {
+            participants.sort((a, b) => b.score - a.score);
+        } else if (sortBy === 'rank') {
+            participants.sort((a, b) => (a.rank || 0) - (b.rank || 0));
+        } else if (sortBy === 'name') {
+            participants.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        }
+
+        const limitedParticipants = participants.slice(0, parseInt(limit));
+
+        res.json({
             success: true,
-            message: 'Default configuration seeded successfully',
-            config,
+            competition: {
+                id: competition._id,
+                title: competition.title,
+                slug: competition.slug,
+                status: competition.status,
+            },
+            participants: limitedParticipants,
+            stats: competition.stats,
         });
     } catch (error) {
-        console.error('Error seeding configuration:', error);
+        console.error('Error fetching participants:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to seed default configuration',
+            message: 'Failed to fetch participants',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * GET /competition/admin/:id/winners
+ */
+router.get('/admin/:id/winners', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid competition ID',
+            });
+        }
+
+        const competition = await Competition.findById(id);
+
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition not found',
+            });
+        }
+
+        // Get all participants who are eligible for rewards
+        const winners = competition.participants
+            .filter(p => {
+                const reward = getRewardForRank(p.rank, competition.rewards);
+                return reward !== null;
+            })
+            .sort((a, b) => (a.rank || 0) - (b.rank || 0))
+            .map(p => ({
+                userId: p.userId,
+                name: p.name,
+                username: p.username,
+                email: p.email,
+                rank: p.rank,
+                score: p.score,
+                reward: getRewardForRank(p.rank, competition.rewards),
+                scoreBreakdown: p.scoreBreakdown,
+                lastCalculated: p.lastCalculated,
+            }));
+
+        res.json({
+            success: true,
+            competition: {
+                id: competition._id,
+                title: competition.title,
+                slug: competition.slug,
+                status: competition.status,
+                startDate: competition.startDate,
+                endDate: competition.endDate,
+            },
+            winners,
+            totalWinners: winners.length,
+            rewards: competition.rewards,
+        });
+    } catch (error) {
+        console.error('Error fetching winners:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch winners',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * POST /competition/admin/:id/recalculate-all
+ */
+router.post('/admin/:id/recalculate-all', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid competition ID',
+            });
+        }
+
+        const competition = await Competition.findById(id);
+
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition not found',
+            });
+        }
+
+        if (!competition.isActive()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Can only recalculate scores for active competitions',
+            });
+        }
+
+        // Get all users with GTC accounts
+        const users = await User.find({
+            'gtcfx.accessToken': { $ne: null },
+            status: 'active',
+        }).select('name username email gtcfx referralDetails userType').lean();
+
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const user of users) {
+            try {
+                const gtcData = await fetchGTCData(user);
+                if (!gtcData) continue;
+
+                const participationCheck = competition.canUserParticipate(user, gtcData);
+                if (!participationCheck.canParticipate) continue;
+
+                const scoreData = await calculateCompetitionScore(user, gtcData, competition);
+
+                competition.updateParticipantScore(user._id, scoreData);
+
+                successCount++;
+            } catch (error) {
+                console.error(`Error processing user ${user.username}:`, error.message);
+                errorCount++;
+            }
+        }
+
+        await competition.save();
+
+        res.json({
+            success: true,
+            message: 'Scores recalculated successfully',
+            stats: {
+                successCount,
+                errorCount,
+                totalParticipants: competition.stats.totalParticipants,
+            },
+            competition: {
+                id: competition._id,
+                title: competition.title,
+                stats: competition.stats,
+            },
+        });
+    } catch (error) {
+        console.error('Error recalculating scores:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to recalculate scores',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * PATCH /competition/admin/:id/status
+ */
+router.patch('/admin/:id/status', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const userId = req.user.userId;
+
+        // Validate MongoDB ObjectId
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid competition ID',
+            });
+        }
+
+        if (!['draft', 'upcoming', 'active', 'completed', 'cancelled'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid status',
+            });
+        }
+
+        const competition = await Competition.findById(id);
+
+        if (!competition) {
+            return res.status(404).json({
+                success: false,
+                message: 'Competition not found',
+            });
+        }
+
+        competition.status = status;
+        competition.updatedBy = userId;
+
+        await competition.save();
+
+        res.json({
+            success: true,
+            message: 'Competition status updated successfully',
+            competition,
+        });
+    } catch (error) {
+        console.error('Error updating status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update status',
+            error: error.message,
+        });
+    }
+});
+
+/**
+ * GET /competition/admin/stats/overview
+ */
+router.get('/admin/stats/overview', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const totalCompetitions = await Competition.countDocuments();
+        const activeCompetitions = await Competition.countDocuments({ status: 'active' });
+        const upcomingCompetitions = await Competition.countDocuments({ status: 'upcoming' });
+        const completedCompetitions = await Competition.countDocuments({ status: 'completed' });
+
+        // Get total participants across all competitions
+        const competitions = await Competition.find().select('participants').lean();
+        let totalParticipations = 0;
+        let uniqueParticipants = new Set();
+
+        competitions.forEach(comp => {
+            if (comp.participants && comp.participants.length > 0) {
+                totalParticipations += comp.participants.length;
+                comp.participants.forEach(p => {
+                    uniqueParticipants.add(p.userId.toString());
+                });
+            }
+        });
+
+        res.json({
+            success: true,
+            stats: {
+                totalCompetitions,
+                activeCompetitions,
+                upcomingCompetitions,
+                completedCompetitions,
+                totalParticipations,
+                uniqueParticipants: uniqueParticipants.size,
+            },
+        });
+    } catch (error) {
+        console.error('Error fetching overview stats:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch overview stats',
             error: error.message,
         });
     }

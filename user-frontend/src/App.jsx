@@ -79,14 +79,8 @@ const baseSidebarLinks = [
   { name: "Nupips Team", href: "/nupips-team", icon: Users },
   { name: "Shop", href: "/shop", icon: ShoppingBag },
   { name: "Learn", href: "/learn", icon: Book },
+  { name: "Competition", href: "/competition", icon: Swords },
 ];
-
-// Competition link (conditionally shown)
-const competitionLink = {
-  name: "Competition",
-  href: "/competition",
-  icon: Swords,
-};
 
 // GTC FX sidebar section (only when connected)
 const gtcFxSidebarSection = {
@@ -143,7 +137,7 @@ const DefaultRoute = () => {
 };
 
 // Layout Wrapper Component with Dynamic Sidebar
-const LayoutWrapper = ({ children, competitionEnabled }) => {
+const LayoutWrapper = ({ children }) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -164,11 +158,6 @@ const LayoutWrapper = ({ children, competitionEnabled }) => {
   const dynamicSidebarLinks = useMemo(() => {
     const links = [...baseSidebarLinks];
 
-    // Add competition link if enabled
-    if (competitionEnabled) {
-      links.push(competitionLink);
-    }
-
     // Add broker connection link if GTC FX is NOT connected
     if (!gtcAuthenticated && !gtcUser) {
       links.push(brokerConnectionLink);
@@ -183,7 +172,7 @@ const LayoutWrapper = ({ children, competitionEnabled }) => {
     links.push(walletSidebarSection);
 
     return links;
-  }, [gtcAuthenticated, gtcUser, competitionEnabled]);
+  }, [gtcAuthenticated, gtcUser]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -265,49 +254,13 @@ const LayoutWrapper = ({ children, competitionEnabled }) => {
   );
 };
 
-// Competition Status Checker - Only runs when authenticated
-const CompetitionStatusChecker = ({ onStatusChange }) => {
-  const { user } = useAuth();
-  const hasFetched = useRef(false);
-
-  useEffect(() => {
-    // Only fetch if user is authenticated and hasn't fetched yet
-    if (!user || hasFetched.current) {
-      return;
-    }
-
-    hasFetched.current = true;
-
-    const checkStatus = async () => {
-      try {
-        const response = await api.get("/competition/status");
-        if (response?.data?.status !== undefined) {
-          onStatusChange(response.data.status);
-        }
-      } catch (error) {
-        console.log("Competition check failed - defaulting to disabled");
-        onStatusChange(false);
-      }
-    };
-
-    checkStatus();
-  }, [user, onStatusChange]);
-
-  return null;
-};
-
 // Main App Component
 function App() {
-  const [competitionEnabled, setCompetitionEnabled] = useState(false);
-
   return (
     <Router>
       <AuthProvider>
         <GTCFxAuthProvider>
-          {/* Only check competition status after auth is ready */}
-          <CompetitionStatusChecker onStatusChange={setCompetitionEnabled} />
-
-          <LayoutWrapper competitionEnabled={competitionEnabled}>
+          <LayoutWrapper>
             <Routes>
               {/* Public routes - no authentication required */}
               <Route
@@ -327,7 +280,7 @@ function App() {
                 }
               />
 
-              {/* Competition route - conditionally rendered */}
+              {/* Competition route - always available */}
               <Route
                 path="/competition"
                 element={

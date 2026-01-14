@@ -17,11 +17,15 @@ import {
   BarChart3,
   Target,
   Clock,
-  ChevronDown,
-  ChevronUp,
   RefreshCw,
   Star,
   Calendar,
+  Lock,
+  Eye,
+  X,
+  ChevronRight,
+  Zap,
+  Shield,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGTCFxAuth } from "../contexts/GTCFxAuthContext";
@@ -33,158 +37,493 @@ const Competition = () => {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(null);
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [userRank, setUserRank] = useState(null);
-  const [competitionRules, setCompetitionRules] = useState(null);
-  const [rewards, setRewards] = useState([]);
-  const [competitionPeriod, setCompetitionPeriod] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [expandedUser, setExpandedUser] = useState(null);
+  const [competitions, setCompetitions] = useState([]);
+  const [selectedCompetition, setSelectedCompetition] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
 
   useEffect(() => {
-    if (gtcAuthenticated && gtcUser) {
-      fetchCompetitionData();
-    } else {
-      setLoading(false);
-    }
-  }, [gtcAuthenticated, gtcUser]);
+    fetchCompetitions();
+  }, [gtcAuthenticated]);
 
-  const fetchCompetitionData = async (showLoader = true) => {
+  const fetchCompetitions = async (showLoader = true) => {
     if (showLoader) {
       setLoading(true);
     } else {
       setRefreshing(true);
     }
-    setError(null);
 
     try {
-      const response = await api.get("/competition/leaderboard?limit=1000");
-
+      const response = await api.get("/competition/list");
       if (response.data.success) {
-        setLeaderboard(response.data.leaderboard || []);
-        setUserRank(response.data.userRank || null);
-        setCompetitionRules(response.data.rules || null);
-        setRewards(response.data.rewards || []);
-        setCompetitionPeriod(response.data.period || null);
-        setStats(response.data.stats || null);
-      } else {
-        setError(response.data.message || "Failed to load competition data");
+        const comps = response.data.competitions || [];
+
+        // Fetch user rank for each competition if connected
+        if (gtcAuthenticated) {
+          const competitionsWithRanks = await Promise.all(
+            comps.map(async (comp) => {
+              try {
+                const statsResponse = await api.get(
+                  `/competition/${comp.slug}/my-stats`
+                );
+                return {
+                  ...comp,
+                  userStats: statsResponse.data.participating
+                    ? statsResponse.data
+                    : null,
+                };
+              } catch (error) {
+                return { ...comp, userStats: null };
+              }
+            })
+          );
+          setCompetitions(competitionsWithRanks);
+        } else {
+          setCompetitions(comps);
+        }
       }
     } catch (err) {
-      console.error("Fetch competition error:", err);
-      setError(err.response?.data?.message || "Failed to load competition");
+      console.error("Fetch competitions error:", err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  // Helper function to get only active metrics (weight > 0)
+  const handleViewDetails = (competition) => {
+    setSelectedCompetition(competition);
+    setShowDetailModal(true);
+  };
+
+  const handleCalculateScore = async (competition) => {
+    if (!gtcAuthenticated) {
+      setShowConnectModal(true);
+      return;
+    }
+
+    try {
+      const response = await api.post(
+        `/competition/${competition.slug}/calculate-my-score`
+      );
+      if (response.data.success) {
+        // Refresh competitions to get updated rank
+        fetchCompetitions(false);
+      }
+    } catch (error) {
+      console.error("Error calculating score:", error);
+    }
+  };
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      upcoming: {
+        bg: "bg-blue-100",
+        text: "text-blue-700",
+        label: "Upcoming",
+      },
+      active: { bg: "bg-green-100", text: "text-green-700", label: "Active" },
+      completed: {
+        bg: "bg-purple-100",
+        text: "text-purple-700",
+        label: "Completed",
+      },
+    };
+    const badge = badges[status] || badges.active;
+    return (
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}
+      >
+        {badge.label}
+      </span>
+    );
+  };
+
+  const getRankIcon = (rank) => {
+    if (rank === 1) return { icon: Trophy, color: "text-amber-500" };
+    if (rank === 2) return { icon: Trophy, color: "text-slate-400" };
+    if (rank === 3) return { icon: Trophy, color: "text-orange-600" };
+    if (rank <= 10) return { icon: Medal, color: "text-blue-500" };
+    if (rank <= 25) return { icon: Award, color: "text-purple-500" };
+    return { icon: Award, color: "text-gray-500" };
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-orange-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-700 font-medium">Loading competitions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
+      <Helmet>
+        <title>Trading Competitions - Nupips</title>
+      </Helmet>
+
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Trophy className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    Trading Competitions
+                  </h1>
+                  <p className="text-sm text-gray-600">
+                    Compete globally and win amazing prizes
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => fetchCompetitions(false)}
+              disabled={refreshing}
+              className="px-4 py-2 bg-white border border-gray-200 hover:border-orange-500 rounded-xl font-medium text-gray-700 hover:text-orange-600 transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm hover:shadow"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+              />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+          </div>
+
+          {/* Connection Status */}
+          {!gtcAuthenticated && (
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-xl p-6 text-white mb-6">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-8 h-8 text-white" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                  <h2 className="text-2xl font-bold mb-2">
+                    Connect GTC FX to Compete
+                  </h2>
+                  <p className="text-orange-100 mb-4">
+                    Join competitions and see your real-time rankings
+                  </p>
+                  <button
+                    onClick={() => navigate("/gtcfx/auth")}
+                    className="px-8 py-3 bg-white text-orange-600 font-semibold rounded-xl hover:bg-orange-50 transition-all inline-flex items-center gap-3 group shadow-lg hover:shadow-xl"
+                  >
+                    <span>Connect Broker Now</span>
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Competitions Grid */}
+        {competitions.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {competitions.map((competition) => {
+              const isLocked =
+                competition.requiresConnection && !gtcAuthenticated;
+              const hasUserStats = competition.userStats?.participating;
+              const { icon: RankIcon, color } = hasUserStats
+                ? getRankIcon(competition.userStats.ranking.rank)
+                : { icon: Trophy, color: "text-gray-400" };
+
+              return (
+                <div
+                  key={competition._id}
+                  className={`relative bg-white rounded-2xl border-2 shadow-sm hover:shadow-lg transition-all overflow-hidden ${
+                    isLocked
+                      ? "border-gray-200 opacity-60"
+                      : competition.isActive
+                      ? "border-orange-300 hover:border-orange-500"
+                      : "border-gray-200"
+                  }`}
+                >
+                  {/* Locked Overlay */}
+                  {isLocked && (
+                    <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 to-gray-900/40 backdrop-blur-[2px] z-10 flex items-center justify-center">
+                      <div className="text-center p-6">
+                        <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-white/30">
+                          <Lock className="w-8 h-8 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">
+                          Connect to Compete
+                        </h3>
+                        <p className="text-white/90 mb-4 text-sm">
+                          Broker connection required
+                        </p>
+                        <button
+                          onClick={() => setShowConnectModal(true)}
+                          className="px-6 py-2 bg-white text-gray-900 font-semibold rounded-xl hover:bg-gray-100 transition-all shadow-lg"
+                        >
+                          Connect Now
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="p-6">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-xl font-bold text-gray-900">
+                            {competition.title}
+                          </h3>
+                          {getStatusBadge(competition.status)}
+                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {competition.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* User Rank Card (if participating) */}
+                    {hasUserStats && (
+                      <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 mb-4 text-white">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-white/80 text-xs font-medium uppercase tracking-wide mb-1">
+                              Your Rank
+                            </p>
+                            <p className="text-3xl font-bold">
+                              #{competition.userStats.ranking.rank}
+                            </p>
+                          </div>
+                          <RankIcon className={`w-10 h-10 ${color}`} />
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between text-sm">
+                          <span>
+                            Score:{" "}
+                            {competition.userStats.ranking.score.toFixed(1)}
+                          </span>
+                          {competition.userStats.ranking.eligibleReward && (
+                            <span className="flex items-center gap-1">
+                              <Gift className="w-4 h-4" />
+                              {
+                                competition.userStats.ranking.eligibleReward
+                                  .prize
+                              }
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Competition Info */}
+                    <div className="space-y-3 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="w-4 h-4 flex-shrink-0" />
+                        <span>
+                          {new Date(competition.startDate).toLocaleDateString()}{" "}
+                          - {new Date(competition.endDate).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Users className="w-4 h-4 flex-shrink-0" />
+                        <span>
+                          {competition.stats?.totalParticipants || 0}{" "}
+                          participants
+                        </span>
+                      </div>
+
+                      {competition.rewards &&
+                        competition.rewards.length > 0 && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <Gift className="w-4 h-4 flex-shrink-0" />
+                            <span>
+                              {competition.rewards.length} prize tiers
+                            </span>
+                          </div>
+                        )}
+                    </div>
+
+                    {/* Top Rewards Preview */}
+                    {competition.rewards && competition.rewards.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-xs font-medium text-gray-500 mb-2">
+                          Top Prizes
+                        </p>
+                        <div className="space-y-2">
+                          {competition.rewards
+                            .slice(0, 3)
+                            .map((reward, idx) => {
+                              const bgColors = [
+                                "from-amber-50 to-amber-100 border-amber-200",
+                                "from-slate-50 to-slate-100 border-slate-200",
+                                "from-orange-50 to-orange-100 border-orange-200",
+                              ];
+                              return (
+                                <div
+                                  key={idx}
+                                  className={`flex items-center justify-between p-2 rounded-lg bg-gradient-to-br border ${bgColors[idx]}`}
+                                >
+                                  <span className="text-xs font-semibold text-gray-700">
+                                    {reward.rankRange}
+                                  </span>
+                                  <span className="text-xs font-bold text-gray-900">
+                                    {reward.prize}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleViewDetails(competition)}
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium text-gray-700 flex items-center justify-center gap-2 transition-all"
+                      >
+                        <Eye className="w-4 h-4" />
+                        View Details
+                      </button>
+
+                      {gtcAuthenticated && competition.isActive && (
+                        <button
+                          onClick={() => handleCalculateScore(competition)}
+                          className="flex-1 px-4 py-2 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg"
+                        >
+                          <Zap className="w-4 h-4" />
+                          {hasUserStats ? "Update Rank" : "Join Now"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-16">
+            <Trophy className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              No Competitions Available
+            </h3>
+            <p className="text-gray-600">
+              Check back soon for new trading competitions!
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedCompetition && (
+        <CompetitionDetailModal
+          competition={selectedCompetition}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedCompetition(null);
+          }}
+          gtcAuthenticated={gtcAuthenticated}
+          onCalculateScore={() => handleCalculateScore(selectedCompetition)}
+          onConnect={() => setShowConnectModal(true)}
+        />
+      )}
+
+      {/* Connect Modal */}
+      {showConnectModal && (
+        <ConnectGTCModal
+          onClose={() => setShowConnectModal(false)}
+          onConnect={() => navigate("/gtcfx/auth")}
+        />
+      )}
+    </div>
+  );
+};
+
+// Competition Detail Modal - Improved Professional Layout
+const CompetitionDetailModal = ({
+  competition,
+  onClose,
+  gtcAuthenticated,
+  onCalculateScore,
+  onConnect,
+}) => {
+  const [activeTab, setActiveTab] = useState("overview");
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+
+  const tabs = [
+    { id: "overview", label: "Overview", icon: Trophy },
+    { id: "rewards", label: "Rewards", icon: Gift },
+    { id: "scoring", label: "Scoring", icon: Target },
+    { id: "leaderboard", label: "Leaderboard", icon: Crown },
+  ];
+
+  const fetchLeaderboard = async () => {
+    setLoadingLeaderboard(true);
+    try {
+      const response = await api.get(
+        `/competition/${competition.slug}/leaderboard?limit=10`
+      );
+      if (response.data.success) {
+        setLeaderboard(response.data.leaderboard || []);
+      }
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "leaderboard") {
+      fetchLeaderboard();
+    }
+  }, [activeTab]);
+
   const getActiveMetrics = () => {
-    if (!competitionRules) return [];
+    if (!competition.rules) return [];
 
     const allMetrics = [
       {
         key: "directReferrals",
         name: "Direct Referrals",
         icon: Users,
-        color: "orange",
-        weight: competitionRules.directReferralsWeight,
-        scoreKey: "directReferralsScore",
-        metricKey: "directReferrals",
-        unit: "referrals",
+        weight: competition.rules.directReferralsWeight,
       },
       {
         key: "teamSize",
         name: "Team Size",
         icon: Users,
-        color: "green",
-        weight: competitionRules.teamSizeWeight,
-        scoreKey: "teamSizeScore",
-        metricKey: "nupipsTeamSize",
-        unit: "members",
+        weight: competition.rules.teamSizeWeight,
       },
       {
         key: "tradingVolume",
         name: "Trading Volume",
         icon: DollarSign,
-        color: "blue",
-        weight: competitionRules.tradingVolumeWeight,
-        scoreKey: "tradingVolumeScore",
-        metricKey: "tradingVolumeDollars",
-        unit: "USD",
-        format: "currency",
+        weight: competition.rules.tradingVolumeWeight,
       },
       {
         key: "profitability",
         name: "Profitability",
         icon: TrendingUp,
-        color: "purple",
-        weight: competitionRules.profitabilityWeight,
-        scoreKey: "profitabilityScore",
-        metricKey: "winRate",
-        unit: "% win rate",
+        weight: competition.rules.profitabilityWeight,
       },
       {
         key: "accountBalance",
         name: "Account Balance",
         icon: DollarSign,
-        color: "indigo",
-        weight: competitionRules.accountBalanceWeight,
-        scoreKey: "accountBalanceScore",
-        metricKey: "accountBalance",
-        unit: "USD",
-        format: "currency",
-      },
-      {
-        key: "kycCompletion",
-        name: "KYC Verification",
-        icon: CheckCircle,
-        color: "pink",
-        weight: competitionRules.kycCompletionWeight,
-        scoreKey: "kycCompletionScore",
-        metricKey: "isKYCVerified",
-        target: 1,
-        unit: "verified",
-        format: "boolean",
+        weight: competition.rules.accountBalanceWeight,
       },
     ];
 
-    // Filter out metrics with 0 weight
-    return allMetrics.filter((metric) => metric.weight > 0);
-  };
-
-  const getRankIcon = (rank) => {
-    if (!rewards || rewards.length === 0) {
-      return { icon: Award, color: "text-gray-500" };
-    }
-
-    if (rank === 1) return { icon: Trophy, color: "text-amber-500" };
-    if (rank === 2) return { icon: Trophy, color: "text-slate-400" };
-    if (rank === 3) return { icon: Trophy, color: "text-orange-600" };
-    if (rank === 4) return { icon: Medal, color: "text-cyan-500" };
-    if (rank <= 10) return { icon: Medal, color: "text-blue-500" };
-    if (rank <= 25) return { icon: Award, color: "text-purple-500" };
-    return { icon: Award, color: "text-gray-500" };
-  };
-
-  const getRankBadgeColor = (rank) => {
-    if (rank === 1) return "bg-amber-50 text-amber-700 border-amber-300";
-    if (rank === 2) return "bg-slate-50 text-slate-700 border-slate-300";
-    if (rank === 3) return "bg-orange-50 text-orange-700 border-orange-300";
-    if (rank === 4) return "bg-cyan-50 text-cyan-700 border-cyan-300";
-    if (rank <= 10) return "bg-blue-50 text-blue-700 border-blue-300";
-    if (rank <= 25) return "bg-purple-50 text-purple-700 border-purple-300";
-    return "bg-gray-50 text-gray-700 border-gray-300";
+    return allMetrics.filter((m) => m.weight > 0);
   };
 
   const calculateProgress = () => {
-    if (!competitionPeriod)
-      return { percentage: 0, daysRemaining: 0, endDate: "" };
-
-    const start = new Date(competitionPeriod.startDate);
-    const end = new Date(competitionPeriod.endDate);
+    const start = new Date(competition.startDate);
+    const end = new Date(competition.endDate);
     const now = new Date();
 
     const total = end - start;
@@ -193,928 +532,559 @@ const Competition = () => {
 
     const daysRemaining = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
 
-    const endDate = end.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-
-    return { percentage: percentage.toFixed(1), daysRemaining, endDate };
+    return { percentage: percentage.toFixed(1), daysRemaining };
   };
 
-  const { percentage, daysRemaining, endDate } = calculateProgress();
+  const { percentage, daysRemaining } = calculateProgress();
+  const activeMetrics = getActiveMetrics();
 
-  const getUserReward = () => {
-    if (!userRank || !rewards.length) return null;
-    return rewards.find(
-      (r) => userRank.rank >= r.minRank && userRank.rank <= r.maxRank
-    );
-  };
-
-  const eligibleReward = getUserReward();
-
-  // IMPROVED Progress Bar Component - Reversed direction with rank 1 on the right
-  const ProgressBar = () => {
-    const totalParticipants = stats?.totalParticipants || 100;
-
-    // Calculate user's position percentage (rank 1 = 100% from LEFT, so bar fills RIGHT to LEFT)
-    const userPosition = userRank
-      ? ((totalParticipants - userRank.rank) / totalParticipants) * 100
-      : 0;
-
-    // Get major milestones (top rewards) - REVERSED
-    const majorMilestones = [...rewards].slice(0, 6).reverse(); // Reverse so rank 1 is on the right
-
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              Competition Progress
-            </h3>
-            <p className="text-sm text-gray-600 mt-1">
-              {daysRemaining} days remaining · {endDate}
-            </p>
-          </div>
-          {userRank && (
-            <div className="text-left sm:text-right bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl px-4 py-3 border-2 border-orange-300">
-              <p className="text-xs text-gray-600 font-medium">Current Rank</p>
-              <p className="text-3xl font-bold text-orange-600">
-                #{userRank.rank}
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[999999] p-4">
+      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+        {/* Header - Light Professional Design */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Trophy className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {competition.title}
+                  </h2>
+                </div>
+              </div>
+              <p className="text-gray-600 text-sm ml-13">
+                {competition.description}
               </p>
             </div>
-          )}
-        </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
 
-        {eligibleReward && (
-          <div className="mb-6 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border-2 border-green-300">
-            <div className="flex items-center gap-3">
-              <Gift className="w-6 h-6 text-green-600 flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-gray-700">
-                  Your Current Prize Tier
-                </p>
-                <p className="text-lg font-bold text-gray-900">
-                  {eligibleReward.prize}
-                </p>
+          {/* Competition Period & Progress */}
+          <div className="mt-4 space-y-3">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <span>
+                  {new Date(competition.startDate).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}{" "}
+                  -{" "}
+                  {new Date(competition.endDate).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
+              {competition.isActive && daysRemaining > 0 && (
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-orange-500" />
+                  <span className="font-medium text-orange-600">
+                    {daysRemaining} day{daysRemaining !== 1 ? "s" : ""} remaining
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-gray-400" />
+                <span>
+                  {competition.stats?.totalParticipants || 0} participant
+                  {competition.stats?.totalParticipants !== 1 ? "s" : ""}
+                </span>
               </div>
             </div>
-          </div>
-        )}
 
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="relative h-3 bg-gray-200 rounded-full overflow-visible">
-            {/* Filled progress - now from RIGHT */}
-            <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-l from-orange-500 to-orange-600 rounded-full transition-all duration-1000"
-              style={{ width: `${Math.min(100 - 2, 100 - userPosition)}%` }}
-            />
-
-            {/* User position indicator */}
-            {userRank && (
-              <div
-                className="absolute top-[7px] -translate-y-1/2 translate-x-1/2 z-10"
-                style={{ right: `${Math.max(2, userPosition)}%` }}
-              >
-                <div className="flex flex-col items-center -mt-10">
-                  <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white text-xs font-bold px-2 py-1 rounded-full border-2 border-white shadow-lg mb-2 whitespace-nowrap">
-                    You
-                  </div>
-                  <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full border-3 border-white shadow-xl flex items-center justify-center">
-                    <Star className="w-4 h-4 text-white fill-white" />
-                  </div>
+            {/* Progress Bar */}
+            {competition.isActive && (
+              <div>
+                <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                  <span>Competition Progress</span>
+                  <span>{percentage}%</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all duration-500"
+                    style={{ width: `${percentage}%` }}
+                  />
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Prize Labels Below Bar - REVERSED */}
-        <div className="relative">
-          <div className="flex justify-between items-start">
-            {majorMilestones.map((reward, index) => {
-              const position =
-                ((totalParticipants - reward.minRank) / totalParticipants) *
-                100;
-              const isAchieved = userRank && userRank.rank <= reward.minRank;
-              const { icon: Icon } = getRankIcon(reward.minRank);
-
+        {/* Tabs */}
+        <div className="border-b border-gray-200 bg-white">
+          <div className="flex overflow-x-auto">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
               return (
-                <div
-                  key={index}
-                  className="flex flex-col items-center"
-                  style={{
-                    width: "16.666%",
-                    maxWidth: "140px",
-                  }}
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 min-w-[120px] px-6 py-3 flex items-center justify-center gap-2 font-medium transition-all relative whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? "text-orange-600"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
                 >
-                  {/* Vertical line */}
-                  <div
-                    className={`w-0.5 rounded h-8 -mt-8 mb-2 ${
-                      isAchieved ? "bg-orange-500" : "bg-gray-300"
-                    }`}
-                  />
-
-                  {/* Icon */}
-                  <Icon
-                    className={`w-5 h-5 mb-2 ${
-                      isAchieved ? "text-orange-600" : "text-gray-400"
-                    }`}
-                  />
-
-                  {/* Rank range */}
-                  <p className="text-xs font-bold text-gray-900 mb-1 text-center">
-                    {reward.rankRange}
-                  </p>
-
-                  {/* Prize */}
-                  <p className="text-[10px] text-gray-600 text-center line-clamp-2 leading-tight">
-                    {reward.prize}
-                  </p>
-                </div>
+                  <Icon className="w-4 h-4" />
+                  <span className="text-sm">{tab.label}</span>
+                  {activeTab === tab.id && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600" />
+                  )}
+                </button>
               );
             })}
           </div>
         </div>
 
-        {/* Achievement summary */}
-        {userRank && (
-          <div className="mt-6 p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between text-sm flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                <span className="text-blue-900 font-medium">
-                  {
-                    majorMilestones.filter((m) => userRank.rank <= m.minRank)
-                      .length
-                  }{" "}
-                  of {majorMilestones.length} milestones achieved
-                </span>
-              </div>
-              {userRank.rank > 1 && (
-                <span className="text-xs text-blue-700 font-medium">
-                  {userRank.rank - 1} rank{userRank.rank - 1 !== 1 ? "s" : ""}{" "}
-                  to next tier
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Scoring Breakdown Component - Now filters by weight
-  const ScoringBreakdown = () => {
-    if (!userRank || !competitionRules) return null;
-
-    const activeMetrics = getActiveMetrics();
-
-    if (activeMetrics.length === 0) return null;
-
-    const getColorClasses = (color) => {
-      const colors = {
-        orange: {
-          bg: "from-orange-50 to-orange-100",
-          border: "border-orange-200",
-          text: "text-orange-700",
-        },
-        blue: {
-          bg: "from-blue-50 to-blue-100",
-          border: "border-blue-200",
-          text: "text-blue-700",
-        },
-        green: {
-          bg: "from-green-50 to-green-100",
-          border: "border-green-200",
-          text: "text-green-700",
-        },
-        purple: {
-          bg: "from-purple-50 to-purple-100",
-          border: "border-purple-200",
-          text: "text-purple-700",
-        },
-        indigo: {
-          bg: "from-indigo-50 to-indigo-100",
-          border: "border-indigo-200",
-          text: "text-indigo-700",
-        },
-        pink: {
-          bg: "from-pink-50 to-pink-100",
-          border: "border-pink-200",
-          text: "text-pink-700",
-        },
-      };
-      return colors[color] || colors.blue;
-    };
-
-    const formatValue = (value, format) => {
-      if (format === "currency") {
-        return `$${value.toLocaleString()}`;
-      }
-      if (format === "boolean") {
-        return value ? "Yes" : "No";
-      }
-      return value.toLocaleString();
-    };
-
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-200 mb-6">
-        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-orange-600" />
-          Scoring Breakdown
-        </h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {activeMetrics.map((metric, index) => {
-            const colors = getColorClasses(metric.color);
-            const Icon = metric.icon;
-            const score = userRank.breakdown?.[metric.scoreKey] || 0;
-            const currentValue =
-              metric.format === "boolean"
-                ? userRank.metrics?.[metric.metricKey]
-                  ? 1
-                  : 0
-                : userRank.metrics?.[metric.metricKey] || 0;
-
-            return (
-              <div
-                key={metric.key}
-                className={`bg-gradient-to-br ${colors.bg} border ${colors.border} rounded-xl p-4`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Icon className={`w-4 h-4 ${colors.text} flex-shrink-0`} />
-                    <span className="text-sm font-medium text-gray-900 truncate">
-                      {metric.name}
-                    </span>
-                  </div>
-                  <span className="text-xs bg-white px-2 py-1 rounded border border-gray-200 flex-shrink-0 ml-2">
-                    {metric.weight}%
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-xs text-gray-600">Score</span>
-                    <span className={`text-lg font-bold ${colors.text}`}>
-                      {score.toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-xs text-gray-600">Current</span>
-                    <span className="text-sm font-semibold text-gray-900 truncate ml-2 text-right">
-                      {formatValue(currentValue, metric.format)} {metric.unit}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 font-medium">Total Score</p>
-              <p className="text-xs text-gray-500 mt-1">
-                Base: {userRank.baseScore.toFixed(1)} × Bonus:{" "}
-                {userRank.bonusMultiplier}x
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-bold text-orange-600">
-                {userRank.score.toFixed(1)}
-              </p>
-              <p className="text-xs text-gray-600 mt-1">out of 100</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Not Connected View
-  if (!gtcAuthenticated || !gtcUser) {
-    const activeMetrics = competitionRules ? getActiveMetrics() : [];
-
-    return (
-      <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
-        <Helmet>
-          <title>Trading Competition - Nupips</title>
-        </Helmet>
-
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
-              <Trophy className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
-              {competitionPeriod?.description || "Trading Championship"}
-            </h1>
-            <p className="text-gray-600 text-lg">
-              Connect your broker to compete for amazing prizes
-            </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-xl p-6 sm:p-8 mb-8 text-white">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0 shadow-inner">
-                <AlertCircle className="w-10 h-10 text-white" />
-              </div>
-              <div className="flex-1 text-center md:text-left">
-                <h2 className="text-2xl sm:text-3xl font-bold mb-2">
-                  Connect GTC FX to Start Competing
-                </h2>
-                <p className="text-orange-100 text-base sm:text-lg mb-4">
-                  Join {stats?.totalParticipants || "hundreds of"} traders
-                  competing for amazing prizes
-                </p>
-                <button
-                  onClick={() => navigate("/gtcfx/auth")}
-                  className="px-6 sm:px-8 py-3 sm:py-4 bg-white text-orange-600 font-semibold rounded-xl hover:bg-orange-50 transition-all inline-flex items-center gap-3 group shadow-lg hover:shadow-xl"
-                >
-                  <span>Connect Broker Now</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {rewards.length >= 3 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
-              {rewards.slice(0, 3).map((reward, idx) => {
-                const bgColors = [
-                  "from-amber-400 to-amber-500",
-                  "from-slate-400 to-slate-500",
-                  "from-orange-600 to-orange-700",
-                ];
-                const textColors = [
-                  "text-amber-100",
-                  "text-slate-100",
-                  "text-orange-100",
-                ];
-
-                return (
-                  <div
-                    key={idx}
-                    className={`bg-gradient-to-br ${bgColors[idx]} rounded-2xl shadow-lg p-6 text-white`}
-                  >
-                    <Trophy className="w-12 h-12 mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">
-                      {reward.title || reward.rankRange}
-                    </h3>
-                    <p className="text-3xl font-bold mb-2">{reward.prize}</p>
-                    <p className={`${textColors[idx]} text-sm`}>
-                      {reward.description}
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-280px)] bg-gray-50">
+          <div className="p-6">
+            {activeTab === "overview" && (
+              <div className="space-y-6">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <Users className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-600">
+                        Participants
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {competition.stats?.totalParticipants || 0}
                     </p>
                   </div>
-                );
-              })}
-            </div>
-          )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
-                  <Target className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  How It Works
-                </h3>
-              </div>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">
-                    Connect your GTC FX broker account
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">
-                    Grow your team and trading volume
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">
-                    Complete KYC for bonus points
-                  </span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">
-                    Climb the leaderboard to win prizes
-                  </span>
-                </li>
-              </ul>
-            </div>
+                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                        <Gift className="w-4 h-4 text-green-600" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-600">
+                        Prize Tiers
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {competition.rewards?.length || 0}
+                    </p>
+                  </div>
 
-            <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
-                  <BarChart3 className="w-6 h-6 text-white" />
+                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <BarChart3 className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-600">
+                        Avg Score
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {competition.stats?.averageScore?.toFixed(1) || "0.0"}
+                    </p>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <Trophy className="w-4 h-4 text-orange-600" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-600">
+                        Top Score
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {competition.stats?.highestScore?.toFixed(1) || "0.0"}
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900">Scoring</h3>
+
+                {/* Requirements */}
+                <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    </div>
+                    Entry Requirements
+                  </h3>
+                  <ul className="space-y-3">
+                    {competition.requirements?.requiresGTCAccount && (
+                      <li className="flex items-start gap-3 text-sm">
+                        <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-2 flex-shrink-0" />
+                        <span className="text-gray-700">
+                          GTC FX account connection required
+                        </span>
+                      </li>
+                    )}
+                    {competition.requirements?.minAccountBalance > 0 && (
+                      <li className="flex items-start gap-3 text-sm">
+                        <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mt-2 flex-shrink-0" />
+                        <span className="text-gray-700">
+                          Minimum account balance: $
+                          {competition.requirements.minAccountBalance.toLocaleString()}
+                        </span>
+                      </li>
+                    )}
+                    {!competition.requirements?.requiresGTCAccount &&
+                      (!competition.requirements?.minAccountBalance ||
+                        competition.requirements.minAccountBalance === 0) && (
+                        <li className="flex items-start gap-3 text-sm">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2 flex-shrink-0" />
+                          <span className="text-gray-600">
+                            No special requirements - open to all
+                          </span>
+                        </li>
+                      )}
+                  </ul>
+                </div>
+
+                {/* Action Button */}
+                {competition.isActive && (
+                  <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                    {gtcAuthenticated ? (
+                      <button
+                        onClick={onCalculateScore}
+                        className="w-full px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg"
+                      >
+                        <Zap className="w-5 h-5" />
+                        {competition.userStats?.participating
+                          ? "Update My Rank"
+                          : "Calculate My Score & Join"}
+                      </button>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                          <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0" />
+                          <p className="text-sm text-orange-800">
+                            Connect your GTC FX account to participate in this
+                            competition
+                          </p>
+                        </div>
+                        <button
+                          onClick={onConnect}
+                          className="w-full px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg"
+                        >
+                          <Lock className="w-5 h-5" />
+                          Connect GTC FX to Join
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="space-y-2">
-                {activeMetrics.length > 0 ? (
-                  activeMetrics.map((metric, idx) => {
-                    const bgColors = [
-                      "from-orange-50 to-orange-100 border-orange-200",
-                      "from-blue-50 to-blue-100 border-blue-200",
-                      "from-green-50 to-green-100 border-green-200",
-                      "from-purple-50 to-purple-100 border-purple-200",
-                      "from-indigo-50 to-indigo-100 border-indigo-200",
-                      "from-pink-50 to-pink-100 border-pink-200",
-                    ];
-                    const textColors = [
-                      "text-orange-600",
-                      "text-blue-600",
-                      "text-green-600",
-                      "text-purple-600",
-                      "text-indigo-600",
-                      "text-pink-600",
-                    ];
+            )}
+
+            {activeTab === "rewards" && (
+              <div className="space-y-3">
+                {competition.rewards && competition.rewards.length > 0 ? (
+                  competition.rewards.map((reward, index) => {
+                    const getRankIcon = (rank) => {
+                      if (rank === 1)
+                        return { icon: Trophy, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-200" };
+                      if (rank === 2)
+                        return { icon: Trophy, color: "text-slate-400", bg: "bg-slate-50", border: "border-slate-200" };
+                      if (rank === 3)
+                        return { icon: Trophy, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" };
+                      if (rank <= 10)
+                        return { icon: Medal, color: "text-blue-500", bg: "bg-blue-50", border: "border-blue-200" };
+                      return { icon: Award, color: "text-purple-500", bg: "bg-purple-50", border: "border-purple-200" };
+                    };
+
+                    const { icon: Icon, color, bg, border } = getRankIcon(reward.minRank);
 
                     return (
                       <div
-                        key={metric.key}
-                        className={`flex items-center justify-between p-3 bg-gradient-to-br ${
-                          bgColors[idx % 6]
-                        } rounded-lg border`}
+                        key={index}
+                        className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all"
                       >
-                        <span className="text-sm text-gray-700">
-                          {metric.name}
-                        </span>
-                        <span
-                          className={`text-sm font-semibold ${
-                            textColors[idx % 6]
-                          }`}
-                        >
-                          {metric.weight}%
-                        </span>
+                        <div className="flex items-center gap-4">
+                          <div className={`w-14 h-14 ${bg} ${border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}>
+                            <Icon className={`w-7 h-7 ${color}`} />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-gray-100 text-gray-700">
+                                {reward.rankRange}
+                              </span>
+                              <span className="text-sm font-semibold text-gray-900">
+                                {reward.title}
+                              </span>
+                            </div>
+                            <p className="text-lg font-bold text-orange-600 mb-1">
+                              {reward.prize}
+                            </p>
+                            <p className="text-sm text-gray-600 line-clamp-2">
+                              {reward.description}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     );
                   })
                 ) : (
-                  <p className="text-sm text-gray-500 text-center py-4">
-                    No scoring criteria configured
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Loading State
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="text-center">
-          <Loader className="w-12 h-12 text-orange-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-700 font-medium">
-            Loading competition data...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error State
-  if (error) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-gradient-to-br from-red-50 to-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-200 shadow-sm">
-            <AlertCircle className="w-8 h-8 text-red-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Failed to Load
-          </h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => fetchCompetitionData()}
-            className="px-6 py-3 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const activeMetrics = getActiveMetrics();
-
-  // Main Competition View
-  return (
-    <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
-      <Helmet>
-        <title>Trading Competition - Nupips</title>
-      </Helmet>
-
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
-              <Trophy className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
-                {competitionPeriod?.description || "Trading Championship"}
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-600 flex items-center gap-2 mt-1">
-                <Clock className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">Ends {endDate}</span>
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => fetchCompetitionData(false)}
-            disabled={refreshing}
-            className="px-4 py-2 bg-white border border-gray-200 hover:border-orange-500 rounded-xl font-medium text-gray-700 hover:text-orange-600 transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm hover:shadow flex-shrink-0"
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
-            />
-            <span>Refresh</span>
-          </button>
-        </div>
-
-        {/* Prize Pool */}
-        {rewards.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 border border-gray-200 mb-6">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Gift className="w-5 h-5 text-orange-600" />
-              Prize Pool
-            </h3>
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-              {rewards.map((reward, index) => {
-                const { icon: Icon, color } = getRankIcon(reward.minRank);
-                const badgeColor = getRankBadgeColor(reward.minRank);
-                return (
-                  <div
-                    key={index}
-                    className={`p-4 rounded-xl border ${badgeColor} hover:shadow-md transition-shadow`}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Icon
-                        className={`w-4 h-4 sm:w-5 sm:h-5 ${color} flex-shrink-0`}
-                      />
-                      <p className="text-xs font-semibold truncate">
-                        {reward.rankRange}
-                      </p>
-                    </div>
-                    <p className="text-sm font-bold text-gray-900 mb-1 truncate">
-                      {reward.prize}
-                    </p>
-                    <p className="text-xs text-gray-600 line-clamp-2">
-                      {reward.description}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        <ProgressBar />
-        <ScoringBreakdown />
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* User Rank Card */}
-          <div className="lg:col-span-1 space-y-6">
-            {userRank && (
-              <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-xl p-6 text-white border border-orange-400">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-white/90 text-xs font-medium uppercase tracking-wide">
-                      Your Rank
-                    </p>
-                    <p className="text-4xl font-bold mt-1">#{userRank.rank}</p>
-                  </div>
-                  {(() => {
-                    const { icon: Icon } = getRankIcon(userRank.rank);
-                    return <Icon className="w-12 h-12 text-white/80" />;
-                  })()}
-                </div>
-
-                <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 mb-4 border border-white/20">
-                  <div className="flex items-baseline justify-between mb-2">
-                    <span className="text-white/90 text-sm">Total Score</span>
-                    <span className="text-3xl font-bold">
-                      {userRank.score.toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-white/80">
-                    <span>Base: {userRank.baseScore.toFixed(1)}</span>
-                    <span>×{userRank.bonusMultiplier} Bonus</span>
-                  </div>
-                </div>
-
-                {eligibleReward && (
-                  <div className="bg-white/15 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Gift className="w-5 h-5 flex-shrink-0" />
-                      <p className="text-sm font-medium">Current Prize Tier</p>
-                    </div>
-                    <p className="text-lg font-bold truncate">
-                      {eligibleReward.prize}
-                    </p>
-                    <p className="text-xs text-white/80 mt-1 line-clamp-2">
-                      {eligibleReward.description}
+                  <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                    <Gift className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium">
+                      No rewards configured yet
                     </p>
                   </div>
                 )}
-
-                <div className="mt-4 flex items-center gap-2 text-sm">
-                  {userRank.isVerified ? (
-                    <>
-                      <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                      <span>KYC Verified (Bonus Active)</span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="w-4 h-4 text-yellow-300 flex-shrink-0" />
-                      <span>Complete KYC for Bonus</span>
-                    </>
-                  )}
-                </div>
               </div>
             )}
 
-            {/* Key Metrics - Only show active ones */}
-            {userRank && activeMetrics.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-blue-600" />
-                  Key Metrics
-                </h3>
-                <div className="space-y-3">
+            {activeTab === "scoring" && (
+              <div className="space-y-6">
+                <div className="bg-white border border-blue-200 rounded-xl p-5">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Target className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-1">
+                        How Scoring Works
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Your score is calculated based on multiple performance
+                        metrics. Each metric contributes to your total score
+                        based on its assigned weight percentage.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {activeMetrics.map((metric, index) => {
-                    const colors = [
+                    const Icon = metric.icon;
+                    const colorSchemes = [
                       {
-                        bg: "from-orange-50 to-orange-100",
+                        gradient: "from-orange-50 to-orange-100",
                         border: "border-orange-200",
                         icon: "text-orange-600",
+                        bg: "bg-orange-100",
                       },
                       {
-                        bg: "from-green-50 to-green-100",
+                        gradient: "from-green-50 to-green-100",
                         border: "border-green-200",
                         icon: "text-green-600",
+                        bg: "bg-green-100",
                       },
                       {
-                        bg: "from-blue-50 to-blue-100",
+                        gradient: "from-blue-50 to-blue-100",
                         border: "border-blue-200",
                         icon: "text-blue-600",
+                        bg: "bg-blue-100",
                       },
                       {
-                        bg: "from-purple-50 to-purple-100",
+                        gradient: "from-purple-50 to-purple-100",
                         border: "border-purple-200",
                         icon: "text-purple-600",
+                        bg: "bg-purple-100",
                       },
                       {
-                        bg: "from-indigo-50 to-indigo-100",
+                        gradient: "from-indigo-50 to-indigo-100",
                         border: "border-indigo-200",
                         icon: "text-indigo-600",
-                      },
-                      {
-                        bg: "from-pink-50 to-pink-100",
-                        border: "border-pink-200",
-                        icon: "text-pink-600",
+                        bg: "bg-indigo-100",
                       },
                     ];
-                    const colorScheme = colors[index % colors.length];
-                    const Icon = metric.icon;
-                    const value = userRank.metrics?.[metric.metricKey] || 0;
-                    const displayValue =
-                      metric.format === "currency"
-                        ? `$${value.toLocaleString()}`
-                        : metric.format === "boolean"
-                        ? value
-                          ? "Yes"
-                          : "No"
-                        : value.toLocaleString();
+                    const scheme = colorSchemes[index % colorSchemes.length];
 
                     return (
                       <div
                         key={metric.key}
-                        className={`flex items-center justify-between p-3 bg-gradient-to-br ${colorScheme.bg} rounded-xl border ${colorScheme.border}`}
+                        className={`bg-gradient-to-br ${scheme.gradient} ${scheme.border} border rounded-xl p-4`}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Icon
-                            className={`w-4 h-4 ${colorScheme.icon} flex-shrink-0`}
-                          />
-                          <span className="text-sm text-gray-700 truncate">
-                            {metric.name}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 ${scheme.bg} rounded-lg flex items-center justify-center`}>
+                              <Icon className={`w-4 h-4 ${scheme.icon}`} />
+                            </div>
+                            <span className="font-semibold text-gray-900 text-sm">
+                              {metric.name}
+                            </span>
+                          </div>
+                          <span className={`text-lg font-bold ${scheme.icon}`}>
+                            {metric.weight}%
                           </span>
                         </div>
-                        <span className="font-semibold text-gray-900 ml-2 flex-shrink-0 text-right">
-                          {displayValue}
-                        </span>
+                        <p className="text-xs text-gray-600">
+                          Contributes {metric.weight}% to your total score
+                        </p>
                       </div>
                     );
                   })}
                 </div>
               </div>
             )}
-          </div>
 
-          {/* Leaderboard */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-4 sm:p-5 bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-                    <Crown className="w-5 h-5 sm:w-6 sm:h-6" />
-                    Leaderboard
-                  </h2>
-                  <span className="text-xs sm:text-sm bg-white/20 px-3 py-1 rounded-lg font-medium">
-                    Top {Math.min(leaderboard.length, 50)}
-                  </span>
-                </div>
-              </div>
+            {activeTab === "leaderboard" && (
+              <div className="space-y-4">
+                {loadingLeaderboard ? (
+                  <div className="bg-white rounded-xl border border-gray-200 p-12 flex items-center justify-center">
+                    <div className="text-center">
+                      <Loader className="w-10 h-10 text-orange-600 animate-spin mx-auto mb-3" />
+                      <p className="text-sm text-gray-600">Loading leaderboard...</p>
+                    </div>
+                  </div>
+                ) : leaderboard.length > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-600">
+                        Top 10 Leaders
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Activity className="w-3.5 h-3.5" />
+                        <span>Live Rankings</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {leaderboard.map((entry, index) => {
+                        const getRankIcon = (rank) => {
+                          if (rank === 1)
+                            return { icon: Trophy, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-200" };
+                          if (rank === 2)
+                            return { icon: Trophy, color: "text-slate-400", bg: "bg-slate-50", border: "border-slate-200" };
+                          if (rank === 3)
+                            return { icon: Trophy, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" };
+                          return { icon: Medal, color: "text-blue-500", bg: "bg-blue-50", border: "border-blue-200" };
+                        };
 
-              <div className="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
-                {leaderboard.slice(0, 50).map((entry) => {
-                  const isExpanded = expandedUser === entry.userId;
-                  const isCurrentUser =
-                    userRank && entry.userId === userRank.userId;
-                  const { icon: RankIcon, color } = getRankIcon(entry.rank);
-                  const badgeColor = getRankBadgeColor(entry.rank);
+                        const { icon: RankIcon, color, bg, border } = getRankIcon(entry.rank);
 
-                  // Get active metrics for this user
-                  const userActiveMetrics = activeMetrics.filter((m) => {
-                    const value = entry.metrics?.[m.metricKey];
-                    return value !== undefined && value !== null;
-                  });
-
-                  return (
-                    <div
-                      key={entry.userId}
-                      className={`transition-all ${
-                        isCurrentUser
-                          ? "bg-gradient-to-r from-orange-50 to-orange-100 border-l-4 border-orange-500"
-                          : "hover:bg-gray-50"
-                      }`}
-                    >
-                      <div className="p-3 sm:p-4">
-                        <div className="flex items-center gap-3 sm:gap-4">
+                        return (
                           <div
-                            className={`flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl border ${badgeColor} flex-shrink-0`}
+                            key={index}
+                            className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
                           >
-                            {entry.rank <= 3 ? (
-                              <RankIcon
-                                className={`w-5 h-5 sm:w-6 sm:h-6 ${color}`}
-                              />
-                            ) : (
-                              <span className="text-xs sm:text-sm font-semibold">
-                                #{entry.rank}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <p className="font-semibold text-gray-900 truncate">
-                                {entry.username}
-                              </p>
-                              {entry.isVerified && (
-                                <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                              )}
-                              {entry.isAgent && (
-                                <Award className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                              )}
-                              {isCurrentUser && (
-                                <span className="text-xs bg-gradient-to-br from-orange-500 to-orange-600 text-white px-2 py-0.5 rounded-full font-medium">
-                                  You
-                                </span>
-                              )}
+                            <div className={`w-12 h-12 ${bg} ${border} border-2 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                              <RankIcon className={`w-6 h-6 ${color}`} />
                             </div>
-                            {/* Show first 2 active metrics inline */}
-                            {userActiveMetrics.length > 0 && (
-                              <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                                {userActiveMetrics
-                                  .slice(0, 2)
-                                  .map((metric, idx) => {
-                                    const Icon = metric.icon;
-                                    const value =
-                                      entry.metrics[metric.metricKey];
-                                    const displayValue =
-                                      metric.format === "currency"
-                                        ? `$${value?.toLocaleString() || 0}`
-                                        : value?.toLocaleString() || 0;
 
-                                    return (
-                                      <span
-                                        key={idx}
-                                        className="flex items-center gap-1"
-                                      >
-                                        <Icon className="w-3 h-3 flex-shrink-0" />
-                                        {displayValue}
-                                      </span>
-                                    );
-                                  })}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-gray-100 text-gray-700">
+                                  #{entry.rank}
+                                </span>
+                                <p className="font-semibold text-gray-900 truncate">
+                                  {entry.username}
+                                </p>
+                                {entry.isAgent && (
+                                  <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-100 rounded-md">
+                                    <Shield className="w-3 h-3 text-blue-600" />
+                                    <span className="text-xs font-medium text-blue-700">
+                                      Agent
+                                    </span>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
+                            </div>
 
-                          <div className="text-right flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                            <div>
-                              <p className="text-xs text-gray-600">Score</p>
-                              <p className="text-lg sm:text-xl font-bold text-gray-900">
+                            <div className="text-right">
+                              <p className="text-xs text-gray-500 mb-0.5">
+                                Score
+                              </p>
+                              <p className="text-xl font-bold text-orange-600">
                                 {entry.score.toFixed(1)}
                               </p>
                             </div>
-                            {userActiveMetrics.length > 0 && (
-                              <button
-                                onClick={() =>
-                                  setExpandedUser(
-                                    isExpanded ? null : entry.userId
-                                  )
-                                }
-                                className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                              >
-                                {isExpanded ? (
-                                  <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                                ) : (
-                                  <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-                                )}
-                              </button>
-                            )}
                           </div>
-                        </div>
-                      </div>
-
-                      {isExpanded && userActiveMetrics.length > 0 && (
-                        <div className="px-3 sm:px-4 pb-3 sm:pb-4">
-                          <div className="bg-white rounded-xl p-4 border border-gray-200">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                              {userActiveMetrics.map((metric, idx) => {
-                                const value = entry.metrics[metric.metricKey];
-                                const displayValue =
-                                  metric.format === "currency"
-                                    ? `$${value?.toLocaleString() || 0}`
-                                    : metric.format === "boolean"
-                                    ? value
-                                      ? "Yes"
-                                      : "No"
-                                    : value?.toLocaleString() || 0;
-
-                                const colorClasses = [
-                                  "text-orange-600",
-                                  "text-green-600",
-                                  "text-blue-600",
-                                  "text-purple-600",
-                                  "text-indigo-600",
-                                  "text-pink-600",
-                                ];
-
-                                return (
-                                  <div
-                                    key={idx}
-                                    className="bg-white p-3 rounded-lg border border-gray-200"
-                                  >
-                                    <p className="text-xs text-gray-600 mb-1">
-                                      {metric.name}
-                                    </p>
-                                    <p
-                                      className={`text-lg font-bold ${
-                                        colorClasses[idx % colorClasses.length]
-                                      }`}
-                                    >
-                                      {displayValue}
-                                    </p>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                        );
+                      })}
                     </div>
-                  );
-                })}
-
-                {leaderboard.length === 0 && (
-                  <div className="p-12 text-center">
-                    <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500 font-medium">
+                  </>
+                ) : (
+                  <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                    <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium mb-1">
                       No participants yet
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      Be the first to join and compete!
                     </p>
                   </div>
                 )}
               </div>
-            </div>
+            )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Connect GTC Modal
+const ConnectGTCModal = ({ onClose, onConnect }) => {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[99999] p-4">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+            <Lock className="w-6 h-6 text-white" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900">
+            Connect Your Broker
+          </h3>
+        </div>
+
+        <p className="text-gray-600 mb-6">
+          Connect your GTC FX account to participate in competitions, track your
+          rankings in real-time, and compete for amazing prizes!
+        </p>
+
+        <div className="space-y-3 mb-6">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <span className="text-sm text-gray-700">
+              Automatic score calculation
+            </span>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <span className="text-sm text-gray-700">
+              Real-time leaderboard rankings
+            </span>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <span className="text-sm text-gray-700">
+              Compete in multiple competitions
+            </span>
+          </div>
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <span className="text-sm text-gray-700">
+              Win exclusive prizes and rewards
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConnect}
+            className="flex-1 px-4 py-2 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+          >
+            Connect Now
+          </button>
         </div>
       </div>
     </div>

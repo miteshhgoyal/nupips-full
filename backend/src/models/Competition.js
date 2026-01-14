@@ -34,11 +34,59 @@ const rewardSchema = new mongoose.Schema({
     },
 }, { _id: false });
 
+const participantSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+    },
+    username: String,
+    name: String,
+    email: String,
+    score: {
+        type: Number,
+        default: 0,
+    },
+    rank: {
+        type: Number,
+        default: null,
+    },
+    lastCalculated: {
+        type: Date,
+        default: Date.now,
+    },
+    scoreBreakdown: {
+        baseScore: Number,
+        breakdown: mongoose.Schema.Types.Mixed,
+        metrics: mongoose.Schema.Types.Mixed,
+    },
+}, { _id: false, timestamps: true });
+
 const competitionSchema = new mongoose.Schema({
+    // Competition Basic Info
+    title: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    description: {
+        type: String,
+        required: true,
+        trim: true,
+    },
+    slug: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true,
+    },
+
     // Competition Status
-    competitionEnabled: {
-        type: Boolean,
-        default: true,
+    status: {
+        type: String,
+        enum: ['draft', 'upcoming', 'active', 'completed', 'cancelled'],
+        default: 'draft',
     },
 
     // Scoring Rules (weights must total 100%)
@@ -48,21 +96,21 @@ const competitionSchema = new mongoose.Schema({
             required: true,
             min: 0,
             max: 100,
-            default: 25,
+            default: 30,
         },
         teamSizeWeight: {
             type: Number,
             required: true,
             min: 0,
             max: 100,
-            default: 15,
+            default: 20,
         },
         tradingVolumeWeight: {
             type: Number,
             required: true,
             min: 0,
             max: 100,
-            default: 20,
+            default: 25,
         },
         profitabilityWeight: {
             type: Number,
@@ -72,13 +120,6 @@ const competitionSchema = new mongoose.Schema({
             default: 15,
         },
         accountBalanceWeight: {
-            type: Number,
-            required: true,
-            min: 0,
-            max: 100,
-            default: 15,
-        },
-        kycCompletionWeight: {
             type: Number,
             required: true,
             min: 0,
@@ -115,40 +156,31 @@ const competitionSchema = new mongoose.Schema({
     },
 
     // Competition Period
-    period: {
-        active: {
-            type: Boolean,
-            default: true,
-        },
-        startDate: {
-            type: Date,
-            required: true,
-        },
-        endDate: {
-            type: Date,
-            required: true,
-            validate: {
-                validator: function (endDate) {
-                    return endDate > this.period.startDate;
-                },
-                message: 'End date must be after start date',
+    startDate: {
+        type: Date,
+        required: true,
+    },
+    endDate: {
+        type: Date,
+        required: true,
+        validate: {
+            validator: function (endDate) {
+                return endDate > this.startDate;
             },
-        },
-        description: {
-            type: String,
-            required: true,
-            trim: true,
-            default: 'Trading Championship',
+            message: 'End date must be after start date',
         },
     },
 
-    // Bonus Multipliers
-    bonusMultipliers: {
-        kycVerified: {
+    // Entry Requirements
+    requirements: {
+        requiresGTCAccount: {
+            type: Boolean,
+            default: true,
+        },
+        minAccountBalance: {
             type: Number,
-            default: 1.1,
-            min: 1.0,
-            max: 2.0,
+            default: 0,
+            min: 0,
         },
     },
 
@@ -181,6 +213,33 @@ const competitionSchema = new mongoose.Schema({
         },
     },
 
+    // Participants tracking
+    participants: [participantSchema],
+
+    // Statistics
+    stats: {
+        totalParticipants: {
+            type: Number,
+            default: 0,
+        },
+        agentCount: {
+            type: Number,
+            default: 0,
+        },
+        averageScore: {
+            type: Number,
+            default: 0,
+        },
+        highestScore: {
+            type: Number,
+            default: 0,
+        },
+        lastCalculated: {
+            type: Date,
+            default: null,
+        },
+    },
+
     // Metadata
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
@@ -198,6 +257,13 @@ const competitionSchema = new mongoose.Schema({
     timestamps: true,
 });
 
+// Indexes for performance
+competitionSchema.index({ slug: 1 });
+competitionSchema.index({ status: 1 });
+competitionSchema.index({ startDate: 1, endDate: 1 });
+competitionSchema.index({ 'participants.userId': 1 });
+competitionSchema.index({ 'participants.score': -1 });
+
 // Pre-save middleware to validate total weight
 competitionSchema.pre('save', function (next) {
     const totalWeight =
@@ -205,129 +271,141 @@ competitionSchema.pre('save', function (next) {
         this.rules.teamSizeWeight +
         this.rules.tradingVolumeWeight +
         this.rules.profitabilityWeight +
-        this.rules.accountBalanceWeight +
-        this.rules.kycCompletionWeight;
+        this.rules.accountBalanceWeight;
 
     if (totalWeight !== 100) {
         return next(new Error(`Total weight must equal 100%. Current total: ${totalWeight}%`));
     }
 
+    // Auto-update status based on dates
+    const now = new Date();
+    if (this.status !== 'cancelled' && this.status !== 'draft') {
+        if (now < this.startDate) {
+            this.status = 'upcoming';
+        } else if (now >= this.startDate && now <= this.endDate) {
+            this.status = 'active';
+        } else if (now > this.endDate) {
+            this.status = 'completed';
+        }
+    }
+
     next();
 });
 
-// Static method to get active competition config
-competitionSchema.statics.getActiveConfig = async function () {
-    const config = await this.findOne().sort({ createdAt: -1 });
-
-    if (!config) {
-        // Return default config if none exists - seed initial data
-        return await this.seedDefaultConfig();
-    }
-
-    return config;
-};
-
-// Static method to seed default configuration
-competitionSchema.statics.seedDefaultConfig = async function () {
-    console.log('Seeding default competition configuration...');
-
-    const defaultConfig = {
-        competitionEnabled: true,
-        rules: {
-            directReferralsWeight: 25,
-            teamSizeWeight: 15,
-            tradingVolumeWeight: 20,
-            profitabilityWeight: 15,
-            accountBalanceWeight: 15,
-            kycCompletionWeight: 10,
-        },
-        rewards: [
-            {
-                rankRange: "1st",
-                minRank: 1,
-                maxRank: 1,
-                title: "Champion",
-                prize: "Moscow Russia Trip",
-                description: "Lifetime VIP status + exclusive training"
-            },
-            {
-                rankRange: "2nd",
-                minRank: 2,
-                maxRank: 2,
-                title: "Grand Master",
-                prize: "$5,000 Cash",
-                description: "Gold Benefits + premium features"
-            },
-            {
-                rankRange: "3rd",
-                minRank: 3,
-                maxRank: 3,
-                title: "Master",
-                prize: "$5,000 Cash",
-                description: "Gold Benefits + priority support"
-            },
-            {
-                rankRange: "4th",
-                minRank: 4,
-                maxRank: 4,
-                title: "Elite Platinum",
-                prize: "$2,500 Cash",
-                description: "Silver Benefits + trading tools"
-            },
-            {
-                rankRange: "5th-10th",
-                minRank: 5,
-                maxRank: 10,
-                title: "Top Performers",
-                prize: "$1,000 Cash",
-                description: "Bronze Benefits + recognition"
-            },
-            {
-                rankRange: "11th-25th",
-                minRank: 11,
-                maxRank: 25,
-                title: "Rising Stars",
-                prize: "$500 Credit",
-                description: "Special badges + community spotlight"
-            },
-        ],
-        period: {
-            active: true,
-            startDate: new Date('2025-01-01'),
-            endDate: new Date('2025-12-31'),
-            description: 'Annual Trading Championship 2025'
-        },
-        bonusMultipliers: {
-            kycVerified: 1.1,
-        },
-        normalizationTargets: {
-            directReferralsTarget: 10,
-            teamSizeTarget: 50,
-            tradingVolumeTarget: 100000,
-            profitPercentTarget: 100,
-            accountBalanceTarget: 10000,
-        },
-        version: 1,
-    };
-
-    try {
-        const config = await this.create(defaultConfig);
-        console.log('Default competition configuration seeded successfully');
-        return config;
-    } catch (error) {
-        console.error('Error seeding default configuration:', error);
-        throw error;
-    }
-};
-
 // Method to check if competition is currently active
 competitionSchema.methods.isActive = function () {
-    if (!this.competitionEnabled || !this.period.active) {
-        return false;
+    const now = new Date();
+    return this.status === 'active' && now >= this.startDate && now <= this.endDate;
+};
+
+// Method to check if competition is upcoming
+competitionSchema.methods.isUpcoming = function () {
+    const now = new Date();
+    return this.status === 'upcoming' && now < this.startDate;
+};
+
+// Method to check if competition is completed
+competitionSchema.methods.isCompleted = function () {
+    return this.status === 'completed';
+};
+
+// Method to check if user can participate
+competitionSchema.methods.canUserParticipate = function (user, gtcData) {
+    // Check GTC account requirement
+    if (this.requirements.requiresGTCAccount && !gtcData) {
+        return {
+            canParticipate: false,
+            reason: 'GTC FX account connection required',
+        };
     }
 
-    const now = new Date();
-    return now >= this.period.startDate && now <= this.period.endDate;
+    // Check minimum balance requirement
+    if (this.requirements.minAccountBalance > 0) {
+        const balance = gtcData?.accountBalance || 0;
+        if (balance < this.requirements.minAccountBalance) {
+            return {
+                canParticipate: false,
+                reason: `Minimum account balance of $${this.requirements.minAccountBalance} required`,
+            };
+        }
+    }
+
+    return {
+        canParticipate: true,
+        reason: 'Eligible to participate',
+    };
+};
+
+// Method to update participant score
+competitionSchema.methods.updateParticipantScore = function (userId, scoreData) {
+    const participantIndex = this.participants.findIndex(
+        p => p.userId.toString() === userId.toString()
+    );
+
+    const participantData = {
+        userId,
+        username: scoreData.username,
+        name: scoreData.name,
+        email: scoreData.email,
+        score: scoreData.totalScore,
+        lastCalculated: new Date(),
+        scoreBreakdown: {
+            baseScore: scoreData.baseScore,
+            breakdown: scoreData.breakdown,
+            metrics: scoreData.metrics,
+        },
+    };
+
+    if (participantIndex >= 0) {
+        this.participants[participantIndex] = {
+            ...this.participants[participantIndex],
+            ...participantData,
+        };
+    } else {
+        this.participants.push(participantData);
+    }
+
+    // Recalculate ranks
+    this.recalculateRanks();
+};
+
+// Method to recalculate all ranks
+competitionSchema.methods.recalculateRanks = function () {
+    // Sort participants by score (descending)
+    this.participants.sort((a, b) => b.score - a.score);
+
+    // Assign ranks
+    let currentRank = 1;
+    this.participants.forEach((participant, index) => {
+        if (index > 0 && participant.score < this.participants[index - 1].score) {
+            currentRank = index + 1;
+        }
+        participant.rank = currentRank;
+    });
+
+    // Update stats
+    this.stats.totalParticipants = this.participants.length;
+    this.stats.highestScore = this.participants[0]?.score || 0;
+    this.stats.averageScore = this.participants.length > 0
+        ? parseFloat((this.participants.reduce((sum, p) => sum + p.score, 0) / this.participants.length).toFixed(2))
+        : 0;
+    this.stats.agentCount = this.participants.filter(p => p.scoreBreakdown?.metrics?.isAgent).length;
+    this.stats.lastCalculated = new Date();
+};
+
+// Static method to get all active competitions
+competitionSchema.statics.getActiveCompetitions = async function () {
+    return await this.find({ status: 'active' }).sort({ startDate: -1 });
+};
+
+// Static method to get upcoming competitions
+competitionSchema.statics.getUpcomingCompetitions = async function () {
+    return await this.find({ status: 'upcoming' }).sort({ startDate: 1 });
+};
+
+// Static method to get completed competitions
+competitionSchema.statics.getCompletedCompetitions = async function () {
+    return await this.find({ status: 'completed' }).sort({ endDate: -1 });
 };
 
 const Competition = mongoose.model('Competition', competitionSchema);
