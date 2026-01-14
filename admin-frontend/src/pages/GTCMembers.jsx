@@ -1866,13 +1866,19 @@ const GTCMembers = () => {
                   {selectedMember.phone && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 flex items-center gap-1">
-                        <Phone className="w-3 h-3" /> Phone
+                        Phone
                       </span>
                       <span className="text-sm font-medium text-gray-900">
                         {selectedMember.phone}
                       </span>
                     </div>
                   )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">KYC Status</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {selectedMember.kycStatus}
+                    </span>
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Level</span>
                     <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800">
