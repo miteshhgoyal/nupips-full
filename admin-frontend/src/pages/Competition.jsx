@@ -1216,29 +1216,6 @@ const BasicInfoTab = ({ formData, setFormData }) => {
           <option value="completed">Completed</option>
         </select>
       </div>
-
-      <div className="space-y-3">
-        <label className="block text-sm font-medium text-gray-700">
-          Requirements
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={formData.requirements?.requiresGTCAccount || false}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                requirements: {
-                  ...formData.requirements,
-                  requiresGTCAccount: e.target.checked,
-                },
-              })
-            }
-            className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-          />
-          <span className="text-sm text-gray-700">Requires GTC Account</span>
-        </label>
-      </div>
     </div>
   );
 };
@@ -1601,36 +1578,6 @@ const AdvancedTab = ({ formData, setFormData }) => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Entry Requirements
-        </h3>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Minimum Account Balance ($)
-          </label>
-          <input
-            type="number"
-            min="0"
-            value={formData.requirements?.minAccountBalance || 0}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                requirements: {
-                  ...formData.requirements,
-                  minAccountBalance: parseFloat(e.target.value) || 0,
-                },
-              })
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            Minimum balance required to participate (0 = no requirement)
-          </p>
         </div>
       </div>
     </div>

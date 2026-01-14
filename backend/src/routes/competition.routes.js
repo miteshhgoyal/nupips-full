@@ -764,6 +764,18 @@ router.post('/admin/create', authenticateToken, requireAdmin, async (req, res) =
                     message: `Total weight must equal 100%. Current total: ${totalWeight}%`,
                 });
             }
+
+            // AUTO-SET requiresGTCAccount based on GTC-related weights
+            const gtcRelatedWeight =
+                (competitionData.rules.teamSizeWeight || 0) +
+                (competitionData.rules.tradingVolumeWeight || 0) +
+                (competitionData.rules.profitabilityWeight || 0) +
+                (competitionData.rules.accountBalanceWeight || 0);
+
+            if (!competitionData.requirements) {
+                competitionData.requirements = {};
+            }
+            competitionData.requirements.requiresGTCAccount = gtcRelatedWeight > 0;
         }
 
         // Validate rewards
@@ -844,9 +856,11 @@ router.get('/admin/list', authenticateToken, requireAdmin, async (req, res) => {
 /**
  * GET /competition/admin/:id
  */
-router.get('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.user.userId;
+        const updateData = req.body;
 
         // Validate MongoDB ObjectId
         if (!id.match(/^[0-9a-fA-F]{24}$/)) {
@@ -856,10 +870,7 @@ router.get('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
             });
         }
 
-        const competition = await Competition.findById(id)
-            .populate('createdBy', 'name username email')
-            .populate('updatedBy', 'name username email')
-            .lean();
+        const competition = await Competition.findById(id);
 
         if (!competition) {
             return res.status(404).json({
@@ -868,15 +879,88 @@ router.get('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
             });
         }
 
+        // Prevent updating completed competitions
+        if (competition.status === 'completed' && updateData.status !== 'completed') {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot modify completed competition',
+            });
+        }
+
+        // If slug is empty, generate from title
+        if (updateData.slug === '' && updateData.title) {
+            updateData.slug = generateSlug(updateData.title);
+        }
+
+        // Validate that weights sum to 100 if rules are being updated
+        if (updateData.rules) {
+            const totalWeight =
+                (updateData.rules.directReferralsWeight || 0) +
+                (updateData.rules.teamSizeWeight || 0) +
+                (updateData.rules.tradingVolumeWeight || 0) +
+                (updateData.rules.profitabilityWeight || 0) +
+                (updateData.rules.accountBalanceWeight || 0);
+
+            if (totalWeight !== 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Total weight must equal 100%. Current total: ${totalWeight}%`,
+                });
+            }
+
+            // AUTO-SET requiresGTCAccount based on GTC-related weights
+            const gtcRelatedWeight =
+                (updateData.rules.teamSizeWeight || 0) +
+                (updateData.rules.tradingVolumeWeight || 0) +
+                (updateData.rules.profitabilityWeight || 0) +
+                (updateData.rules.accountBalanceWeight || 0);
+
+            if (!updateData.requirements) {
+                updateData.requirements = competition.requirements || {};
+            }
+            updateData.requirements.requiresGTCAccount = gtcRelatedWeight > 0;
+        }
+
+        // Validate rewards if provided
+        if (updateData.rewards && updateData.rewards.length > 0) {
+            for (const reward of updateData.rewards) {
+                if (!reward.minRank || !reward.maxRank || !reward.title || !reward.prize) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'All reward fields are required',
+                    });
+                }
+                if (reward.minRank > reward.maxRank) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Min rank cannot be greater than max rank',
+                    });
+                }
+            }
+        }
+
+        // Update fields
+        Object.keys(updateData).forEach(key => {
+            if (key !== '_id' && key !== 'createdAt' && key !== 'createdBy' && key !== 'participants' && key !== 'stats') {
+                competition[key] = updateData[key];
+            }
+        });
+
+        competition.updatedBy = userId;
+        competition.version += 1;
+
+        await competition.save();
+
         res.json({
             success: true,
+            message: 'Competition updated successfully',
             competition,
         });
     } catch (error) {
-        console.error('Error fetching competition:', error);
+        console.error('Error updating competition:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch competition',
+            message: error.message || 'Failed to update competition',
             error: error.message,
         });
     }
