@@ -408,6 +408,7 @@ router.post('/webhook/user-tree', async (req, res) => {
                     joinedAt,
                     rawData,
                     phoneNumber,
+                    kycStatus,
                 } = m;
 
                 if (!gtcUserId || !email || !username) {
@@ -430,6 +431,7 @@ router.post('/webhook/user-tree', async (req, res) => {
                             rawData: rawData || {},
                             joinedAt: joinedAt ? new Date(Number(joinedAt) * 1000) : new Date(),
                             lastUpdated: new Date(),
+                            kycStatus: kycStatus || '',
                         },
                     },
                     { upsert: true, new: true }
@@ -474,7 +476,8 @@ router.post('/webhook/member-update', async (req, res) => {
             uplineChain,
             joinedAt,
             rawData,
-            phoneNumber
+            phoneNumber,
+            kycStatus,
         } = req.body;
 
         if (!gtcUserId || !email || !username) {
@@ -499,17 +502,19 @@ router.post('/webhook/member-update', async (req, res) => {
                     rawData: rawData || {},
                     joinedAt: joinedAt ? new Date(Number(joinedAt) * 1000) : new Date(),
                     lastUpdated: new Date(),
+                    kycStatus: kycStatus || '',
                 },
             },
             { upsert: true, new: true }
         );
 
-        console.log(`Updated/created member: ${gtcUserId}`);
+        console.log(`Updated/created member: ${gtcUserId} (KYC: ${kycStatus || 'not_provided'})`);
 
         res.status(200).json({
             success: true,
             message: 'Member update processed successfully',
             timestamp: new Date().toISOString(),
+            kycStatus: kycStatus || '',
         });
 
     } catch (error) {
@@ -525,14 +530,21 @@ router.get('/members', authenticateToken, async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 100;
         const skip = (page - 1) * limit;
+        const { kycStatus } = req.query;
 
-        const members = await GTCMember.find()
+        // Build query
+        let query = {};
+        if (kycStatus) {
+            query.kycStatus = kycStatus;
+        }
+
+        const members = await GTCMember.find(query)
             .sort({ joinedAt: -1 })
             .skip(skip)
             .limit(limit)
             .lean();
 
-        const total = await GTCMember.countDocuments();
+        const total = await GTCMember.countDocuments(query);
 
         res.json({
             success: true,
@@ -643,13 +655,13 @@ router.post('/sync-member-tree', async (req, res) => {
         console.log('Fetching tree from GTC API...');
 
         const response = await gtcAxios.post(
-            '/api/v3/agent/member_tree', 
+            '/api/v3/agent/member_tree',
             {},
             {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
-                timeout: 3000000  // 60 seconds for large trees
+                timeout: 300000  // 5 minutes for large trees
             }
         );
 
@@ -746,6 +758,20 @@ router.get('/tree-stats', async (req, res) => {
         res.status(200).json({ success: true, data: stats });
     } catch (error) {
         console.error('Error fetching tree stats:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ====================== GET KYC STATISTICS ======================
+router.get('/kyc-stats', authenticateToken, async (req, res) => {
+    try {
+        const kycStats = await GTCMember.getKYCStats();
+        res.status(200).json({
+            success: true,
+            data: kycStats
+        });
+    } catch (error) {
+        console.error('Error fetching KYC stats:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

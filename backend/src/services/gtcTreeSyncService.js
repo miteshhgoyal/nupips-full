@@ -1,4 +1,3 @@
-// backend/src/services/gtcTreeSyncService.js
 import GTCMember from '../models/GTCMember.js';
 
 /**
@@ -15,6 +14,10 @@ function flattenTreeRecursively(node, uplineChain = [], allMembers = []) {
         phone: node.phone || null,
         amount: node.amount || 0,
         userType: node.user_type || 'agent',
+
+        // Store kyc_status directly from API as string
+        kycStatus: node.kyc_status || '',
+
         parentGtcUserId: node.parent_id ? String(node.parent_id) : null,
         level: node.level || 0,
         uplineChain: [...uplineChain],
@@ -78,6 +81,16 @@ export async function syncMemberTreeFromAPI(apiResponse) {
 
         console.log(`Flattened ${allMembers.length} total members`);
 
+        // Count KYC statistics before sync (based on actual API values)
+        const kycStats = {
+            completed: allMembers.filter(m => m.kycStatus === 'completed').length,
+            pending: allMembers.filter(m => m.kycStatus === 'pending').length,
+            rejected: allMembers.filter(m => m.kycStatus === 'rejected').length,
+            notSubmitted: allMembers.filter(m => !m.kycStatus || m.kycStatus === '').length,
+        };
+
+        console.log('KYC Status Distribution:', kycStats);
+
         // Step 2: Prepare bulk operations for efficient database insertion
         const bulkOps = allMembers.map(member => ({
             updateOne: {
@@ -88,7 +101,7 @@ export async function syncMemberTreeFromAPI(apiResponse) {
         }));
 
         // Step 3: Execute bulk write in batches for optimal performance
-        const BATCH_SIZE = 500; // Optimal batch size [web:13][web:16]
+        const BATCH_SIZE = 500;
         let totalProcessed = 0;
         let totalBatches = Math.ceil(bulkOps.length / BATCH_SIZE);
 
@@ -109,6 +122,7 @@ export async function syncMemberTreeFromAPI(apiResponse) {
         const stats = {
             totalMembers: allMembers.length,
             processed: totalProcessed,
+            kycStats: kycStats,
             duration: `${duration}s`,
             timestamp: new Date().toISOString(),
         };
@@ -125,13 +139,25 @@ export async function syncMemberTreeFromAPI(apiResponse) {
 }
 
 /**
- * Helper function to get tree statistics
+ * Helper function to get tree statistics including KYC stats
  */
 export async function getTreeStats() {
     try {
         const totalMembers = await GTCMember.countDocuments();
         const agents = await GTCMember.countDocuments({ userType: 'agent' });
         const direct = await GTCMember.countDocuments({ userType: 'direct' });
+
+        // KYC Statistics - based on actual string values from GTC API
+        const kycCompleted = await GTCMember.countDocuments({ kycStatus: 'completed' });
+        const kycPending = await GTCMember.countDocuments({ kycStatus: 'pending' });
+        const kycRejected = await GTCMember.countDocuments({ kycStatus: 'rejected' });
+        const kycNotSubmitted = await GTCMember.countDocuments({
+            $or: [
+                { kycStatus: '' },
+                { kycStatus: { $exists: false } },
+                { kycStatus: null }
+            ]
+        });
 
         const levelStats = await GTCMember.aggregate([
             {
@@ -143,10 +169,30 @@ export async function getTreeStats() {
             { $sort: { _id: 1 } }
         ]);
 
+        const kycStatusBreakdown = await GTCMember.aggregate([
+            {
+                $group: {
+                    _id: '$kycStatus',
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { count: -1 } }
+        ]);
+
         return {
             totalMembers,
             agents,
             direct,
+            kycStats: {
+                completed: kycCompleted,
+                pending: kycPending,
+                rejected: kycRejected,
+                notSubmitted: kycNotSubmitted,
+                completionRate: totalMembers > 0
+                    ? ((kycCompleted / totalMembers) * 100).toFixed(2) + '%'
+                    : '0%',
+                breakdown: kycStatusBreakdown,
+            },
             levelDistribution: levelStats,
         };
     } catch (error) {

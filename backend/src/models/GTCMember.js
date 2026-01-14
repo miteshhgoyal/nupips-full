@@ -31,7 +31,7 @@ const GTCMemberSchema = new mongoose.Schema(
             type: String,
         },
 
-        // Existing fields
+        // Contact and basic info
         phone: {
             type: String,
         },
@@ -45,6 +45,13 @@ const GTCMemberSchema = new mongoose.Schema(
             default: 'agent',
         },
 
+        // KYC Status - simplified to just store the string from API
+        kycStatus: {
+            type: String,
+            default: '',
+            index: true,
+        },
+
         // Onboarding Status Fields
         onboardedWithCall: {
             type: Boolean,
@@ -55,7 +62,7 @@ const GTCMemberSchema = new mongoose.Schema(
             default: false,
         },
 
-        // NEW: Onboarding Management Fields
+        // Onboarding Management Fields
         onboardingDoneBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
@@ -109,5 +116,27 @@ GTCMemberSchema.index({ parentGtcUserId: 1 });
 GTCMemberSchema.index({ userType: 1 });
 GTCMemberSchema.index({ onboardedWithCall: 1, onboardedWithMessage: 1 });
 GTCMemberSchema.index({ onboardingDoneBy: 1 });
+GTCMemberSchema.index({ kycStatus: 1 });
+
+// Static method to get KYC statistics
+GTCMemberSchema.statics.getKYCStats = async function () {
+    const stats = await this.aggregate([
+        {
+            $group: {
+                _id: '$kycStatus',
+                count: { $sum: 1 }
+            }
+        }
+    ]);
+
+    const total = await this.countDocuments();
+    const completed = await this.countDocuments({ kycStatus: 'completed' });
+
+    return {
+        total,
+        completed,
+        statusBreakdown: stats,
+    };
+};
 
 export default mongoose.model('GTCMember', GTCMemberSchema);
