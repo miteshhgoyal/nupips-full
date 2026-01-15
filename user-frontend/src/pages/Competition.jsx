@@ -532,6 +532,407 @@ const Competition = () => {
   );
 };
 
+const ScoringDetailModal = ({ competition, onClose }) => {
+  const getActiveMetrics = () => {
+    if (!competition.rules) return [];
+
+    const allMetrics = [
+      {
+        key: "directReferrals",
+        name: "Direct Referrals",
+        icon: Users,
+        weight: competition.rules.directReferralsWeight,
+        target: competition.normalizationTargets?.directReferralsTarget || 10,
+        description: "Number of users directly referred by you",
+        formula: "min(Your Direct Referrals / Target, 1.0) × Weight%",
+      },
+      {
+        key: "teamSize",
+        name: "Team Size",
+        icon: Users,
+        weight: competition.rules.teamSizeWeight,
+        target: competition.normalizationTargets?.teamSizeTarget || 50,
+        description: "Total size of your downline team",
+        formula: "min(Your Team Size / Target, 1.0) × Weight%",
+      },
+      {
+        key: "tradingVolume",
+        name: "Trading Volume",
+        icon: DollarSign,
+        weight: competition.rules.tradingVolumeWeight,
+        target: competition.normalizationTargets?.tradingVolumeTarget || 100000,
+        description: "Total trading volume in USD (lots × 100,000)",
+        formula: "min(Your Volume / Target, 1.0) × Weight%",
+      },
+      {
+        key: "profitability",
+        name: "Profitability",
+        icon: TrendingUp,
+        weight: competition.rules.profitabilityWeight,
+        target: competition.normalizationTargets?.profitPercentTarget || 100,
+        description:
+          "Combination of win rate (50%) and profit percentage (50%)",
+        formula:
+          "[(Win Rate / 100) × 0.5 + min(Profit % / Target, 1.0) × 0.5] × Weight%",
+      },
+      {
+        key: "accountBalance",
+        name: "Account Balance",
+        icon: DollarSign,
+        weight: competition.rules.accountBalanceWeight,
+        target: competition.normalizationTargets?.accountBalanceTarget || 10000,
+        description: "Total GTC FX account balance (wallet + trading)",
+        formula: "min(Your Balance / Target, 1.0) × Weight%",
+      },
+    ];
+
+    return allMetrics.filter((m) => m.weight > 0);
+  };
+
+  const activeMetrics = getActiveMetrics();
+
+  return (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100000] p-4">
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 z-10">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold">How Scoring Works</h2>
+              </div>
+              <p className="text-orange-100 text-sm">
+                Detailed explanation of the scoring calculation formula
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
+            >
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto max-h-[calc(90vh-120px)] p-6 space-y-6">
+          {/* Overview */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              Scoring Formula
+            </h3>
+            <div className="space-y-3 text-sm text-gray-700">
+              <p>
+                Your <strong>Base Score</strong> is calculated by combining
+                multiple performance metrics, each weighted according to its
+                importance in this competition.
+              </p>
+              <div className="bg-white rounded-lg p-4 border border-blue-200">
+                <p className="font-mono text-xs text-gray-800">
+                  Base Score = (Metric₁ Score × Weight₁) + (Metric₂ Score ×
+                  Weight₂) + ... + (Metricₙ Score × Weightₙ)
+                </p>
+              </div>
+              {competition.kycBonusMultiplier > 1 && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-green-600 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-green-900">KYC Bonus</p>
+                    <p className="text-green-700 text-xs">
+                      Users with verified KYC receive a{" "}
+                      <strong>
+                        {((competition.kycBonusMultiplier - 1) * 100).toFixed(
+                          0
+                        )}
+                        % bonus
+                      </strong>{" "}
+                      on their base score.
+                    </p>
+                    <p className="font-mono text-xs text-green-800 mt-1">
+                      Final Score = Base Score ×{" "}
+                      {competition.kycBonusMultiplier}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Metrics Breakdown */}
+          <div>
+            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Activity className="w-5 h-5 text-orange-600" />
+              Metrics Breakdown
+            </h3>
+            <div className="space-y-4">
+              {activeMetrics.map((metric, index) => {
+                const Icon = metric.icon;
+                const colorSchemes = [
+                  {
+                    bg: "bg-orange-50",
+                    border: "border-orange-200",
+                    icon: "text-orange-600",
+                    badge: "bg-orange-100 text-orange-700",
+                  },
+                  {
+                    bg: "bg-green-50",
+                    border: "border-green-200",
+                    icon: "text-green-600",
+                    badge: "bg-green-100 text-green-700",
+                  },
+                  {
+                    bg: "bg-blue-50",
+                    border: "border-blue-200",
+                    icon: "text-blue-600",
+                    badge: "bg-blue-100 text-blue-700",
+                  },
+                  {
+                    bg: "bg-purple-50",
+                    border: "border-purple-200",
+                    icon: "text-purple-600",
+                    badge: "bg-purple-100 text-purple-700",
+                  },
+                  {
+                    bg: "bg-indigo-50",
+                    border: "border-indigo-200",
+                    icon: "text-indigo-600",
+                    badge: "bg-indigo-100 text-indigo-700",
+                  },
+                ];
+                const scheme = colorSchemes[index % colorSchemes.length];
+
+                return (
+                  <div
+                    key={metric.key}
+                    className={`${scheme.bg} ${scheme.border} border rounded-xl p-4`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-10 h-10 bg-white rounded-lg flex items-center justify-center border ${scheme.border}`}
+                        >
+                          <Icon className={`w-5 h-5 ${scheme.icon}`} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-900">
+                            {metric.name}
+                          </h4>
+                          <p className="text-xs text-gray-600">
+                            {metric.description}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-bold ${scheme.badge}`}
+                      >
+                        {metric.weight}%
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {/* Target */}
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="text-gray-600">
+                            Target to Max Score:
+                          </span>
+                          <span className="font-bold text-gray-900">
+                            {metric.key === "tradingVolume"
+                              ? `$${metric.target.toLocaleString()}`
+                              : metric.key === "profitability"
+                              ? `${metric.target}% profit`
+                              : metric.key === "accountBalance"
+                              ? `$${metric.target.toLocaleString()}`
+                              : metric.target}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          Reaching or exceeding this target gives you the
+                          maximum score for this metric
+                        </p>
+                      </div>
+
+                      {/* Formula */}
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-600 mb-1">
+                          Calculation Formula:
+                        </p>
+                        <p className="font-mono text-xs text-gray-800 break-all">
+                          {metric.formula}
+                        </p>
+                      </div>
+
+                      {/* Example */}
+                      <div className="bg-white rounded-lg p-3 border border-gray-200">
+                        <p className="text-xs text-gray-600 mb-2 font-semibold">
+                          Example:
+                        </p>
+                        {metric.key === "directReferrals" && (
+                          <div className="space-y-1 text-xs">
+                            <p className="text-gray-700">
+                              • If you have <strong>5 direct referrals</strong>{" "}
+                              and target is <strong>{metric.target}</strong>:
+                            </p>
+                            <p className="font-mono text-gray-800">
+                              Score = min(5 / {metric.target}, 1.0) ×{" "}
+                              {metric.weight}% ={" "}
+                              {(
+                                Math.min(5 / metric.target, 1) * metric.weight
+                              ).toFixed(2)}{" "}
+                              points
+                            </p>
+                          </div>
+                        )}
+                        {metric.key === "teamSize" && (
+                          <div className="space-y-1 text-xs">
+                            <p className="text-gray-700">
+                              • If your team has <strong>30 members</strong> and
+                              target is <strong>{metric.target}</strong>:
+                            </p>
+                            <p className="font-mono text-gray-800">
+                              Score = min(30 / {metric.target}, 1.0) ×{" "}
+                              {metric.weight}% ={" "}
+                              {(
+                                Math.min(30 / metric.target, 1) * metric.weight
+                              ).toFixed(2)}{" "}
+                              points
+                            </p>
+                          </div>
+                        )}
+                        {metric.key === "tradingVolume" && (
+                          <div className="space-y-1 text-xs">
+                            <p className="text-gray-700">
+                              • If you trade <strong>10 lots</strong>{" "}
+                              (=$1,000,000) and target is{" "}
+                              <strong>${metric.target.toLocaleString()}</strong>
+                              :
+                            </p>
+                            <p className="font-mono text-gray-800">
+                              Score = min(1000000 / {metric.target}, 1.0) ×{" "}
+                              {metric.weight}% ={" "}
+                              {(
+                                Math.min(1000000 / metric.target, 1) *
+                                metric.weight
+                              ).toFixed(2)}{" "}
+                              points
+                            </p>
+                          </div>
+                        )}
+                        {metric.key === "profitability" && (
+                          <div className="space-y-1 text-xs">
+                            <p className="text-gray-700">
+                              • If your win rate is <strong>60%</strong> and
+                              profit is <strong>50%</strong>:
+                            </p>
+                            <p className="font-mono text-gray-800">
+                              Score = [(0.6 × 0.5) + min(50 / {metric.target},
+                              1.0) × 0.5] × {metric.weight}% ={" "}
+                              {(
+                                (0.6 * 0.5 +
+                                  Math.min(50 / metric.target, 1) * 0.5) *
+                                metric.weight
+                              ).toFixed(2)}{" "}
+                              points
+                            </p>
+                          </div>
+                        )}
+                        {metric.key === "accountBalance" && (
+                          <div className="space-y-1 text-xs">
+                            <p className="text-gray-700">
+                              • If your balance is <strong>$5,000</strong> and
+                              target is{" "}
+                              <strong>${metric.target.toLocaleString()}</strong>
+                              :
+                            </p>
+                            <p className="font-mono text-gray-800">
+                              Score = min(5000 / {metric.target}, 1.0) ×{" "}
+                              {metric.weight}% ={" "}
+                              {(
+                                Math.min(5000 / metric.target, 1) *
+                                metric.weight
+                              ).toFixed(2)}{" "}
+                              points
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Normalization Targets Table */}
+          <div>
+            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Target className="w-5 h-5 text-purple-600" />
+              Normalization Targets
+            </h3>
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left p-3 font-semibold text-gray-700">
+                      Metric
+                    </th>
+                    <th className="text-right p-3 font-semibold text-gray-700">
+                      Weight
+                    </th>
+                    <th className="text-right p-3 font-semibold text-gray-700">
+                      Target for Max Score
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {activeMetrics.map((metric) => (
+                    <tr key={metric.key} className="hover:bg-gray-50">
+                      <td className="p-3 font-medium text-gray-900">
+                        {metric.name}
+                      </td>
+                      <td className="p-3 text-right font-bold text-orange-600">
+                        {metric.weight}%
+                      </td>
+                      <td className="p-3 text-right text-gray-700">
+                        {metric.key === "tradingVolume"
+                          ? `$${metric.target.toLocaleString()}`
+                          : metric.key === "profitability"
+                          ? `${metric.target}%`
+                          : metric.key === "accountBalance"
+                          ? `$${metric.target.toLocaleString()}`
+                          : metric.target}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="bg-orange-50 font-bold">
+                    <td className="p-3 text-gray-900">Total</td>
+                    <td className="p-3 text-right text-orange-600">100%</td>
+                    <td className="p-3 text-right text-gray-700">-</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-4">
+          <button
+            onClick={onClose}
+            className="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl"
+          >
+            Got it!
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Competition Detail Modal - Improved Professional Layout
 const CompetitionDetailModal = ({
   competition,
@@ -543,6 +944,7 @@ const CompetitionDetailModal = ({
   const [activeTab, setActiveTab] = useState("overview");
   const [leaderboard, setLeaderboard] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [showScoringDetailModal, setShowScoringDetailModal] = useState(false);
 
   const tabs = [
     { id: "overview", label: "Overview", icon: Trophy },
@@ -632,7 +1034,7 @@ const CompetitionDetailModal = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[999999] p-4">
-      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl">
         {/* Header - Light Professional Design */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
           <div className="flex items-start justify-between gap-4">
@@ -973,87 +1375,127 @@ const CompetitionDetailModal = ({
 
             {activeTab === "scoring" && (
               <div className="space-y-6">
+                {/* Overview with "View Details" button */}
                 <div className="bg-white border border-blue-200 rounded-xl p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Target className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-1">
-                        How Scoring Works
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Your score is calculated based on multiple performance
-                        metrics. Each metric contributes to your total score
-                        based on its assigned weight percentage.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {activeMetrics.map((metric, index) => {
-                    const Icon = metric.icon;
-                    const colorSchemes = [
-                      {
-                        gradient: "from-orange-50 to-orange-100",
-                        border: "border-orange-200",
-                        icon: "text-orange-600",
-                        bg: "bg-orange-100",
-                      },
-                      {
-                        gradient: "from-green-50 to-green-100",
-                        border: "border-green-200",
-                        icon: "text-green-600",
-                        bg: "bg-green-100",
-                      },
-                      {
-                        gradient: "from-blue-50 to-blue-100",
-                        border: "border-blue-200",
-                        icon: "text-blue-600",
-                        bg: "bg-blue-100",
-                      },
-                      {
-                        gradient: "from-purple-50 to-purple-100",
-                        border: "border-purple-200",
-                        icon: "text-purple-600",
-                        bg: "bg-purple-100",
-                      },
-                      {
-                        gradient: "from-indigo-50 to-indigo-100",
-                        border: "border-indigo-200",
-                        icon: "text-indigo-600",
-                        bg: "bg-indigo-100",
-                      },
-                    ];
-                    const scheme = colorSchemes[index % colorSchemes.length];
-
-                    return (
-                      <div
-                        key={metric.key}
-                        className={`bg-gradient-to-br ${scheme.gradient} ${scheme.border} border rounded-xl p-4`}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`w-8 h-8 ${scheme.bg} rounded-lg flex items-center justify-center`}
-                            >
-                              <Icon className={`w-4 h-4 ${scheme.icon}`} />
-                            </div>
-                            <span className="font-semibold text-gray-900 text-sm">
-                              {metric.name}
-                            </span>
-                          </div>
-                          <span className={`text-lg font-bold ${scheme.icon}`}>
-                            {metric.weight}%
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-600">
-                          Contributes {metric.weight}% to your total score
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Target className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-1">
+                          How Scoring Works
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Your score is calculated based on multiple performance
+                          metrics. Each metric contributes to your total score
+                          based on its assigned weight percentage.
                         </p>
                       </div>
-                    );
-                  })}
+                    </div>
+
+                    {/* View Detailed Explanation Button */}
+                    <button
+                      onClick={() => setShowScoringDetailModal(true)}
+                      className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold flex items-center gap-2 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
+                    >
+                      <Info className="w-4 h-4" />
+                      View Details
+                    </button>
+                  </div>
+
+                  {/* Quick Summary */}
+                  {competition.kycBonusMultiplier > 1 && (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <div className="flex items-center gap-2 text-sm text-blue-900">
+                        <Shield className="w-4 h-4 text-blue-600" />
+                        <span>
+                          <strong>KYC Bonus:</strong> Verified users get{" "}
+                          <strong className="text-blue-600">
+                            {(
+                              (competition.kycBonusMultiplier - 1) *
+                              100
+                            ).toFixed(0)}
+                            %
+                          </strong>{" "}
+                          score boost
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Metric Cards (Simplified) */}
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-3 text-sm">
+                    Active Scoring Metrics
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {activeMetrics.map((metric, index) => {
+                      const Icon = metric.icon;
+                      const colorSchemes = [
+                        {
+                          gradient: "from-orange-50 to-orange-100",
+                          border: "border-orange-200",
+                          icon: "text-orange-600",
+                          bg: "bg-orange-100",
+                        },
+                        {
+                          gradient: "from-green-50 to-green-100",
+                          border: "border-green-200",
+                          icon: "text-green-600",
+                          bg: "bg-green-100",
+                        },
+                        {
+                          gradient: "from-blue-50 to-blue-100",
+                          border: "border-blue-200",
+                          icon: "text-blue-600",
+                          bg: "bg-blue-100",
+                        },
+                        {
+                          gradient: "from-purple-50 to-purple-100",
+                          border: "border-purple-200",
+                          icon: "text-purple-600",
+                          bg: "bg-purple-100",
+                        },
+                        {
+                          gradient: "from-indigo-50 to-indigo-100",
+                          border: "border-indigo-200",
+                          icon: "text-indigo-600",
+                          bg: "bg-indigo-100",
+                        },
+                      ];
+                      const scheme = colorSchemes[index % colorSchemes.length];
+
+                      return (
+                        <div
+                          key={metric.key}
+                          className={`bg-gradient-to-br ${scheme.gradient} ${scheme.border} border rounded-xl p-4`}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-8 h-8 ${scheme.bg} rounded-lg flex items-center justify-center`}
+                              >
+                                <Icon className={`w-4 h-4 ${scheme.icon}`} />
+                              </div>
+                              <span className="font-semibold text-gray-900 text-sm">
+                                {metric.name}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-lg font-bold ${scheme.icon}`}
+                            >
+                              {metric.weight}%
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            Contributes {metric.weight}% to your total score
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
@@ -1597,6 +2039,13 @@ const CompetitionDetailModal = ({
           </div>
         </div>
       </div>
+
+      {showScoringDetailModal && (
+        <ScoringDetailModal
+          competition={competition}
+          onClose={() => setShowScoringDetailModal(false)}
+        />
+      )}
     </div>
   );
 };
