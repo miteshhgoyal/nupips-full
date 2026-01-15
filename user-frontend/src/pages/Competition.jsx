@@ -27,10 +27,51 @@ import {
   User,
   Zap,
   Shield,
+  Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGTCFxAuth } from "../contexts/GTCFxAuthContext";
 import api from "../services/api";
+
+const InfoTooltip = ({ title, items }) => {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setShow(!show);
+        }}
+        className="ml-1 p-0.5 hover:bg-gray-100 rounded transition-colors"
+      >
+        <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+      </button>
+
+      {show && (
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-48">
+          <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl">
+            <div className="font-semibold mb-2 border-b border-gray-700 pb-1">
+              {title}
+            </div>
+            <div className="space-y-1.5">
+              {items.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <span className="text-gray-300">{item.label}:</span>
+                  <span className="font-semibold ml-2">${item.value}</span>
+                </div>
+              ))}
+            </div>
+            {/* Arrow */}
+            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Competition = () => {
   const navigate = useNavigate();
@@ -1107,6 +1148,164 @@ const CompetitionDetailModal = ({
                   )}
                 </div>
 
+                {/* Performance Metrics Card */}
+                {competition.userStats?.metrics && (
+                  <div className="bg-white rounded-xl p-5 border border-gray-200">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-orange-600" />
+                      Your Performance Metrics
+                    </h3>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                      {/* Direct Referrals */}
+                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Users className="w-4 h-4 text-blue-600" />
+                          <span className="text-xs font-medium text-gray-600">
+                            Direct Referrals
+                          </span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">
+                          {competition.userStats.metrics.directReferrals || 0}
+                        </p>
+                      </div>
+
+                      {/* Team Size */}
+                      <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Users className="w-4 h-4 text-green-600" />
+                          <span className="text-xs font-medium text-gray-600">
+                            Team Size
+                          </span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">
+                          {competition.userStats.metrics.gtcTeamSize || 0}
+                        </p>
+                      </div>
+
+                      {/* Trading Volume */}
+                      <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <DollarSign className="w-4 h-4 text-purple-600" />
+                          <span className="text-xs font-medium text-gray-600">
+                            Trading Volume
+                          </span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">
+                          {competition.userStats.metrics.tradingVolumeLots?.toFixed(
+                            1
+                          ) || "0.0"}
+                        </p>
+                        <p className="text-xs text-gray-500">lots</p>
+                      </div>
+
+                      {/* Account Balance with Tooltip */}
+                      <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <DollarSign className="w-4 h-4 text-green-600" />
+                          <span className="text-xs font-medium text-gray-600 flex items-center">
+                            Account Balance
+                            <InfoTooltip
+                              title="Balance Breakdown"
+                              items={[
+                                {
+                                  label: "Wallet",
+                                  value: (
+                                    competition.userStats.metrics
+                                      .walletBalance || 0
+                                  ).toFixed(2),
+                                },
+                                {
+                                  label: "Trading",
+                                  value: (
+                                    competition.userStats.metrics
+                                      .tradingBalance || 0
+                                  ).toFixed(2),
+                                },
+                                {
+                                  label: "Total",
+                                  value: (
+                                    competition.userStats.metrics
+                                      .accountBalance || 0
+                                  ).toFixed(2),
+                                },
+                              ]}
+                            />
+                          </span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">
+                          $
+                          {(
+                            competition.userStats.metrics.accountBalance || 0
+                          ).toFixed(2)}
+                        </p>
+                      </div>
+
+                      {/* Net Profit with Tooltip */}
+                      <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <TrendingUp className="w-4 h-4 text-orange-600" />
+                          <span className="text-xs font-medium text-gray-600 flex items-center">
+                            Total Profit
+                            <InfoTooltip
+                              title="Profit Breakdown"
+                              items={[
+                                {
+                                  label: "Self Trading",
+                                  value: (
+                                    competition.userStats.metrics
+                                      .selfTradingProfit || 0
+                                  ).toFixed(2),
+                                },
+                                {
+                                  label: "PAMM",
+                                  value: (
+                                    competition.userStats.metrics.pammProfit ||
+                                    0
+                                  ).toFixed(2),
+                                },
+                                {
+                                  label: "Total",
+                                  value: (
+                                    competition.userStats.metrics.netProfit || 0
+                                  ).toFixed(2),
+                                },
+                              ]}
+                            />
+                          </span>
+                        </div>
+                        <p
+                          className={`text-xl font-bold ${
+                            (competition.userStats.metrics.netProfit || 0) >= 0
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          $
+                          {(
+                            competition.userStats.metrics.netProfit || 0
+                          ).toFixed(2)}
+                        </p>
+                      </div>
+
+                      {/* Win Rate */}
+                      <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-200">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Target className="w-4 h-4 text-indigo-600" />
+                          <span className="text-xs font-medium text-gray-600">
+                            Win Rate
+                          </span>
+                        </div>
+                        <p className="text-xl font-bold text-gray-900">
+                          {competition.userStats.metrics.winRate?.toFixed(1) ||
+                            "0.0"}
+                          %
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Score Breakdown */}
                 {competition.userStats?.ranking && (
                   <div className="bg-white rounded-xl p-5 border border-gray-200">
@@ -1243,12 +1442,14 @@ const CompetitionDetailModal = ({
                             key={index}
                             className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
                           >
+                            {/* Rank Badge */}
                             <div
                               className={`w-12 h-12 ${bg} ${border} border-2 rounded-lg flex items-center justify-center flex-shrink-0`}
                             >
                               <RankIcon className={`w-6 h-6 ${color}`} />
                             </div>
 
+                            {/* User Info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-gray-100 text-gray-700">
@@ -1266,8 +1467,99 @@ const CompetitionDetailModal = ({
                                   </div>
                                 )}
                               </div>
+
+                              {/* Metrics with Tooltips */}
+                              {entry.metrics && (
+                                <div className="flex items-center gap-3 mt-2 text-xs text-gray-600">
+                                  {/* Balance with Breakdown */}
+                                  <span className="flex items-center gap-1">
+                                    <DollarSign className="w-3 h-3" />$
+                                    {(
+                                      entry.metrics.accountBalance || 0
+                                    ).toFixed(0)}
+                                    <InfoTooltip
+                                      title="Balance Breakdown"
+                                      items={[
+                                        {
+                                          label: "Wallet",
+                                          value: (
+                                            entry.metrics.walletBalance || 0
+                                          ).toFixed(2),
+                                        },
+                                        {
+                                          label: "Trading",
+                                          value: (
+                                            entry.metrics.tradingBalance || 0
+                                          ).toFixed(2),
+                                        },
+                                        {
+                                          label: "Total",
+                                          value: (
+                                            entry.metrics.accountBalance || 0
+                                          ).toFixed(2),
+                                        },
+                                      ]}
+                                    />
+                                  </span>
+
+                                  {/* Profit with Breakdown */}
+                                  <span
+                                    className={`flex items-center gap-1 ${
+                                      (entry.metrics.netProfit || 0) >= 0
+                                        ? "text-green-600"
+                                        : "text-red-600"
+                                    }`}
+                                  >
+                                    <TrendingUp className="w-3 h-3" />$
+                                    {(entry.metrics.netProfit || 0).toFixed(0)}
+                                    <InfoTooltip
+                                      title="Profit Breakdown"
+                                      items={[
+                                        {
+                                          label: "Self Trading",
+                                          value: (
+                                            entry.metrics.selfTradingProfit || 0
+                                          ).toFixed(2),
+                                        },
+                                        {
+                                          label: "PAMM",
+                                          value: (
+                                            entry.metrics.pammProfit || 0
+                                          ).toFixed(2),
+                                        },
+                                        {
+                                          label: "Total",
+                                          value: (
+                                            entry.metrics.netProfit || 0
+                                          ).toFixed(2),
+                                        },
+                                      ]}
+                                    />
+                                  </span>
+
+                                  {/* Volume */}
+                                  {entry.metrics.tradingVolumeLots > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <BarChart3 className="w-3 h-3" />
+                                      {entry.metrics.tradingVolumeLots.toFixed(
+                                        1
+                                      )}{" "}
+                                      lots
+                                    </span>
+                                  )}
+
+                                  {/* Win Rate */}
+                                  {entry.metrics.winRate > 0 && (
+                                    <span className="flex items-center gap-1">
+                                      <Target className="w-3 h-3" />
+                                      {entry.metrics.winRate.toFixed(0)}%
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
+                            {/* Score */}
                             <div className="text-right">
                               <p className="text-xs text-gray-500 mb-0.5">
                                 Score
@@ -1275,6 +1567,14 @@ const CompetitionDetailModal = ({
                               <p className="text-xl font-bold text-orange-600">
                                 {entry.score.toFixed(1)}
                               </p>
+                              {entry.metrics?.kycBonusApplied && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Shield className="w-3 h-3 text-green-600" />
+                                  <span className="text-xs font-medium text-green-600">
+                                    +{entry.metrics.kycBonusPercentage}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         );

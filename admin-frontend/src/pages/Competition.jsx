@@ -32,9 +32,50 @@ import {
   Filter,
   ChevronDown,
   ChevronUp,
+  Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+
+const InfoTooltip = ({ title, items }) => {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div className="relative inline-block">
+      <button
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setShow(!show);
+        }}
+        className="ml-1 p-0.5 hover:bg-gray-100 rounded transition-colors"
+      >
+        <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+      </button>
+
+      {show && (
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-48">
+          <div className="bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl">
+            <div className="font-semibold mb-2 border-b border-gray-700 pb-1">
+              {title}
+            </div>
+            <div className="space-y-1.5">
+              {items.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <span className="text-gray-300">{item.label}:</span>
+                  <span className="font-semibold ml-2">${item.value}</span>
+                </div>
+              ))}
+            </div>
+            {/* Arrow */}
+            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const AdminCompetition = () => {
   const navigate = useNavigate();
@@ -2057,6 +2098,7 @@ const ParticipantsModal = ({ competition, onClose }) => {
                             Performance Metrics
                           </h4>
                           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {/* Direct Referrals */}
                             <div className="flex items-center gap-2">
                               <Users className="w-4 h-4 text-blue-500" />
                               <div>
@@ -2069,6 +2111,8 @@ const ParticipantsModal = ({ competition, onClose }) => {
                                 </p>
                               </div>
                             </div>
+
+                            {/* Team Size */}
                             <div className="flex items-center gap-2">
                               <Users className="w-4 h-4 text-green-500" />
                               <div>
@@ -2081,6 +2125,8 @@ const ParticipantsModal = ({ competition, onClose }) => {
                                 </p>
                               </div>
                             </div>
+
+                            {/* Trading Volume */}
                             <div className="flex items-center gap-2">
                               <DollarSign className="w-4 h-4 text-purple-500" />
                               <div>
@@ -2093,6 +2139,8 @@ const ParticipantsModal = ({ competition, onClose }) => {
                                 </p>
                               </div>
                             </div>
+
+                            {/* Win Rate */}
                             <div className="flex items-center gap-2">
                               <TrendingUp className="w-4 h-4 text-orange-500" />
                               <div>
@@ -2107,18 +2155,94 @@ const ParticipantsModal = ({ competition, onClose }) => {
                                 </p>
                               </div>
                             </div>
+
+                            {/* Balance with Breakdown Tooltip */}
                             <div className="flex items-center gap-2">
                               <DollarSign className="w-4 h-4 text-green-500" />
                               <div>
-                                <p className="text-xs text-gray-600">Balance</p>
+                                <p className="text-xs text-gray-600 flex items-center">
+                                  Balance
+                                  <InfoTooltip
+                                    title="Balance Breakdown"
+                                    items={[
+                                      {
+                                        label: "Wallet",
+                                        value: (
+                                          participant.scoreBreakdown.metrics
+                                            .walletBalance || 0
+                                        ).toFixed(2),
+                                      },
+                                      {
+                                        label: "Trading",
+                                        value: (
+                                          participant.scoreBreakdown.metrics
+                                            .tradingBalance || 0
+                                        ).toFixed(2),
+                                      },
+                                      {
+                                        label: "Total",
+                                        value: (
+                                          participant.scoreBreakdown.metrics
+                                            .accountBalance || 0
+                                        ).toFixed(2),
+                                      },
+                                    ]}
+                                  />
+                                </p>
                                 <p className="text-sm font-semibold text-gray-900">
                                   $
-                                  {participant.scoreBreakdown.metrics.accountBalance?.toFixed(
-                                    0
-                                  ) || "0"}
+                                  {(
+                                    participant.scoreBreakdown.metrics
+                                      .accountBalance || 0
+                                  ).toFixed(0)}
                                 </p>
                               </div>
                             </div>
+
+                            {/* Profit with Breakdown Tooltip */}
+                            <div className="flex items-center gap-2">
+                              <Activity className="w-4 h-4 text-indigo-500" />
+                              <div>
+                                <p className="text-xs text-gray-600 flex items-center">
+                                  Profit
+                                  <InfoTooltip
+                                    title="Profit Breakdown"
+                                    items={[
+                                      {
+                                        label: "Self Trading",
+                                        value: (
+                                          participant.scoreBreakdown.metrics
+                                            .selfTradingProfit || 0
+                                        ).toFixed(2),
+                                      },
+                                      {
+                                        label: "PAMM",
+                                        value: (
+                                          participant.scoreBreakdown.metrics
+                                            .pammProfit || 0
+                                        ).toFixed(2),
+                                      },
+                                      {
+                                        label: "Total",
+                                        value: (
+                                          participant.scoreBreakdown.metrics
+                                            .netProfit || 0
+                                        ).toFixed(2),
+                                      },
+                                    ]}
+                                  />
+                                </p>
+                                <p className="text-sm font-semibold text-gray-900">
+                                  $
+                                  {(
+                                    participant.scoreBreakdown.metrics
+                                      .netProfit || 0
+                                  ).toFixed(2)}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Trades */}
                             <div className="flex items-center gap-2">
                               <Activity className="w-4 h-4 text-indigo-500" />
                               <div>
