@@ -358,13 +358,13 @@ const AdminCompetition = () => {
                     KYC Verified
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {competition.stats?.kycVerifiedCount || 0}
+                    {overviewStats?.kycVerifiedCount || 0}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {competition.stats?.totalParticipants > 0
+                    {overviewStats?.totalParticipations > 0
                       ? `${(
-                          (competition.stats.kycVerifiedCount /
-                            competition.stats.totalParticipants) *
+                          (overviewStats.kycVerifiedCount /
+                            overviewStats.totalParticipations) *
                           100
                         ).toFixed(0)}%`
                       : "0%"}{" "}
