@@ -360,16 +360,6 @@ const AdminCompetition = () => {
                   <p className="text-2xl font-bold text-gray-900">
                     {overviewStats?.kycVerifiedCount || 0}
                   </p>
-                  <p className="text-xs text-gray-500">
-                    {overviewStats?.totalParticipations > 0
-                      ? `${(
-                          (overviewStats.kycVerifiedCount /
-                            overviewStats.totalParticipations) *
-                          100
-                        ).toFixed(0)}%`
-                      : "0%"}{" "}
-                    of participants
-                  </p>
                 </div>
               </div>
             </div>
