@@ -107,6 +107,7 @@ router.post('/agent/commission_report', authenticateToken, proxyGtcRequest);
 router.post('/agent/member', authenticateToken, proxyGtcRequest);
 router.post('/agent/member_tree', authenticateToken, proxyGtcRequest);
 router.post('/agent/query_child_accounts', authenticateToken, proxyGtcRequest);
+router.post('/agent/member_pnl', authenticateToken, proxyGtcRequest);
 router.post('/logout', authenticateToken, proxyGtcRequest);
 
 export default router;
