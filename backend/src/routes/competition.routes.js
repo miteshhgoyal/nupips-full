@@ -9,7 +9,8 @@ import { authenticateToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-// Admin middleware
+// ==================== MIDDLEWARE ====================
+
 const requireAdmin = async (req, res, next) => {
     try {
         const user = await User.findById(req.user.userId);
@@ -28,7 +29,8 @@ const requireAdmin = async (req, res, next) => {
     }
 };
 
-// Create axios instance for GTC FX API calls
+// ==================== AXIOS INSTANCE ====================
+
 const gtcAxios = axios.create({
     baseURL: process.env.GTC_FX_API_URL || 'https://apiv1.gtctrader100.top',
     timeout: 45000,
@@ -42,7 +44,6 @@ const gtcAxios = axios.create({
     }),
 });
 
-// Add response interceptor
 gtcAxios.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -56,8 +57,239 @@ gtcAxios.interceptors.response.use(
     }
 );
 
+// ==================== HELPER FUNCTIONS ====================
+
 /**
- * Fetch GTC FX data for a user with competition-specific P&L
+ * Fetch KYC status and calculate bonus multiplier
+ */
+async function fetchKYCStatus(memberId, competition = null) {
+    try {
+        const gtcMember = await GTCMember.findOne({ gtcUserId: String(memberId) });
+        if (!gtcMember) {
+            return {
+                kycStatus: '',
+                kycBonus: 1.0,
+                hasKycApproved: false
+            };
+        }
+
+        const kycStatus = gtcMember.kycStatus || '';
+        let kycBonus = 1.0;
+
+        if (kycStatus === 'approved' && competition) {
+            kycBonus = competition.kycBonusMultiplier || 1.05;
+        } else if (kycStatus === 'approved') {
+            kycBonus = 1.05; // Default 5% bonus
+        }
+
+        return {
+            kycStatus,
+            kycBonus,
+            hasKycApproved: kycStatus === 'approved'
+        };
+    } catch (err) {
+        console.warn('Could not fetch KYC status:', err.message);
+        return {
+            kycStatus: '',
+            kycBonus: 1.0,
+            hasKycApproved: false
+        };
+    }
+}
+
+/**
+ * Fetch balance information from child accounts
+ */
+async function fetchBalanceInfo(memberId, authHeader) {
+    try {
+        const response = await gtcAxios.post(
+            '/api/v3/agent/query_child_accounts',
+            { member_id: memberId },
+            { headers: authHeader }
+        );
+
+        if (response.data.code === 200) {
+            const childData = response.data.data;
+
+            const walletBalance = parseFloat(childData.wallet?.amount || 0);
+            const tradingBalance = (childData.mt_account || []).reduce((sum, account) => {
+                return sum + parseFloat(account.balance || 0);
+            }, 0);
+
+            return {
+                walletBalance,
+                tradingBalance,
+                totalGTCBalance: walletBalance + tradingBalance
+            };
+        }
+
+        return null;
+    } catch (err) {
+        console.warn('Error fetching child accounts:', err.message);
+        return null;
+    }
+}
+
+/**
+ * Fetch self-trading profit from member_pnl API
+ */
+async function fetchSelfTradingProfit(memberId, authHeader, competition = null) {
+    let totalProfit = 0;
+    let totalLoss = 0;
+    let totalTrades = 0;
+    let totalVolumeLots = 0;
+
+    try {
+        let payload = { member_id: memberId };
+
+        // Add date range if competition is provided
+        if (competition) {
+            const startTimestamp = Math.floor(new Date(competition.startDate).getTime() / 1000);
+            const endTimestamp = Math.floor(new Date(competition.endDate).getTime() / 1000);
+            payload.start_date = new Date(competition.startDate).toISOString().split('T')[0];
+            payload.end_date = new Date(competition.endDate).toISOString().split('T')[0];
+        }
+
+        const response = await gtcAxios.post(
+            '/api/v3/agent/member_pnl',
+            payload,
+            { headers: authHeader }
+        );
+
+        if (response.data.code === 200) {
+            const pnlData = response.data.data;
+
+            // Process MT trade data
+            if (pnlData.mt_trade) {
+                const mtPnl = parseFloat(pnlData.mt_trade.total_pnl || 0);
+                if (mtPnl > 0) {
+                    totalProfit += mtPnl;
+                } else {
+                    totalLoss += Math.abs(mtPnl);
+                }
+                totalTrades += (pnlData.mt_trade.list || []).length;
+
+                // Calculate volume if available
+                if (pnlData.mt_trade.list && Array.isArray(pnlData.mt_trade.list)) {
+                    totalVolumeLots = pnlData.mt_trade.list.reduce((sum, trade) => {
+                        return sum + (parseFloat(trade.volume || 0) / 100); // Convert to lots
+                    }, 0);
+                }
+            }
+
+            // Process smart copy data
+            if (pnlData.smart_copy) {
+                const scPnl = parseFloat(pnlData.smart_copy.total_pnl || 0);
+                if (scPnl > 0) {
+                    totalProfit += scPnl;
+                } else {
+                    totalLoss += Math.abs(scPnl);
+                }
+                totalTrades += (pnlData.smart_copy.list || []).length;
+            }
+        }
+    } catch (err) {
+        console.warn('Could not fetch member P&L:', err.message);
+    }
+
+    const netProfit = totalProfit - totalLoss;
+
+    return {
+        selfTradingProfit: netProfit,
+        totalProfit,
+        totalLoss,
+        totalTrades,
+        totalVolumeLots
+    };
+}
+
+/**
+ * Fetch PAMM trading profit from share_profit_log API
+ */
+async function fetchPAMMProfit(memberId, authHeader, competition = null) {
+    let pammProfit = 0;
+    let pammTotalInvestment = 0;
+    let pammDetails = [];
+
+    try {
+        let payload = {
+            copy_id: 0, // 0 means fetch all
+            page: 1,
+            page_size: 1000
+        };
+
+        // Add timestamps if competition is provided
+        if (competition) {
+            payload.start_time = Math.floor(new Date(competition.startDate).getTime() / 1000);
+            payload.end_time = Math.floor(new Date(competition.endDate).getTime() / 1000);
+        }
+
+        const response = await gtcAxios.post(
+            '/api/v3/agent/share_profit_log',
+            payload,
+            { headers: authHeader }
+        );
+
+        if (response.data.code === 200) {
+            const data = response.data.data;
+
+            // Get total PAMM profit from summary
+            if (data.summary) {
+                pammProfit = parseFloat(data.summary.copy_earn || 0);
+                pammTotalInvestment = parseFloat(data.summary.total_investment || 0);
+            }
+
+            // Store details for potential future use
+            if (data.list && Array.isArray(data.list)) {
+                pammDetails = data.list.map(item => ({
+                    strategyId: item.strategy_id,
+                    strategyName: item.strategy_name,
+                    copyProfit: parseFloat(item.copy_profit || 0),
+                    copyEarn: parseFloat(item.copy_earn || 0),
+                    copyAmount: parseFloat(item.copy_amount || 0),
+                    settleTime: item.settle_time
+                }));
+            }
+        }
+    } catch (err) {
+        console.warn('Could not fetch PAMM profit:', err.message);
+    }
+
+    return {
+        pammProfit,
+        pammTotalInvestment,
+        pammDetails
+    };
+}
+
+/**
+ * Fetch team/referral information
+ */
+async function fetchTeamInfo(authHeader) {
+    try {
+        const response = await gtcAxios.post(
+            '/api/v3/agent/member',
+            { page: 1, page_size: 10 },
+            { headers: authHeader }
+        );
+
+        if (response.data.code === 200) {
+            const memberData = response.data.data;
+            return {
+                gtcTeamSize: memberData?.total || 0,
+                gtcDirectMembers: memberData?.list?.filter(m => m.level === 1).length || 0
+            };
+        }
+
+        return { gtcTeamSize: 0, gtcDirectMembers: 0 };
+    } catch (err) {
+        console.warn('Could not fetch member data:', err.message);
+        return { gtcTeamSize: 0, gtcDirectMembers: 0 };
+    }
+}
+
+/**
+ * Main function to fetch complete GTC FX data for a user
  */
 async function fetchGTCData(user, competition = null) {
     try {
@@ -67,7 +299,7 @@ async function fetchGTCData(user, competition = null) {
 
         const authHeader = { Authorization: `Bearer ${user.gtcfx.accessToken}` };
 
-        // Fetch Account Info (for member_id and other data)
+        // 1. Fetch Account Info
         const accountResponse = await gtcAxios.post(
             '/api/v3/account_info',
             {},
@@ -82,184 +314,90 @@ async function fetchGTCData(user, competition = null) {
         const accountData = accountResponse.data.data;
         const memberId = accountData.id || accountData.member_id;
 
-        // Fetch KYC status from GTCMember collection
-        let kycStatus = '';
-        let kycBonus = 1.0; // Default no bonus
-        try {
-            const gtcMember = await GTCMember.findOne({ gtcUserId: String(memberId) });
-            if (gtcMember) {
-                kycStatus = gtcMember.kycStatus || '';
+        // 2. Fetch KYC Status
+        const kycInfo = await fetchKYCStatus(memberId, competition);
 
-                // Apply competition-specific KYC bonus if approved
-                if (kycStatus === 'approved' && competition) {
-                    kycBonus = competition.kycBonusMultiplier || 1.05;
-                } else if (kycStatus === 'approved') {
-                    kycBonus = 1.05; // Default 5% if no competition context
-                }
-            }
-        } catch (err) {
-            console.warn('Could not fetch KYC status:', err.message);
-        }
-
-        // NEW: Fetch child accounts to get accurate balance
+        // 3. Fetch Balance Information
+        const balanceInfo = await fetchBalanceInfo(memberId, authHeader);
         let walletBalance = 0;
         let tradingBalance = 0;
         let totalGTCBalance = 0;
 
-        try {
-            const childAccountsResponse = await gtcAxios.post(
-                '/api/v3/agent/query_child_accounts',
-                { member_id: memberId },
-                { headers: authHeader }
-            );
-
-            if (childAccountsResponse.data.code === 200) {
-                const childData = childAccountsResponse.data.data;
-
-                // Get wallet balance
-                walletBalance = parseFloat(childData.wallet?.amount || 0);
-
-                // Get total trading balance from all MT accounts
-                if (childData.mt_account && Array.isArray(childData.mt_account)) {
-                    tradingBalance = childData.mt_account.reduce((sum, account) => {
-                        return sum + parseFloat(account.balance || 0);
-                    }, 0);
-                }
-
-                // Total GTC Balance = Wallet + All MT Account Balances
-                totalGTCBalance = walletBalance + tradingBalance;
-            } else {
-                console.warn('Could not fetch child accounts, using fallback balance');
-                // Fallback to account_info balance if child accounts API fails
-                totalGTCBalance = parseFloat(accountData.amount || 0);
-                walletBalance = totalGTCBalance;
-                tradingBalance = 0;
-            }
-        } catch (err) {
-            console.warn('Error fetching child accounts:', err.message);
+        if (balanceInfo) {
+            walletBalance = balanceInfo.walletBalance;
+            tradingBalance = balanceInfo.tradingBalance;
+            totalGTCBalance = balanceInfo.totalGTCBalance;
+        } else {
             // Fallback to account_info balance
             totalGTCBalance = parseFloat(accountData.amount || 0);
             walletBalance = totalGTCBalance;
             tradingBalance = 0;
         }
 
-        // NEW: Fetch P&L data using member_pnl API with competition dates
-        let totalProfit = 0;
-        let totalLoss = 0;
-        let netProfit = 0;
-        let totalTrades = 0;
-        let totalVolumeLots = 0;
+        // 4. Fetch Self-Trading Profit
+        const selfTradingData = await fetchSelfTradingProfit(memberId, authHeader, competition);
 
-        if (competition) {
-            try {
-                // Format dates for API (YYYY-MM-DD)
-                const startDate = new Date(competition.startDate).toISOString().split('T')[0];
-                const endDate = new Date(competition.endDate).toISOString().split('T')[0];
+        // 5. Fetch PAMM Profit
+        const pammData = await fetchPAMMProfit(memberId, authHeader, competition);
 
-                const pnlResponse = await gtcAxios.post(
-                    '/api/v3/agent/member_pnl',
-                    {
-                        member_id: memberId,
-                        start_date: startDate,
-                        end_date: endDate
-                    },
-                    { headers: authHeader }
-                );
+        // 6. Calculate Combined Profit
+        const totalProfit = selfTradingData.totalProfit;
+        const totalLoss = selfTradingData.totalLoss;
+        const selfTradingProfit = selfTradingData.selfTradingProfit;
+        const pammProfit = pammData.pammProfit;
+        const netProfit = selfTradingProfit + pammProfit; // Combined profit
 
-                if (pnlResponse.data.code === 200) {
-                    const pnlData = pnlResponse.data.data;
+        // 7. Fetch Team Info
+        const teamInfo = await fetchTeamInfo(authHeader);
 
-                    // Process MT trade data
-                    if (pnlData.mt_trade) {
-                        const mtPnl = parseFloat(pnlData.mt_trade.total_pnl || 0);
-                        if (mtPnl > 0) {
-                            totalProfit += mtPnl;
-                        } else {
-                            totalLoss += Math.abs(mtPnl);
-                        }
-                        totalTrades += (pnlData.mt_trade.list || []).length;
-                    }
-
-                    // Process smart copy data
-                    if (pnlData.smart_copy) {
-                        const scPnl = parseFloat(pnlData.smart_copy.total_pnl || 0);
-                        if (scPnl > 0) {
-                            totalProfit += scPnl;
-                        } else {
-                            totalLoss += Math.abs(scPnl);
-                        }
-                        totalTrades += (pnlData.smart_copy.list || []).length;
-                    }
-
-                    netProfit = totalProfit - totalLoss;
-                }
-            } catch (err) {
-                console.warn('Could not fetch member P&L:', err.message);
-                // Fallback to account_info data
-                totalProfit = parseFloat(accountData.total_profit || 0);
-                totalLoss = parseFloat(accountData.total_loss || 0);
-                netProfit = totalProfit - totalLoss;
-            }
-        } else {
-            // No competition context - use account_info data
-            totalProfit = parseFloat(accountData.total_profit || 0);
-            totalLoss = parseFloat(accountData.total_loss || 0);
-            netProfit = totalProfit - totalLoss;
-        }
-
-        // Fetch Agent/Member data
-        let memberData = null;
-        try {
-            const memberResponse = await gtcAxios.post(
-                '/api/v3/agent/member',
-                { page: 1, page_size: 10 },
-                { headers: authHeader }
-            );
-
-            if (memberResponse.data.code === 200) {
-                memberData = memberResponse.data.data;
-            }
-        } catch (err) {
-            console.warn('Could not fetch member data:', err.message);
-        }
-
-        // Use totalGTCBalance from child accounts instead of accountData.amount
+        // 8. Calculate metrics
         const equity = parseFloat(accountData.equity || totalGTCBalance);
-
         const profitPercent = totalGTCBalance > 0 ? (netProfit / totalGTCBalance) * 100 : 0;
-        const winRate = totalProfit + totalLoss > 0 ? (totalProfit / (totalProfit + totalLoss)) * 100 : 0;
+        const winRate = totalProfit + totalLoss > 0
+            ? (totalProfit / (totalProfit + totalLoss)) * 100
+            : 0;
 
-        const gtcTeamSize = memberData?.total || 0;
-        const gtcDirectMembers = memberData?.list?.filter(m => m.level === 1).length || 0;
-
+        // 9. Return complete data object
         return {
-            // Use total GTC balance (wallet + all MT accounts)
+            // Balance fields
             accountBalance: totalGTCBalance,
             walletBalance: walletBalance,
             tradingBalance: tradingBalance,
             totalGTCBalance: totalGTCBalance,
-
             equity: equity,
             margin: parseFloat(accountData.margin || 0),
             freeMargin: parseFloat(accountData.free_margin || 0),
             marginLevel: parseFloat(accountData.margin_level || 0),
+
+            // Profit fields (BACKWARD COMPATIBLE + NEW FIELDS)
             totalProfit: totalProfit,
             totalLoss: totalLoss,
-            netProfit: netProfit,
+            netProfit: netProfit, // Combined profit (self + PAMM)
+            selfTradingProfit: selfTradingProfit, // NEW
+            pammProfit: pammProfit, // NEW
+            pammTotalInvestment: pammData.pammTotalInvestment, // NEW
             profitPercent: profitPercent,
             winRate: winRate,
-            totalVolumeLots: totalVolumeLots,
-            totalTrades: totalTrades,
+
+            // Trading metrics
+            totalVolumeLots: selfTradingData.totalVolumeLots,
+            totalTrades: selfTradingData.totalTrades,
+
+            // Account info
             accountLevel: parseInt(accountData.level || 0),
             isAgent: accountData.user_type === 'agent' || accountData.is_agent === 1,
-            gtcTeamSize: gtcTeamSize,
-            gtcDirectMembers: gtcDirectMembers,
-            rawAccountData: accountData,
 
-            // KYC fields with competition-specific multiplier
-            kycStatus: kycStatus,
-            kycBonus: kycBonus,
-            hasKycApproved: kycStatus === 'approved',
+            // Team info
+            gtcTeamSize: teamInfo.gtcTeamSize,
+            gtcDirectMembers: teamInfo.gtcDirectMembers,
+
+            // KYC fields
+            kycStatus: kycInfo.kycStatus,
+            kycBonus: kycInfo.kycBonus,
+            hasKycApproved: kycInfo.hasKycApproved,
+
+            // Raw data
+            rawAccountData: accountData,
         };
     } catch (error) {
         console.error('Error fetching GTC data:', error.message);
@@ -305,13 +443,14 @@ async function calculateCompetitionScore(user, gtcData, competition) {
         1
     ) * rules.tradingVolumeWeight;
 
-    // 4. Profitability Score
+    // 4. Profitability Score (uses combined profit)
     const winRate = gtcData?.winRate || 0;
     const profitPercent = Math.max(gtcData?.profitPercent || 0, 0);
-    const profitabilityScore = (winRate / 100) * 0.5 + (Math.min(profitPercent / normalizationTargets.profitPercentTarget, 1)) * 0.5;
+    const profitabilityScore = (winRate / 100) * 0.5 +
+        (Math.min(profitPercent / normalizationTargets.profitPercentTarget, 1)) * 0.5;
     scores.profitability = profitabilityScore * rules.profitabilityWeight;
 
-    // 5. Account Balance Score - USE TOTAL GTC BALANCE
+    // 5. Account Balance Score
     const accountBalance = gtcData?.totalGTCBalance || 0;
     scores.accountBalance = Math.min(
         accountBalance / normalizationTargets.accountBalanceTarget,
@@ -320,11 +459,9 @@ async function calculateCompetitionScore(user, gtcData, competition) {
 
     const baseScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
 
-    // Apply competition-specific KYC bonus multiplier
+    // Apply KYC bonus multiplier
     const kycMultiplier = gtcData?.kycBonus || 1.0;
     const totalScore = baseScore * kycMultiplier;
-
-    // Calculate bonus percentage for display
     const bonusPercentage = ((kycMultiplier - 1.0) * 100).toFixed(1);
 
     return {
@@ -343,17 +480,29 @@ async function calculateCompetitionScore(user, gtcData, competition) {
             gtcTeamSize: gtcData?.gtcTeamSize || 0,
             tradingVolumeLots: parseFloat((gtcData?.totalVolumeLots || 0).toFixed(2)),
             tradingVolumeDollars: parseFloat((volumeInDollars).toFixed(2)),
+
+            // Profit metrics (BACKWARD COMPATIBLE + NEW)
+            netProfit: parseFloat((gtcData?.netProfit || 0).toFixed(2)),
+            selfTradingProfit: parseFloat((gtcData?.selfTradingProfit || 0).toFixed(2)), // NEW
+            pammProfit: parseFloat((gtcData?.pammProfit || 0).toFixed(2)), // NEW
+            pammTotalInvestment: parseFloat((gtcData?.pammTotalInvestment || 0).toFixed(2)), // NEW
+            totalProfit: parseFloat((gtcData?.totalProfit || 0).toFixed(2)),
+            totalLoss: parseFloat((gtcData?.totalLoss || 0).toFixed(2)),
             profitPercent: parseFloat((gtcData?.profitPercent || 0).toFixed(2)),
             winRate: parseFloat((gtcData?.winRate || 0).toFixed(2)),
+
+            // Balance metrics
             totalGTCBalance: parseFloat((gtcData?.totalGTCBalance || 0).toFixed(2)),
             walletBalance: parseFloat((gtcData?.walletBalance || 0).toFixed(2)),
             tradingBalance: parseFloat((gtcData?.tradingBalance || 0).toFixed(2)),
             accountBalance: parseFloat((gtcData?.totalGTCBalance || 0).toFixed(2)),
             equity: parseFloat((gtcData?.equity || 0).toFixed(2)),
+
+            // Other metrics
             totalTrades: gtcData?.totalTrades || 0,
             isAgent: gtcData?.isAgent || false,
 
-            // KYC info with detailed bonus display
+            // KYC info
             kycStatus: gtcData?.kycStatus || '',
             hasKycApproved: gtcData?.hasKycApproved || false,
             kycBonusApplied: gtcData?.kycBonus > 1.0,
@@ -367,7 +516,7 @@ async function calculateCompetitionScore(user, gtcData, competition) {
 }
 
 /**
- * Helper function to determine reward for a given rank
+ * Helper to get reward for a given rank
  */
 function getRewardForRank(rank, rewards) {
     if (!rank || !rewards || rewards.length === 0) return null;
