@@ -24,6 +24,7 @@ import {
   Eye,
   X,
   ChevronRight,
+  User,
   Zap,
   Shield,
 } from "lucide-react";
@@ -298,6 +299,57 @@ const Competition = () => {
                           </div>
                           <RankIcon className={`w-10 h-10 ${color}`} />
                         </div>
+
+                        {/* KYC BONUS DISPLAY */}
+                        {competition.userStats.metrics?.kycBonusApplied && (
+                          <div className="mt-3 pt-3 border-t border-white/20">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Shield className="w-4 h-4 text-white" />
+                              <span className="text-xs font-semibold text-white/90">
+                                KYC Verified Bonus
+                              </span>
+                            </div>
+                            <div className="bg-white/20 rounded-lg p-2">
+                              <p className="text-sm font-bold text-white">
+                                +
+                                {
+                                  competition.userStats.metrics
+                                    .kycBonusPercentage
+                                }
+                                % Score Boost
+                              </p>
+                              <p className="text-xs text-white/80 mt-0.5">
+                                Base Score:{" "}
+                                {competition.userStats.ranking.baseScore?.toFixed(
+                                  1
+                                )}{" "}
+                                → Final:{" "}
+                                {competition.userStats.ranking.score?.toFixed(
+                                  1
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* If NOT verified, show incentive */}
+                        {!competition.userStats.metrics?.hasKycApproved &&
+                          competition.kycBonusMultiplier > 1 && (
+                            <div className="mt-3 pt-3 border-t border-white/20">
+                              <div className="flex items-center gap-2 text-white/90">
+                                <AlertCircle className="w-4 h-4" />
+                                <p className="text-xs">
+                                  Complete KYC to get{" "}
+                                  {(
+                                    (competition.kycBonusMultiplier - 1) *
+                                    100
+                                  ).toFixed(0)}
+                                  % bonus!
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
                         <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between text-sm">
                           <span>
                             Score:{" "}
@@ -344,7 +396,6 @@ const Competition = () => {
                           </div>
                         )}
                     </div>
-
                     {/* Top Rewards Preview */}
                     {competition.rewards && competition.rewards.length > 0 && (
                       <div className="mb-4">
@@ -377,7 +428,6 @@ const Competition = () => {
                         </div>
                       </div>
                     )}
-
                     {/* Action Buttons */}
                     <div className="flex gap-2">
                       <button
@@ -457,6 +507,7 @@ const CompetitionDetailModal = ({
     { id: "overview", label: "Overview", icon: Trophy },
     { id: "rewards", label: "Rewards", icon: Gift },
     { id: "scoring", label: "Scoring", icon: Target },
+    { id: "mystats", label: "My Stats", icon: User },
     { id: "leaderboard", label: "Leaderboard", icon: Crown },
   ];
 
@@ -591,7 +642,8 @@ const CompetitionDetailModal = ({
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-orange-500" />
                   <span className="font-medium text-orange-600">
-                    {daysRemaining} day{daysRemaining !== 1 ? "s" : ""} remaining
+                    {daysRemaining} day{daysRemaining !== 1 ? "s" : ""}{" "}
+                    remaining
                   </span>
                 </div>
               )}
@@ -793,17 +845,47 @@ const CompetitionDetailModal = ({
                   competition.rewards.map((reward, index) => {
                     const getRankIcon = (rank) => {
                       if (rank === 1)
-                        return { icon: Trophy, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-200" };
+                        return {
+                          icon: Trophy,
+                          color: "text-amber-500",
+                          bg: "bg-amber-50",
+                          border: "border-amber-200",
+                        };
                       if (rank === 2)
-                        return { icon: Trophy, color: "text-slate-400", bg: "bg-slate-50", border: "border-slate-200" };
+                        return {
+                          icon: Trophy,
+                          color: "text-slate-400",
+                          bg: "bg-slate-50",
+                          border: "border-slate-200",
+                        };
                       if (rank === 3)
-                        return { icon: Trophy, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" };
+                        return {
+                          icon: Trophy,
+                          color: "text-orange-600",
+                          bg: "bg-orange-50",
+                          border: "border-orange-200",
+                        };
                       if (rank <= 10)
-                        return { icon: Medal, color: "text-blue-500", bg: "bg-blue-50", border: "border-blue-200" };
-                      return { icon: Award, color: "text-purple-500", bg: "bg-purple-50", border: "border-purple-200" };
+                        return {
+                          icon: Medal,
+                          color: "text-blue-500",
+                          bg: "bg-blue-50",
+                          border: "border-blue-200",
+                        };
+                      return {
+                        icon: Award,
+                        color: "text-purple-500",
+                        bg: "bg-purple-50",
+                        border: "border-purple-200",
+                      };
                     };
 
-                    const { icon: Icon, color, bg, border } = getRankIcon(reward.minRank);
+                    const {
+                      icon: Icon,
+                      color,
+                      bg,
+                      border,
+                    } = getRankIcon(reward.minRank);
 
                     return (
                       <div
@@ -811,7 +893,9 @@ const CompetitionDetailModal = ({
                         className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all"
                       >
                         <div className="flex items-center gap-4">
-                          <div className={`w-14 h-14 ${bg} ${border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}>
+                          <div
+                            className={`w-14 h-14 ${bg} ${border} border-2 rounded-xl flex items-center justify-center flex-shrink-0`}
+                          >
                             <Icon className={`w-7 h-7 ${color}`} />
                           </div>
 
@@ -910,7 +994,9 @@ const CompetitionDetailModal = ({
                       >
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2">
-                            <div className={`w-8 h-8 ${scheme.bg} rounded-lg flex items-center justify-center`}>
+                            <div
+                              className={`w-8 h-8 ${scheme.bg} rounded-lg flex items-center justify-center`}
+                            >
                               <Icon className={`w-4 h-4 ${scheme.icon}`} />
                             </div>
                             <span className="font-semibold text-gray-900 text-sm">
@@ -931,13 +1017,175 @@ const CompetitionDetailModal = ({
               </div>
             )}
 
+            {activeTab === "mystats" && gtcAuthenticated && (
+              <div className="space-y-4">
+                {/* KYC Status Card */}
+                <div
+                  className={`rounded-xl p-5 border-2 ${
+                    competition.userStats?.metrics?.hasKycApproved
+                      ? "bg-green-50 border-green-300"
+                      : "bg-yellow-50 border-yellow-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        competition.userStats?.metrics?.hasKycApproved
+                          ? "bg-green-500"
+                          : "bg-yellow-500"
+                      }`}
+                    >
+                      <Shield className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900">
+                        KYC Verification Status
+                      </h3>
+                      <p
+                        className={`text-sm font-semibold ${
+                          competition.userStats?.metrics?.hasKycApproved
+                            ? "text-green-700"
+                            : "text-yellow-700"
+                        }`}
+                      >
+                        {competition.userStats?.metrics?.hasKycApproved
+                          ? "✓ Verified"
+                          : "Not Verified"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {competition.userStats?.metrics?.kycBonusApplied ? (
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">
+                          Bonus Multiplier
+                        </span>
+                        <span className="text-2xl font-bold text-green-600">
+                          {competition.userStats.metrics.kycBonusMultiplier}x
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Extra Boost</span>
+                        <span className="font-bold text-green-600">
+                          +{competition.userStats.metrics.kycBonusPercentage}%
+                        </span>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-green-200 text-xs text-gray-600">
+                        Your base score of{" "}
+                        <strong>
+                          {competition.userStats.ranking.baseScore?.toFixed(2)}
+                        </strong>{" "}
+                        is boosted to{" "}
+                        <strong className="text-green-600">
+                          {competition.userStats.ranking.score?.toFixed(2)}
+                        </strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-lg p-4 border border-yellow-200">
+                      <p className="text-sm text-gray-700 mb-2">
+                        Complete KYC verification to unlock:
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Zap className="w-5 h-5 text-yellow-600" />
+                        <span className="text-lg font-bold text-yellow-700">
+                          +
+                          {((competition.kycBonusMultiplier - 1) * 100).toFixed(
+                            0
+                          )}
+                          % Score Bonus
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => navigate("/kyc")}
+                        className="mt-3 w-full px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-semibold transition-all"
+                      >
+                        Complete KYC Now
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Score Breakdown */}
+                {competition.userStats?.ranking && (
+                  <div className="bg-white rounded-xl p-5 border border-gray-200">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-orange-600" />
+                      Your Score Breakdown
+                    </h3>
+
+                    <div className="space-y-3">
+                      {Object.entries(
+                        competition.userStats.ranking.breakdown || {}
+                      ).map(([key, value]) => (
+                        <div
+                          key={key}
+                          className="flex items-center justify-between"
+                        >
+                          <span className="text-sm text-gray-600 capitalize">
+                            {key
+                              .replace("Score", "")
+                              .replace(/([A-Z])/g, " $1")
+                              .trim()}
+                          </span>
+                          <span className="font-bold text-gray-900">
+                            {value?.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+
+                      <div className="pt-3 border-t border-gray-200">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-700">
+                            Base Score
+                          </span>
+                          <span className="font-bold text-gray-900">
+                            {competition.userStats.ranking.baseScore?.toFixed(
+                              2
+                            )}
+                          </span>
+                        </div>
+
+                        {competition.userStats.metrics?.kycBonusApplied && (
+                          <div className="flex items-center justify-between text-green-600 mb-1">
+                            <span className="text-sm font-medium">
+                              KYC Bonus
+                            </span>
+                            <span className="font-bold">
+                              +
+                              {(
+                                competition.userStats.ranking.score -
+                                competition.userStats.ranking.baseScore
+                              ).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-300">
+                          <span className="font-semibold text-gray-900">
+                            Final Score
+                          </span>
+                          <span className="text-2xl font-bold text-orange-600">
+                            {competition.userStats.ranking.score?.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {activeTab === "leaderboard" && (
               <div className="space-y-4">
                 {loadingLeaderboard ? (
                   <div className="bg-white rounded-xl border border-gray-200 p-12 flex items-center justify-center">
                     <div className="text-center">
                       <Loader className="w-10 h-10 text-orange-600 animate-spin mx-auto mb-3" />
-                      <p className="text-sm text-gray-600">Loading leaderboard...</p>
+                      <p className="text-sm text-gray-600">
+                        Loading leaderboard...
+                      </p>
                     </div>
                   </div>
                 ) : leaderboard.length > 0 ? (
@@ -955,22 +1203,49 @@ const CompetitionDetailModal = ({
                       {leaderboard.map((entry, index) => {
                         const getRankIcon = (rank) => {
                           if (rank === 1)
-                            return { icon: Trophy, color: "text-amber-500", bg: "bg-amber-50", border: "border-amber-200" };
+                            return {
+                              icon: Trophy,
+                              color: "text-amber-500",
+                              bg: "bg-amber-50",
+                              border: "border-amber-200",
+                            };
                           if (rank === 2)
-                            return { icon: Trophy, color: "text-slate-400", bg: "bg-slate-50", border: "border-slate-200" };
+                            return {
+                              icon: Trophy,
+                              color: "text-slate-400",
+                              bg: "bg-slate-50",
+                              border: "border-slate-200",
+                            };
                           if (rank === 3)
-                            return { icon: Trophy, color: "text-orange-600", bg: "bg-orange-50", border: "border-orange-200" };
-                          return { icon: Medal, color: "text-blue-500", bg: "bg-blue-50", border: "border-blue-200" };
+                            return {
+                              icon: Trophy,
+                              color: "text-orange-600",
+                              bg: "bg-orange-50",
+                              border: "border-orange-200",
+                            };
+                          return {
+                            icon: Medal,
+                            color: "text-blue-500",
+                            bg: "bg-blue-50",
+                            border: "border-blue-200",
+                          };
                         };
 
-                        const { icon: RankIcon, color, bg, border } = getRankIcon(entry.rank);
+                        const {
+                          icon: RankIcon,
+                          color,
+                          bg,
+                          border,
+                        } = getRankIcon(entry.rank);
 
                         return (
                           <div
                             key={index}
                             className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
                           >
-                            <div className={`w-12 h-12 ${bg} ${border} border-2 rounded-lg flex items-center justify-center flex-shrink-0`}>
+                            <div
+                              className={`w-12 h-12 ${bg} ${border} border-2 rounded-lg flex items-center justify-center flex-shrink-0`}
+                            >
                               <RankIcon className={`w-6 h-6 ${color}`} />
                             </div>
 

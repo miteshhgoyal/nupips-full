@@ -184,6 +184,20 @@ const competitionSchema = new mongoose.Schema({
         },
     },
 
+    // KYC Bonus Configuration
+    kycBonusMultiplier: {
+        type: Number,
+        default: 1.05, // 5% bonus by default
+        min: 1.0,
+        max: 2.0,
+        validate: {
+            validator: function (value) {
+                return value >= 1.0 && value <= 2.0;
+            },
+            message: 'KYC bonus multiplier must be between 1.0 (no bonus) and 2.0 (100% bonus)',
+        },
+    },
+
     // Normalization Targets (for scoring calculations)
     normalizationTargets: {
         directReferralsTarget: {

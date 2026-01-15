@@ -285,7 +285,7 @@ const AdminCompetition = () => {
 
         {/* Overview Stats */}
         {overviewStats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-md">
@@ -343,6 +343,32 @@ const AdminCompetition = () => {
                   </p>
                   <p className="text-2xl font-bold text-gray-900">
                     {overviewStats.uniqueParticipants || 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-md">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 font-medium">
+                    KYC Verified
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {competition.stats?.kycVerifiedCount || 0}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {competition.stats?.totalParticipants > 0
+                      ? `${(
+                          (competition.stats.kycVerifiedCount /
+                            competition.stats.totalParticipants) *
+                          100
+                        ).toFixed(0)}%`
+                      : "0%"}{" "}
+                    of participants
                   </p>
                 </div>
               </div>
@@ -1216,6 +1242,51 @@ const BasicInfoTab = ({ formData, setFormData }) => {
           <option value="completed">Completed</option>
         </select>
       </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          KYC Bonus Multiplier
+        </label>
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min="1.0"
+            max="2.0"
+            step="0.01"
+            value={formData.kycBonusMultiplier || 1.05}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                kycBonusMultiplier: parseFloat(e.target.value) || 1.0,
+              })
+            }
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+            <p className="text-sm font-semibold text-blue-900">
+              +{((formData.kycBonusMultiplier - 1) * 100).toFixed(0)}% Bonus
+            </p>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Score multiplier for KYC-verified users (e.g., 1.05 = 5% bonus, 1.10 =
+          10% bonus)
+        </p>
+
+        {/* Visual indicator */}
+        {formData.kycBonusMultiplier > 1 && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg p-2">
+            <CheckCircle className="w-4 h-4" />
+            <span>
+              KYC-verified users will receive a{" "}
+              <strong>
+                {((formData.kycBonusMultiplier - 1) * 100).toFixed(0)}%
+              </strong>{" "}
+              score boost
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -1875,7 +1946,7 @@ const ParticipantsModal = ({ competition, onClose }) => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="font-semibold text-gray-900 truncate">
-                            {participant.name || participant.username}
+                            {participant.username}
                           </p>
                           {participant.scoreBreakdown?.metrics?.isAgent && (
                             <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-100 rounded-md">
@@ -1885,27 +1956,58 @@ const ParticipantsModal = ({ competition, onClose }) => {
                               </span>
                             </div>
                           )}
+
+                          {/* KYC BADGE */}
+                          {participant.scoreBreakdown?.metrics
+                            ?.hasKycApproved && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 rounded-md">
+                              <CheckCircle className="w-3 h-3 text-green-600" />
+                              <span className="text-xs font-medium text-green-700">
+                                KYC ✓
+                              </span>
+                            </div>
+                          )}
                         </div>
+
                         <p className="text-sm text-gray-600">
                           @{participant.username}
                         </p>
+
                         <p className="text-xs text-gray-500">
                           {participant.email}
                         </p>
+
+                        {/* Show bonus if applied */}
+                        {participant.scoreBreakdown?.metrics
+                          ?.kycBonusApplied && (
+                          <div className="mt-1 flex items-center gap-1 text-xs text-green-600">
+                            <Zap className="w-3 h-3" />
+                            <span>
+                              +
+                              {
+                                participant.scoreBreakdown.metrics
+                                  .kycBonusPercentage
+                              }
+                              % KYC Bonus
+                            </span>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Score Info */}
+                      {/* Scores */}
                       <div className="text-right">
                         <p className="text-xs text-gray-500 mb-0.5">
-                          Total Score
+                          Final Score
                         </p>
                         <p className="text-2xl font-bold text-orange-600">
-                          {participant.score?.toFixed(1) || "0.0"}
+                          {participant.score?.toFixed(2)}
                         </p>
-                        {participant.scoreBreakdown?.baseScore && (
-                          <p className="text-xs text-gray-500">
+
+                        {participant.scoreBreakdown?.metrics
+                          ?.kycBonusApplied && (
+                          <p className="text-xs text-gray-500 mt-1">
                             Base:{" "}
-                            {participant.scoreBreakdown.baseScore.toFixed(1)}
+                            {participant.scoreBreakdown.baseScore?.toFixed(2)}
                           </p>
                         )}
                       </div>

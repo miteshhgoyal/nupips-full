@@ -84,15 +84,17 @@ async function fetchGTCData(user, competition = null) {
 
         // Fetch KYC status from GTCMember collection
         let kycStatus = '';
-        let kycBonus = 0;
+        let kycBonus = 1.0; // Default no bonus
         try {
             const gtcMember = await GTCMember.findOne({ gtcUserId: String(memberId) });
             if (gtcMember) {
                 kycStatus = gtcMember.kycStatus || '';
 
-                // Apply KYC bonus if approved
-                if (kycStatus === 'approved') {
-                    kycBonus = 1.05; // 5% bonus multiplier
+                // Apply competition-specific KYC bonus if approved
+                if (kycStatus === 'approved' && competition) {
+                    kycBonus = competition.kycBonusMultiplier || 1.05;
+                } else if (kycStatus === 'approved') {
+                    kycBonus = 1.05; // Default 5% if no competition context
                 }
             }
         } catch (err) {
@@ -232,7 +234,7 @@ async function fetchGTCData(user, competition = null) {
 
         return {
             // Use total GTC balance (wallet + all MT accounts)
-            accountBalance: totalGTCBalance, // For backward compatibility
+            accountBalance: totalGTCBalance,
             walletBalance: walletBalance,
             tradingBalance: tradingBalance,
             totalGTCBalance: totalGTCBalance,
@@ -254,7 +256,7 @@ async function fetchGTCData(user, competition = null) {
             gtcDirectMembers: gtcDirectMembers,
             rawAccountData: accountData,
 
-            // KYC fields
+            // KYC fields with competition-specific multiplier
             kycStatus: kycStatus,
             kycBonus: kycBonus,
             hasKycApproved: kycStatus === 'approved',
@@ -318,9 +320,12 @@ async function calculateCompetitionScore(user, gtcData, competition) {
 
     const baseScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
 
-    // Apply KYC bonus if approved (5% boost)
+    // Apply competition-specific KYC bonus multiplier
     const kycMultiplier = gtcData?.kycBonus || 1.0;
     const totalScore = baseScore * kycMultiplier;
+
+    // Calculate bonus percentage for display
+    const bonusPercentage = ((kycMultiplier - 1.0) * 100).toFixed(1);
 
     return {
         totalScore: parseFloat(totalScore.toFixed(2)),
@@ -340,19 +345,20 @@ async function calculateCompetitionScore(user, gtcData, competition) {
             tradingVolumeDollars: parseFloat((volumeInDollars).toFixed(2)),
             profitPercent: parseFloat((gtcData?.profitPercent || 0).toFixed(2)),
             winRate: parseFloat((gtcData?.winRate || 0).toFixed(2)),
-            // Show total GTC balance in metrics
             totalGTCBalance: parseFloat((gtcData?.totalGTCBalance || 0).toFixed(2)),
             walletBalance: parseFloat((gtcData?.walletBalance || 0).toFixed(2)),
             tradingBalance: parseFloat((gtcData?.tradingBalance || 0).toFixed(2)),
-            accountBalance: parseFloat((gtcData?.totalGTCBalance || 0).toFixed(2)), // For backward compatibility
+            accountBalance: parseFloat((gtcData?.totalGTCBalance || 0).toFixed(2)),
             equity: parseFloat((gtcData?.equity || 0).toFixed(2)),
             totalTrades: gtcData?.totalTrades || 0,
             isAgent: gtcData?.isAgent || false,
 
-            // KYC info
+            // KYC info with detailed bonus display
             kycStatus: gtcData?.kycStatus || '',
             hasKycApproved: gtcData?.hasKycApproved || false,
             kycBonusApplied: gtcData?.kycBonus > 1.0,
+            kycBonusMultiplier: kycMultiplier,
+            kycBonusPercentage: bonusPercentage,
         },
         username: user.username,
         name: user.name,
@@ -559,6 +565,7 @@ router.get('/:slug/leaderboard', authenticateToken, async (req, res) => {
                 status: competition.status,
                 startDate: competition.startDate,
                 endDate: competition.endDate,
+                kycBonusMultiplier: competition.kycBonusMultiplier,
             },
             leaderboard,
             userRank,
@@ -748,6 +755,7 @@ router.get('/:slug/my-stats', authenticateToken, async (req, res) => {
                 status: competition.status,
                 startDate: competition.startDate,
                 endDate: competition.endDate,
+                kycBonusMultiplier: competition.kycBonusMultiplier,
             },
             ranking: {
                 rank: participant.rank,
@@ -759,7 +767,6 @@ router.get('/:slug/my-stats', authenticateToken, async (req, res) => {
             breakdown: participant.scoreBreakdown?.breakdown,
             metrics: participant.scoreBreakdown?.metrics,
             gtcAccountInfo: gtcData ? {
-                // Show total balance only
                 balance: gtcData.totalGTCBalance,
                 walletBalance: gtcData.walletBalance,
                 tradingBalance: gtcData.tradingBalance,
@@ -815,6 +822,17 @@ router.post('/admin/create', authenticateToken, requireAdmin, async (req, res) =
                 success: false,
                 message: 'A competition with this slug already exists',
             });
+        }
+
+        // Validate KYC bonus multiplier
+        if (competitionData.kycBonusMultiplier !== undefined) {
+            const multiplier = parseFloat(competitionData.kycBonusMultiplier);
+            if (multiplier < 1.0 || multiplier > 2.0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'KYC bonus multiplier must be between 1.0 and 2.0',
+                });
+            }
         }
 
         // Validate that weights sum to 100
@@ -958,6 +976,17 @@ router.put('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
         // If slug is empty, generate from title
         if (updateData.slug === '' && updateData.title) {
             updateData.slug = generateSlug(updateData.title);
+        }
+
+        // Validate KYC bonus multiplier
+        if (updateData.kycBonusMultiplier !== undefined) {
+            const multiplier = parseFloat(updateData.kycBonusMultiplier);
+            if (multiplier < 1.0 || multiplier > 2.0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'KYC bonus multiplier must be between 1.0 and 2.0',
+                });
+            }
         }
 
         // Validate that weights sum to 100 if rules are being updated
@@ -1183,6 +1212,7 @@ router.get('/admin/:id/participants', authenticateToken, requireAdmin, async (re
                 title: competition.title,
                 slug: competition.slug,
                 status: competition.status,
+                kycBonusMultiplier: competition.kycBonusMultiplier,
             },
             participants: limitedParticipants,
             stats: competition.stats,
@@ -1249,6 +1279,7 @@ router.get('/admin/:id/winners', authenticateToken, requireAdmin, async (req, re
                 status: competition.status,
                 startDate: competition.startDate,
                 endDate: competition.endDate,
+                kycBonusMultiplier: competition.kycBonusMultiplier,
             },
             winners,
             totalWinners: winners.length,
