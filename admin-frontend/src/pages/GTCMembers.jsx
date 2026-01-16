@@ -1210,10 +1210,10 @@ const GTCMembers = () => {
                               <User className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                              <p className="font-semibold text-gray-900">
+                              <p className="font-semibold text-gray-900 text-nowrap">
                                 {member.name || "N/A"}
                               </p>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-gray-500 text-nowrap">
                                 @{member.username}
                               </p>
                             </div>
@@ -1261,10 +1261,13 @@ const GTCMembers = () => {
                         {/* Trading Balance */}
                         <td className="px-6 py-4">
                           <div className="text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <DollarSign className="w-4 h-4 text-green-600" />
-                              <span className="text-base font-bold text-green-700 text-nowrap">
-                                ${(member.tradingBalance || 0).toFixed(2)}
+                            <div className="flex items-center justify-center gap-0.5">
+                              <DollarSign
+                                className="w-4 h-4 text-green-600"
+                                strokeWidth={"2.5px"}
+                              />
+                              <span className="text-base font-bold text-green-700 text-nowrap mb-0.5">
+                                {(member.tradingBalance || 0).toFixed(2)}
                               </span>
                             </div>
                             {member.tradingBalanceDetails?.lastFetched && (
@@ -1280,10 +1283,13 @@ const GTCMembers = () => {
                         {/* Wallet Balance */}
                         <td className="px-6 py-4">
                           <div className="text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <DollarSign className="w-4 h-4 text-blue-600" />
-                              <span className="text-base font-bold text-blue-700 text-nowrap">
-                                ${(member.walletBalance || 0).toFixed(2)}
+                            <div className="flex items-center justify-center gap-0.5">
+                              <DollarSign
+                                className="w-4 h-4 text-blue-600"
+                                strokeWidth={"2.5px"}
+                              />
+                              <span className="text-base font-bold text-blue-700 text-nowrap mb-0.5">
+                                {(member.walletBalance || 0).toFixed(2)}
                               </span>
                             </div>
                             {member.tradingBalanceDetails?.wallet
@@ -1384,7 +1390,7 @@ const GTCMembers = () => {
                                 )
                               }
                               disabled={assigningUser}
-                              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white disabled:opacity-50"
+                              className="w-full min-w-32 px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white disabled:opacity-50"
                             >
                               <option value="">Not Assigned</option>
                               {availableUsers.map((u) => (
@@ -1413,7 +1419,7 @@ const GTCMembers = () => {
 
                         {/* Notes */}
                         <td className="px-6 py-4">
-                          <div className="max-w-xs">
+                          <div className="max-w-md">
                             {isEditingNotes ? (
                               <div className="flex items-center gap-2">
                                 <input

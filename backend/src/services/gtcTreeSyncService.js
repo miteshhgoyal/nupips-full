@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import axios from 'axios';
 import https from 'https';
 
-// Create axios instance for GTC API
+// Create axios instance for GTC API with retry logic
 const gtcAxios = axios.create({
     baseURL: process.env.GTC_FX_API_URL || 'https://apiv1.gtctrader100.top',
     timeout: 30000,
@@ -17,9 +17,9 @@ const gtcAxios = axios.create({
 });
 
 /**
- * Helper function to fetch trading balance for a member
+ * Helper function to fetch trading balance with retry logic
  */
-async function fetchTradingBalance(memberId, accessToken) {
+async function fetchTradingBalance(memberId, accessToken, retries = 2) {
     try {
         const response = await gtcAxios.post(
             '/api/v3/agent/query_child_accounts',
@@ -31,12 +31,10 @@ async function fetchTradingBalance(memberId, accessToken) {
             const mtAccounts = response.data.data.mt_account || [];
             const wallet = response.data.data.wallet || {};
 
-            // Calculate total trading balance from all MT5 accounts
             const totalTradingBalance = mtAccounts.reduce((sum, account) => {
                 return sum + parseFloat(account.balance || 0);
             }, 0);
 
-            // Get wallet balance
             const walletBalance = parseFloat(wallet.amount || 0);
 
             return {
@@ -52,17 +50,23 @@ async function fetchTradingBalance(memberId, accessToken) {
 
         return null;
     } catch (error) {
-        console.error(`Error fetching trading balance for member ${memberId}:`, error.message);
+        // Retry on 502 errors (Bad Gateway - server overload)
+        if (error.response?.status === 502 && retries > 0) {
+            // Wait before retry (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * (3 - retries)));
+            return fetchTradingBalance(memberId, accessToken, retries - 1);
+        }
+
+        // Silently skip errors - don't log for each member
+        // Only count failures, don't spam logs
         return null;
     }
 }
 
 /**
  * Recursively flatten the tree structure into an array of members
- * This prepares data for bulk insert operation
  */
 function flattenTreeRecursively(node, uplineChain = [], allMembers = []) {
-    // Map API fields to schema fields
     const memberData = {
         gtcUserId: String(node.member_id),
         email: node.email,
@@ -71,22 +75,17 @@ function flattenTreeRecursively(node, uplineChain = [], allMembers = []) {
         phone: node.phone || null,
         amount: node.amount || 0,
         userType: node.user_type || 'agent',
-
-        // Store kyc_status directly from API as string
         kycStatus: node.kyc_status || '',
-
         parentGtcUserId: node.parent_id ? String(node.parent_id) : null,
         level: node.level || 0,
         uplineChain: [...uplineChain],
         joinedAt: node.create_time ? new Date(node.create_time * 1000) : new Date(),
         lastUpdated: new Date(),
-        rawData: node, // Store complete node for reference
+        rawData: node,
     };
 
-    // Add current member to the array
     allMembers.push(memberData);
 
-    // Process children recursively
     if (node.children && Array.isArray(node.children) && node.children.length > 0) {
         const newUplineChain = [
             ...uplineChain,
@@ -108,7 +107,6 @@ function flattenTreeRecursively(node, uplineChain = [], allMembers = []) {
 
 /**
  * Main function to sync the entire member tree from GTC API
- * Uses bulkWrite for optimal performance
  */
 export async function syncMemberTreeFromAPI(apiResponse, accessToken = null) {
     try {
@@ -135,7 +133,7 @@ export async function syncMemberTreeFromAPI(apiResponse, accessToken = null) {
             accessToken = user?.gtcfx?.accessToken;
         }
 
-        // Step 1: Flatten the entire tree into a flat array
+        // STEP 1: Flatten tree
         console.log(`Flattening tree with ${tree.length} root node(s)...`);
         let allMembers = [];
 
@@ -146,11 +144,14 @@ export async function syncMemberTreeFromAPI(apiResponse, accessToken = null) {
 
         console.log(`Flattened ${allMembers.length} total members`);
 
-        // Step 2: Fetch trading balance for all members (with rate limiting)
+        // STEP 2: Fetch trading balances
+        let balanceFetchErrors = 0;
+        let balanceFetchSuccess = 0;
+
         if (accessToken) {
             console.log('Fetching trading balances for all members...');
-            const BALANCE_BATCH_SIZE = 10; // Process 10 at a time
-            const DELAY_MS = 100; // 100ms delay between batches
+            const BALANCE_BATCH_SIZE = 10;
+            const DELAY_MS = 100;
 
             for (let i = 0; i < allMembers.length; i += BALANCE_BATCH_SIZE) {
                 const batch = allMembers.slice(i, i + BALANCE_BATCH_SIZE);
@@ -160,14 +161,17 @@ export async function syncMemberTreeFromAPI(apiResponse, accessToken = null) {
                         member.tradingBalance = balanceData.tradingBalance;
                         member.walletBalance = balanceData.walletBalance;
                         member.tradingBalanceDetails = balanceData.tradingBalanceDetails;
+                        balanceFetchSuccess++;
+                    } else {
+                        balanceFetchErrors++;
                     }
                 });
 
                 await Promise.all(balancePromises);
 
-                // Progress log
-                if ((i + BALANCE_BATCH_SIZE) % 100 === 0) {
-                    console.log(`Fetched trading balance for ${Math.min(i + BALANCE_BATCH_SIZE, allMembers.length)}/${allMembers.length} members`);
+                // Progress log (only every 500 to reduce noise)
+                if ((i + BALANCE_BATCH_SIZE) % 500 === 0) {
+                    console.log(`Progress: ${Math.min(i + BALANCE_BATCH_SIZE, allMembers.length)}/${allMembers.length} members`);
                 }
 
                 // Delay to avoid rate limiting
@@ -175,12 +179,14 @@ export async function syncMemberTreeFromAPI(apiResponse, accessToken = null) {
                     await new Promise(resolve => setTimeout(resolve, DELAY_MS));
                 }
             }
-            console.log('Trading balance fetch completed');
+
+            console.log(`Trading balance fetch completed`);
+            console.log(`Success: ${balanceFetchSuccess}, Errors: ${balanceFetchErrors}`);
         } else {
             console.log('No access token found, skipping trading balance fetch');
         }
 
-        // Count KYC statistics before sync (based on actual API values)
+        // STEP 3: Calculate KYC stats
         const kycStats = {
             completed: allMembers.filter(m => m.kycStatus === 'completed').length,
             pending: allMembers.filter(m => m.kycStatus === 'pending').length,
@@ -188,9 +194,9 @@ export async function syncMemberTreeFromAPI(apiResponse, accessToken = null) {
             notSubmitted: allMembers.filter(m => !m.kycStatus || m.kycStatus === '').length,
         };
 
-        console.log('KYC Status Distribution:', kycStats);
+        console.log('KYC Distribution:', kycStats);
 
-        // Step 3: Prepare bulk operations for efficient database insertion
+        // STEP 4: Prepare bulk operations
         const bulkOps = allMembers.map(member => ({
             updateOne: {
                 filter: { gtcUserId: member.gtcUserId },
@@ -199,7 +205,7 @@ export async function syncMemberTreeFromAPI(apiResponse, accessToken = null) {
             }
         }));
 
-        // Step 4: Execute bulk write in batches for optimal performance
+        // STEP 5: Save to MongoDB in batches
         const BATCH_SIZE = 500;
         let totalProcessed = 0;
         let totalBatches = Math.ceil(bulkOps.length / BATCH_SIZE);
@@ -210,10 +216,13 @@ export async function syncMemberTreeFromAPI(apiResponse, accessToken = null) {
             const batch = bulkOps.slice(i, i + BATCH_SIZE);
             const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
 
-            console.log(`Batch ${batchNumber}/${totalBatches}: Processing ${batch.length} members...`);
-
             const result = await GTCMember.bulkWrite(batch, { ordered: false });
             totalProcessed += result.upsertedCount + result.modifiedCount;
+
+            // Only log every other batch to reduce noise
+            if (batchNumber % 2 === 1 || batchNumber === totalBatches) {
+                console.log(`Batch ${batchNumber}/${totalBatches} saved`);
+            }
         }
 
         const duration = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -223,12 +232,13 @@ export async function syncMemberTreeFromAPI(apiResponse, accessToken = null) {
             processed: totalProcessed,
             kycStats: kycStats,
             tradingBalanceFetched: !!accessToken,
+            balanceFetchSuccess: balanceFetchSuccess,
+            balanceFetchErrors: balanceFetchErrors,
             duration: `${duration}s`,
             timestamp: new Date().toISOString(),
         };
 
-        console.log(`Tree sync completed successfully!`);
-        console.log(`Stats:`, stats);
+        console.log(`Tree sync completed in ${duration}s!`);
 
         return { success: true, message: 'Tree synced successfully', stats };
 
@@ -239,7 +249,7 @@ export async function syncMemberTreeFromAPI(apiResponse, accessToken = null) {
 }
 
 /**
- * Helper function to get tree statistics including KYC stats
+ * Helper function to get tree statistics
  */
 export async function getTreeStats() {
     try {
@@ -247,7 +257,6 @@ export async function getTreeStats() {
         const agents = await GTCMember.countDocuments({ userType: 'agent' });
         const direct = await GTCMember.countDocuments({ userType: 'direct' });
 
-        // KYC Statistics - based on actual string values from GTC API
         const kycCompleted = await GTCMember.countDocuments({ kycStatus: 'completed' });
         const kycPending = await GTCMember.countDocuments({ kycStatus: 'pending' });
         const kycRejected = await GTCMember.countDocuments({ kycStatus: 'rejected' });
@@ -259,7 +268,6 @@ export async function getTreeStats() {
             ]
         });
 
-        // Trading Balance Statistics
         const totalTradingBalance = await GTCMember.aggregate([
             { $group: { _id: null, total: { $sum: '$tradingBalance' } } }
         ]);
@@ -269,22 +277,12 @@ export async function getTreeStats() {
         ]);
 
         const levelStats = await GTCMember.aggregate([
-            {
-                $group: {
-                    _id: '$level',
-                    count: { $sum: 1 }
-                }
-            },
+            { $group: { _id: '$level', count: { $sum: 1 } } },
             { $sort: { _id: 1 } }
         ]);
 
         const kycStatusBreakdown = await GTCMember.aggregate([
-            {
-                $group: {
-                    _id: '$kycStatus',
-                    count: { $sum: 1 }
-                }
-            },
+            { $group: { _id: '$kycStatus', count: { $sum: 1 } } },
             { $sort: { count: -1 } }
         ]);
 
@@ -312,5 +310,4 @@ export async function getTreeStats() {
     }
 }
 
-// Export the helper function
 export { fetchTradingBalance };
