@@ -38,6 +38,9 @@ import {
   FileText,
   Shuffle,
   Key,
+  GitBranch,
+  Minus,
+  Plus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -115,6 +118,29 @@ const GTCMembers = () => {
   // For modal onboarding notes editing
   const [editingModalNotes, setEditingModalNotes] = useState(false);
   const [modalNotesValue, setModalNotesValue] = useState("");
+
+  // Full tree view
+  const [showFullTreeModal, setShowFullTreeModal] = useState(false);
+  const [fullTreeData, setFullTreeData] = useState(null);
+  const [loadingFullTree, setLoadingFullTree] = useState(false);
+  const [fullTreeExpanded, setFullTreeExpanded] = useState(new Set());
+
+  const [kycStats, setKycStats] = useState({
+    completed: 0,
+    pending: 0, // This will include pending, rejected, and not started
+  });
+
+  const [balanceStats, setBalanceStats] = useState({
+    withTradingBalance: 0,
+    zeroTradingBalance: 0,
+    withWalletBalance: 0,
+    zeroWalletBalance: 0,
+  });
+
+  const [additionalStats, setAdditionalStats] = useState({
+    recentJoins: 0, // Last 30 days
+    completeOnboarding: 0,
+  });
 
   useEffect(() => {
     fetchCurrentUser();
@@ -195,6 +221,8 @@ const GTCMembers = () => {
         setTotalCount(response.data.pagination.total);
         setTotalPages(response.data.pagination.pages);
         setStats(response.data.stats);
+
+        calculateAdditionalStats(response.data.allMembers || filteredMembers);
       }
     } catch (err) {
       console.error("Fetch GTC members error:", err);
@@ -202,6 +230,59 @@ const GTCMembers = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateAdditionalStats = (allMembers) => {
+    // KYC Stats - Only Completed and Pending (merged)
+    const kycCompleted = allMembers.filter(
+      (m) => m.kycStatus === "completed"
+    ).length;
+    const kycPending = allMembers.filter(
+      (m) => m.kycStatus !== "completed" // Everything else is "pending"
+    ).length;
+
+    setKycStats({
+      completed: kycCompleted,
+      pending: kycPending,
+    });
+
+    // Balance Stats
+    const withTradingBalance = allMembers.filter(
+      (m) => (m.tradingBalance || 0) > 0
+    ).length;
+    const zeroTradingBalance = allMembers.filter(
+      (m) => (m.tradingBalance || 0) === 0
+    ).length;
+    const withWalletBalance = allMembers.filter(
+      (m) => (m.amount || 0) > 0
+    ).length;
+    const zeroWalletBalance = allMembers.filter(
+      (m) => (m.amount || 0) === 0
+    ).length;
+
+    setBalanceStats({
+      withTradingBalance,
+      zeroTradingBalance,
+      withWalletBalance,
+      zeroWalletBalance,
+    });
+
+    // Additional Stats
+    // Recent joins - last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentJoins = allMembers.filter(
+      (m) => new Date(m.joinedAt) > thirtyDaysAgo
+    ).length;
+
+    const completeOnboarding = allMembers.filter(
+      (m) => m.onboardedWithCall && m.onboardedWithMessage
+    ).length;
+
+    setAdditionalStats({
+      recentJoins,
+      completeOnboarding,
+    });
   };
 
   const fetchOnboardingStats = async () => {
@@ -220,6 +301,385 @@ const GTCMembers = () => {
     await fetchMembers();
     await fetchOnboardingStats();
     setRefreshing(false);
+  };
+
+  const loadFullTree = async () => {
+    setLoadingFullTree(true);
+    setError(null);
+    setFullTreeExpanded(new Set());
+
+    try {
+      const response = await api.get("/admin/gtc-members?limit=10000");
+      if (response.data.success) {
+        const allMembers = response.data.allMembers || response.data.data;
+        const tree = buildFullTree(allMembers);
+        setFullTreeData(tree);
+        setShowFullTreeModal(true);
+      }
+    } catch (err) {
+      setError("Failed to load full tree");
+    } finally {
+      setLoadingFullTree(false);
+    }
+  };
+
+  const buildFullTree = (members) => {
+    const memberMap = new Map();
+    const rootMembers = [];
+
+    // Create a map of all members
+    members.forEach((member) => {
+      memberMap.set(member.gtcUserId, {
+        ...member,
+        children: [],
+      });
+    });
+
+    // Build tree structure
+    members.forEach((member) => {
+      if (member.parentGtcUserId && memberMap.has(member.parentGtcUserId)) {
+        const parent = memberMap.get(member.parentGtcUserId);
+        parent.children.push(memberMap.get(member.gtcUserId));
+      } else {
+        // Root member
+        rootMembers.push(memberMap.get(member.gtcUserId));
+      }
+    });
+
+    return rootMembers;
+  };
+
+  const toggleFullTreeNode = (nodeId) => {
+    setFullTreeExpanded((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  };
+
+  const renderSimpleTreeNode = (node, depth = 0) => {
+    const hasChildren = node.children && node.children.length > 0;
+    const isExpanded = expandedNodes.has(node._id);
+    const totalDescendants = hasChildren ? countTotalDescendants(node) : 0;
+
+    // Level-based background colors
+    const levelColors = [
+      "bg-blue-50", // Level 0
+      "bg-green-50", // Level 1
+      "bg-yellow-50", // Level 2
+      "bg-purple-50", // Level 3
+      "bg-pink-50", // Level 4
+      "bg-indigo-50", // Level 5
+      "bg-orange-50", // Level 6
+      "bg-teal-50", // Level 7
+      "bg-cyan-50", // Level 8
+      "bg-rose-50", // Level 9
+    ];
+
+    const bgColor = levelColors[depth % levelColors.length];
+
+    return (
+      <div key={node._id} className={`${depth > 0 ? "ml-6 sm:ml-8" : ""}`}>
+        <div
+          className={`rounded-lg border border-gray-200 hover:border-orange-300 hover:shadow-sm transition-all p-3 sm:p-4 ${bgColor}`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {/* Toggle Button */}
+            {hasChildren ? (
+              <button
+                onClick={() => toggleNode(node._id)}
+                className="self-start w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 transition-all flex-shrink-0"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-gray-700" />
+                ) : (
+                  <ChevronRightIcon className="w-4 h-4 text-gray-700" />
+                )}
+              </button>
+            ) : (
+              <div className="self-start w-7 h-7 flex items-center justify-center flex-shrink-0">
+                <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+              </div>
+            )}
+
+            {/* Member Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-orange-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">
+                    {node.name || "N/A"}
+                  </p>
+                  <p className="text-sm text-gray-500 truncate">
+                    @{node.username}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700">
+                  ID: {node.gtcUserId}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
+                  Level {node.level}
+                </span>
+                {node.userType && (
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      node.userType === "agent"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-orange-100 text-orange-700"
+                    }`}
+                  >
+                    {node.userType === "agent" ? "Agent" : "Direct"}
+                  </span>
+                )}
+                {node.amount > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-100 text-emerald-700">
+                    ${node.amount.toFixed(2)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="text-right">
+              {hasChildren ? (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Team Size</p>
+                  <div className="text-sm font-bold text-gray-900">
+                    <span className="text-lg">{node.children.length}</span>
+                    <span className="text-xs ml-1">direct</span>
+                    {totalDescendants > node.children.length && (
+                      <div className="text-xs font-normal text-gray-600">
+                        ({totalDescendants} total)
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Email</p>
+                  <p className="text-sm font-medium text-gray-900 truncate max-w-[200px]">
+                    {node.email}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* View Details Button */}
+            <button
+              onClick={() => openDetailModal(node)}
+              className="self-start sm:self-center w-8 h-8 rounded-lg flex items-center justify-center bg-gray-100 hover:bg-orange-100 transition-all flex-shrink-0"
+              title="View Details"
+            >
+              <Eye className="w-4 h-4 text-gray-600 hover:text-orange-600" />
+            </button>
+          </div>
+        </div>
+
+        {/* Children */}
+        {hasChildren && isExpanded && (
+          <div className="mt-2 space-y-2">
+            {node.children.map((child) =>
+              renderSimpleTreeNode(child, depth + 1)
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderFullTreeNode = (node, depth = 0) => {
+    const hasChildren = node.children && node.children.length > 0;
+    const isExpanded = fullTreeExpanded.has(node.gtcUserId);
+
+    // Level-based background colors
+    const levelColors = [
+      "bg-blue-50", // Level 0
+      "bg-green-50", // Level 1
+      "bg-yellow-50", // Level 2
+      "bg-purple-50", // Level 3
+      "bg-pink-50", // Level 4
+      "bg-indigo-50", // Level 5
+      "bg-orange-50", // Level 6
+      "bg-teal-50", // Level 7
+      "bg-cyan-50", // Level 8
+      "bg-rose-50", // Level 9
+    ];
+
+    const bgColor = levelColors[depth % levelColors.length];
+
+    return (
+      <div
+        key={node.gtcUserId}
+        className="border-b border-gray-100 last:border-0"
+      >
+        {/* Desktop View */}
+        <div
+          className={`hidden md:flex items-center gap-2 p-3 hover:bg-opacity-70 transition-colors ${bgColor}`}
+          style={{ paddingLeft: `${depth * 24 + 12}px` }}
+        >
+          {hasChildren ? (
+            <button
+              onClick={() => toggleFullTreeNode(node.gtcUserId)}
+              className="w-5 h-5 flex items-center justify-center hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+            >
+              {isExpanded ? (
+                <Minus className="w-3 h-3 text-gray-600" />
+              ) : (
+                <Plus className="w-3 h-3 text-gray-600" />
+              )}
+            </button>
+          ) : (
+            <div className="w-5 h-5 flex-shrink-0"></div>
+          )}
+
+          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+
+          <div className="flex-1 min-w-0 grid grid-cols-6 gap-3 items-center">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {node.name || "N/A"}
+              </p>
+              <p className="text-xs text-gray-500 truncate">@{node.username}</p>
+            </div>
+
+            <div className="text-xs font-mono text-gray-600 truncate">
+              {node.gtcUserId}
+            </div>
+
+            <div className="flex items-center justify-center">
+              {node.kycStatus === "completed" ? (
+                <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded whitespace-nowrap">
+                  KYC Done
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded whitespace-nowrap">
+                  No KYC
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-center">
+              {node.onboardedWithCall && node.onboardedWithMessage ? (
+                <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded whitespace-nowrap">
+                  Onboarded
+                </span>
+              ) : node.onboardedWithCall || node.onboardedWithMessage ? (
+                <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded whitespace-nowrap">
+                  Partial
+                </span>
+              ) : (
+                <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded whitespace-nowrap">
+                  Pending
+                </span>
+              )}
+            </div>
+
+            <div className="text-sm font-medium text-gray-700 text-right">
+              ${(node.tradingBalance || 0).toFixed(2)}
+            </div>
+
+            <div className="text-sm font-medium text-gray-700 text-right">
+              ${(node.amount || 0).toFixed(2)}
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile View */}
+        <div
+          className={`md:hidden p-3 ${bgColor}`}
+          style={{ paddingLeft: `${depth * 16 + 12}px` }}
+        >
+          <div className="flex items-start gap-2">
+            {hasChildren ? (
+              <button
+                onClick={() => toggleFullTreeNode(node.gtcUserId)}
+                className="w-5 h-5 flex items-center justify-center hover:bg-gray-200 rounded transition-colors flex-shrink-0 mt-1"
+              >
+                {isExpanded ? (
+                  <Minus className="w-3 h-3 text-gray-600" />
+                ) : (
+                  <Plus className="w-3 h-3 text-gray-600" />
+                )}
+              </button>
+            ) : (
+              <div className="w-5 h-5 flex-shrink-0"></div>
+            )}
+
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {node.name || "N/A"}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    @{node.username}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded font-mono">
+                  {node.gtcUserId}
+                </span>
+                {node.kycStatus === "completed" ? (
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                    KYC Done
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                    No KYC
+                  </span>
+                )}
+                {node.onboardedWithCall && node.onboardedWithMessage ? (
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                    Onboarded
+                  </span>
+                ) : node.onboardedWithCall || node.onboardedWithMessage ? (
+                  <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded">
+                    Partial
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                    Pending
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-gray-500">Trading:</span>
+                  <span className="ml-1 font-medium text-gray-700">
+                    ${(node.tradingBalance || 0).toFixed(2)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Wallet:</span>
+                  <span className="ml-1 font-medium text-gray-700">
+                    ${(node.amount || 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div>
+            {node.children.map((child) => renderFullTreeNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleSearch = () => {
@@ -891,6 +1351,18 @@ const GTCMembers = () => {
 
             <div className="flex items-center gap-3">
               <button
+                onClick={loadFullTree}
+                disabled={loadingFullTree}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md disabled:opacity-50"
+              >
+                {loadingFullTree ? (
+                  <Loader className="w-5 h-5 animate-spin" />
+                ) : (
+                  <GitBranch className="w-5 h-5" />
+                )}
+                Full Tree
+              </button>
+              <button
                 onClick={() => setShowSyncModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md"
               >
@@ -945,6 +1417,7 @@ const GTCMembers = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+          {/* Row 1 - General & KYC Stats */}
           <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
@@ -957,93 +1430,149 @@ const GTCMembers = () => {
             <p className="text-2xl font-bold text-orange-900">{stats.total}</p>
           </div>
 
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-sm font-medium text-purple-900">
+                Recent Joins
+              </p>
+            </div>
+            <p className="text-2xl font-bold text-purple-900">
+              {additionalStats.recentJoins}
+            </p>
+            <p className="text-xs text-purple-700 mt-1">Last 30 days</p>
+          </div>
+
           <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                <Network className="w-5 h-5 text-white" />
+                <CheckCircle className="w-5 h-5 text-white" />
               </div>
-              <p className="text-sm font-medium text-green-900">With Parent</p>
+              <p className="text-sm font-medium text-green-900">
+                KYC Completed
+              </p>
             </div>
             <p className="text-2xl font-bold text-green-900">
-              {stats.withParent}
+              {kycStats.completed}
+            </p>
+            <p className="text-xs text-green-700 mt-1">
+              {stats.total > 0
+                ? ((kycStats.completed / stats.total) * 100).toFixed(1)
+                : 0}
+              % of total
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                <Layers className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
+                <Clock className="w-5 h-5 text-white" />
               </div>
-              <p className="text-sm font-medium text-blue-900">Avg Level</p>
+              <p className="text-sm font-medium text-yellow-900">KYC Pending</p>
             </div>
-            <p className="text-2xl font-bold text-blue-900">
-              {stats.avgLevel.toFixed(1)}
+            <p className="text-2xl font-bold text-yellow-900">
+              {kycStats.pending}
+            </p>
+            <p className="text-xs text-yellow-700 mt-1">
+              {stats.total > 0
+                ? ((kycStats.pending / stats.total) * 100).toFixed(1)
+                : 0}
+              % of total
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-pink-50 to-pink-100 rounded-xl p-6 border border-pink-200">
+          {/* Row 2 - Balance & Onboarding Stats */}
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-white" />
               </div>
-              <p className="text-sm font-medium text-pink-900">Max Level</p>
+              <p className="text-sm font-medium text-emerald-900">
+                With Trading Balance
+              </p>
             </div>
-            <p className="text-2xl font-bold text-pink-900">{stats.maxLevel}</p>
+            <p className="text-2xl font-bold text-emerald-900">
+              {balanceStats.withTradingBalance}
+            </p>
+            <p className="text-xs text-emerald-700 mt-1">
+              {stats.total > 0
+                ? (
+                    (balanceStats.withTradingBalance / stats.total) *
+                    100
+                  ).toFixed(1)
+                : 0}
+              % of total
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-sm font-medium text-red-900">
+                Zero Trading Balance
+              </p>
+            </div>
+            <p className="text-2xl font-bold text-red-900">
+              {balanceStats.zeroTradingBalance}
+            </p>
+            <p className="text-xs text-red-700 mt-1">
+              {stats.total > 0
+                ? (
+                    (balanceStats.zeroTradingBalance / stats.total) *
+                    100
+                  ).toFixed(1)
+                : 0}
+              % of total
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-6 border border-teal-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-sm font-medium text-teal-900">
+                With Wallet Balance
+              </p>
+            </div>
+            <p className="text-2xl font-bold text-teal-900">
+              {balanceStats.withWalletBalance}
+            </p>
+            <p className="text-xs text-teal-700 mt-1">
+              {stats.total > 0
+                ? (
+                    (balanceStats.withWalletBalance / stats.total) *
+                    100
+                  ).toFixed(1)
+                : 0}
+              % of total
+            </p>
           </div>
 
           <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-xl p-6 border border-cyan-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-cyan-500 rounded-full flex items-center justify-center">
-                <PhoneCall className="w-5 h-5 text-white" />
+                <CheckCircle className="w-5 h-5 text-white" />
               </div>
               <p className="text-sm font-medium text-cyan-900">
-                Onboarded via Call
+                Complete Onboarding
               </p>
             </div>
             <p className="text-2xl font-bold text-cyan-900">
-              {onboardingStats.onboardedWithCall}
+              {additionalStats.completeOnboarding}
             </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-white" />
-              </div>
-              <p className="text-sm font-medium text-indigo-900">
-                Onboarded via Message
-              </p>
-            </div>
-            <p className="text-2xl font-bold text-indigo-900">
-              {onboardingStats.onboardedWithMessage}
-            </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-6 border border-emerald-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-5 h-5 text-white" />
-              </div>
-              <p className="text-sm font-medium text-emerald-900">
-                Both Completed
-              </p>
-            </div>
-            <p className="text-2xl font-bold text-emerald-900">
-              {onboardingStats.bothOnboarded}
-            </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-white" />
-              </div>
-              <p className="text-sm font-medium text-amber-900">
-                Not Onboarded
-              </p>
-            </div>
-            <p className="text-2xl font-bold text-amber-900">
-              {onboardingStats.notOnboarded}
+            <p className="text-xs text-cyan-700 mt-1">
+              {stats.total > 0
+                ? (
+                    (additionalStats.completeOnboarding / stats.total) *
+                    100
+                  ).toFixed(1)
+                : 0}
+              % of total
             </p>
           </div>
         </div>
@@ -2245,15 +2774,16 @@ const GTCMembers = () => {
       {/* Tree Modal */}
       {showTreeModal && treeData && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <Network className="w-6 h-6 text-orange-600" />
-                    GTC Team Tree
+          <div className="bg-white rounded-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-orange-100">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <Network className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 flex-shrink-0" />
+                    <span className="truncate">GTC Team Tree</span>
                   </h2>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1">
                     {treeData.root.name || treeData.root.username}'s downline
                     hierarchy
                     {treeData.tree && treeData.tree.length > 0 && (
@@ -2271,40 +2801,80 @@ const GTCMembers = () => {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={expandAll}
-                    className="px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-sm font-medium transition-colors"
+                    className="hidden sm:block px-3 py-1.5 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-sm font-medium transition-colors"
                   >
                     Expand All
                   </button>
                   <button
                     onClick={collapseAll}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                    className="hidden sm:block px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
                   >
                     Collapse All
                   </button>
                   <button
                     onClick={() => setShowTreeModal(false)}
-                    className="p-2 hover:bg-white rounded-lg transition-colors"
+                    className="p-2 hover:bg-white rounded-lg transition-colors flex-shrink-0"
                   >
-                    <X className="w-6 h-6 text-gray-600" />
+                    <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="mb-6">
-                {renderTreeNode(
-                  {
-                    ...treeData.root,
-                    _id: "root",
-                    children: treeData.tree,
-                  },
-                  true,
-                  0
-                )}
-              </div>
+            {/* Tree Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              {treeData.tree && treeData.tree.length > 0 ? (
+                <div className="space-y-3">
+                  {/* Root Member */}
+                  <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl p-4 border border-orange-700 shadow-lg">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-white" />
+                      </div>
 
-              {(!treeData.tree || treeData.tree.length === 0) && (
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-white truncate text-lg">
+                          {treeData.root.name || "N/A"}
+                        </p>
+                        <p className="text-sm text-white/80 truncate">
+                          @{treeData.root.username}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-xs px-2 py-1 rounded-full font-medium bg-white/20 text-white">
+                          ID: {treeData.root.gtcUserId}
+                        </span>
+                        <span className="text-xs px-2 py-1 rounded-full font-medium bg-white/20 text-white">
+                          Level {treeData.root.level}
+                        </span>
+                        {treeData.root.amount > 0 && (
+                          <span className="text-xs px-2 py-1 rounded-full font-medium bg-white/20 text-white">
+                            ${treeData.root.amount.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-xs text-white/80">Team Size</p>
+                        <div className="text-white font-bold">
+                          <span className="text-lg">
+                            {treeData.tree.length}
+                          </span>
+                          <span className="text-xs ml-1">direct</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Children */}
+                  <div className="space-y-2">
+                    {treeData.tree.map((child) =>
+                      renderSimpleTreeNode(child, 0)
+                    )}
+                  </div>
+                </div>
+              ) : (
                 <div className="text-center py-12 bg-gray-50 rounded-xl">
                   <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500 font-medium">
@@ -2313,6 +2883,65 @@ const GTCMembers = () => {
                   <p className="text-sm text-gray-400 mt-2">
                     This member hasn't recruited anyone to their team
                   </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Tree Modal */}
+      {showFullTreeModal && fullTreeData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <GitBranch className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 flex-shrink-0" />
+                    <span className="truncate">Complete GTC Member Tree</span>
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                    All members organized in hierarchical structure (
+                    {fullTreeData.length} root members)
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowFullTreeModal(false)}
+                  className="p-2 hover:bg-white rounded-lg transition-colors flex-shrink-0"
+                >
+                  <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            {/* Column Headers - Hidden on mobile */}
+            <div className="hidden md:block bg-gray-50 border-b border-gray-200 px-3 py-3 sticky top-0 z-10">
+              <div className="flex items-center gap-2">
+                <div className="w-5"></div>
+                <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <div className="flex-1 grid grid-cols-6 gap-3 items-center text-xs font-semibold text-gray-700 uppercase">
+                  <div>Name / Username</div>
+                  <div>GTC User ID</div>
+                  <div>KYC Status</div>
+                  <div>Onboarding</div>
+                  <div>Trading Balance</div>
+                  <div>Wallet Balance</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tree Content */}
+            <div className="flex-1 overflow-y-auto">
+              {fullTreeData.length === 0 ? (
+                <div className="text-center py-12">
+                  <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 font-medium">No members found</p>
+                </div>
+              ) : (
+                <div>
+                  {fullTreeData.map((root) => renderFullTreeNode(root, 0))}
                 </div>
               )}
             </div>
