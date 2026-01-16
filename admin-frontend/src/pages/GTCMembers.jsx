@@ -1547,37 +1547,6 @@ const GTCMembers = () => {
             </div>
           )}
         </div>
-
-        {/* Additional Pagination (bottom) */}
-        {members.length > 0 && (
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-gray-600">
-              Showing {members.length} of {totalCount} members
-            </p>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
-              </button>
-              <span className="px-4 py-2 text-sm font-medium text-gray-700">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() =>
-                  setCurrentPage(Math.min(totalPages, currentPage + 1))
-                }
-                disabled={currentPage === totalPages}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Sync Modal */}
