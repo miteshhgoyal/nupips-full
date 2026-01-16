@@ -247,31 +247,49 @@ const GTCMembers = () => {
     setSuccess(null);
 
     try {
-      const response = await api.post(
-        "/gtcfx/sync-member-tree",
-        {
-          token: syncToken,
-        },
-        {
-          timeout: 600000,
-        }
+      api
+        .post(
+          "/gtcfx/sync-member-tree",
+          { token: syncToken },
+          {
+            timeout: 600000,
+            headers: { "Content-Type": "application/json" },
+          }
+        )
+        .then((response) => {
+          // Success callback (runs in background)
+          if (response.data.success) {
+            setSuccess(
+              `Sync completed! ${response.data.syncResult.stats.totalMembers} members synced in ${response.data.syncResult.stats.duration}`
+            );
+            fetchMembers();
+            fetchOnboardingStats();
+          }
+        })
+        .catch((err) => {
+          // Only show error if it's NOT a timeout
+          if (!err.code || err.code !== "ECONNABORTED") {
+            setError(
+              err.response?.data?.message || "Sync failed - check backend logs"
+            );
+          }
+        });
+
+      // Immediately close modal and show success
+      setShowSyncModal(false);
+      setSyncToken("");
+      setSyncing(false);
+
+      setSuccess(
+        "Sync started successfully! This will take 7-8 minutes. You can continue working, we'll refresh the data automatically when done."
       );
 
-      if (response.data.success) {
-        setSuccess(
-          `Successfully synced ${response.data.syncResult.stats.totalMembers} members in ${response.data.syncResult.stats.duration}!`
-        );
-        setShowSyncModal(false);
-        setSyncToken("");
-        // Refresh data after sync
-        await fetchMembers();
-        await fetchOnboardingStats();
-      }
+      // Auto-dismiss success after 8 seconds
+      setTimeout(() => setSuccess(null), 8000);
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Failed to sync members from GTC API"
-      );
-    } finally {
+      // This rarely happens since we're not awaiting
+      console.error("Sync initiation error:", err);
+      setError("Failed to start sync. Please try again.");
       setSyncing(false);
     }
   };
