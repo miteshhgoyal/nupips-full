@@ -247,9 +247,15 @@ const GTCMembers = () => {
     setSuccess(null);
 
     try {
-      const response = await api.post("/gtcfx/sync-member-tree", {
-        token: syncToken,
-      });
+      const response = await api.post(
+        "/gtcfx/sync-member-tree",
+        {
+          token: syncToken,
+        },
+        {
+          timeout: 600000,
+        }
+      );
 
       if (response.data.success) {
         setSuccess(
@@ -776,6 +782,9 @@ const GTCMembers = () => {
         "Level",
         "User Type",
         "Amount",
+        "Trading Balance",
+        "Wallet Balance",
+        "KYC Status",
         "Parent GTC ID",
         "Onboarded With Call",
         "Onboarded With Message",
@@ -792,6 +801,9 @@ const GTCMembers = () => {
         m.level,
         m.userType || "agent",
         m.amount || 0,
+        m.tradingBalance || 0,
+        m.walletBalance || 0,
+        m.kycStatus || "N/A",
         m.parentGtcUserId || "Root",
         m.onboardedWithCall ? "Yes" : "No",
         m.onboardedWithMessage ? "Yes" : "No",
@@ -1132,6 +1144,15 @@ const GTCMembers = () => {
                     Level
                   </th>
                   <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                    Trading Balance
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                    Wallet Balance
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                    KYC Status
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
                     Onboarding Status
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
@@ -1148,16 +1169,16 @@ const GTCMembers = () => {
               <tbody>
                 {members.length === 0 ? (
                   <tr>
-                    <td colSpan="9" className="px-6 py-16 text-center">
+                    <td colSpan="12" className="px-6 py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                           <Globe className="w-8 h-8 text-gray-400" />
                         </div>
-                        <p className="text-gray-600 font-medium">
-                          No GTC members found
+                        <p className="text-gray-500 font-medium">
+                          No members found
                         </p>
-                        <p className="text-sm text-gray-500">
-                          Try adjusting your filters or syncing from GTC API
+                        <p className="text-sm text-gray-400">
+                          Try adjusting your filters or sync from GTC
                         </p>
                       </div>
                     </td>
@@ -1165,31 +1186,34 @@ const GTCMembers = () => {
                 ) : (
                   members.map((member) => {
                     const memberId = member._id || member.gtcUserId;
-                    const isEditingThisNotes = editingNotesId === memberId;
+                    const isEditingNotes = editingNotesId === memberId;
 
                     return (
                       <tr
-                        key={member._id}
+                        key={memberId}
                         className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                       >
                         {/* Joining Date */}
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-600 text-nowrap">
-                            {formatDate(member.joinedAt)}
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm text-gray-600 text-nowrap">
+                              {formatDate(member.joinedAt)}
+                            </span>
                           </div>
                         </td>
 
-                        {/* Member */}
+                        {/* Member Info */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 shrink-0 bg-orange-100 rounded-full flex items-center justify-center">
-                              <User className="w-5 h-5 text-orange-600" />
+                            <div className="shrink-0 w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center">
+                              <User className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                              <p className="font-medium text-gray-900 text-nowrap">
+                              <p className="font-semibold text-gray-900">
                                 {member.name || "N/A"}
                               </p>
-                              <p className="text-xs font-mono text-gray-500 text-nowrap">
+                              <p className="text-sm text-gray-500">
                                 @{member.username}
                               </p>
                             </div>
@@ -1200,7 +1224,7 @@ const GTCMembers = () => {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <Hash className="w-4 h-4 text-gray-400" />
-                            <span className="font-mono text-sm text-gray-900 text-nowrap">
+                            <span className="text-sm font-mono text-gray-700">
                               {member.gtcUserId}
                             </span>
                           </div>
@@ -1208,145 +1232,209 @@ const GTCMembers = () => {
 
                         {/* Contacts */}
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-sm text-gray-600 mb-0.5">
-                            <Mail className="w-4 h-4 text-gray-400" />
-                            <span className="truncate max-w-[200px] text-nowrap">
-                              {member.email}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Phone className="w-4 h-4 text-gray-400" />
-                            <span className="truncate max-w-[200px] text-nowrap">
-                              {member.phone ? member.phone : "Not Available"}
-                            </span>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Mail className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-600">
+                                {member.email}
+                              </span>
+                            </div>
+                            {member.phone && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm text-gray-600">
+                                  {member.phone}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </td>
 
                         {/* Level */}
                         <td className="px-6 py-4">
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 text-nowrap">
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium text-nowrap">
                             <Layers className="w-3 h-3" />
                             Level {member.level}
                           </span>
                         </td>
 
-                        {/* Onboarding Status */}
+                        {/* Trading Balance */}
                         <td className="px-6 py-4">
-                          <div className="flex flex-col gap-3">
-                            {/* Onboarded with Call Toggle */}
-                            <div className="flex items-center justify-center gap-2">
-                              <PhoneCall className="w-4 h-4 text-cyan-600" />
-                              <span className="text-xs text-gray-600 min-w-[40px]">
-                                Call
+                          <div className="text-center">
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                              <DollarSign className="w-4 h-4 text-green-600" />
+                              <span className="text-base font-bold text-green-700 text-nowrap">
+                                ${(member.tradingBalance || 0).toFixed(2)}
                               </span>
-                              <button
-                                onClick={() => toggleOnboardedWithCall(member)}
-                                disabled={togglingCall[memberId]}
-                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 ${
-                                  member.onboardedWithCall
-                                    ? "bg-cyan-600"
-                                    : "bg-gray-300"
-                                } ${
-                                  togglingCall[memberId]
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : ""
-                                }`}
-                              >
-                                <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
-                                    member.onboardedWithCall
-                                      ? "translate-x-6"
-                                      : "translate-x-1"
-                                  }`}
-                                />
-                              </button>
                             </div>
-
-                            {/* Onboarded with Message Toggle */}
-                            <div className="flex items-center justify-center gap-2">
-                              <MessageCircle className="w-4 h-4 text-indigo-600" />
-                              <span className="text-xs text-gray-600 min-w-[40px]">
-                                Msg
+                            {member.tradingBalanceDetails?.lastFetched && (
+                              <span className="text-xs text-gray-400 text-nowrap">
+                                {new Date(
+                                  member.tradingBalanceDetails.lastFetched
+                                ).toLocaleDateString()}
                               </span>
-                              <button
-                                onClick={() =>
-                                  toggleOnboardedWithMessage(member)
-                                }
-                                disabled={togglingMessage[memberId]}
-                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                                  member.onboardedWithMessage
-                                    ? "bg-indigo-600"
-                                    : "bg-gray-300"
-                                } ${
-                                  togglingMessage[memberId]
-                                    ? "opacity-50 cursor-not-allowed"
-                                    : ""
-                                }`}
-                              >
-                                <span
-                                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition duration-200 ease-in-out ${
-                                    member.onboardedWithMessage
-                                      ? "translate-x-6"
-                                      : "translate-x-1"
-                                  }`}
-                                />
-                              </button>
-                            </div>
+                            )}
                           </div>
                         </td>
 
-                        {/* Onboarded By Column */}
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        {/* Wallet Balance */}
+                        <td className="px-6 py-4">
+                          <div className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <DollarSign className="w-4 h-4 text-blue-600" />
+                              <span className="text-base font-bold text-blue-700 text-nowrap">
+                                ${(member.walletBalance || 0).toFixed(2)}
+                              </span>
+                            </div>
+                            {member.tradingBalanceDetails?.wallet
+                              ?.currency_symbol && (
+                              <span className="text-xs text-gray-400 text-nowrap">
+                                {
+                                  member.tradingBalanceDetails.wallet
+                                    .currency_symbol
+                                }
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* KYC Status */}
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center">
+                            {member.kycStatus === "completed" ? (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                                <CheckCircle className="w-3 h-3" />
+                                Completed
+                              </span>
+                            ) : member.kycStatus === "pending" ? (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
+                                <Clock className="w-3 h-3" />
+                                Pending
+                              </span>
+                            ) : member.kycStatus === "rejected" ? (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                                <X className="w-3 h-3" />
+                                Rejected
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
+                                <AlertCircle className="w-3 h-3" />
+                                Not Started
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Onboarding Status */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => toggleOnboardedWithCall(member)}
+                              disabled={togglingCall[memberId]}
+                              className={`p-2 rounded-lg transition-all ${
+                                member.onboardedWithCall
+                                  ? "bg-green-100 text-green-600"
+                                  : "bg-gray-100 text-gray-400"
+                              } hover:scale-110 disabled:opacity-50`}
+                              title={
+                                member.onboardedWithCall
+                                  ? "Onboarded with Call ✓"
+                                  : "Not onboarded with Call"
+                              }
+                            >
+                              {togglingCall[memberId] ? (
+                                <Loader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <PhoneCall className="w-4 h-4" />
+                              )}
+                            </button>
+
+                            <button
+                              onClick={() => toggleOnboardedWithMessage(member)}
+                              disabled={togglingMessage[memberId]}
+                              className={`p-2 rounded-lg transition-all ${
+                                member.onboardedWithMessage
+                                  ? "bg-blue-100 text-blue-600"
+                                  : "bg-gray-100 text-gray-400"
+                              } hover:scale-110 disabled:opacity-50`}
+                              title={
+                                member.onboardedWithMessage
+                                  ? "Onboarded with Message ✓"
+                                  : "Not onboarded with Message"
+                              }
+                            >
+                              {togglingMessage[memberId] ? (
+                                <Loader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <MessageCircle className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Onboarded By */}
+                        <td className="px-6 py-4">
                           {currentUser?.userType === "admin" ? (
                             <select
                               value={member.onboardingDoneBy?._id || ""}
                               onChange={(e) =>
                                 handleAssignOnboardingDoneBy(
-                                  member._id || member.gtcUserId,
+                                  memberId,
                                   e.target.value
                                 )
                               }
                               disabled={assigningUser}
-                              className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white disabled:opacity-50"
                             >
                               <option value="">Not Assigned</option>
-                              {availableUsers.map((user) => (
-                                <option key={user._id} value={user._id}>
-                                  {user.name || user.username}
+                              {availableUsers.map((u) => (
+                                <option key={u._id} value={u._id}>
+                                  {u.name} ({u.userType})
                                 </option>
                               ))}
                             </select>
                           ) : (
-                            <div className="text-sm text-gray-900">
-                              {member.onboardingDoneBy?.name ||
-                                member.onboardingDoneBy?.username ||
-                                "Not Assigned"}
+                            <div className="flex items-center gap-2">
+                              {member.onboardingDoneBy ? (
+                                <>
+                                  <UserCheck className="w-4 h-4 text-gray-400" />
+                                  <span className="text-sm text-gray-700">
+                                    {member.onboardingDoneBy.name}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-sm text-gray-400">
+                                  Not Assigned
+                                </span>
+                              )}
                             </div>
                           )}
                         </td>
 
-                        {/* Notes Column */}
+                        {/* Notes */}
                         <td className="px-6 py-4">
-                          {isEditingThisNotes ? (
-                            <div className="flex items-start gap-2">
-                              <textarea
-                                value={editingNotesValue}
-                                onChange={(e) =>
-                                  setEditingNotesValue(e.target.value)
-                                }
-                                placeholder="Add onboarding notes..."
-                                rows={3}
-                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none min-w-[250px]"
-                                autoFocus
-                              />
-                              <div className="flex flex-col gap-1">
-                                <button
-                                  onClick={() =>
-                                    handleSaveNotes(memberId, editingNotesValue)
+                          <div className="max-w-xs">
+                            {isEditingNotes ? (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={editingNotesValue}
+                                  onChange={(e) =>
+                                    setEditingNotesValue(e.target.value)
                                   }
+                                  className="flex-1 px-2 py-1 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                  placeholder="Add notes..."
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => {
+                                    handleSaveNotes(
+                                      memberId,
+                                      editingNotesValue
+                                    );
+                                  }}
                                   disabled={savingNotes}
                                   className="p-1.5 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition-colors disabled:opacity-50"
-                                  title="Save Notes"
                                 >
                                   {savingNotes ? (
                                     <Loader className="w-4 h-4 animate-spin" />
@@ -1359,42 +1447,39 @@ const GTCMembers = () => {
                                     setEditingNotesId(null);
                                     setEditingNotesValue("");
                                   }}
-                                  disabled={savingNotes}
-                                  className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors disabled:opacity-50"
-                                  title="Cancel"
+                                  className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
                                 >
                                   <X className="w-4 h-4" />
                                 </button>
                               </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-start gap-2 min-w-[250px]">
-                              {member.onboardingNotes ? (
-                                <div className="flex-1 flex items-start gap-2">
-                                  <FileText className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                                  <span className="text-sm text-gray-700 line-clamp-2">
-                                    {member.onboardingNotes}
-                                  </span>
+                            ) : (
+                              <div className="flex items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                  {member.onboardingNotes ? (
+                                    <p className="text-sm text-gray-700 truncate">
+                                      {member.onboardingNotes}
+                                    </p>
+                                  ) : (
+                                    <p className="text-sm text-gray-400 italic">
+                                      No notes
+                                    </p>
+                                  )}
                                 </div>
-                              ) : (
-                                <span className="text-sm text-gray-400 italic">
-                                  No notes
-                                </span>
-                              )}
-                              <button
-                                onClick={() => {
-                                  setEditingNotesId(memberId);
-                                  setEditingNotesValue(
-                                    member.onboardingNotes || ""
-                                  );
-                                }}
-                                className="p-1.5 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors flex-shrink-0"
-                                title="Edit Notes"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          )}
+                                <button
+                                  onClick={() => {
+                                    setEditingNotesId(memberId);
+                                    setEditingNotesValue(
+                                      member.onboardingNotes || ""
+                                    );
+                                  }}
+                                  className="flex-shrink-0 p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
+                                  title="Edit Notes"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </td>
 
                         {/* Actions */}
@@ -1402,22 +1487,17 @@ const GTCMembers = () => {
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => openDetailModal(member)}
-                              className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
+                              className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
                               title="View Details"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => loadMemberTree(member._id)}
-                              disabled={loadingTree}
-                              className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors disabled:opacity-50"
+                              onClick={() => loadMemberTree(memberId)}
+                              className="p-2 bg-purple-100 hover:bg-purple-200 text-purple-600 rounded-lg transition-colors"
                               title="View Tree"
                             >
-                              {loadingTree ? (
-                                <Loader className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <Network className="w-4 h-4" />
-                              )}
+                              <Network className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -1428,9 +1508,41 @@ const GTCMembers = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+              <p className="text-sm text-gray-600">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                {Math.min(currentPage * itemsPerPage, totalCount)} of{" "}
+                {totalCount} members
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <span className="px-4 py-2 text-sm font-medium text-gray-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Pagination */}
+        {/* Additional Pagination (bottom) */}
         {members.length > 0 && (
           <div className="flex items-center justify-between mt-6">
             <p className="text-sm text-gray-600">
@@ -1570,7 +1682,7 @@ const GTCMembers = () => {
         </div>
       )}
 
-      {/* Detail Modal - Enhanced with Onboarding Management */}
+      {/* Detail Modal - Enhanced with Trading Balance */}
       {showDetailModal && selectedMember && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-3xl w-full shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -1599,6 +1711,123 @@ const GTCMembers = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
+              {/* Trading Balance Details Section */}
+              {selectedMember.tradingBalanceDetails && (
+                <div className="mb-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-green-600" />
+                    Financial Overview
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                      <p className="text-sm text-gray-600 mb-1">
+                        Total Trading Balance
+                      </p>
+                      <p className="text-2xl font-bold text-green-700">
+                        ${(selectedMember.tradingBalance || 0).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        From{" "}
+                        {selectedMember.tradingBalanceDetails?.mtAccounts
+                          ?.length || 0}{" "}
+                        MT5 Accounts
+                      </p>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-4 border border-blue-200">
+                      <p className="text-sm text-gray-600 mb-1">
+                        Wallet Balance
+                      </p>
+                      <p className="text-2xl font-bold text-blue-700">
+                        ${(selectedMember.walletBalance || 0).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {selectedMember.tradingBalanceDetails?.wallet
+                          ?.currency_symbol || "USD"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedMember.tradingBalanceDetails?.mtAccounts &&
+                    selectedMember.tradingBalanceDetails.mtAccounts.length >
+                      0 && (
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                          <Hash className="w-4 h-4" />
+                          MT5 Trading Accounts
+                        </h4>
+                        {selectedMember.tradingBalanceDetails.mtAccounts.map(
+                          (account, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-white rounded-lg p-4 border border-gray-200"
+                            >
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="font-semibold text-gray-900">
+                                  {account.account_name}
+                                </span>
+                                <span className="text-xs font-mono bg-gray-100 px-2 py-1 rounded">
+                                  ID: {account.loginid}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                <div>
+                                  <span className="text-gray-600 block mb-1">
+                                    Balance
+                                  </span>
+                                  <span className="font-bold text-green-700">
+                                    $
+                                    {parseFloat(account.balance || 0).toFixed(
+                                      2
+                                    )}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-600 block mb-1">
+                                    Equity
+                                  </span>
+                                  <span className="font-medium text-gray-900">
+                                    $
+                                    {parseFloat(account.equity || 0).toFixed(2)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-600 block mb-1">
+                                    Margin
+                                  </span>
+                                  <span className="font-medium text-gray-900">
+                                    $
+                                    {parseFloat(account.margin || 0).toFixed(2)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-600 block mb-1">
+                                    Currency
+                                  </span>
+                                  <span className="font-medium text-gray-900">
+                                    {account.currency}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    )}
+
+                  {selectedMember.tradingBalanceDetails?.lastFetched && (
+                    <div className="mt-4 text-xs text-gray-500 flex items-center gap-2">
+                      <Clock className="w-3 h-3" />
+                      Last updated:{" "}
+                      {new Date(
+                        selectedMember.tradingBalanceDetails.lastFetched
+                      ).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Onboarding Status Section */}
               <div className="mb-6">
                 <h3 className="text-sm font-semibold text-gray-700 uppercase mb-4 flex items-center gap-2">
@@ -1876,7 +2105,7 @@ const GTCMembers = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">KYC Status</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {selectedMember.kycStatus}
+                      {selectedMember.kycStatus || "Not Started"}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -1906,7 +2135,7 @@ const GTCMembers = () => {
                   {selectedMember.amount !== undefined && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600 flex items-center gap-1">
-                        <DollarSign className="w-3 h-3" /> Amount
+                        <DollarSign className="w-3 h-3" /> GTC Wallet Balance
                       </span>
                       <span className="text-sm font-bold text-emerald-700">
                         ${selectedMember.amount.toFixed(2)}

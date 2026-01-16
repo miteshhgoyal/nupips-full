@@ -7,7 +7,7 @@ import User from '../models/User.js';
 import GTCMember from '../models/GTCMember.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 import { addIncomeExpenseEntry } from '../utils/walletUtils.js';
-import { syncMemberTreeFromAPI, getTreeStats } from '../services/gtcTreeSyncService.js';
+import { syncMemberTreeFromAPI, getTreeStats, fetchTradingBalance } from '../services/gtcTreeSyncService.js';
 
 const router = express.Router();
 
@@ -487,8 +487,19 @@ router.post('/webhook/member-update', async (req, res) => {
             });
         }
 
-        // Save/update member
-        await GTCMember.findOneAndUpdate(
+        // Fetch trading balance if we have access token
+        let tradingData = {};
+        const user = await User.findOne({ 'gtcfx.accessToken': { $exists: true, $ne: null } }).select('gtcfx.accessToken');
+
+        if (user?.gtcfx?.accessToken) {
+            const balanceData = await fetchTradingBalance(gtcUserId, user.gtcfx.accessToken);
+            if (balanceData) {
+                tradingData = balanceData;
+            }
+        }
+
+        // Save/update member with trading balance
+        const updatedMember = await GTCMember.findOneAndUpdate(
             { gtcUserId },
             {
                 $set: {
@@ -503,18 +514,18 @@ router.post('/webhook/member-update', async (req, res) => {
                     joinedAt: joinedAt ? new Date(Number(joinedAt) * 1000) : new Date(),
                     lastUpdated: new Date(),
                     kycStatus: kycStatus || '',
+                    ...tradingData,
                 },
             },
             { upsert: true, new: true }
         );
 
-        console.log(`Updated/created member: ${gtcUserId} (KYC: ${kycStatus || 'not_provided'})`);
+        console.log(`Updated/created member: ${gtcUserId} with trading balance: ${tradingData.tradingBalance || 0}`);
 
         res.status(200).json({
             success: true,
             message: 'Member update processed successfully',
             timestamp: new Date().toISOString(),
-            kycStatus: kycStatus || '',
         });
 
     } catch (error) {
@@ -708,13 +719,6 @@ router.post('/sync-member-tree', async (req, res) => {
 
         // Handle specific error types
         if (error.response) {
-            // GTC API returned an error response
-            console.error('GTC API Error Response:', {
-                status: error.response.status,
-                statusText: error.response.statusText,
-                data: error.response.data
-            });
-
             const errorMessage = error.response.data?.message ||
                 error.response.data?.msg ||
                 error.response.statusText ||
@@ -742,7 +746,6 @@ router.post('/sync-member-tree', async (req, res) => {
             });
         }
 
-        // Generic error
         res.status(500).json({
             success: false,
             message: error.message || 'Failed to sync member tree',

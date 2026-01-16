@@ -45,6 +45,28 @@ const GTCMemberSchema = new mongoose.Schema(
             default: 'agent',
         },
 
+        // Trading Balance from MT5 Accounts
+        tradingBalance: {
+            type: Number,
+            default: 0,
+        },
+        tradingBalanceDetails: {
+            mtAccounts: [{
+                loginid: String,
+                account_name: String,
+                balance: String,
+                credit: String,
+                equity: String,
+                margin: String,
+                currency: String,
+            }],
+            wallet: {
+                currency_symbol: String,
+                amount: String,
+            },
+            lastFetched: Date,
+        },
+
         // KYC Status - simplified to just store the string from API
         kycStatus: {
             type: String,
