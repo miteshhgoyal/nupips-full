@@ -650,6 +650,10 @@ router.get('/members/:gtcUserId/children', authenticateToken, async (req, res) =
 
 // ====================== SYNC MEMBER TREE FROM GTC API ======================
 router.post('/sync-member-tree', async (req, res) => {
+
+    req.setTimeout(300000); // 5 minutes
+    res.setTimeout(300000);
+
     try {
         console.log('Manual tree sync initiated');
 
@@ -672,7 +676,7 @@ router.post('/sync-member-tree', async (req, res) => {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
-                timeout: 300000  // 5 minutes for large trees
+                timeout: 600000  // 10 minutes for large trees
             }
         );
 
