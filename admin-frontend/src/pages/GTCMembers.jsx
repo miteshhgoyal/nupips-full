@@ -1307,18 +1307,9 @@ const GTCMembers = () => {
                                 strokeWidth={"2.5px"}
                               />
                               <span className="text-base font-bold text-blue-700 text-nowrap mb-0.5">
-                                {(member.walletBalance || 0).toFixed(2)}
+                                {(member.amount || 0).toFixed(2)}
                               </span>
                             </div>
-                            {member.tradingBalanceDetails?.wallet
-                              ?.currency_symbol && (
-                              <span className="text-xs text-gray-400 text-nowrap">
-                                {
-                                  member.tradingBalanceDetails.wallet
-                                    .currency_symbol
-                                }
-                              </span>
-                            )}
                           </div>
                         </td>
 
