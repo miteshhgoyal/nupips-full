@@ -960,8 +960,6 @@ router.get('/gtc-members/export', async (req, res) => {
     }
 });
 
-// ==================== GTC MEMBERS ROUTES ====================
-
 // ============================================
 // GET: Fetch all GTC members with filters
 // ============================================
@@ -992,15 +990,20 @@ router.get('/gtc-members', async (req, res) => {
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const [members, total, stats] = await Promise.all([
+        // Fetch paginated members and total count
+        const [members, total] = await Promise.all([
             GTCMember.find(filter)
                 .sort({ joinedAt: -1 })
                 .skip(skip)
                 .limit(parseInt(limit))
                 .populate('onboardingDoneBy', 'name email username userType')
-                .populate('onboardingDoneBy', 'name email username userType')
                 .lean(),
             GTCMember.countDocuments(filter),
+        ]);
+
+        // Calculate comprehensive stats for ALL members (not just current page)
+        const [allMembersStats, kycStats, balanceStats, onboardingStats, additionalStats] = await Promise.all([
+            // Basic stats
             GTCMember.aggregate([
                 {
                     $facet: {
@@ -1018,20 +1021,153 @@ router.get('/gtc-members', async (req, res) => {
                     },
                 },
             ]),
+
+            // KYC Stats
+            GTCMember.aggregate([
+                {
+                    $facet: {
+                        completed: [
+                            { $match: { kycStatus: 'completed' } },
+                            { $count: 'count' },
+                        ],
+                        pending: [
+                            { $match: { kycStatus: { $ne: 'completed' } } },
+                            { $count: 'count' },
+                        ],
+                    },
+                },
+            ]),
+
+            // Balance Stats
+            GTCMember.aggregate([
+                {
+                    $facet: {
+                        withTradingBalance: [
+                            { $match: { tradingBalance: { $gt: 0 } } },
+                            { $count: 'count' },
+                        ],
+                        zeroTradingBalance: [
+                            { $match: { $or: [{ tradingBalance: 0 }, { tradingBalance: { $exists: false } }] } },
+                            { $count: 'count' },
+                        ],
+                        withWalletBalance: [
+                            { $match: { amount: { $gt: 0 } } },
+                            { $count: 'count' },
+                        ],
+                        zeroWalletBalance: [
+                            { $match: { $or: [{ amount: 0 }, { amount: { $exists: false } }] } },
+                            { $count: 'count' },
+                        ],
+                    },
+                },
+            ]),
+
+            // Onboarding Stats
+            GTCMember.aggregate([
+                {
+                    $facet: {
+                        onboardedWithCall: [
+                            { $match: { onboardedWithCall: true } },
+                            { $count: 'count' },
+                        ],
+                        onboardedWithMessage: [
+                            { $match: { onboardedWithMessage: true } },
+                            { $count: 'count' },
+                        ],
+                        bothOnboarded: [
+                            {
+                                $match: {
+                                    onboardedWithCall: true,
+                                    onboardedWithMessage: true,
+                                },
+                            },
+                            { $count: 'count' },
+                        ],
+                        notOnboarded: [
+                            {
+                                $match: {
+                                    onboardedWithCall: false,
+                                    onboardedWithMessage: false,
+                                },
+                            },
+                            { $count: 'count' },
+                        ],
+                        partialOnboarded: [
+                            {
+                                $match: {
+                                    $or: [
+                                        { onboardedWithCall: true, onboardedWithMessage: false },
+                                        { onboardedWithCall: false, onboardedWithMessage: true },
+                                    ],
+                                },
+                            },
+                            { $count: 'count' },
+                        ],
+                    },
+                },
+            ]),
+
+            // Additional Stats (Recent Joins)
+            GTCMember.aggregate([
+                {
+                    $facet: {
+                        recentJoins: [
+                            {
+                                $match: {
+                                    joinedAt: {
+                                        $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+                                    },
+                                },
+                            },
+                            { $count: 'count' },
+                        ],
+                    },
+                },
+            ]),
         ]);
 
+        // Format all stats
         const formattedStats = {
-            total: stats[0].totalMembers[0]?.count || 0,
-            withParent: stats[0].withParent[0]?.count || 0,
-            rootMembers: stats[0].rootMembers[0]?.count || 0,
-            avgLevel: stats[0].avgLevel[0]?.avg || 0,
-            maxLevel: stats[0].maxLevel[0]?.max || 0,
+            total: allMembersStats[0].totalMembers[0]?.count || 0,
+            withParent: allMembersStats[0].withParent[0]?.count || 0,
+            rootMembers: allMembersStats[0].rootMembers[0]?.count || 0,
+            avgLevel: allMembersStats[0].avgLevel[0]?.avg || 0,
+            maxLevel: allMembersStats[0].maxLevel[0]?.max || 0,
+        };
+
+        const formattedKycStats = {
+            completed: kycStats[0].completed[0]?.count || 0,
+            pending: kycStats[0].pending[0]?.count || 0,
+        };
+
+        const formattedBalanceStats = {
+            withTradingBalance: balanceStats[0].withTradingBalance[0]?.count || 0,
+            zeroTradingBalance: balanceStats[0].zeroTradingBalance[0]?.count || 0,
+            withWalletBalance: balanceStats[0].withWalletBalance[0]?.count || 0,
+            zeroWalletBalance: balanceStats[0].zeroWalletBalance[0]?.count || 0,
+        };
+
+        const formattedOnboardingStats = {
+            onboardedWithCall: onboardingStats[0].onboardedWithCall[0]?.count || 0,
+            onboardedWithMessage: onboardingStats[0].onboardedWithMessage[0]?.count || 0,
+            bothOnboarded: onboardingStats[0].bothOnboarded[0]?.count || 0,
+            notOnboarded: onboardingStats[0].notOnboarded[0]?.count || 0,
+            partialOnboarded: onboardingStats[0].partialOnboarded[0]?.count || 0,
+        };
+
+        const formattedAdditionalStats = {
+            recentJoins: additionalStats[0].recentJoins[0]?.count || 0,
+            completeOnboarding: onboardingStats[0].bothOnboarded[0]?.count || 0,
         };
 
         res.status(200).json({
             success: true,
             data: members,
             stats: formattedStats,
+            kycStats: formattedKycStats,
+            balanceStats: formattedBalanceStats,
+            onboardingStats: formattedOnboardingStats,
+            additionalStats: formattedAdditionalStats,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),

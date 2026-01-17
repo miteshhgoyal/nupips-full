@@ -145,7 +145,6 @@ const GTCMembers = () => {
   useEffect(() => {
     fetchCurrentUser();
     fetchMembers();
-    fetchOnboardingStats();
     fetchAvailableUsers();
   }, [currentPage, filterLevel, filterHasParent, filterOnboardingStatus]);
 
@@ -220,9 +219,13 @@ const GTCMembers = () => {
         setMembers(filteredMembers);
         setTotalCount(response.data.pagination.total);
         setTotalPages(response.data.pagination.pages);
-        setStats(response.data.stats);
 
-        calculateAdditionalStats(response.data.allMembers || filteredMembers);
+        // Set all stats from backend (these are now calculated for ALL members)
+        setStats(response.data.stats);
+        setKycStats(response.data.kycStats);
+        setBalanceStats(response.data.balanceStats);
+        setOnboardingStats(response.data.onboardingStats);
+        setAdditionalStats(response.data.additionalStats);
       }
     } catch (err) {
       console.error("Fetch GTC members error:", err);
@@ -232,74 +235,9 @@ const GTCMembers = () => {
     }
   };
 
-  const calculateAdditionalStats = (allMembers) => {
-    // KYC Stats - Only Completed and Pending (merged)
-    const kycCompleted = allMembers.filter(
-      (m) => m.kycStatus === "completed"
-    ).length;
-    const kycPending = allMembers.filter(
-      (m) => m.kycStatus !== "completed" // Everything else is "pending"
-    ).length;
-
-    setKycStats({
-      completed: kycCompleted,
-      pending: kycPending,
-    });
-
-    // Balance Stats
-    const withTradingBalance = allMembers.filter(
-      (m) => (m.tradingBalance || 0) > 0
-    ).length;
-    const zeroTradingBalance = allMembers.filter(
-      (m) => (m.tradingBalance || 0) === 0
-    ).length;
-    const withWalletBalance = allMembers.filter(
-      (m) => (m.amount || 0) > 0
-    ).length;
-    const zeroWalletBalance = allMembers.filter(
-      (m) => (m.amount || 0) === 0
-    ).length;
-
-    setBalanceStats({
-      withTradingBalance,
-      zeroTradingBalance,
-      withWalletBalance,
-      zeroWalletBalance,
-    });
-
-    // Additional Stats
-    // Recent joins - last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recentJoins = allMembers.filter(
-      (m) => new Date(m.joinedAt) > thirtyDaysAgo
-    ).length;
-
-    const completeOnboarding = allMembers.filter(
-      (m) => m.onboardedWithCall && m.onboardedWithMessage
-    ).length;
-
-    setAdditionalStats({
-      recentJoins,
-      completeOnboarding,
-    });
-  };
-
-  const fetchOnboardingStats = async () => {
-    try {
-      const response = await api.get("/admin/gtc-members/stats/onboarding");
-      if (response.data.success) {
-        setOnboardingStats(response.data.data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch onboarding stats:", err);
-    }
-  };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchMembers();
-    await fetchOnboardingStats();
     setRefreshing(false);
   };
 
@@ -766,7 +704,6 @@ const GTCMembers = () => {
         `/admin/gtc-members/${memberId}/onboarding`,
         {
           onboardedWithCall: newValue,
-          // Auto-assign current user if toggling ON and not already assigned
           ...(newValue && !member.onboardingDoneBy && currentUser
             ? { onboardingDoneBy: currentUser._id }
             : {}),
@@ -781,7 +718,6 @@ const GTCMembers = () => {
               return {
                 ...m,
                 onboardedWithCall: newValue,
-                // Update onboardingDoneBy if it was set
                 ...(response.data.data.onboardingDoneBy
                   ? { onboardingDoneBy: response.data.data.onboardingDoneBy }
                   : {}),
@@ -791,7 +727,6 @@ const GTCMembers = () => {
           })
         );
 
-        // Update selected member if in modal
         if (
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
@@ -800,7 +735,9 @@ const GTCMembers = () => {
         }
 
         setSuccess(`Onboarded with call status updated successfully`);
-        await fetchOnboardingStats();
+
+        // Refresh all stats after toggle
+        await fetchMembers();
       }
     } catch (err) {
       console.error("Toggle onboarded with call error:", err);
@@ -824,7 +761,6 @@ const GTCMembers = () => {
         `/admin/gtc-members/${memberId}/onboarding`,
         {
           onboardedWithMessage: newValue,
-          // Auto-assign current user if toggling ON and not already assigned
           ...(newValue && !member.onboardingDoneBy && currentUser
             ? { onboardingDoneBy: currentUser._id }
             : {}),
@@ -839,7 +775,6 @@ const GTCMembers = () => {
               return {
                 ...m,
                 onboardedWithMessage: newValue,
-                // Update onboardingDoneBy if it was set
                 ...(response.data.data.onboardingDoneBy
                   ? { onboardingDoneBy: response.data.data.onboardingDoneBy }
                   : {}),
@@ -849,7 +784,6 @@ const GTCMembers = () => {
           })
         );
 
-        // Update selected member if in modal
         if (
           selectedMember &&
           (selectedMember._id || selectedMember.gtcUserId) === memberId
@@ -858,7 +792,9 @@ const GTCMembers = () => {
         }
 
         setSuccess(`Onboarded with message status updated successfully`);
-        await fetchOnboardingStats();
+
+        // Refresh all stats after toggle
+        await fetchMembers();
       }
     } catch (err) {
       console.error("Toggle onboarded with message error:", err);
