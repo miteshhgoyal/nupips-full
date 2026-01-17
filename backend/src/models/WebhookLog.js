@@ -1,39 +1,42 @@
 // models/WebhookLog.js
 import mongoose from 'mongoose';
 
+// ==================== MAIN SCHEMA ====================
+
 const webhookLogSchema = new mongoose.Schema({
+    // ========== Webhook Identification ==========
     uuid: {
         type: String,
         required: true,
-        index: true
     },
+
+    // ========== User Reference ==========
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        index: true
     },
+
+    // ========== Webhook Type ==========
     type: {
         type: String,
         enum: ['deposit', 'withdrawal', 'blockbee-callback', 'other'],
         default: 'other',
-        index: true
     },
 
-    // Request details
+    // ========== Request Details ==========
     payload: mongoose.Schema.Types.Mixed,
     ipAddress: String,
     userAgent: String,
     headers: Object,
 
-    // Processing status
+    // ========== Processing Status ==========
     processed: {
         type: Boolean,
         default: false,
-        index: true
     },
     processedAt: Date,
 
-    // Related documents
+    // ========== Related Documents ==========
     depositId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Deposit'
@@ -43,7 +46,7 @@ const webhookLogSchema = new mongoose.Schema({
         ref: 'Withdrawal'
     },
 
-    // Error handling
+    // ========== Error Handling ==========
     error: String,
     errorStack: String,
     retryCount: {
@@ -52,21 +55,28 @@ const webhookLogSchema = new mongoose.Schema({
     },
     lastRetryAt: Date,
 
-    // Response info
+    // ========== Response Info ==========
     responseStatus: Number,
     responseData: Object
 }, {
     timestamps: true
 });
 
-// Compound indexes
+// ==================== INDEXES ====================
+// Compound indexes for better query performance
 webhookLogSchema.index({ uuid: 1, createdAt: -1 });
 webhookLogSchema.index({ type: 1, processed: 1 });
 webhookLogSchema.index({ userId: 1, type: 1, createdAt: -1 });
 webhookLogSchema.index({ depositId: 1 });
 webhookLogSchema.index({ withdrawalId: 1 });
+webhookLogSchema.index({ uuid: 1 });
+webhookLogSchema.index({ processed: 1, createdAt: 1 }); // For cleanup queries
 
-// Method: Mark as processed
+// ==================== INSTANCE METHODS ====================
+
+/**
+ * Mark webhook log as processed
+ */
 webhookLogSchema.methods.markProcessed = async function (responseData = null) {
     this.processed = true;
     this.processedAt = new Date();
@@ -76,7 +86,9 @@ webhookLogSchema.methods.markProcessed = async function (responseData = null) {
     await this.save();
 };
 
-// Method: Log retry attempt
+/**
+ * Log retry attempt
+ */
 webhookLogSchema.methods.logRetry = async function (error = null) {
     this.retryCount += 1;
     this.lastRetryAt = new Date();
@@ -87,7 +99,12 @@ webhookLogSchema.methods.logRetry = async function (error = null) {
     await this.save();
 };
 
-// Static method: Clean old logs (for cron job)
+// ==================== STATIC METHODS ====================
+
+/**
+ * Clean old processed logs (for cron job)
+ * @param {number} daysOld - Delete logs older than this many days
+ */
 webhookLogSchema.statics.cleanOldLogs = async function (daysOld = 90) {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
@@ -99,6 +116,8 @@ webhookLogSchema.statics.cleanOldLogs = async function (daysOld = 90) {
 
     return result.deletedCount;
 };
+
+// ==================== EXPORT ====================
 
 const WebhookLog = mongoose.model('WebhookLog', webhookLogSchema);
 export default WebhookLog;

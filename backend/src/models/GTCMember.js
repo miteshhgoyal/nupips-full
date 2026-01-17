@@ -1,5 +1,11 @@
+// models/GTCMember.js
 import mongoose from 'mongoose';
 
+// ==================== SUBDOCUMENTS ====================
+
+/**
+ * Upline subdocument schema
+ */
 const UplineSchema = new mongoose.Schema(
     {
         gtcUserId: String,
@@ -10,14 +16,15 @@ const UplineSchema = new mongoose.Schema(
     { _id: false }
 );
 
+// ==================== MAIN SCHEMA ====================
+
 const GTCMemberSchema = new mongoose.Schema(
     {
-        // GTC user identity
+        // ========== GTC User Identity ==========
         gtcUserId: {
             type: String,
             required: true,
             unique: true,
-            index: true,
         },
         email: {
             type: String,
@@ -31,7 +38,7 @@ const GTCMemberSchema = new mongoose.Schema(
             type: String,
         },
 
-        // Contact and basic info
+        // ========== Contact and Basic Info ==========
         phone: {
             type: String,
         },
@@ -45,7 +52,7 @@ const GTCMemberSchema = new mongoose.Schema(
             default: 'agent',
         },
 
-        // Trading Balance from MT5 Accounts
+        // ========== Trading Balance from MT5 Accounts ==========
         tradingBalance: {
             type: Number,
             default: 0,
@@ -67,14 +74,13 @@ const GTCMemberSchema = new mongoose.Schema(
             lastFetched: Date,
         },
 
-        // KYC Status - simplified to just store the string from API
+        // ========== KYC Status ==========
         kycStatus: {
             type: String,
             default: '',
-            index: true,
         },
 
-        // Onboarding Status Fields
+        // ========== Onboarding Status Fields ==========
         onboardedWithCall: {
             type: Boolean,
             default: false,
@@ -84,12 +90,11 @@ const GTCMemberSchema = new mongoose.Schema(
             default: false,
         },
 
-        // Onboarding Management Fields
+        // ========== Onboarding Management Fields ==========
         onboardingDoneBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
             default: null,
-            index: true,
         },
         onboardingNotes: {
             type: String,
@@ -101,11 +106,10 @@ const GTCMemberSchema = new mongoose.Schema(
             default: null,
         },
 
-        // Tree/parent info
+        // ========== Tree/Parent Info ==========
         parentGtcUserId: {
             type: String,
             default: null,
-            index: true,
         },
         level: {
             type: Number,
@@ -113,13 +117,13 @@ const GTCMemberSchema = new mongoose.Schema(
         },
         uplineChain: [UplineSchema],
 
-        // Extra data from GTC
+        // ========== Extra Data from GTC ==========
         rawData: {
             type: Object,
             default: {},
         },
 
-        // Timestamps from GTC
+        // ========== Timestamps from GTC ==========
         joinedAt: {
             type: Date,
             default: Date.now,
@@ -132,15 +136,21 @@ const GTCMemberSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// Indexes
+// ==================== INDEXES ====================
+// Compound and single indexes for query optimization
 GTCMemberSchema.index({ gtcUserId: 1, level: 1 });
+GTCMemberSchema.index({ gtcUserId: 1 }); // Unique already handled
 GTCMemberSchema.index({ parentGtcUserId: 1 });
 GTCMemberSchema.index({ userType: 1 });
 GTCMemberSchema.index({ onboardedWithCall: 1, onboardedWithMessage: 1 });
 GTCMemberSchema.index({ onboardingDoneBy: 1 });
 GTCMemberSchema.index({ kycStatus: 1 });
 
-// Static method to get KYC statistics
+// ==================== STATIC METHODS ====================
+
+/**
+ * Get KYC statistics for all members
+ */
 GTCMemberSchema.statics.getKYCStats = async function () {
     const stats = await this.aggregate([
         {
@@ -160,5 +170,7 @@ GTCMemberSchema.statics.getKYCStats = async function () {
         statusBreakdown: stats,
     };
 };
+
+// ==================== EXPORT ====================
 
 export default mongoose.model('GTCMember', GTCMemberSchema);

@@ -1,20 +1,21 @@
 // models/Deposit.js
 import mongoose from 'mongoose';
 
+// ==================== MAIN SCHEMA ====================
+
 const depositSchema = new mongoose.Schema({
+    // ========== User Reference ==========
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,
-        index: true
     },
 
-    // Transaction Details
+    // ========== Transaction Details ==========
     transactionId: {
         type: String,
         required: true,
         unique: true,
-        index: true
     },
     amount: {
         type: Number,
@@ -28,7 +29,7 @@ const depositSchema = new mongoose.Schema({
         default: 'USD'
     },
 
-    // Payment Method
+    // ========== Payment Method ==========
     paymentMethod: {
         type: String,
         enum: ['bank_transfer', 'crypto', 'wallet', 'blockbee_checkout', 'blockbee-crypto'],
@@ -49,19 +50,17 @@ const depositSchema = new mongoose.Schema({
         walletId: String
     },
 
-    // BlockBee Integration
+    // ========== BlockBee Integration ==========
     blockBee: {
         paymentId: String,
         paymentUrl: String,
         uuid: {
             type: String,
-            index: true
         },
         coin: String,
         ticker: String,
         address: {
             type: String,
-            index: true
         },
         qrCode: String,
         qrCodeUrl: String,
@@ -72,7 +71,6 @@ const depositSchema = new mongoose.Schema({
         valuePaid: Number,
         txHash: {
             type: String,
-            index: true
         },
         blockBeeStatus: {
             type: String,
@@ -87,7 +85,6 @@ const depositSchema = new mongoose.Schema({
                 'failed'
             ],
             default: 'initiated',
-            index: true
         },
         confirmations: Number,
         isProcessed: {
@@ -100,20 +97,19 @@ const depositSchema = new mongoose.Schema({
         createdAt: Date
     },
 
-    // Status
+    // ========== Status ==========
     status: {
         type: String,
         enum: ['pending', 'processing', 'completed', 'failed', 'cancelled'],
         default: 'pending',
-        index: true
     },
 
-    // Proof and Notes
+    // ========== Proof and Notes ==========
     proofOfPayment: String,
     userNotes: String,
     adminNotes: String,
 
-    // Processing
+    // ========== Processing ==========
     processedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -121,17 +117,21 @@ const depositSchema = new mongoose.Schema({
     processedAt: Date,
     completedAt: Date,
 
-    // TTL field for auto-deletion
+    // ========== TTL field for auto-deletion ==========
     expiresAt: {
         type: Date,
-        index: true
     }
 }, {
     timestamps: true
 });
 
-// Existing indexes
+// ==================== INDEXES ====================
+// Compound indexes for better query performance
 depositSchema.index({ userId: 1, status: 1, createdAt: -1 });
+depositSchema.index({ transactionId: 1 }); // Unique already, single index
+depositSchema.index({ status: 1 });
+
+// BlockBee related indexes
 depositSchema.index({ 'blockBee.paymentId': 1 });
 depositSchema.index({ 'blockBee.uuid': 1 });
 depositSchema.index({ 'blockBee.address': 1 });
@@ -150,7 +150,11 @@ depositSchema.index(
     }
 );
 
-// Pre-save hook: Set expiresAt for pending deposits
+// ==================== PRE-SAVE HOOKS ====================
+
+/**
+ * Pre-save hook: Set expiresAt for pending deposits and completedAt for completed deposits
+ */
 depositSchema.pre('save', function (next) {
     // Set completedAt when status changes to completed
     if (this.isModified('status') && this.status === 'completed' && !this.completedAt) {
@@ -170,7 +174,11 @@ depositSchema.pre('save', function (next) {
     next();
 });
 
-// Post-save hook: Update user financials when deposit is completed
+// ==================== POST-SAVE HOOKS ====================
+
+/**
+ * Post-save hook: Update user financials when deposit is completed
+ */
 depositSchema.post('save', async function (doc, next) {
     try {
         const wasModified = doc.isModified('status');
@@ -194,6 +202,8 @@ depositSchema.post('save', async function (doc, next) {
         next(error);
     }
 });
+
+// ==================== EXPORT ====================
 
 const Deposit = mongoose.model('Deposit', depositSchema);
 export default Deposit;

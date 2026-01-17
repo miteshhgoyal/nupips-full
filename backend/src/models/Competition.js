@@ -1,6 +1,11 @@
-// backend/src/models/Competition.js
+// models/Competition.js
 import mongoose from 'mongoose';
 
+// ==================== SUBDOCUMENTS ====================
+
+/**
+ * Reward subdocument schema
+ */
 const rewardSchema = new mongoose.Schema({
     rankRange: {
         type: String,
@@ -34,6 +39,9 @@ const rewardSchema = new mongoose.Schema({
     },
 }, { _id: false });
 
+/**
+ * Participant subdocument schema
+ */
 const participantSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -62,8 +70,10 @@ const participantSchema = new mongoose.Schema({
     },
 }, { _id: false, timestamps: true });
 
+// ==================== MAIN SCHEMA ====================
+
 const competitionSchema = new mongoose.Schema({
-    // Competition Basic Info
+    // ========== Competition Basic Info ==========
     title: {
         type: String,
         required: true,
@@ -82,14 +92,14 @@ const competitionSchema = new mongoose.Schema({
         lowercase: true,
     },
 
-    // Competition Status
+    // ========== Competition Status ==========
     status: {
         type: String,
         enum: ['draft', 'upcoming', 'active', 'completed', 'cancelled'],
         default: 'draft',
     },
 
-    // Scoring Rules (weights must total 100%)
+    // ========== Scoring Rules (weights must total 100%) ==========
     rules: {
         directReferralsWeight: {
             type: Number,
@@ -128,7 +138,7 @@ const competitionSchema = new mongoose.Schema({
         },
     },
 
-    // Rewards Configuration
+    // ========== Rewards Configuration ==========
     rewards: {
         type: [rewardSchema],
         default: [],
@@ -155,7 +165,7 @@ const competitionSchema = new mongoose.Schema({
         },
     },
 
-    // Competition Period
+    // ========== Competition Period ==========
     startDate: {
         type: Date,
         required: true,
@@ -171,7 +181,7 @@ const competitionSchema = new mongoose.Schema({
         },
     },
 
-    // Entry Requirements
+    // ========== Entry Requirements ==========
     requirements: {
         requiresGTCAccount: {
             type: Boolean,
@@ -184,7 +194,7 @@ const competitionSchema = new mongoose.Schema({
         },
     },
 
-    // KYC Bonus Configuration
+    // ========== KYC Bonus Configuration ==========
     kycBonusMultiplier: {
         type: Number,
         default: 1.05, // 5% bonus by default
@@ -198,7 +208,7 @@ const competitionSchema = new mongoose.Schema({
         },
     },
 
-    // Normalization Targets (for scoring calculations)
+    // ========== Normalization Targets (for scoring calculations) ==========
     normalizationTargets: {
         directReferralsTarget: {
             type: Number,
@@ -227,10 +237,10 @@ const competitionSchema = new mongoose.Schema({
         },
     },
 
-    // Participants tracking
+    // ========== Participants Tracking ==========
     participants: [participantSchema],
 
-    // Statistics
+    // ========== Statistics ==========
     stats: {
         totalParticipants: {
             type: Number,
@@ -254,7 +264,7 @@ const competitionSchema = new mongoose.Schema({
         },
     },
 
-    // Metadata
+    // ========== Metadata ==========
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
@@ -271,15 +281,21 @@ const competitionSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-// Indexes for performance
+// ==================== INDEXES ====================
+// Indexes for better query performance
 competitionSchema.index({ slug: 1 });
 competitionSchema.index({ status: 1 });
 competitionSchema.index({ startDate: 1, endDate: 1 });
 competitionSchema.index({ 'participants.userId': 1 });
 competitionSchema.index({ 'participants.score': -1 });
 
-// Pre-save middleware to validate total weight
+// ==================== PRE-SAVE HOOKS ====================
+
+/**
+ * Pre-save middleware to validate total weight and auto-update status
+ */
 competitionSchema.pre('save', function (next) {
+    // Validate total weight equals 100%
     const totalWeight =
         this.rules.directReferralsWeight +
         this.rules.teamSizeWeight +
@@ -306,24 +322,34 @@ competitionSchema.pre('save', function (next) {
     next();
 });
 
-// Method to check if competition is currently active
+// ==================== INSTANCE METHODS ====================
+
+/**
+ * Check if competition is currently active
+ */
 competitionSchema.methods.isActive = function () {
     const now = new Date();
     return this.status === 'active' && now >= this.startDate && now <= this.endDate;
 };
 
-// Method to check if competition is upcoming
+/**
+ * Check if competition is upcoming
+ */
 competitionSchema.methods.isUpcoming = function () {
     const now = new Date();
     return this.status === 'upcoming' && now < this.startDate;
 };
 
-// Method to check if competition is completed
+/**
+ * Check if competition is completed
+ */
 competitionSchema.methods.isCompleted = function () {
     return this.status === 'completed';
 };
 
-// Method to check if user can participate
+/**
+ * Check if user can participate in this competition
+ */
 competitionSchema.methods.canUserParticipate = function (user, gtcData) {
     // Check GTC account requirement
     if (this.requirements.requiresGTCAccount && !gtcData) {
@@ -350,7 +376,9 @@ competitionSchema.methods.canUserParticipate = function (user, gtcData) {
     };
 };
 
-// Method to update participant score
+/**
+ * Update participant score
+ */
 competitionSchema.methods.updateParticipantScore = function (userId, scoreData) {
     const participantIndex = this.participants.findIndex(
         p => p.userId.toString() === userId.toString()
@@ -383,7 +411,9 @@ competitionSchema.methods.updateParticipantScore = function (userId, scoreData) 
     this.recalculateRanks();
 };
 
-// Method to recalculate all ranks
+/**
+ * Recalculate all participant ranks
+ */
 competitionSchema.methods.recalculateRanks = function () {
     // Sort participants by score (descending)
     this.participants.sort((a, b) => b.score - a.score);
@@ -407,20 +437,30 @@ competitionSchema.methods.recalculateRanks = function () {
     this.stats.lastCalculated = new Date();
 };
 
-// Static method to get all active competitions
+// ==================== STATIC METHODS ====================
+
+/**
+ * Get all active competitions
+ */
 competitionSchema.statics.getActiveCompetitions = async function () {
     return await this.find({ status: 'active' }).sort({ startDate: -1 });
 };
 
-// Static method to get upcoming competitions
+/**
+ * Get upcoming competitions
+ */
 competitionSchema.statics.getUpcomingCompetitions = async function () {
     return await this.find({ status: 'upcoming' }).sort({ startDate: 1 });
 };
 
-// Static method to get completed competitions
+/**
+ * Get completed competitions
+ */
 competitionSchema.statics.getCompletedCompetitions = async function () {
     return await this.find({ status: 'completed' }).sort({ endDate: -1 });
 };
+
+// ==================== EXPORT ====================
 
 const Competition = mongoose.model('Competition', competitionSchema);
 

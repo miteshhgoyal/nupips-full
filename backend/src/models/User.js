@@ -1,6 +1,8 @@
 // models/User.js
 import mongoose from 'mongoose';
 
+// ==================== SUBDOCUMENTS ====================
+
 // Address Subdocument Schema
 const addressSchema = new mongoose.Schema({
     firstName: { type: String, required: true },
@@ -16,8 +18,10 @@ const addressSchema = new mongoose.Schema({
     label: { type: String, default: "Home" }
 });
 
+// ==================== MAIN SCHEMA ====================
+
 const UserSchema = new mongoose.Schema({
-    // Basic Information
+    // ========== Basic Information ==========
     name: {
         type: String,
         required: true
@@ -26,13 +30,11 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: true,
         unique: true,
-        index: true
     },
     email: {
         type: String,
         required: true,
         unique: true,
-        index: true
     },
     phone: {
         type: String,
@@ -43,13 +45,13 @@ const UserSchema = new mongoose.Schema({
         required: true
     },
 
-    // Wallet & Balance
+    // ========== Wallet & Balance ==========
     walletBalance: {
         type: Number,
         default: 0,
-        index: true
     },
 
+    // ========== Privacy Settings ==========
     privacySettings: {
         hideDetailsFromDownline: {
             type: Boolean,
@@ -57,16 +59,15 @@ const UserSchema = new mongoose.Schema({
         }
     },
 
-    // Addresses Array
+    // ========== Addresses ==========
     addresses: [addressSchema],
 
-    // Referral System
+    // ========== Referral System ==========
     referralDetails: {
         referredBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
             default: null,
-            index: true
         },
         referralTree: [{
             userId: {
@@ -86,12 +87,11 @@ const UserSchema = new mongoose.Schema({
         }
     },
 
-    // User Type & Roles
+    // ========== User Type & Roles ==========
     userType: {
         type: String,
         enum: ['admin', 'agent', 'trader', 'subadmin'],
         default: 'trader',
-        index: true
     },
 
     permissions: {
@@ -115,7 +115,7 @@ const UserSchema = new mongoose.Schema({
         default: []
     },
 
-    // Financial Tracking
+    // ========== Financial Tracking ==========
     financials: {
         totalDeposits: {
             type: Number,
@@ -155,7 +155,7 @@ const UserSchema = new mongoose.Schema({
         }
     },
 
-    // Trading Statistics
+    // ========== Trading Statistics ==========
     tradingStats: {
         totalVolumeLots: {
             type: Number,
@@ -179,7 +179,7 @@ const UserSchema = new mongoose.Schema({
         }
     },
 
-    // Downline Statistics
+    // ========== Downline Statistics ==========
     downlineStats: {
         totalAgents: {
             type: Number,
@@ -199,14 +199,13 @@ const UserSchema = new mongoose.Schema({
         }
     },
 
-    // GTC FX Authentication
+    // ========== GTC FX Authentication ==========
     gtcfx: {
         accessToken: { type: String, default: null },
         refreshToken: { type: String, default: null },
         user: { type: Object, default: null },
         lastSync: { type: Date, default: null },
         lastPerformanceFeesFetch: { type: Date, default: null },
-
         referralLink: {
             type: String,
             default: null,
@@ -215,29 +214,35 @@ const UserSchema = new mongoose.Schema({
         referralLinkUpdatedAt: { type: Date, default: null }
     },
 
+    // ========== Income/Expense History ==========
     incomeExpenseHistory: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "IncomeExpense"
     }],
 
-    // Account Status
+    // ========== Account Status ==========
     status: {
         type: String,
         enum: ['active', 'inactive', 'suspended', 'banned'],
         default: 'active',
-        index: true
     }
 }, {
     timestamps: true
 });
 
-// Indexes
+// ==================== INDEXES ====================
+// Compound indexes for better query performance
 UserSchema.index({ email: 1, status: 1 });
+UserSchema.index({ username: 1 }); // Unique already, single index for lookups
 UserSchema.index({ userType: 1, status: 1 });
 UserSchema.index({ 'referralDetails.referredBy': 1 });
-UserSchema.index({ 'referralDetails.referralTree.userId': 1 });
+UserSchema.index({ walletBalance: 1 });
 
-// Method: Update financial stats from Deposit/Withdrawal models
+// ==================== INSTANCE METHODS ====================
+
+/**
+ * Update financial statistics from Deposit/Withdrawal models
+ */
 UserSchema.methods.updateFinancials = async function () {
     try {
         const Deposit = mongoose.model('Deposit');
@@ -292,7 +297,9 @@ UserSchema.methods.updateFinancials = async function () {
     }
 };
 
-// Method: Update downline stats
+/**
+ * Update downline statistics
+ */
 UserSchema.methods.updateDownlineStats = async function () {
     try {
         // Get all direct referrals (level 1 only)
@@ -338,7 +345,9 @@ UserSchema.methods.updateDownlineStats = async function () {
     }
 };
 
-// Method: Update referrer's stats when new user is referred
+/**
+ * Notify referrer when new user is referred
+ */
 UserSchema.methods.notifyReferrer = async function () {
     try {
         if (this.referralDetails?.referredBy) {
@@ -352,14 +361,16 @@ UserSchema.methods.notifyReferrer = async function () {
     }
 };
 
-// Method: Get full referral tree with user details
+/**
+ * Get full referral tree with user details
+ */
 UserSchema.methods.getReferralTreeWithDetails = async function (maxLevel = null) {
     try {
-        let query = { userId: { $in: this.referralDetails.referralTree.map(r => r.userId) } };
+        let query = { _id: { $in: this.referralDetails.referralTree.map(r => r.userId) } };
 
         if (maxLevel) {
             const filteredTree = this.referralDetails.referralTree.filter(r => r.level <= maxLevel);
-            query = { userId: { $in: filteredTree.map(r => r.userId) } };
+            query = { _id: { $in: filteredTree.map(r => r.userId) } };
         }
 
         const users = await mongoose.model('User').find(query)
@@ -381,11 +392,17 @@ UserSchema.methods.getReferralTreeWithDetails = async function (maxLevel = null)
     }
 };
 
-// Post-save hook: Notify referrer when new user signs up
+// ==================== HOOKS ====================
+
+/**
+ * Post-save hook: Notify referrer when new user signs up
+ */
 UserSchema.post('save', async function (doc) {
     if (doc.isNew && doc.referralDetails?.referredBy) {
         await doc.notifyReferrer();
     }
 });
+
+// ==================== EXPORT ====================
 
 export default mongoose.model('User', UserSchema);

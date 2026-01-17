@@ -1,28 +1,29 @@
 // models/Notification.js
 import mongoose from 'mongoose';
 
+// ==================== MAIN SCHEMA ====================
+
 const NotificationSchema = new mongoose.Schema({
-    // User who receives this notification
+    // ========== User Reference ==========
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,
-        index: true
     },
 
-    // Notification message
+    // ========== Notification Content ==========
     message: {
         type: String,
         required: true
     },
 
-    // Read status
+    // ========== Read Status ==========
     isRead: {
         type: Boolean,
         default: false
     },
 
-    // Type (optional - for filtering)
+    // ========== Type (for filtering) ==========
     type: {
         type: String,
         default: 'general'
@@ -31,7 +32,11 @@ const NotificationSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Index for fast queries
+// ==================== INDEXES ====================
+// Compound index for fast queries
 NotificationSchema.index({ user: 1, createdAt: -1 });
+NotificationSchema.index({ user: 1, isRead: 1 });
+
+// ==================== EXPORT ====================
 
 export default mongoose.model('Notification', NotificationSchema);

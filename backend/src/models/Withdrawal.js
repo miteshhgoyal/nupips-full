@@ -1,20 +1,21 @@
 // models/Withdrawal.js
 import mongoose from 'mongoose';
 
+// ==================== MAIN SCHEMA ====================
+
 const withdrawalSchema = new mongoose.Schema({
+    // ========== User Reference ==========
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,
-        index: true
     },
 
-    // Transaction Details
+    // ========== Transaction Details ==========
     transactionId: {
         type: String,
         required: true,
         unique: true,
-        index: true
     },
     amount: {
         type: Number,
@@ -36,16 +37,16 @@ const withdrawalSchema = new mongoose.Schema({
         required: true
     },
 
-    // Payment Method
+    // ========== Payment Method ==========
     withdrawalMethod: {
         type: String,
         enum: ['bank_transfer', 'crypto', 'wallet', 'blockbee-crypto'],
         required: true
     },
     withdrawalDetails: {
-        cryptocurrency: String, // No enum restriction
+        cryptocurrency: String,
         walletAddress: String,
-        network: String, // No enum restriction
+        network: String,
         txHash: String,
         bankName: String,
         accountNumber: String,
@@ -55,35 +56,32 @@ const withdrawalSchema = new mongoose.Schema({
         walletId: String
     },
 
-    // BlockBee Integration
+    // ========== BlockBee Integration ==========
     blockBee: {
         payoutId: String,
         payoutRequestId: String,
-        coin: String, // Store full identifier
-        ticker: String, // Store ticker
+        coin: String,
+        ticker: String,
         blockBeeStatus: {
             type: String,
             enum: ['created', 'pending', 'processing', 'done', 'completed', 'error', 'failed'],
-            index: true
         },
         txHash: {
             type: String,
-            index: true
         },
         lastStatusCheck: Date,
         errorMessage: String,
         createdAt: Date
     },
 
-    // Status
+    // ========== Status ==========
     status: {
         type: String,
         enum: ['pending', 'processing', 'completed', 'rejected', 'cancelled'],
         default: 'pending',
-        index: true
     },
 
-    // Processing
+    // ========== Processing ==========
     adminNotes: String,
     rejectionReason: String,
     processedBy: {
@@ -96,13 +94,21 @@ const withdrawalSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Indexes
+// ==================== INDEXES ====================
+// Compound indexes for better query performance
 withdrawalSchema.index({ userId: 1, status: 1, createdAt: -1 });
+withdrawalSchema.index({ transactionId: 1 }); // Unique already, single index
+
+// BlockBee related indexes
 withdrawalSchema.index({ 'blockBee.payoutId': 1 });
 withdrawalSchema.index({ 'blockBee.blockBeeStatus': 1 });
 withdrawalSchema.index({ 'blockBee.txHash': 1 });
 
-// Pre-save hook: Calculate netAmount and set completedAt
+// ==================== PRE-SAVE HOOKS ====================
+
+/**
+ * Pre-save hook: Calculate netAmount and set completedAt
+ */
 withdrawalSchema.pre('save', function (next) {
     // Calculate net amount if not already set
     if (!this.netAmount) {
@@ -117,7 +123,11 @@ withdrawalSchema.pre('save', function (next) {
     next();
 });
 
-// Post-save hook: Update user financials and deduct from wallet
+// ==================== POST-SAVE HOOKS ====================
+
+/**
+ * Post-save hook: Update user financials and deduct from wallet
+ */
 withdrawalSchema.post('save', async function (doc, next) {
     try {
         const wasModified = doc.isModified('status');
@@ -151,6 +161,8 @@ withdrawalSchema.post('save', async function (doc, next) {
         next(error);
     }
 });
+
+// ==================== EXPORT ====================
 
 const Withdrawal = mongoose.model('Withdrawal', withdrawalSchema);
 export default Withdrawal;

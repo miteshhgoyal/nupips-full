@@ -1,6 +1,10 @@
+// models/SystemConfig.js
 import mongoose from "mongoose";
 
+// ==================== MAIN SCHEMA ====================
+
 const SystemSchema = new mongoose.Schema({
+    // ========== Percentage Distribution ==========
     systemPercentage: {
         type: Number,
         default: 40,
@@ -13,9 +17,20 @@ const SystemSchema = new mongoose.Schema({
         min: 0,
         max: 100
     },
+
+    // ========== Upline Distribution ==========
     uplineDistribution: [{
-        level: { type: Number, required: true, min: 1 },
-        percentage: { type: Number, required: true, min: 0, max: 100 }
+        level: {
+            type: Number,
+            required: true,
+            min: 1
+        },
+        percentage: {
+            type: Number,
+            required: true,
+            min: 0,
+            max: 100
+        }
     }],
     maxUplineLevels: {
         type: Number,
@@ -24,6 +39,7 @@ const SystemSchema = new mongoose.Schema({
         max: 20
     },
 
+    // ========== Performance Fee Configuration ==========
     performanceFeeFrequency: {
         type: String,
         enum: ["monthly", "daily"],
@@ -46,7 +62,7 @@ const SystemSchema = new mongoose.Schema({
         }
     },
 
-    // PAMM UUID Configuration
+    // ========== PAMM UUID Configuration ==========
     pammUuid: {
         type: String,
         default: null,
@@ -57,11 +73,13 @@ const SystemSchema = new mongoose.Schema({
         default: false
     },
 
+    // ========== Timestamps ==========
     updatedAt: {
         type: Date,
         default: Date.now
     },
 
+    // ========== Income/Expense History ==========
     incomeExpenseHistory: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "IncomeExpense"
@@ -71,6 +89,16 @@ const SystemSchema = new mongoose.Schema({
     collection: 'systemconfigs'
 });
 
+// ==================== INDEXES ====================
+// No explicit indexes needed - MongoDB will handle _id automatically
+// Add indexes if specific query patterns emerge
+
+// ==================== STATIC METHODS ====================
+
+/**
+ * Get or create system configuration
+ * Ensures there's always exactly one config document
+ */
 SystemSchema.statics.getOrCreateConfig = async function () {
     try {
         let config = await this.findOne({});
@@ -98,17 +126,27 @@ SystemSchema.statics.getOrCreateConfig = async function () {
     }
 };
 
+// ==================== PRE-SAVE HOOKS ====================
+
+/**
+ * Pre-save middleware to validate total percentage doesn't exceed 100%
+ */
 SystemSchema.pre('save', function (next) {
     let total = this.systemPercentage + this.traderPercentage;
+
     if (this.uplineDistribution && Array.isArray(this.uplineDistribution)) {
         this.uplineDistribution.forEach(item => {
             total += item.percentage;
         });
     }
+
     if (total > 100) {
         return next(new Error(`Total percentage (${total}%) exceeds 100%`));
     }
+
     next();
 });
+
+// ==================== EXPORT ====================
 
 export default mongoose.model("SystemConfig", SystemSchema);
