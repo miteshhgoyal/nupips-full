@@ -238,12 +238,28 @@ router.post('/register', async (req, res) => {
         const newUser = new User({
             name, username, email, phone,
             password: await hashPassword(password),
-            referralDetails: { referredBy: null, referralTree: [], totalDirectReferrals: 0, totalDownlineUsers: 0 }
+            referralDetails: {
+                referredBy: null,
+                referralTree: [],
+                totalDirectReferrals: 0,
+                totalDownlineUsers: 0
+            }
         });
         await newUser.save();
 
         // MAIN LOGIC: Handle GTC upline matching
-        const result = await handleGTCUplineMatching(newUser, attemptedReferrerId, attemptedReferrerUsername);
+        const gtcResult = await handleGTCUplineMatching(newUser, attemptedReferrerId, attemptedReferrerUsername);
+
+        // FALLBACK: If no GTC match but referredBy provided, use that
+        if (!gtcResult.matched && attemptedReferrerId) {
+            console.log(`No GTC match for ${newUser.username}, using referredBy: ${attemptedReferrerUsername}`);
+            const referrer = await User.findById(attemptedReferrerId);
+            if (referrer) {
+                newUser.referralDetails.referredBy = attemptedReferrerId;
+                await newUser.save();
+                await updateSponsorTree(attemptedReferrerId, newUser._id);
+            }
+        }
 
         // Check if new user is an upline for reserved users
         await checkReservedUsersForUpline(newUser);
@@ -254,6 +270,11 @@ router.post('/register', async (req, res) => {
             userType: newUser.userType,
             permissions: newUser.permissions || { pages: [] }
         }, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+        // Get final referrer info
+        const finalReferrer = newUser.referralDetails.referredBy
+            ? await User.findById(newUser.referralDetails.referredBy)
+            : null;
 
         res.status(201).json({
             message: 'Registration successful',
@@ -266,9 +287,8 @@ router.post('/register', async (req, res) => {
                 phone: newUser.phone,
                 walletBalance: newUser.walletBalance,
                 permissions: newUser.permissions,
-                uplineStatus: result.matched ? 'matched' : (result?.reserved ? 'reserved' : 'no_upline'),
-                referredBy: newUser.referralDetails.referredBy ?
-                    (await User.findById(newUser.referralDetails.referredBy))?.username : null
+                uplineStatus: gtcResult.matched ? 'matched' : (gtcResult?.reserved ? 'reserved' : 'no_upline'),
+                referredBy: finalReferrer?.username || null
             }
         });
 
