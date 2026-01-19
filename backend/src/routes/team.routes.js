@@ -5,14 +5,19 @@ import { authenticateToken } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// Get direct team members
+// Get direct team members - FIXED
 router.get("/direct", authenticateToken, async (req, res) => {
     try {
         const me = await User.findById(req.user.userId);
         if (!me) return res.status(404).json({ message: "User not found" });
 
+        // Get direct referrals from referralTree (level 1 only)
+        const directReferralIds = me.referralDetails.referralTree
+            .filter(entry => entry.level === 1)
+            .map(entry => entry.userId);
+
         const directTeam = await User.find({
-            "referralDetails.referredBy": me._id,
+            _id: { $in: directReferralIds }
         })
             .select(
                 "name username email phone userType status walletBalance financials createdAt"
@@ -30,7 +35,7 @@ router.get("/direct", authenticateToken, async (req, res) => {
     }
 });
 
-// Get full downline tree (recursive)
+// Get full downline tree (recursive) - IMPROVED
 router.get("/tree", authenticateToken, async (req, res) => {
     try {
         const me = await User.findById(req.user.userId);
@@ -82,30 +87,22 @@ router.get("/tree", authenticateToken, async (req, res) => {
     }
 });
 
-// Get team statistics
+// Get team statistics - FIXED
 router.get("/stats", authenticateToken, async (req, res) => {
     try {
         const me = await User.findById(req.user.userId);
         if (!me) return res.status(404).json({ message: "User not found" });
 
-        // Get all downline users recursively
-        async function getAllDownline(userId) {
-            const direct = await User.find({
-                "referralDetails.referredBy": userId,
-            }).lean();
+        // Get all downline user IDs from referralTree
+        const allDownlineIds = me.referralDetails.referralTree.map(entry => entry.userId);
+        const allDownline = await User.find({
+            _id: { $in: allDownlineIds }
+        }).lean();
 
-            let all = [...direct];
-            for (const user of direct) {
-                const nested = await getAllDownline(user._id);
-                all = all.concat(nested);
-            }
-            return all;
-        }
-
-        const allDownline = await getAllDownline(me._id);
-        const directTeam = allDownline.filter(
-            (u) => u.referralDetails.referredBy.toString() === me._id.toString()
-        );
+        // Get direct team (level 1 only)
+        const directTeamIds = me.referralDetails.referralTree
+            .filter(entry => entry.level === 1)
+            .map(entry => entry.userId);
 
         // Calculate commission-based metrics
         const totalRebateIncome = allDownline.reduce(
@@ -134,7 +131,7 @@ router.get("/stats", authenticateToken, async (req, res) => {
         );
 
         res.json({
-            directCount: directTeam.length,
+            directCount: directTeamIds.length,
             totalDownline: allDownline.length,
             activeUsers: allDownline.filter((u) => u.status === "active").length,
             totalRebateIncome,
