@@ -142,6 +142,8 @@ const GTCMembers = () => {
     completeOnboarding: 0,
   });
 
+  onst[(exportingUser, setExportingUser)] = useState(null);
+
   useEffect(() => {
     fetchCurrentUser();
     fetchMembers();
@@ -193,25 +195,25 @@ const GTCMembers = () => {
         if (filterOnboardingStatus) {
           if (filterOnboardingStatus === "both") {
             filteredMembers = filteredMembers.filter(
-              (m) => m.onboardedWithCall && m.onboardedWithMessage
+              (m) => m.onboardedWithCall && m.onboardedWithMessage,
             );
           } else if (filterOnboardingStatus === "call") {
             filteredMembers = filteredMembers.filter(
-              (m) => m.onboardedWithCall
+              (m) => m.onboardedWithCall,
             );
           } else if (filterOnboardingStatus === "message") {
             filteredMembers = filteredMembers.filter(
-              (m) => m.onboardedWithMessage
+              (m) => m.onboardedWithMessage,
             );
           } else if (filterOnboardingStatus === "none") {
             filteredMembers = filteredMembers.filter(
-              (m) => !m.onboardedWithCall && !m.onboardedWithMessage
+              (m) => !m.onboardedWithCall && !m.onboardedWithMessage,
             );
           } else if (filterOnboardingStatus === "partial") {
             filteredMembers = filteredMembers.filter(
               (m) =>
                 (m.onboardedWithCall && !m.onboardedWithMessage) ||
-                (!m.onboardedWithCall && m.onboardedWithMessage)
+                (!m.onboardedWithCall && m.onboardedWithMessage),
             );
           }
         }
@@ -426,7 +428,7 @@ const GTCMembers = () => {
         {hasChildren && isExpanded && (
           <div className="mt-2 space-y-2">
             {node.children.map((child) =>
-              renderSimpleTreeNode(child, depth + 1)
+              renderSimpleTreeNode(child, depth + 1),
             )}
           </div>
         )}
@@ -652,13 +654,13 @@ const GTCMembers = () => {
           {
             timeout: 600000,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         )
         .then((response) => {
           // Success callback (runs in background)
           if (response.data.success) {
             setSuccess(
-              `Sync completed! ${response.data.syncResult.stats.totalMembers} members synced in ${response.data.syncResult.stats.duration}`
+              `Sync completed! ${response.data.syncResult.stats.totalMembers} members synced in ${response.data.syncResult.stats.duration}`,
             );
             fetchMembers();
             fetchOnboardingStats();
@@ -668,7 +670,7 @@ const GTCMembers = () => {
           // Only show error if it's NOT a timeout
           if (!err.code || err.code !== "ECONNABORTED") {
             setError(
-              err.response?.data?.message || "Sync failed - check backend logs"
+              err.response?.data?.message || "Sync failed - check backend logs",
             );
           }
         });
@@ -679,7 +681,7 @@ const GTCMembers = () => {
       setSyncing(false);
 
       setSuccess(
-        "Sync started successfully! This will take 7-8 minutes. You can continue working, we'll refresh the data automatically when done."
+        "Sync started successfully! This will take 7-8 minutes. You can continue working, we'll refresh the data automatically when done.",
       );
 
       // Auto-dismiss success after 8 seconds
@@ -707,7 +709,7 @@ const GTCMembers = () => {
           ...(newValue && !member.onboardingDoneBy && currentUser
             ? { onboardingDoneBy: currentUser._id }
             : {}),
-        }
+        },
       );
 
       if (response.data.success) {
@@ -724,7 +726,7 @@ const GTCMembers = () => {
               };
             }
             return m;
-          })
+          }),
         );
 
         if (
@@ -742,7 +744,7 @@ const GTCMembers = () => {
     } catch (err) {
       console.error("Toggle onboarded with call error:", err);
       setError(
-        err.response?.data?.message || "Failed to update onboarding status"
+        err.response?.data?.message || "Failed to update onboarding status",
       );
     } finally {
       setTogglingCall((prev) => ({ ...prev, [memberId]: false }));
@@ -764,7 +766,7 @@ const GTCMembers = () => {
           ...(newValue && !member.onboardingDoneBy && currentUser
             ? { onboardingDoneBy: currentUser._id }
             : {}),
-        }
+        },
       );
 
       if (response.data.success) {
@@ -781,7 +783,7 @@ const GTCMembers = () => {
               };
             }
             return m;
-          })
+          }),
         );
 
         if (
@@ -799,7 +801,7 @@ const GTCMembers = () => {
     } catch (err) {
       console.error("Toggle onboarded with message error:", err);
       setError(
-        err.response?.data?.message || "Failed to update onboarding status"
+        err.response?.data?.message || "Failed to update onboarding status",
       );
     } finally {
       setTogglingMessage((prev) => ({ ...prev, [memberId]: false }));
@@ -820,7 +822,7 @@ const GTCMembers = () => {
         `/admin/gtc-members/${memberId}/onboarding`,
         {
           onboardingDoneBy: newUserId || null,
-        }
+        },
       );
 
       if (response.data.success) {
@@ -834,7 +836,7 @@ const GTCMembers = () => {
               };
             }
             return m;
-          })
+          }),
         );
 
         // Update selected member if in modal
@@ -875,7 +877,7 @@ const GTCMembers = () => {
               };
             }
             return m;
-          })
+          }),
         );
 
         if (
@@ -902,7 +904,7 @@ const GTCMembers = () => {
     } catch (err) {
       console.error("Save onboarding notes error:", err);
       setError(
-        err.response?.data?.message || "Failed to save onboarding notes"
+        err.response?.data?.message || "Failed to save onboarding notes",
       );
     } finally {
       setSavingNotes(false);
@@ -935,7 +937,7 @@ const GTCMembers = () => {
         setShowTreeModal(true);
         if (response.data.data.tree?.length > 0) {
           const firstLevelIds = response.data.data.tree.map(
-            (child) => child._id
+            (child) => child._id,
           );
           setExpandedNodes(new Set(firstLevelIds));
         }
@@ -984,7 +986,7 @@ const GTCMembers = () => {
     if (!node.children || node.children.length === 0) return 0;
     return node.children.reduce(
       (sum, child) => sum + 1 + countTotalDescendants(child),
-      0
+      0,
     );
   };
 
@@ -1177,7 +1179,7 @@ const GTCMembers = () => {
         {hasChildren && isExpanded && (
           <div className="mt-2 space-y-2 pl-4 border-l-2 border-gray-200">
             {node.children.map((child) =>
-              renderTreeNode(child, false, depth + 1)
+              renderTreeNode(child, false, depth + 1),
             )}
           </div>
         )}
@@ -1185,55 +1187,294 @@ const GTCMembers = () => {
     );
   };
 
-  const exportToCSV = () => {
-    const csvData = [
-      [
-        "GTC User ID",
-        "Username",
-        "Name",
-        "Email",
-        "Phone",
-        "Level",
-        "User Type",
-        "Amount",
-        "Trading Balance",
-        "Wallet Balance",
-        "KYC Status",
-        "Parent GTC ID",
-        "Onboarded With Call",
-        "Onboarded With Message",
-        "Onboarded By",
-        "Notes",
-        "Joined At",
-      ],
-      ...members.map((m) => [
-        m.gtcUserId,
-        m.username,
-        m.name || "N/A",
-        m.email,
-        m.phone || "N/A",
-        m.level,
-        m.userType || "agent",
-        m.amount || 0,
-        m.tradingBalance || 0,
-        m.walletBalance || 0,
-        m.kycStatus || "N/A",
-        m.parentGtcUserId || "Root",
-        m.onboardedWithCall ? "Yes" : "No",
-        m.onboardedWithMessage ? "Yes" : "No",
-        m.onboardingDoneBy?.name || "N/A",
-        m.onboardingNotes || "N/A",
-        new Date(m.joinedAt).toLocaleDateString(),
-      ]),
-    ];
+  // Helper function to calculate downline stats for a member
+  const calculateDownlineStats = (member, allMembers) => {
+    const findAllDescendants = (parentId) => {
+      const directChildren = allMembers.filter(
+        (m) => m.parentGtcUserId === parentId,
+      );
+      let allDescendants = [...directChildren];
 
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      csvData.map((row) => row.join(",")).join("\n");
-    const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", `gtc-members-${new Date().getTime()}.csv`);
-    link.click();
+      directChildren.forEach((child) => {
+        allDescendants = [
+          ...allDescendants,
+          ...findAllDescendants(child.gtcUserId),
+        ];
+      });
+
+      return allDescendants;
+    };
+
+    const descendants = findAllDescendants(member.gtcUserId);
+    const directDownline = descendants.filter(
+      (m) => m.parentGtcUserId === member.gtcUserId,
+    );
+
+    return {
+      directDownlineCount: directDownline.length,
+      totalDownlineCount: descendants.length,
+      downlineWithKYC: descendants.filter((m) => m.kycStatus === "completed")
+        .length,
+      downlineOnboarded: descendants.filter(
+        (m) => m.onboardedWithCall && m.onboardedWithMessage,
+      ).length,
+      downlineTotalTradingBalance: descendants.reduce(
+        (sum, m) => sum + (m.tradingBalance || 0),
+        0,
+      ),
+      downlineTotalWalletBalance: descendants.reduce(
+        (sum, m) => sum + (m.amount || 0),
+        0,
+      ),
+    };
+  };
+
+  const exportUserWithDownline = async (member) => {
+    try {
+      setExportingUser(member.gtcUserId);
+      setSuccess(`Preparing export for ${member.name || member.username}...`);
+
+      // Fetch all members to build the tree
+      const response = await api.get("/admin/gtc-members?limit=10000");
+      const allMembers = response.data.allMembers || response.data.data;
+
+      // Find all descendants
+      const findAllDescendants = (parentId) => {
+        const directChildren = allMembers.filter(
+          (m) => m.parentGtcUserId === parentId,
+        );
+        let allDescendants = [...directChildren];
+
+        directChildren.forEach((child) => {
+          allDescendants = [
+            ...allDescendants,
+            ...findAllDescendants(child.gtcUserId),
+          ];
+        });
+
+        return allDescendants;
+      };
+
+      const descendants = findAllDescendants(member.gtcUserId);
+      const exportMembers = [member, ...descendants];
+
+      const csvData = [
+        [
+          "GTC User ID",
+          "Username",
+          "Name",
+          "Email",
+          "Phone",
+          "Level",
+          "User Type",
+          "Parent GTC ID",
+          "Relationship",
+          "Direct Downline Count",
+          "Total Downline Count",
+          "Downline with KYC",
+          "Downline Fully Onboarded",
+          "Personal Trading Balance",
+          "Personal Wallet Balance",
+          "Downline Total Trading Balance",
+          "Downline Total Wallet Balance",
+          "Total Network Trading Balance",
+          "Total Network Wallet Balance",
+          "KYC Status",
+          "Onboarded With Call",
+          "Onboarded With Message",
+          "Onboarding Status",
+          "Onboarded By",
+          "Onboarding Notes",
+          "Upline Chain Count",
+          "MT5 Accounts Count",
+          "Joined At",
+          "Last Updated",
+        ],
+        ...exportMembers.map((m) => {
+          const downlineStats = calculateDownlineStats(m, allMembers);
+          const onboardingStatus =
+            m.onboardedWithCall && m.onboardedWithMessage
+              ? "Complete"
+              : m.onboardedWithCall || m.onboardedWithMessage
+                ? "Partial"
+                : "Not Started";
+
+          const relationship =
+            m.gtcUserId === member.gtcUserId
+              ? "Self"
+              : m.parentGtcUserId === member.gtcUserId
+                ? "Direct Child"
+                : "Indirect Descendant";
+
+          return [
+            m.gtcUserId,
+            m.username,
+            m.name || "N/A",
+            m.email,
+            m.phone || "N/A",
+            m.level,
+            m.userType || "agent",
+            m.parentGtcUserId || "Root",
+            relationship,
+            downlineStats.directDownlineCount,
+            downlineStats.totalDownlineCount,
+            downlineStats.downlineWithKYC,
+            downlineStats.downlineOnboarded,
+            (m.tradingBalance || 0).toFixed(2),
+            (m.amount || 0).toFixed(2),
+            downlineStats.downlineTotalTradingBalance.toFixed(2),
+            downlineStats.downlineTotalWalletBalance.toFixed(2),
+            (
+              (m.tradingBalance || 0) +
+              downlineStats.downlineTotalTradingBalance
+            ).toFixed(2),
+            (
+              (m.amount || 0) + downlineStats.downlineTotalWalletBalance
+            ).toFixed(2),
+            m.kycStatus || "Not Started",
+            m.onboardedWithCall ? "Yes" : "No",
+            m.onboardedWithMessage ? "Yes" : "No",
+            onboardingStatus,
+            m.onboardingDoneBy?.name || "N/A",
+            m.onboardingNotes || "N/A",
+            m.uplineChain?.length || 0,
+            m.tradingBalanceDetails?.mtAccounts?.length || 0,
+            new Date(m.joinedAt).toLocaleDateString(),
+            new Date(m.lastUpdated).toLocaleDateString(),
+          ];
+        }),
+      ];
+
+      const csvContent =
+        "data:text/csv;charset=utf-8," +
+        csvData
+          .map((row) => row.map((cell) => `"${cell}"`).join(","))
+          .join("\n");
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csvContent));
+      link.setAttribute(
+        "download",
+        `gtc-${member.username}-downline-${new Date().getTime()}.csv`,
+      );
+      link.click();
+
+      setSuccess(
+        `Export completed! ${exportMembers.length} members exported (1 + ${descendants.length} downline)`,
+      );
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error("Export user error:", err);
+      setError("Failed to export user data. Please try again.");
+    } finally {
+      setExportingUser(null);
+    }
+  };
+
+  const exportToCSV = async () => {
+    try {
+      setSuccess("Preparing export data...");
+
+      // Fetch all members for accurate calculations
+      const response = await api.get("/admin/gtc-members?limit=10000");
+      const allMembers = response.data.allMembers || response.data.data;
+
+      const csvData = [
+        [
+          "GTC User ID",
+          "Username",
+          "Name",
+          "Email",
+          "Phone",
+          "Level",
+          "User Type",
+          "Parent GTC ID",
+          "Direct Downline Count",
+          "Total Downline Count",
+          "Downline with KYC",
+          "Downline Fully Onboarded",
+          "Personal Trading Balance",
+          "Personal Wallet Balance",
+          "Downline Total Trading Balance",
+          "Downline Total Wallet Balance",
+          "Total Network Trading Balance",
+          "Total Network Wallet Balance",
+          "KYC Status",
+          "Onboarded With Call",
+          "Onboarded With Message",
+          "Onboarding Status",
+          "Onboarded By",
+          "Onboarding Notes",
+          "Upline Chain Count",
+          "MT5 Accounts Count",
+          "Joined At",
+          "Last Updated",
+        ],
+        ...allMembers.map((m) => {
+          const downlineStats = calculateDownlineStats(m, allMembers);
+          const onboardingStatus =
+            m.onboardedWithCall && m.onboardedWithMessage
+              ? "Complete"
+              : m.onboardedWithCall || m.onboardedWithMessage
+                ? "Partial"
+                : "Not Started";
+
+          return [
+            m.gtcUserId,
+            m.username,
+            m.name || "N/A",
+            m.email,
+            m.phone || "N/A",
+            m.level,
+            m.userType || "agent",
+            m.parentGtcUserId || "Root",
+            downlineStats.directDownlineCount,
+            downlineStats.totalDownlineCount,
+            downlineStats.downlineWithKYC,
+            downlineStats.downlineOnboarded,
+            (m.tradingBalance || 0).toFixed(2),
+            (m.amount || 0).toFixed(2),
+            downlineStats.downlineTotalTradingBalance.toFixed(2),
+            downlineStats.downlineTotalWalletBalance.toFixed(2),
+            (
+              (m.tradingBalance || 0) +
+              downlineStats.downlineTotalTradingBalance
+            ).toFixed(2),
+            (
+              (m.amount || 0) + downlineStats.downlineTotalWalletBalance
+            ).toFixed(2),
+            m.kycStatus || "Not Started",
+            m.onboardedWithCall ? "Yes" : "No",
+            m.onboardedWithMessage ? "Yes" : "No",
+            onboardingStatus,
+            m.onboardingDoneBy?.name || "N/A",
+            m.onboardingNotes || "N/A",
+            m.uplineChain?.length || 0,
+            m.tradingBalanceDetails?.mtAccounts?.length || 0,
+            new Date(m.joinedAt).toLocaleDateString(),
+            new Date(m.lastUpdated).toLocaleDateString(),
+          ];
+        }),
+      ];
+
+      const csvContent =
+        "data:text/csv;charset=utf-8," +
+        csvData
+          .map((row) => row.map((cell) => `"${cell}"`).join(","))
+          .join("\n");
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csvContent));
+      link.setAttribute(
+        "download",
+        `gtc-members-complete-${new Date().getTime()}.csv`,
+      );
+      link.click();
+
+      setSuccess("Export completed successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err) {
+      console.error("Export error:", err);
+      setError("Failed to export data. Please try again.");
+    }
   };
 
   const formatDate = (date) => {
@@ -1317,10 +1558,11 @@ const GTCMembers = () => {
               </button>
               <button
                 onClick={exportToCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md"
+                title="Export All Members with Complete Data"
               >
                 <Download className="w-5 h-5" />
-                Export
+                Export All
               </button>
             </div>
           </div>
@@ -1756,7 +1998,7 @@ const GTCMembers = () => {
                             {member.tradingBalanceDetails?.lastFetched && (
                               <span className="text-xs text-gray-400 text-nowrap">
                                 {new Date(
-                                  member.tradingBalanceDetails.lastFetched
+                                  member.tradingBalanceDetails.lastFetched,
                                 ).toLocaleDateString()}
                               </span>
                             )}
@@ -1860,7 +2102,7 @@ const GTCMembers = () => {
                               onChange={(e) =>
                                 handleAssignOnboardingDoneBy(
                                   memberId,
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               disabled={assigningUser}
@@ -1910,7 +2152,7 @@ const GTCMembers = () => {
                                   onClick={() => {
                                     handleSaveNotes(
                                       memberId,
-                                      editingNotesValue
+                                      editingNotesValue,
                                     );
                                   }}
                                   disabled={savingNotes}
@@ -1949,7 +2191,7 @@ const GTCMembers = () => {
                                   onClick={() => {
                                     setEditingNotesId(memberId);
                                     setEditingNotesValue(
-                                      member.onboardingNotes || ""
+                                      member.onboardingNotes || "",
                                     );
                                   }}
                                   className="flex-shrink-0 p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
@@ -1978,6 +2220,19 @@ const GTCMembers = () => {
                               title="View Tree"
                             >
                               <Network className="w-4 h-4" />
+                            </button>
+                            {/* NEW: Per-user export button */}
+                            <button
+                              onClick={() => exportUserWithDownline(member)}
+                              disabled={exportingUser === member.gtcUserId}
+                              className="p-2 bg-green-100 hover:bg-green-200 text-green-600 rounded-lg transition-colors disabled:opacity-50"
+                              title="Export User with Downline"
+                            >
+                              {exportingUser === member.gtcUserId ? (
+                                <Loader className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
                             </button>
                           </div>
                         </td>
@@ -2228,7 +2483,7 @@ const GTCMembers = () => {
                                   <span className="font-bold text-green-700">
                                     $
                                     {parseFloat(account.balance || 0).toFixed(
-                                      2
+                                      2,
                                     )}
                                   </span>
                                 </div>
@@ -2260,7 +2515,7 @@ const GTCMembers = () => {
                                 </div>
                               </div>
                             </div>
-                          )
+                          ),
                         )}
                       </div>
                     )}
@@ -2270,7 +2525,7 @@ const GTCMembers = () => {
                       <Clock className="w-3 h-3" />
                       Last updated:{" "}
                       {new Date(
-                        selectedMember.tradingBalanceDetails.lastFetched
+                        selectedMember.tradingBalanceDetails.lastFetched,
                       ).toLocaleString()}
                     </div>
                   )}
@@ -2407,7 +2662,7 @@ const GTCMembers = () => {
                           if (e.target.value) {
                             handleAssignOnboardingDoneBy(
                               selectedMember._id || selectedMember.gtcUserId,
-                              e.target.value
+                              e.target.value,
                             );
                           }
                         }}
@@ -2465,7 +2720,7 @@ const GTCMembers = () => {
                             onClick={() =>
                               handleSaveNotes(
                                 selectedMember._id || selectedMember.gtcUserId,
-                                modalNotesValue
+                                modalNotesValue,
                               )
                             }
                             disabled={savingNotes}
@@ -2478,7 +2733,7 @@ const GTCMembers = () => {
                             onClick={() => {
                               setEditingModalNotes(false);
                               setModalNotesValue(
-                                selectedMember.onboardingNotes || ""
+                                selectedMember.onboardingNotes || "",
                               );
                             }}
                             className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
@@ -2727,7 +2982,7 @@ const GTCMembers = () => {
                         ({treeData.tree.length} direct •{" "}
                         {treeData.tree.reduce(
                           (sum, node) => sum + countTotalDescendants(node),
-                          0
+                          0,
                         )}{" "}
                         total)
                       </span>
@@ -2806,7 +3061,7 @@ const GTCMembers = () => {
                   {/* Children */}
                   <div className="space-y-2">
                     {treeData.tree.map((child) =>
-                      renderSimpleTreeNode(child, 0)
+                      renderSimpleTreeNode(child, 0),
                     )}
                   </div>
                 </div>
