@@ -142,7 +142,7 @@ const GTCMembers = () => {
     completeOnboarding: 0,
   });
 
-  onst[(exportingUser, setExportingUser)] = useState(null);
+  const [exportingUser, setExportingUser] = useState(null);
 
   useEffect(() => {
     fetchCurrentUser();
