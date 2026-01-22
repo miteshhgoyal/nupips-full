@@ -179,29 +179,69 @@ const SystemConfiguration = () => {
     setFormData({ ...formData, [field]: value });
   };
 
-  // Fixed function to handle percentage input properly
+  // Fixed function to handle percentage input properly - prevents leading zeros
   const handlePercentageChange = (field, value) => {
-    // Remove leading zeros and handle empty string
-    const cleanedValue = value.replace(/^0+(?=\d)/, "");
-    const numValue = cleanedValue === "" ? 0 : Number(cleanedValue);
+    // Handle empty or zero-only input
+    if (value === "" || value === "0") {
+      updateField(field, 0);
+      return;
+    }
+
+    // Remove ALL leading zeros
+    const cleanedValue = value.replace(/^0+/, "");
+
+    // If nothing left after removing zeros, set to 0
+    if (cleanedValue === "") {
+      updateField(field, 0);
+      return;
+    }
+
+    const numValue = parseFloat(cleanedValue);
 
     // Ensure value is within valid range
-    const validValue = Math.max(0, Math.min(100, numValue));
-    updateField(field, validValue);
+    if (!isNaN(numValue)) {
+      const validValue = Math.max(0, Math.min(100, numValue));
+      updateField(field, validValue);
+    }
   };
 
   const updateUplinePercentage = (level, value) => {
-    // Remove leading zeros
-    const cleanedValue = value.replace(/^0+(?=\d)/, "");
-    const numValue = cleanedValue === "" ? 0 : Number(cleanedValue);
-    const validValue = Math.max(0, Math.min(100, numValue));
+    // Handle empty or zero-only input
+    if (value === "" || value === "0") {
+      setFormData({
+        ...formData,
+        uplineDistribution: formData.uplineDistribution.map((item) =>
+          item.level === level ? { ...item, percentage: 0 } : item,
+        ),
+      });
+      return;
+    }
 
-    setFormData({
-      ...formData,
-      uplineDistribution: formData.uplineDistribution.map((item) =>
-        item.level === level ? { ...item, percentage: validValue } : item,
-      ),
-    });
+    // Remove ALL leading zeros
+    const cleanedValue = value.replace(/^0+/, "");
+
+    // If nothing left after removing zeros, set to 0
+    if (cleanedValue === "") {
+      setFormData({
+        ...formData,
+        uplineDistribution: formData.uplineDistribution.map((item) =>
+          item.level === level ? { ...item, percentage: 0 } : item,
+        ),
+      });
+      return;
+    }
+
+    const numValue = parseFloat(cleanedValue);
+
+    if (!isNaN(numValue)) {
+      const validValue = Math.max(0, Math.min(100, numValue));
+      setFormData({
+        ...formData,
+        uplineDistribution: formData.uplineDistribution.map((item) =>
+          item.level === level ? { ...item, percentage: validValue } : item,
+        ),
+      });
+    }
   };
 
   const addUplineLevel = () => {
@@ -548,7 +588,7 @@ const SystemConfiguration = () => {
                     Fee Distribution Settings
                   </h3>
 
-                  {/* Summary Cards - Improved mobile layout */}
+                  {/* Summary Cards - Improved mobile layout with reordering */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* System Percentage */}
                     <div className="bg-orange-50 rounded-xl p-4 sm:p-6 border border-orange-200">
@@ -572,6 +612,13 @@ const SystemConfiguration = () => {
                           max="100"
                           step="0.1"
                           value={formData.systemPercentage}
+                          onInput={(e) => {
+                            // Clean leading zeros immediately on input
+                            e.target.value = e.target.value.replace(
+                              /^0+(?=\d)/,
+                              "",
+                            );
+                          }}
                           onChange={(e) =>
                             handlePercentageChange(
                               "systemPercentage",
@@ -605,6 +652,13 @@ const SystemConfiguration = () => {
                           max="100"
                           step="0.1"
                           value={formData.traderPercentage}
+                          onInput={(e) => {
+                            // Clean leading zeros immediately on input
+                            e.target.value = e.target.value.replace(
+                              /^0+(?=\d)/,
+                              "",
+                            );
+                          }}
                           onChange={(e) =>
                             handlePercentageChange(
                               "traderPercentage",
@@ -616,8 +670,8 @@ const SystemConfiguration = () => {
                       )}
                     </div>
 
-                    {/* Total Allocation - Fixed for mobile */}
-                    <div className="bg-purple-50 rounded-xl p-4 sm:p-6 border border-purple-200 sm:col-span-2 lg:col-span-1">
+                    {/* Total Allocation - Shows last on mobile, third on desktop */}
+                    <div className="bg-purple-50 rounded-xl p-4 sm:p-6 border border-purple-200 order-last sm:order-none">
                       <div className="flex flex-col sm:block">
                         <p className="text-xs sm:text-sm font-medium text-purple-900 mb-1 sm:mb-2">
                           Total Allocation
@@ -696,6 +750,13 @@ const SystemConfiguration = () => {
                                   max="100"
                                   step="0.1"
                                   value={item.percentage}
+                                  onInput={(e) => {
+                                    // Clean leading zeros immediately on input
+                                    e.target.value = e.target.value.replace(
+                                      /^0+(?=\d)/,
+                                      "",
+                                    );
+                                  }}
                                   onChange={(e) =>
                                     updateUplinePercentage(
                                       item.level,
