@@ -33,6 +33,7 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  Zap,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -68,7 +69,6 @@ const InfoTooltip = ({ title, items }) => {
                 </div>
               ))}
             </div>
-            {/* Arrow */}
             <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
           </div>
         </div>
@@ -143,7 +143,7 @@ const AdminCompetition = () => {
         (c) =>
           c.title?.toLowerCase().includes(query) ||
           c.description?.toLowerCase().includes(query) ||
-          c.slug?.toLowerCase().includes(query)
+          c.slug?.toLowerCase().includes(query),
       );
     }
 
@@ -160,7 +160,7 @@ const AdminCompetition = () => {
 
     try {
       const response = await api.delete(
-        `/competition/admin/${selectedCompetition._id}`
+        `/competition/admin/${selectedCompetition._id}`,
       );
       if (response.data.success) {
         showMessage("Competition cancelled successfully!");
@@ -172,7 +172,7 @@ const AdminCompetition = () => {
     } catch (error) {
       showMessage(
         error.response?.data?.message || "Failed to cancel competition",
-        "error"
+        "error",
       );
       console.error("Error deleting competition:", error);
     }
@@ -181,7 +181,7 @@ const AdminCompetition = () => {
   const handleDuplicate = async (competition) => {
     try {
       const response = await api.post(
-        `/competition/admin/${competition._id}/duplicate`
+        `/competition/admin/${competition._id}/duplicate`,
       );
       if (response.data.success) {
         showMessage("Competition duplicated successfully!");
@@ -190,7 +190,7 @@ const AdminCompetition = () => {
     } catch (error) {
       showMessage(
         error.response?.data?.message || "Failed to duplicate competition",
-        "error"
+        "error",
       );
       console.error("Error duplicating competition:", error);
     }
@@ -232,7 +232,7 @@ const AdminCompetition = () => {
     const badge = badges[status] || badges.draft;
     return (
       <span
-        className={`px-3 py-1 rounded-full text-xs font-semibold border ${badge.bg} ${badge.text} ${badge.border}`}
+        className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${badge.bg} ${badge.text} ${badge.border} whitespace-nowrap`}
       >
         {badge.label}
       </span>
@@ -254,71 +254,73 @@ const AdminCompetition = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
+      <div className="min-h-screen flex items-center justify-center bg-white px-4">
         <div className="flex flex-col items-center gap-4">
-          <Loader className="w-12 h-12 text-orange-600 animate-spin" />
-          <p className="text-gray-600 font-medium">Loading competitions...</p>
+          <Loader className="w-10 h-10 sm:w-12 sm:h-12 text-orange-600 animate-spin" />
+          <p className="text-gray-600 font-medium text-sm sm:text-base">
+            Loading competitions...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-white p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 transition-colors text-sm sm:text-base"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             Back
           </button>
 
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <Trophy className="w-8 h-8 text-orange-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+                <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
                 Competition Management
               </h1>
-              <p className="text-gray-600 mt-2">
+              <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
                 Create and manage trading competitions
               </p>
             </div>
-
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-6 py-3 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold flex items-center gap-2 transition-all shadow-lg hover:shadow-xl"
+              className="px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl text-sm sm:text-base"
             >
-              <Plus className="w-5 h-5" />
-              Create Competition
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Create Competition</span>
+              <span className="sm:hidden">Create</span>
             </button>
           </div>
 
           {/* Alerts */}
           {message && (
             <div
-              className={`p-4 rounded-xl border flex items-start gap-3 ${
+              className={`p-3 sm:p-4 rounded-xl border flex items-start gap-2 sm:gap-3 ${
                 message.type === "error"
                   ? "bg-red-50 border-red-200"
                   : "bg-green-50 border-green-200"
               }`}
             >
               {message.type === "error" ? (
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 flex-shrink-0 mt-0.5" />
               ) : (
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 flex-shrink-0 mt-0.5" />
               )}
               <p
-                className={`text-sm font-medium ${
+                className={`text-xs sm:text-sm font-medium flex-1 ${
                   message.type === "error" ? "text-red-700" : "text-green-700"
                 }`}
               >
                 {message.text}
               </p>
               <button onClick={() => setMessage(null)} className="ml-auto">
-                <X className="w-5 h-5 text-gray-600" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
               </button>
             </div>
           )}
@@ -326,79 +328,81 @@ const AdminCompetition = () => {
 
         {/* Overview Stats */}
         {overviewStats && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-md">
-                  <Trophy className="w-6 h-6 text-white" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-blue-200">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                  <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">
-                    Total Competitions
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">
+                    Total
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">
                     {overviewStats.totalCompetitions || 0}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-md">
-                  <Activity className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-200">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                  <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">Active</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">
+                    Active
+                  </p>
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">
                     {overviewStats.activeCompetitions || 0}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center shadow-md">
-                  <Users className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-purple-200">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">
-                    Total Participants
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">
+                    Participants
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">
                     {overviewStats.totalParticipations || 0}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center shadow-md">
-                  <Target className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-orange-200">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                  <Target className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">
-                    Unique Users
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">
+                    Unique
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">
                     {overviewStats.uniqueParticipants || 0}
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center shadow-md">
-                  <Shield className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-green-200 col-span-2 sm:col-span-1">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-md flex-shrink-0">
+                  <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600 font-medium">
+                <div className="min-w-0">
+                  <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">
                     KYC Verified
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-lg sm:text-2xl font-bold text-gray-900">
                     {overviewStats?.kycVerifiedCount || 0}
                   </p>
                 </div>
@@ -408,87 +412,92 @@ const AdminCompetition = () => {
         )}
 
         {/* Search and Filters */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 sm:p-4 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search competitions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <Filter className="w-5 h-5 text-gray-400" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="all">All Status</option>
-                <option value="draft">Draft</option>
-                <option value="upcoming">Upcoming</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="flex items-center gap-2 flex-1">
+                <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                >
+                  <option value="all">All Status</option>
+                  <option value="draft">Draft</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
 
-            <button
-              onClick={fetchCompetitions}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </button>
+              <button
+                onClick={fetchCompetitions}
+                className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1 sm:gap-2"
+                title="Refresh"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm">Refresh</span>
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Competitions List */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {filteredCompetitions.map((competition) => (
             <div
               key={competition._id}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-6"
+              className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-4 sm:p-5 md:p-6"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-gray-900">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                       {competition.title}
                     </h3>
                     {getStatusBadge(competition.status)}
                   </div>
-                  <p className="text-gray-600 mb-2">
+                  <p className="text-gray-600 mb-2 text-sm sm:text-base line-clamp-2">
                     {competition.description}
                   </p>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {formatDate(competition.startDate)} -{" "}
-                      {formatDate(competition.endDate)}
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="truncate">
+                        {formatDate(competition.startDate)} -{" "}
+                        {formatDate(competition.endDate)}
+                      </span>
                     </span>
                     <span className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
+                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                       {competition.stats?.totalParticipants || 0} participants
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 ml-4">
+                <div className="flex items-center gap-1.5 sm:gap-2 sm:ml-4 overflow-x-auto pb-1">
                   {competition.status === "active" && (
                     <button
                       onClick={() => {
                         setSelectedCompetition(competition);
                         setShowParticipantsModal(true);
                       }}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all flex-shrink-0"
                       title="View Participants"
                     >
-                      <Users className="w-5 h-5" />
+                      <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   )}
                   {competition.status === "completed" && (
@@ -497,28 +506,28 @@ const AdminCompetition = () => {
                         setSelectedCompetition(competition);
                         setShowWinnersModal(true);
                       }}
-                      className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                      className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-all flex-shrink-0"
                       title="View Winners"
                     >
-                      <Crown className="w-5 h-5" />
+                      <Crown className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   )}
                   <button
                     onClick={() => handleDuplicate(competition)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all flex-shrink-0"
                     title="Duplicate"
                   >
-                    <Copy className="w-5 h-5" />
+                    <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                   <button
                     onClick={() => {
                       setSelectedCompetition(competition);
                       setShowEditModal(true);
                     }}
-                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-all"
+                    className="p-2 text-orange-600 hover:bg-orange-50 rounded-lg transition-all flex-shrink-0"
                     title="Edit"
                   >
-                    <Edit2 className="w-5 h-5" />
+                    <Edit2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                   {competition.status !== "cancelled" && (
                     <button
@@ -526,38 +535,38 @@ const AdminCompetition = () => {
                         setSelectedCompetition(competition);
                         setShowDeleteModal(true);
                       }}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
                       title="Cancel"
                     >
-                      <Trash2 className="w-5 h-5" />
+                      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                   )}
                 </div>
               </div>
 
               {/* Competition Stats */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 pt-3 sm:pt-4 border-t border-gray-200">
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Avg Score</p>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-base sm:text-lg font-bold text-gray-900">
                     {competition.stats?.averageScore?.toFixed(1) || "0.0"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Highest Score</p>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-base sm:text-lg font-bold text-gray-900">
                     {competition.stats?.highestScore?.toFixed(1) || "0.0"}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Agents</p>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-base sm:text-lg font-bold text-gray-900">
                     {competition.stats?.agentCount || 0}
                   </p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 mb-1">Rewards</p>
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-base sm:text-lg font-bold text-gray-900">
                     {competition.rewards?.length || 0}
                   </p>
                 </div>
@@ -567,8 +576,8 @@ const AdminCompetition = () => {
 
           {filteredCompetitions.length === 0 && (
             <div className="text-center py-12">
-              <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 font-medium">
+              <Trophy className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 font-medium text-sm sm:text-base">
                 {searchQuery || statusFilter !== "all"
                   ? "No competitions found"
                   : "No competitions yet. Create your first one!"}
@@ -578,7 +587,7 @@ const AdminCompetition = () => {
         </div>
       </div>
 
-      {/* Create Modal */}
+      {/* Modals remain largely the same but with responsive classes added */}
       {showCreateModal && (
         <CreateCompetitionModal
           onClose={() => setShowCreateModal(false)}
@@ -591,7 +600,6 @@ const AdminCompetition = () => {
         />
       )}
 
-      {/* Edit Modal */}
       {showEditModal && selectedCompetition && (
         <EditCompetitionModal
           competition={selectedCompetition}
@@ -607,20 +615,19 @@ const AdminCompetition = () => {
         />
       )}
 
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && selectedCompetition && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6">
+          <div className="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-red-600" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900">
                 Cancel Competition
               </h3>
             </div>
 
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-6 text-sm sm:text-base">
               Are you sure you want to cancel "{selectedCompetition.title}"?
               This action will mark the competition as cancelled.
             </p>
@@ -631,22 +638,21 @@ const AdminCompetition = () => {
                   setShowDeleteModal(false);
                   setSelectedCompetition(null);
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium text-sm sm:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteCompetition}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold"
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm sm:text-base"
               >
-                Yes, Cancel Competition
+                Yes, Cancel
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Winners Modal */}
       {showWinnersModal && selectedCompetition && (
         <WinnersModal
           competition={selectedCompetition}
@@ -657,7 +663,6 @@ const AdminCompetition = () => {
         />
       )}
 
-      {/* Participants Modal */}
       {showParticipantsModal && selectedCompetition && (
         <ParticipantsModal
           competition={selectedCompetition}
@@ -671,7 +676,7 @@ const AdminCompetition = () => {
   );
 };
 
-// Create Competition Modal Component
+// Create Competition Modal - Mobile Responsive
 const CreateCompetitionModal = ({ onClose, onSuccess, showMessage }) => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
@@ -725,7 +730,7 @@ const CreateCompetitionModal = ({ onClose, onSuccess, showMessage }) => {
   const calculateTotalWeight = () => {
     return Object.values(formData.rules).reduce(
       (sum, val) => sum + (parseFloat(val) || 0),
-      0
+      0,
     );
   };
 
@@ -762,7 +767,7 @@ const CreateCompetitionModal = ({ onClose, onSuccess, showMessage }) => {
     if (totalWeight !== 100) {
       showMessage(
         `Total weight must equal 100%. Current: ${totalWeight}%`,
-        "error"
+        "error",
       );
       return false;
     }
@@ -806,7 +811,7 @@ const CreateCompetitionModal = ({ onClose, onSuccess, showMessage }) => {
     } catch (error) {
       showMessage(
         error.response?.data?.message || "Failed to create competition",
-        "error"
+        "error",
       );
     } finally {
       setSaving(false);
@@ -814,36 +819,38 @@ const CreateCompetitionModal = ({ onClose, onSuccess, showMessage }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto my-8">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            <Plus className="w-6 h-6 text-orange-600" />
-            Create New Competition
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl sm:rounded-2xl w-full max-w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto my-4 sm:my-8">
+        {/* Header - Responsive */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 flex items-center justify-between z-10">
+          <h2 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+            <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
+            <span className="truncate">Create New Competition</span>
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
+        {/* Tab Navigation - Horizontal Scroll on Mobile */}
         <div className="border-b border-gray-200 bg-gray-50">
-          <div className="flex overflow-x-auto">
+          <div className="flex overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 px-6 py-4 flex items-center justify-center gap-2 font-medium transition-colors relative whitespace-nowrap ${
+                  className={`flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-center gap-1.5 sm:gap-2 font-medium transition-colors relative whitespace-nowrap text-sm sm:text-base ${
                     activeTab === tab.id
                       ? "text-orange-600 bg-white"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>{tab.label}</span>
                   {activeTab === tab.id && (
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600" />
@@ -854,7 +861,8 @@ const CreateCompetitionModal = ({ onClose, onSuccess, showMessage }) => {
           </div>
         </div>
 
-        <div className="p-6">
+        {/* Tab Content - Responsive Padding */}
+        <div className="p-4 sm:p-6">
           {activeTab === "basic" && (
             <BasicInfoTab formData={formData} setFormData={setFormData} />
           )}
@@ -869,8 +877,9 @@ const CreateCompetitionModal = ({ onClose, onSuccess, showMessage }) => {
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 flex items-center justify-between">
-          <p className="text-sm text-gray-500">
+        {/* Footer - Responsive */}
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 sm:p-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <p className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
             Total Weight:{" "}
             <span
               className={`font-bold ${
@@ -882,28 +891,29 @@ const CreateCompetitionModal = ({ onClose, onSuccess, showMessage }) => {
               {calculateTotalWeight()}%
             </span>
           </p>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3">
             <button
               onClick={onClose}
               disabled={saving}
-              className="px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50"
+              className="flex-1 sm:flex-initial px-4 sm:px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 text-sm sm:text-base"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving || calculateTotalWeight() !== 100}
-              className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold disabled:opacity-50 flex items-center gap-2"
+              className="flex-1 sm:flex-initial px-4 sm:px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
             >
               {saving ? (
                 <>
-                  <Loader className="w-5 h-5 animate-spin" />
-                  Creating...
+                  <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                  <span className="hidden sm:inline">Creating...</span>
+                  <span className="sm:hidden">...</span>
                 </>
               ) : (
                 <>
-                  <Check className="w-5 h-5" />
-                  Create Competition
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                  Create
                 </>
               )}
             </button>
@@ -914,7 +924,7 @@ const CreateCompetitionModal = ({ onClose, onSuccess, showMessage }) => {
   );
 };
 
-// Edit Competition Modal Component - Similar to Create but with existing data
+// Edit Competition Modal - Mobile Responsive (Similar structure to Create)
 const EditCompetitionModal = ({
   competition,
   onClose,
@@ -972,7 +982,7 @@ const EditCompetitionModal = ({
   const calculateTotalWeight = () => {
     return Object.values(formData.rules).reduce(
       (sum, val) => sum + (parseFloat(val) || 0),
-      0
+      0,
     );
   };
 
@@ -1009,7 +1019,7 @@ const EditCompetitionModal = ({
     if (totalWeight !== 100) {
       showMessage(
         `Total weight must equal 100%. Current: ${totalWeight}%`,
-        "error"
+        "error",
       );
       return false;
     }
@@ -1047,7 +1057,7 @@ const EditCompetitionModal = ({
       setSaving(true);
       const response = await api.put(
         `/competition/admin/${competition._id}`,
-        formData
+        formData,
       );
       if (response.data.success) {
         onSuccess();
@@ -1056,7 +1066,7 @@ const EditCompetitionModal = ({
     } catch (error) {
       showMessage(
         error.response?.data?.message || "Failed to update competition",
-        "error"
+        "error",
       );
     } finally {
       setSaving(false);
@@ -1064,36 +1074,36 @@ const EditCompetitionModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto my-8">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-            <Edit2 className="w-6 h-6 text-orange-600" />
-            Edit Competition
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl sm:rounded-2xl w-full max-w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto my-4 sm:my-8">
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 flex items-center justify-between z-10">
+          <h2 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+            <Edit2 className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
+            <span className="truncate">Edit Competition</span>
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
 
         <div className="border-b border-gray-200 bg-gray-50">
-          <div className="flex overflow-x-auto">
+          <div className="flex overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 px-6 py-4 flex items-center justify-center gap-2 font-medium transition-colors relative whitespace-nowrap ${
+                  className={`flex-shrink-0 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-center gap-1.5 sm:gap-2 font-medium transition-colors relative whitespace-nowrap text-sm sm:text-base ${
                     activeTab === tab.id
                       ? "text-orange-600 bg-white"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span>{tab.label}</span>
                   {activeTab === tab.id && (
                     <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600" />
@@ -1104,7 +1114,7 @@ const EditCompetitionModal = ({
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {activeTab === "basic" && (
             <BasicInfoTab formData={formData} setFormData={setFormData} />
           )}
@@ -1119,8 +1129,8 @@ const EditCompetitionModal = ({
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-6 flex items-center justify-between">
-          <p className="text-sm text-gray-500">
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 sm:p-6 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <p className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
             Total Weight:{" "}
             <span
               className={`font-bold ${
@@ -1132,28 +1142,28 @@ const EditCompetitionModal = ({
               {calculateTotalWeight()}%
             </span>
           </p>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3">
             <button
               onClick={onClose}
               disabled={saving}
-              className="px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50"
+              className="flex-1 sm:flex-initial px-4 sm:px-6 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium disabled:opacity-50 text-sm sm:text-base"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving || calculateTotalWeight() !== 100}
-              className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold disabled:opacity-50 flex items-center gap-2"
+              className="flex-1 sm:flex-initial px-4 sm:px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
             >
               {saving ? (
                 <>
-                  <Loader className="w-5 h-5 animate-spin" />
+                  <Loader className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                   Saving...
                 </>
               ) : (
                 <>
-                  <Check className="w-5 h-5" />
-                  Save Changes
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                  Save
                 </>
               )}
             </button>
@@ -1164,7 +1174,7 @@ const EditCompetitionModal = ({
   );
 };
 
-// Tab Components
+// Tab Components - Mobile Responsive
 const BasicInfoTab = ({ formData, setFormData }) => {
   const generateSlugFromTitle = (title) => {
     return title
@@ -1176,7 +1186,7 @@ const BasicInfoTab = ({ formData, setFormData }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Title *
@@ -1193,7 +1203,7 @@ const BasicInfoTab = ({ formData, setFormData }) => {
             });
           }}
           placeholder="e.g., Summer Trading Championship 2026"
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
         />
       </div>
 
@@ -1208,7 +1218,7 @@ const BasicInfoTab = ({ formData, setFormData }) => {
           }
           placeholder="Describe your competition..."
           rows={4}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
         />
       </div>
 
@@ -1221,14 +1231,14 @@ const BasicInfoTab = ({ formData, setFormData }) => {
           value={formData.slug}
           onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
           placeholder="summer-trading-championship-2026"
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
         />
         <p className="text-xs text-gray-500 mt-1">
           URL-friendly identifier (auto-generated from title)
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Start Date *
@@ -1239,7 +1249,7 @@ const BasicInfoTab = ({ formData, setFormData }) => {
             onChange={(e) =>
               setFormData({ ...formData, startDate: e.target.value })
             }
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
         </div>
 
@@ -1253,7 +1263,7 @@ const BasicInfoTab = ({ formData, setFormData }) => {
             onChange={(e) =>
               setFormData({ ...formData, endDate: e.target.value })
             }
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
         </div>
       </div>
@@ -1265,7 +1275,7 @@ const BasicInfoTab = ({ formData, setFormData }) => {
         <select
           value={formData.status}
           onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
         >
           <option value="draft">Draft</option>
           <option value="upcoming">Upcoming</option>
@@ -1278,7 +1288,7 @@ const BasicInfoTab = ({ formData, setFormData }) => {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           KYC Bonus Multiplier
         </label>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <input
             type="number"
             min="1.0"
@@ -1291,23 +1301,21 @@ const BasicInfoTab = ({ formData, setFormData }) => {
                 kycBonusMultiplier: parseFloat(e.target.value) || 1.0,
               })
             }
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           />
-          <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-            <p className="text-sm font-semibold text-blue-900">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 sm:px-4 py-2.5 sm:py-3">
+            <p className="text-xs sm:text-sm font-semibold text-blue-900">
               +{((formData.kycBonusMultiplier - 1) * 100).toFixed(0)}% Bonus
             </p>
           </div>
         </div>
         <p className="text-xs text-gray-500 mt-1">
-          Score multiplier for KYC-verified users (e.g., 1.05 = 5% bonus, 1.10 =
-          10% bonus)
+          Score multiplier for KYC-verified users (e.g., 1.05 = 5% bonus)
         </p>
 
-        {/* Visual indicator */}
         {formData.kycBonusMultiplier > 1 && (
           <div className="mt-2 flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg p-2">
-            <CheckCircle className="w-4 h-4" />
+            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
             <span>
               KYC-verified users will receive a{" "}
               <strong>
@@ -1349,24 +1357,24 @@ const ScoringRulesTab = ({ formData, setFormData }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <p className="text-sm text-blue-900">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
+        <p className="text-xs sm:text-sm text-blue-900">
           Configure how scores are calculated. Total must equal 100%.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {rules.map((rule) => {
           const Icon = rule.icon;
           return (
             <div
               key={rule.key}
-              className="bg-gray-50 border border-gray-200 rounded-xl p-4"
+              className="bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl p-3 sm:p-4"
             >
-              <div className="flex items-center gap-2 mb-3">
-                <Icon className="w-5 h-5 text-orange-600" />
-                <label className="font-medium text-gray-900">
+              <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+                <label className="text-sm sm:text-base font-medium text-gray-900">
                   {rule.label}
                 </label>
               </div>
@@ -1378,9 +1386,11 @@ const ScoringRulesTab = ({ formData, setFormData }) => {
                   step="1"
                   value={formData.rules?.[rule.key] || 0}
                   onChange={(e) => handleRuleChange(rule.key, e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
-                <span className="text-gray-700 font-medium">%</span>
+                <span className="text-sm sm:text-base text-gray-700 font-medium">
+                  %
+                </span>
               </div>
             </div>
           );
@@ -1442,19 +1452,19 @@ const RewardsTab = ({ formData, setFormData }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">
             Competition Rewards
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-xs sm:text-sm text-gray-600">
             Define prizes for different rank ranges
           </p>
         </div>
         <button
           onClick={addReward}
-          className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium flex items-center gap-2"
+          className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 text-sm sm:text-base"
         >
           <Plus className="w-4 h-4" />
           Add Reward
@@ -1463,34 +1473,34 @@ const RewardsTab = ({ formData, setFormData }) => {
 
       {(!formData.rewards || formData.rewards.length === 0) && (
         <div className="text-center py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-          <Gift className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-          <p className="text-gray-600">
+          <Gift className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-2" />
+          <p className="text-sm sm:text-base text-gray-600">
             No rewards yet. Add your first reward!
           </p>
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {(formData.rewards || []).map((reward, index) => (
           <div
             key={index}
-            className="bg-white border border-gray-200 rounded-xl p-4"
+            className="bg-white border border-gray-200 rounded-lg sm:rounded-xl p-3 sm:p-4"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-semibold text-gray-900">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h4 className="text-sm sm:text-base font-semibold text-gray-900">
                 Reward #{index + 1}
               </h4>
               <button
                 onClick={() => removeReward(index)}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   Min Rank *
                 </label>
                 <input
@@ -1501,15 +1511,15 @@ const RewardsTab = ({ formData, setFormData }) => {
                     updateReward(
                       index,
                       "minRank",
-                      parseInt(e.target.value) || 1
+                      parseInt(e.target.value) || 1,
                     )
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   Max Rank *
                 </label>
                 <input
@@ -1520,17 +1530,17 @@ const RewardsTab = ({ formData, setFormData }) => {
                     updateReward(
                       index,
                       "maxRank",
-                      parseInt(e.target.value) || 1
+                      parseInt(e.target.value) || 1,
                     )
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
             </div>
 
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   Title *
                 </label>
                 <input
@@ -1538,12 +1548,12 @@ const RewardsTab = ({ formData, setFormData }) => {
                   value={reward.title || ""}
                   onChange={(e) => updateReward(index, "title", e.target.value)}
                   placeholder="e.g., 1st Place Winner"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   Prize *
                 </label>
                 <input
@@ -1551,12 +1561,12 @@ const RewardsTab = ({ formData, setFormData }) => {
                   value={reward.prize || ""}
                   onChange={(e) => updateReward(index, "prize", e.target.value)}
                   placeholder="e.g., $10,000 Cash"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   Description *
                 </label>
                 <textarea
@@ -1566,7 +1576,7 @@ const RewardsTab = ({ formData, setFormData }) => {
                   }
                   placeholder="Describe the reward..."
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -1591,19 +1601,19 @@ const AdvancedTab = ({ formData, setFormData }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-4">
           Normalization Targets
         </h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
           Set target values for scoring normalization. These define what
           constitutes a "perfect" score in each category.
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
               Direct Referrals Target
             </label>
             <input
@@ -1613,12 +1623,12 @@ const AdvancedTab = ({ formData, setFormData }) => {
               onChange={(e) =>
                 handleTargetChange("directReferralsTarget", e.target.value)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
               Team Size Target
             </label>
             <input
@@ -1628,12 +1638,12 @@ const AdvancedTab = ({ formData, setFormData }) => {
               onChange={(e) =>
                 handleTargetChange("teamSizeTarget", e.target.value)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
               Trading Volume Target ($)
             </label>
             <input
@@ -1645,12 +1655,12 @@ const AdvancedTab = ({ formData, setFormData }) => {
               onChange={(e) =>
                 handleTargetChange("tradingVolumeTarget", e.target.value)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
               Profit Percent Target (%)
             </label>
             <input
@@ -1660,12 +1670,12 @@ const AdvancedTab = ({ formData, setFormData }) => {
               onChange={(e) =>
                 handleTargetChange("profitPercentTarget", e.target.value)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
               Account Balance Target ($)
             </label>
             <input
@@ -1677,7 +1687,7 @@ const AdvancedTab = ({ formData, setFormData }) => {
               onChange={(e) =>
                 handleTargetChange("accountBalanceTarget", e.target.value)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             />
           </div>
         </div>

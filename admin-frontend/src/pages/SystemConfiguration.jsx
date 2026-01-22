@@ -179,13 +179,27 @@ const SystemConfiguration = () => {
     setFormData({ ...formData, [field]: value });
   };
 
+  // Fixed function to handle percentage input properly
+  const handlePercentageChange = (field, value) => {
+    // Remove leading zeros and handle empty string
+    const cleanedValue = value.replace(/^0+(?=\d)/, "");
+    const numValue = cleanedValue === "" ? 0 : Number(cleanedValue);
+
+    // Ensure value is within valid range
+    const validValue = Math.max(0, Math.min(100, numValue));
+    updateField(field, validValue);
+  };
+
   const updateUplinePercentage = (level, value) => {
+    // Remove leading zeros
+    const cleanedValue = value.replace(/^0+(?=\d)/, "");
+    const numValue = cleanedValue === "" ? 0 : Number(cleanedValue);
+    const validValue = Math.max(0, Math.min(100, numValue));
+
     setFormData({
       ...formData,
       uplineDistribution: formData.uplineDistribution.map((item) =>
-        item.level === level
-          ? { ...item, percentage: Number(value) || 0 }
-          : item
+        item.level === level ? { ...item, percentage: validValue } : item,
       ),
     });
   };
@@ -214,7 +228,7 @@ const SystemConfiguration = () => {
     setFormData({
       ...formData,
       uplineDistribution: formData.uplineDistribution.filter(
-        (item) => item.level !== level
+        (item) => item.level !== level,
       ),
     });
   };
@@ -328,21 +342,21 @@ const SystemConfiguration = () => {
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             {/* Tab Navigation */}
             <div className="border-b border-gray-200 bg-gray-50">
-              <div className="flex">
+              <div className="flex overflow-x-auto">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
                   return (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`flex-1 px-6 py-4 flex items-center justify-center gap-2 font-medium transition-colors relative ${
+                      className={`flex-1 min-w-[120px] px-4 sm:px-6 py-4 flex items-center justify-center gap-2 font-medium transition-colors relative ${
                         activeTab === tab.id
                           ? "text-orange-600 bg-white"
                           : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                       }`}
                     >
                       <Icon className="w-5 h-5" />
-                      <span>{tab.label}</span>
+                      <span className="text-sm sm:text-base">{tab.label}</span>
                       {activeTab === tab.id && (
                         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-600" />
                       )}
@@ -353,7 +367,7 @@ const SystemConfiguration = () => {
             </div>
 
             {/* Tab Content */}
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {/* Edit/Save Actions */}
               <div className="flex items-center justify-end gap-3 mb-6">
                 {!editing ? (
@@ -534,19 +548,19 @@ const SystemConfiguration = () => {
                     Fee Distribution Settings
                   </h3>
 
-                  {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Summary Cards - Improved mobile layout */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* System Percentage */}
-                    <div className="bg-orange-50 rounded-xl p-6 border border-orange-200">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
-                          <Percent className="w-6 h-6 text-white" />
+                    <div className="bg-orange-50 rounded-xl p-4 sm:p-6 border border-orange-200">
+                      <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Percent className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-orange-900">
+                          <p className="text-xs sm:text-sm font-medium text-orange-900">
                             System Share
                           </p>
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-xl sm:text-2xl font-bold text-gray-900">
                             {formData.systemPercentage}%
                           </p>
                         </div>
@@ -559,27 +573,27 @@ const SystemConfiguration = () => {
                           step="0.1"
                           value={formData.systemPercentage}
                           onChange={(e) =>
-                            updateField(
+                            handlePercentageChange(
                               "systemPercentage",
-                              Number(e.target.value) || 0
+                              e.target.value,
                             )
                           }
-                          className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          className="w-full px-3 sm:px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         />
                       )}
                     </div>
 
                     {/* Trader Percentage */}
-                    <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                          <Users className="w-6 h-6 text-white" />
+                    <div className="bg-green-50 rounded-xl p-4 sm:p-6 border border-green-200">
+                      <div className="flex items-center gap-3 mb-3 sm:mb-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-green-900">
+                          <p className="text-xs sm:text-sm font-medium text-green-900">
                             Trader Share
                           </p>
-                          <p className="text-2xl font-bold text-gray-900">
+                          <p className="text-xl sm:text-2xl font-bold text-gray-900">
                             {formData.traderPercentage}%
                           </p>
                         </div>
@@ -592,44 +606,48 @@ const SystemConfiguration = () => {
                           step="0.1"
                           value={formData.traderPercentage}
                           onChange={(e) =>
-                            updateField(
+                            handlePercentageChange(
                               "traderPercentage",
-                              Number(e.target.value) || 0
+                              e.target.value,
                             )
                           }
-                          className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                          className="w-full px-3 sm:px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                         />
                       )}
                     </div>
 
-                    {/* Total Allocation */}
-                    <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-                      <p className="text-sm font-medium text-purple-900 mb-2">
-                        Total Allocation
-                      </p>
-                      <div className="text-3xl font-bold text-gray-900">
-                        {totalPercentage().toFixed(1)}%
+                    {/* Total Allocation - Fixed for mobile */}
+                    <div className="bg-purple-50 rounded-xl p-4 sm:p-6 border border-purple-200 sm:col-span-2 lg:col-span-1">
+                      <div className="flex flex-col sm:block">
+                        <p className="text-xs sm:text-sm font-medium text-purple-900 mb-1 sm:mb-2">
+                          Total Allocation
+                        </p>
+                        <div className="flex items-baseline gap-2 sm:block">
+                          <div className="text-2xl sm:text-3xl font-bold text-gray-900">
+                            {totalPercentage().toFixed(1)}%
+                          </div>
+                          <p
+                            className={`text-xs sm:text-sm font-medium sm:mt-2 ${
+                              totalPercentage() > 100
+                                ? "text-red-600"
+                                : "text-green-600"
+                            }`}
+                          >
+                            {totalPercentage() > 100
+                              ? `${(totalPercentage() - 100).toFixed(1)}% Over`
+                              : `${(100 - totalPercentage()).toFixed(
+                                  1,
+                                )}% Remaining`}
+                          </p>
+                        </div>
                       </div>
-                      <p
-                        className={`text-sm font-medium mt-2 ${
-                          totalPercentage() > 100
-                            ? "text-red-600"
-                            : "text-green-600"
-                        }`}
-                      >
-                        {totalPercentage() > 100
-                          ? `${(totalPercentage() - 100).toFixed(1)}% Over`
-                          : `${(100 - totalPercentage()).toFixed(
-                              1
-                            )}% Remaining`}
-                      </p>
                     </div>
                   </div>
 
                   {/* Upline Distribution */}
                   <div>
                     <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-lg font-bold text-gray-900">
+                      <h4 className="text-base sm:text-lg font-bold text-gray-900">
                         Upline Distribution
                       </h4>
                       {editing && (
@@ -643,31 +661,31 @@ const SystemConfiguration = () => {
                       )}
                     </div>
 
-                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 divide-y divide-gray-200">
+                    <div className="bg-gray-50 rounded-xl p-3 sm:p-4 border border-gray-200 divide-y divide-gray-200">
                       {formData.uplineDistribution.map((item) => (
                         <div
                           key={item.level}
-                          className="flex items-center justify-between py-4"
+                          className="flex items-center justify-between py-3 sm:py-4 gap-3"
                         >
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="font-bold text-blue-700">
+                          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs sm:text-sm font-bold text-blue-700">
                                 L{item.level}
                               </span>
                             </div>
-                            <div>
-                              <p className="font-semibold text-gray-900">
+                            <div className="min-w-0">
+                              <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
                                 Level {item.level}
                               </p>
-                              <p className="text-sm text-gray-500">
+                              <p className="text-xs sm:text-sm text-gray-500 truncate">
                                 Direct Upline Share
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                             {!editing ? (
-                              <span className="text-2xl font-bold text-gray-900">
+                              <span className="text-lg sm:text-2xl font-bold text-gray-900">
                                 {item.percentage}%
                               </span>
                             ) : (
@@ -681,21 +699,21 @@ const SystemConfiguration = () => {
                                   onChange={(e) =>
                                     updateUplinePercentage(
                                       item.level,
-                                      e.target.value
+                                      e.target.value,
                                     )
                                   }
-                                  className="w-24 px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent text-right"
+                                  className="w-20 sm:w-24 px-2 sm:px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent text-right text-sm"
                                 />
-                                <span className="text-gray-700">%</span>
+                                <span className="text-gray-700 text-sm">%</span>
                               </>
                             )}
                             {editing && (
                               <button
                                 onClick={() => removeUplineLevel(item.level)}
-                                className="w-10 h-10 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center transition-colors"
+                                className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
                                 title="Remove level"
                               >
-                                <Trash2 className="w-4 h-4 text-red-600" />
+                                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
                               </button>
                             )}
                           </div>
@@ -714,7 +732,7 @@ const SystemConfiguration = () => {
                           onChange={(e) =>
                             updateField(
                               "maxUplineLevels",
-                              Number(e.target.value) || 0
+                              Number(e.target.value) || 0,
                             )
                           }
                           className="mx-2 w-20 px-2 py-1 border border-blue-200 rounded-lg focus:ring-2 focus:ring-orange-500 bg-white"
@@ -728,8 +746,8 @@ const SystemConfiguration = () => {
               {/* Fee Schedule Tab */}
               {activeTab === "schedule" && (
                 <div className="space-y-6">
-                  <div className="p-6 bg-yellow-50 rounded-xl border border-yellow-200">
-                    <h3 className="text-lg font-bold text-gray-900 mb-4">
+                  <div className="p-4 sm:p-6 bg-yellow-50 rounded-xl border border-yellow-200">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">
                       Performance Fee Schedule
                     </h3>
 
@@ -747,7 +765,7 @@ const SystemConfiguration = () => {
                           onChange={(e) =>
                             updateField(
                               "performanceFeeFrequency",
-                              e.target.value
+                              e.target.value,
                             )
                           }
                           className="w-full rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500 p-2"
@@ -786,7 +804,7 @@ const SystemConfiguration = () => {
                                     onChange={(e) =>
                                       updatePerformanceFeeDates(
                                         idx,
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                     className="w-20 px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 text-right"

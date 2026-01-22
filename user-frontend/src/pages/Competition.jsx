@@ -181,12 +181,12 @@ const Competition = () => {
   };
 
   const getRankIcon = (rank) => {
-    if (rank === 1) return { icon: Trophy, color: "text-amber-500" };
-    if (rank === 2) return { icon: Trophy, color: "text-slate-400" };
-    if (rank === 3) return { icon: Trophy, color: "text-orange-600" };
-    if (rank <= 10) return { icon: Medal, color: "text-blue-500" };
-    if (rank <= 25) return { icon: Award, color: "text-purple-500" };
-    return { icon: Award, color: "text-gray-500" };
+    if (rank === 1) return { icon: Trophy, color: "text-amber-100" };
+    if (rank === 2) return { icon: Trophy, color: "text-slate-100" };
+    if (rank === 3) return { icon: Trophy, color: "text-orange-100" };
+    if (rank <= 10) return { icon: Medal, color: "text-blue-100" };
+    if (rank <= 25) return { icon: Award, color: "text-purple-100" };
+    return { icon: Award, color: "text-gray-100" };
   };
 
   if (loading) {
@@ -274,7 +274,7 @@ const Competition = () => {
               const hasUserStats = competition.userStats?.participating;
               const { icon: RankIcon, color } = hasUserStats
                 ? getRankIcon(competition.userStats.ranking.rank)
-                : { icon: Trophy, color: "text-gray-400" };
+                : { icon: Trophy, color: "text-white" };
 
               return (
                 <div
@@ -496,7 +496,7 @@ const Competition = () => {
           </div>
         ) : (
           <div className="text-center py-16">
-            <Trophy className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+            <Trophy className="w-20 h-20 text-gray mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-900 mb-2">
               No Competitions Available
             </h3>
@@ -1580,12 +1580,6 @@ const CompetitionDetailModal = ({
                           % Score Bonus
                         </span>
                       </div>
-                      <button
-                        onClick={() => navigate("/kyc")}
-                        className="mt-3 w-full px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-semibold transition-all"
-                      >
-                        Complete KYC Now
-                      </button>
                     </div>
                   )}
                 </div>

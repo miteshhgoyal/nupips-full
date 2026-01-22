@@ -1526,7 +1526,7 @@ const GTCMembers = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <button
                 onClick={loadFullTree}
                 disabled={loadingFullTree}
@@ -1562,7 +1562,7 @@ const GTCMembers = () => {
                 title="Export All Members with Complete Data"
               >
                 <Download className="w-5 h-5" />
-                Export All
+                Export
               </button>
             </div>
           </div>
