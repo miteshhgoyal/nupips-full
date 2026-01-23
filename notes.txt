@@ -1,0 +1,20 @@
+
+
+- in main nupips user dashboard - trading performance section - fix it ... what api is used for this section ? and what is net balance ? add total gtc users in dashboard.
+
+sidebar dashboard updates.
+
+gtc dashboard - account balance > gtc wallet balance. - done
+
+gtc dashboard - add total trading accounts balance in a dropdown - done
+remove account type and status in gtc dahsbord stat cards - done
+
+put member since at last. - done
+
+total gtc usrs underline.. downline in gtc in gtc dashboard. - done
+
+show what users have joined gtc or not ..
+
+in profit logs .. remove share fees, management fees - done
+put full tree view make a seprate page.. - done
+

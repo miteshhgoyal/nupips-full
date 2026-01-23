@@ -1,5 +1,5 @@
 // pages/gtcfx/user/AgentMembers.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
   Loader,
@@ -7,109 +7,643 @@ import {
   Users,
   DollarSign,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   Mail,
-  Download,
   Search,
   TrendingUp,
   Award,
-  Clock,
   ChevronDown,
-  ChevronRight as ChevronRightIcon,
+  ChevronRight,
   RefreshCw,
   Network,
   X,
   Phone,
   FileJson,
+  UserCircle,
+  Hash,
+  Eye,
+  Filter,
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  Clock,
 } from "lucide-react";
-import api from "../../../services/gtcfxApi";
+import { useNavigate } from "react-router-dom";
+import api from "../../../services/api";
 
+// ============ CONSTANTS ============
 const TREE_CACHE_KEY = "gtcfx_full_tree";
 const TREE_CACHE_TIME_KEY = "gtcfx_full_tree_time";
 const TREE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+// ============ UTILITY FUNCTIONS ============
+const collectAllMembers = (node, collected = []) => {
+  if (!node) return collected;
+  collected.push(node);
+  if (node.children && node.children.length > 0) {
+    node.children.forEach((child) => collectAllMembers(child, collected));
+  }
+  return collected;
+};
+
+const formatDate = (timestamp) => {
+  // Handle both Unix timestamps (seconds) and ISO date strings
+  const date =
+    typeof timestamp === "number"
+      ? new Date(timestamp * 1000)
+      : new Date(timestamp);
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const formatDateTime = (timestamp) => {
+  // Handle both Unix timestamps (seconds) and ISO date strings
+  const date =
+    typeof timestamp === "number"
+      ? new Date(timestamp * 1000)
+      : new Date(timestamp);
+
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+// ============ SUB-COMPONENTS ============
+
+// Gradient Stats Card Component
+const StatsCard = ({
+  icon: Icon,
+  label,
+  value,
+  gradientFrom,
+  gradientTo,
+  iconBg,
+  subtitle,
+}) => (
+  <div
+    className={`bg-gradient-to-br ${gradientFrom} ${gradientTo} rounded-xl p-6 border border-${gradientFrom.split("-")[1]}-200 shadow-sm`}
+  >
+    <div className="flex items-center gap-3 mb-2">
+      <div
+        className={`w-10 h-10 ${iconBg} rounded-full flex items-center justify-center`}
+      >
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+      <p
+        className={`text-sm font-medium text-${gradientFrom.split("-")[1]}-900`}
+      >
+        {label}
+      </p>
+    </div>
+    <p className={`text-2xl font-bold text-${gradientFrom.split("-")[1]}-900`}>
+      {value}
+    </p>
+    {subtitle && (
+      <p className={`text-xs text-${gradientFrom.split("-")[1]}-700 mt-1`}>
+        {subtitle}
+      </p>
+    )}
+  </div>
+);
+
+// Filter Section Component
+const FilterSection = ({
+  searchTerm,
+  setSearchTerm,
+  filterUserType,
+  setFilterUserType,
+  filterKycStatus,
+  setFilterKycStatus,
+  filterOnboarded,
+  setFilterOnboarded,
+  onClear,
+}) => (
+  <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
+    <div className="flex items-center gap-2 mb-4">
+      <Filter className="w-5 h-5 text-orange-600" />
+      <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* Search */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Search Members
+        </label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Name, email, or phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+          />
+        </div>
+      </div>
+
+      {/* Member Type */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Member Type
+        </label>
+        <select
+          value={filterUserType}
+          onChange={(e) => setFilterUserType(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+        >
+          <option value="">All Members</option>
+          <option value="agent">Sub-Agents</option>
+          <option value="direct">Direct Clients</option>
+        </select>
+      </div>
+
+      {/* KYC Status */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          KYC Status
+        </label>
+        <select
+          value={filterKycStatus}
+          onChange={(e) => setFilterKycStatus(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+        >
+          <option value="">All Statuses</option>
+          <option value="completed">Completed</option>
+          <option value="pending">Pending</option>
+          <option value="">Not Started</option>
+        </select>
+      </div>
+
+      {/* Onboarding Status */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Onboarding
+        </label>
+        <select
+          value={filterOnboarded}
+          onChange={(e) => setFilterOnboarded(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
+        >
+          <option value="">All</option>
+          <option value="call">Called</option>
+          <option value="message">Messaged</option>
+          <option value="both">Both</option>
+          <option value="none">Not Contacted</option>
+        </select>
+      </div>
+
+      {/* Clear Filters */}
+      <div className="flex items-end">
+        <button
+          onClick={onClear}
+          className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+        >
+          Clear Filters
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// Tree Node Row Component
+const TreeNodeRow = ({
+  node,
+  isRoot,
+  expandedNodes,
+  onToggle,
+  onMemberClick,
+  matchesFilter,
+}) => {
+  const hasChildren = node.children && node.children.length > 0;
+  const isExpanded = expandedNodes.has(node.gtcUserId);
+  const level = node.level || 0;
+  const indent = level * 20;
+  const matches = matchesFilter(node);
+
+  const hasMatchingChildren = (n) => {
+    if (matchesFilter(n)) return true;
+    if (n.children && n.children.length > 0) {
+      return n.children.some(hasMatchingChildren);
+    }
+    return false;
+  };
+
+  if (!hasMatchingChildren(node)) return null;
+
+  const getLevelStyles = () => {
+    if (isRoot) return "bg-gradient-to-r from-orange-50 to-orange-100";
+    if (level === 1) return "bg-purple-50/50";
+    if (level === 2) return "bg-blue-50/50";
+    if (level > 2) return "bg-gray-50/50";
+    return "";
+  };
+
+  const getAvatarStyles = () => {
+    if (isRoot) return "bg-gradient-to-br from-orange-500 to-orange-600";
+    if (level === 1) return "bg-gradient-to-br from-purple-500 to-purple-600";
+    if (level === 2) return "bg-gradient-to-br from-blue-500 to-blue-600";
+    return "bg-gradient-to-br from-gray-500 to-gray-600";
+  };
+
+  const getKycBadge = (status) => {
+    if (status === "completed") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+          <CheckCircle className="w-3 h-3" />
+          KYC Done
+        </span>
+      );
+    } else if (status === "pending") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold">
+          <Clock className="w-3 h-3" />
+          Pending
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
+        <XCircle className="w-3 h-3" />
+        No KYC
+      </span>
+    );
+  };
+
+  const getOnboardingBadge = (member) => {
+    const hasCall = member.onboardedWithCall;
+    const hasMessage = member.onboardedWithMessage;
+
+    if (hasCall && hasMessage) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+          <CheckCircle className="w-3 h-3" />
+          Full Contact
+        </span>
+      );
+    } else if (hasCall) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
+          <Phone className="w-3 h-3" />
+          Called
+        </span>
+      );
+    } else if (hasMessage) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-semibold">
+          <Mail className="w-3 h-3" />
+          Messaged
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
+        <XCircle className="w-3 h-3" />
+        Not Contacted
+      </span>
+    );
+  };
+
+  return (
+    <>
+      <tr
+        onClick={() => onMemberClick(node)}
+        className={`border-b border-gray-100 hover:bg-orange-50 transition-colors cursor-pointer ${getLevelStyles()} ${
+          !matches ? "opacity-40" : ""
+        }`}
+      >
+        {/* Member Name & Avatar */}
+        <td className="px-6 py-4" style={{ paddingLeft: `${24 + indent}px` }}>
+          <div className="flex items-center gap-2">
+            {hasChildren ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggle(node.gtcUserId);
+                }}
+                className="p-1 hover:bg-orange-200 rounded transition-colors flex-shrink-0"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="w-4 h-4 text-orange-600" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                )}
+              </button>
+            ) : (
+              <div className="w-6" />
+            )}
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold shadow-sm ${getAvatarStyles()} text-white`}
+              >
+                {(node.username || "U").charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {node.username}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {node.name || "N/A"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </td>
+
+        {/* Email */}
+        <td className="px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <p className="text-sm text-gray-600 truncate max-w-[200px]">
+              {node.email}
+            </p>
+          </div>
+        </td>
+
+        {/* Phone */}
+        <td className="px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <p className="text-sm text-gray-600 truncate">
+              {node.phone || "N/A"}
+            </p>
+          </div>
+        </td>
+
+        {/* KYC & Onboarding Status */}
+        <td className="px-6 py-4">
+          <div className="flex flex-col gap-1">
+            {getKycBadge(node.kycStatus)}
+          </div>
+        </td>
+
+        {/* Level */}
+        <td className="px-6 py-4 text-center">
+          <span className="inline-flex items-center px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+            L{level}
+          </span>
+        </td>
+
+        {/* Balance */}
+        <td className="px-6 py-4 text-right">
+          <p className="font-bold text-green-600 text-sm">
+            ${parseFloat(node.amount || 0).toFixed(2)}
+          </p>
+        </td>
+
+        {/* Trading Balance */}
+        <td className="px-6 py-4 text-right">
+          <p className="font-bold text-blue-600 text-sm">
+            ${parseFloat(node.tradingBalance || 0).toFixed(2)}
+          </p>
+        </td>
+
+        {/* Registered */}
+        <td className="px-6 py-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-gray-400" />
+            <p className="text-sm text-gray-900 text-nowrap">
+              {formatDate(node.joinedAt)}
+            </p>
+          </div>
+        </td>
+
+        {/* Details Button */}
+        <td className="px-6 py-4 text-center">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMemberClick(node);
+            }}
+            className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
+            title="View Details"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+        </td>
+      </tr>
+
+      {/* Children */}
+      {hasChildren &&
+        isExpanded &&
+        node.children.map((child) => (
+          <TreeNodeRow
+            key={child.gtcUserId}
+            node={child}
+            isRoot={false}
+            expandedNodes={expandedNodes}
+            onToggle={onToggle}
+            onMemberClick={onMemberClick}
+            matchesFilter={matchesFilter}
+          />
+        ))}
+    </>
+  );
+};
+
+// Detail Modal Component
+const MemberDetailModal = ({ member, onClose }) => {
+  if (!member) return null;
+
+  const getKycStatusColor = (status) => {
+    if (status === "completed") return "green";
+    if (status === "pending") return "yellow";
+    return "gray";
+  };
+
+  const kycColor = getKycStatusColor(member.kycStatus);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+      <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
+              <UserCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Member Details
+              </h2>
+              <p className="text-xs text-gray-500">
+                {formatDate(member.joinedAt)}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+          {/* Avatar & Basic Info */}
+          <div className="text-center mb-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+              <span className="text-white font-bold text-2xl">
+                {(member.username || "U").charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <h4 className="text-xl font-bold text-gray-900 mb-1">
+              {member.username}
+            </h4>
+            <p className="text-sm text-gray-600 mb-2">{member.name || "N/A"}</p>
+            <div className="flex items-center justify-center gap-2">
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold capitalize ${
+                  member.userType === "agent"
+                    ? "bg-orange-100 text-orange-800"
+                    : "bg-green-100 text-green-800"
+                }`}
+              >
+                {member.userType === "agent" ? "Sub-Agent" : "Direct Client"}
+              </span>
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold capitalize bg-${kycColor}-100 text-${kycColor}-800`}
+              >
+                KYC: {member.kycStatus || "Not Started"}
+              </span>
+            </div>
+          </div>
+
+          {/* Balance Highlights */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
+              <p className="text-xs text-green-700 mb-1">Wallet Balance</p>
+              <p className="text-2xl font-bold text-green-600">
+                ${parseFloat(member.amount || 0).toFixed(2)}
+              </p>
+            </div>
+            <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
+              <p className="text-xs text-blue-700 mb-1">Trading Balance</p>
+              <p className="text-2xl font-bold text-blue-600">
+                ${parseFloat(member.tradingBalance || 0).toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          {/* Info Grid */}
+          <div className="space-y-3">
+            {/* Email */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Email
+              </span>
+              <span className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
+                {member.email}
+              </span>
+            </div>
+
+            {/* Phone */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                Phone
+              </span>
+              <span className="text-sm font-semibold text-gray-900">
+                {member.phone || "N/A"}
+              </span>
+            </div>
+
+            {/* Member ID */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <Hash className="w-4 h-4" />
+                GTC User ID
+              </span>
+              <span className="text-sm font-mono font-semibold text-gray-900">
+                {member.gtcUserId}
+              </span>
+            </div>
+
+            {/* Level */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Level
+              </span>
+              <span className="text-sm font-semibold text-gray-900">
+                Level {member.level || 0}
+              </span>
+            </div>
+
+            {/* Registration Date */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+              <h3 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Registration
+              </h3>
+              <p className="text-sm text-blue-900">
+                {formatDateTime(member.joinedAt)}
+              </p>
+            </div>
+
+            {/* Team Size */}
+            {member.children && member.children.length > 0 && (
+              <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                <h3 className="text-sm font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Team Size
+                </h3>
+                <p className="text-2xl font-bold text-purple-600">
+                  {member.children.length}
+                </p>
+                <p className="text-xs text-purple-700 mt-1">
+                  Direct team members
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 bg-gray-50 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ============ MAIN COMPONENT ============
+
 const GTCFxAgentMembers = () => {
-  const [members, setMembers] = useState([]);
+  const navigate = useNavigate();
+  const [treeData, setTreeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalMembers, setTotalMembers] = useState(0);
-  const [pageInput, setPageInput] = useState("1");
+  const [expandedTreeNodes, setExpandedTreeNodes] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUserType, setFilterUserType] = useState("");
-  const [expandedMembers, setExpandedMembers] = useState(new Set());
+  const [filterKycStatus, setFilterKycStatus] = useState("");
+  const [filterOnboarded, setFilterOnboarded] = useState("");
 
-  // Tree Modal States
-  const [showTreeModal, setShowTreeModal] = useState(false);
-  const [treeData, setTreeData] = useState(null);
-  const [loadingTree, setLoadingTree] = useState(false);
-  const [expandedTreeNodes, setExpandedTreeNodes] = useState(new Set());
-
-  // Modal scroll preservation
-  const modalScrollRef = useRef(null);
-  const modalScrollPosRef = useRef(0);
-
-  const ITEMS_PER_PAGE = 10;
+  // Detail modal
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
-    fetchMembers();
-  }, [currentPage]);
+    fetchTreeData();
+  }, []);
 
-  useEffect(() => {
-    setPageInput(currentPage.toString());
-  }, [currentPage]);
-
-  const fetchMembers = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const payload = {
-        page: currentPage,
-        page_size: ITEMS_PER_PAGE,
-      };
-
-      const response = await api.post("/agent/member", payload);
-
-      if (response.data.code === 200) {
-        const data = response.data.data;
-        setMembers(data.list || []);
-        setTotalMembers(data.total || 0);
-        setTotalPages(Math.ceil((data.total || 0) / ITEMS_PER_PAGE));
-      } else {
-        setError(response.data.message || "Failed to fetch members");
-      }
-    } catch (err) {
-      console.error("Fetch members error:", err);
-      setError(
-        err.response?.data?.message || "Network error. Please try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Helpers for modal scroll
-  const rememberModalScroll = () => {
-    if (modalScrollRef.current) {
-      modalScrollPosRef.current = modalScrollRef.current.scrollTop;
-    }
-  };
-
-  const restoreModalScroll = () => {
-    if (modalScrollRef.current) {
-      modalScrollRef.current.scrollTop = modalScrollPosRef.current;
-    }
-  };
-
-  useEffect(() => {
-    // when expandedTreeNodes changes (toggle), restore previous scroll
-    restoreModalScroll();
-  }, [expandedTreeNodes]);
-
-  // Cache helpers
+  // ============ CACHE HELPERS ============
   const readCachedTree = () => {
     try {
       const raw = sessionStorage.getItem(TREE_CACHE_KEY);
@@ -118,7 +652,6 @@ const GTCFxAgentMembers = () => {
 
       const savedAt = parseInt(timeRaw, 10);
       if (!savedAt || Date.now() - savedAt > TREE_CACHE_TTL_MS) {
-        // expired
         sessionStorage.removeItem(TREE_CACHE_KEY);
         sessionStorage.removeItem(TREE_CACHE_TIME_KEY);
         return null;
@@ -148,86 +681,113 @@ const GTCFxAgentMembers = () => {
     }
   };
 
-  // Open full tree modal with 5‑minute cache
-  const openFullTree = async () => {
+  // ============ API CALLS ============
+  const fetchTreeData = async (forceRefresh = false) => {
+    setLoading(true);
     setError(null);
 
-    // 1) Try cache (only when user reopens modal etc.)
-    const cached = readCachedTree();
-    if (cached) {
-      setTreeData(cached);
-      setShowTreeModal(true);
-      if (cached?.tree?.member_id) {
-        setExpandedTreeNodes(new Set([cached.tree.member_id]));
+    // Try cache first
+    if (!forceRefresh) {
+      const cached = readCachedTree();
+      if (cached) {
+        setTreeData(cached);
+        setLoading(false);
+        if (cached?.tree?.gtcUserId) {
+          setExpandedTreeNodes(new Set([cached.tree.gtcUserId]));
+        }
+        return;
       }
-      return;
     }
 
-    // 2) No valid cache -> fetch fresh
-    setLoadingTree(true);
+    // Fetch fresh data from backend database
     try {
-      const response = await api.post("/agent/member_tree");
+      const response = await api.post("/gtcfx/agent/member_tree");
 
-      if (response.data.code === 200) {
+      if (response.data.success) {
         const data = response.data.data;
         setTreeData(data);
         writeCachedTree(data);
 
-        setShowTreeModal(true);
         // Auto-expand root node
-        if (data?.tree?.member_id) {
-          setExpandedTreeNodes(new Set([data.tree.member_id]));
+        if (data?.tree?.gtcUserId) {
+          setExpandedTreeNodes(new Set([data.tree.gtcUserId]));
         }
       } else {
         setError(response.data.message || "Failed to load tree");
       }
     } catch (err) {
       console.error("Load tree error:", err);
-      setError("Failed to load team tree");
+
+      // Handle specific error cases
+      if (err.response?.status === 401) {
+        setError("Please login to GTC FX first to view your team network.");
+      } else if (err.response?.status === 404) {
+        setError(
+          err.response.data.message ||
+            "GTC FX account not properly configured.",
+        );
+      } else {
+        setError(
+          err.response?.data?.message || "Network error. Please try again.",
+        );
+      }
     } finally {
-      setLoadingTree(false);
+      setLoading(false);
     }
   };
 
-  // Optional: clear cache when leaving page or on unmount
-  useEffect(() => {
-    return () => {
-      // Comment this out if you want cache to survive component unmount
-      // clearCachedTree();
-    };
-  }, []);
-
-  // Build tree structure from flat list (for paginated view)
-  const buildTree = (membersList) => {
-    const memberMap = new Map();
-    const rootMembers = [];
-
-    membersList.forEach((member) => {
-      memberMap.set(member.member_id, { ...member, children: [] });
-    });
-
-    membersList.forEach((member) => {
-      const memberNode = memberMap.get(member.member_id);
-      if (member.parent_id === 0 || !memberMap.has(member.parent_id)) {
-        rootMembers.push(memberNode);
-      } else {
-        const parent = memberMap.get(member.parent_id);
-        if (parent) {
-          parent.children.push(memberNode);
-        }
-      }
-    });
-
-    return rootMembers;
+  // ============ HANDLERS ============
+  const handleRefresh = () => {
+    clearCachedTree();
+    fetchTreeData(true);
   };
 
-  // Export as JSON
+  const toggleTreeNode = (gtcUserId) => {
+    setExpandedTreeNodes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(gtcUserId)) {
+        newSet.delete(gtcUserId);
+      } else {
+        newSet.add(gtcUserId);
+      }
+      return newSet;
+    });
+  };
+
+  const expandAll = () => {
+    if (treeData?.tree) {
+      const allNodes = collectAllMembers(treeData.tree).map((m) => m.gtcUserId);
+      setExpandedTreeNodes(new Set(allNodes));
+    }
+  };
+
+  const collapseAll = () => {
+    if (treeData?.tree?.gtcUserId) {
+      setExpandedTreeNodes(new Set([treeData.tree.gtcUserId]));
+    }
+  };
+
+  const handleMemberClick = (member) => {
+    setSelectedMember(member);
+    setShowDetailModal(true);
+  };
+
+  const closeDetailModal = () => {
+    setSelectedMember(null);
+    setShowDetailModal(false);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setFilterUserType("");
+    setFilterKycStatus("");
+    setFilterOnboarded("");
+  };
+
   const handleExportJSON = () => {
     const dataToExport = treeData?.tree || {
-      members: members,
-      total: totalMembers,
+      message: "No data available",
       exported_at: new Date().toISOString(),
-      page: currentPage,
     };
 
     const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -242,877 +802,265 @@ const GTCFxAgentMembers = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handlePageInputChange = (e) => {
-    const value = e.target.value;
-    if (value === "" || /^\d+$/.test(value)) {
-      setPageInput(value);
-    }
-  };
-
-  const handlePageInputSubmit = (e) => {
-    if (e.key === "Enter") {
-      const page = parseInt(pageInput);
-      if (page && page > 0 && page <= totalPages) {
-        setCurrentPage(page);
-      } else {
-        setPageInput(currentPage.toString());
-      }
-    }
-  };
-
-  const handlePageInputBlur = () => {
-    const page = parseInt(pageInput);
-    if (page && page > 0 && page <= totalPages) {
-      setCurrentPage(page);
-    } else {
-      setPageInput(currentPage.toString());
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handleResetToFirstPage = () => {
-    setCurrentPage(1);
-    setSearchTerm("");
-    setFilterUserType("");
-  };
-
-  const filteredMembers = members.filter((member) => {
+  // ============ FILTER LOGIC ============
+  const matchesFilter = (member) => {
+    const searchLower = searchTerm.toLowerCase();
     const matchesSearch =
-      member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.realname.toLowerCase().includes(searchTerm.toLowerCase());
+      !searchTerm ||
+      member.email?.toLowerCase().includes(searchLower) ||
+      member.username?.toLowerCase().includes(searchLower) ||
+      member.name?.toLowerCase().includes(searchLower) ||
+      member.phone?.toLowerCase().includes(searchLower);
 
     const matchesType =
-      filterUserType === "" || member.user_type === filterUserType;
+      filterUserType === "" || member.userType === filterUserType;
 
-    return matchesSearch && matchesType;
-  });
+    const matchesKyc =
+      filterKycStatus === "" || member.kycStatus === filterKycStatus;
 
-  const memberTree = buildTree(filteredMembers);
+    let matchesOnboarding = true;
+    if (filterOnboarded === "call") {
+      matchesOnboarding = member.onboardedWithCall === true;
+    } else if (filterOnboarded === "message") {
+      matchesOnboarding = member.onboardedWithMessage === true;
+    } else if (filterOnboarded === "both") {
+      matchesOnboarding =
+        member.onboardedWithCall === true &&
+        member.onboardedWithMessage === true;
+    } else if (filterOnboarded === "none") {
+      matchesOnboarding =
+        !member.onboardedWithCall && !member.onboardedWithMessage;
+    }
 
-  const toggleMember = (memberId) => {
-    setExpandedMembers((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(memberId)) {
-        newSet.delete(memberId);
-      } else {
-        newSet.add(memberId);
-      }
-      return newSet;
-    });
+    return matchesSearch && matchesType && matchesKyc && matchesOnboarding;
   };
 
-  // Use scroll-preserving variant for tree modal
-  const safeToggleTreeNode = (memberId) => {
-    // remember scroll before expanding/collapsing
-    rememberModalScroll();
-    setExpandedTreeNodes((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(memberId)) {
-        newSet.delete(memberId);
-      } else {
-        newSet.add(memberId);
-      }
-      return newSet;
-    });
-  };
+  // ============ STATS CALCULATION ============
+  const allMembers = treeData?.tree ? collectAllMembers(treeData.tree) : [];
 
-  // Recursive tree node renderer - Table Row format with all details
-  const TreeNodeRow = ({ node, isRoot = false }) => {
-    const hasChildren = node.children && node.children.length > 0;
-    const isExpanded = expandedTreeNodes.has(node.member_id);
-    const level = node.level || 0;
-    const indent = level * 20;
-
-    return (
-      <>
-        <tr
-          className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-            isRoot
-              ? "bg-linear-to-r from-orange-50 to-orange-100 font-semibold"
-              : level === 1
-              ? "bg-purple-50/40"
-              : level === 2
-              ? "bg-blue-50/40"
-              : level > 2
-              ? "bg-gray-50/40"
-              : ""
-          }`}
-        >
-          {/* Member Name & Avatar */}
-          <td
-            className="px-3 py-2.5"
-            style={{ paddingLeft: `${12 + indent}px` }}
-          >
-            <div className="flex items-center gap-2">
-              {hasChildren ? (
-                <button
-                  onClick={() => safeToggleTreeNode(node.member_id)}
-                  className="p-1 hover:bg-orange-100 rounded transition-colors flex-shrink-0"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-3.5 h-3.5 text-orange-600" />
-                  ) : (
-                    <ChevronRightIcon className="w-3.5 h-3.5 text-gray-400" />
-                  )}
-                </button>
-              ) : (
-                <div className="w-5" />
-              )}
-              <div className="flex items-center gap-2 min-w-0">
-                <div
-                  className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
-                    isRoot
-                      ? "bg-orange-500 text-white"
-                      : level === 1
-                      ? "bg-purple-400 text-white"
-                      : level === 2
-                      ? "bg-blue-400 text-white"
-                      : "bg-gray-400 text-white"
-                  }`}
-                >
-                  {(node.nickname || "U").charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-gray-900 truncate">
-                    {node.nickname}
-                  </p>
-                  <p className="text-[10px] text-gray-500 truncate">
-                    {node.realname || "N/A"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </td>
-
-          {/* Email */}
-          <td className="px-3 py-2.5">
-            <div className="flex items-center gap-1">
-              <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
-              <p className="text-[11px] text-gray-600 truncate max-w-[180px]">
-                {node.email}
-              </p>
-            </div>
-          </td>
-
-          {/* Phone */}
-          <td className="px-3 py-2.5">
-            <div className="flex items-center gap-1">
-              <Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />
-              <p className="text-[11px] text-gray-600 truncate">
-                {node.phone || "N/A"}
-              </p>
-            </div>
-          </td>
-
-          {/* Type */}
-          <td className="px-3 py-2.5">
-            <span
-              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                node.user_type === "agent"
-                  ? "bg-purple-100 text-purple-700"
-                  : "bg-green-100 text-green-700"
-              }`}
-            >
-              {node.user_type === "agent" ? "Agent" : "Direct"}
-            </span>
-          </td>
-
-          {/* Level */}
-          <td className="px-3 py-2.5 text-center">
-            <span className="inline-block px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-semibold">
-              L{level}
-            </span>
-          </td>
-
-          {/* Balance */}
-          <td className="px-3 py-2.5 text-right">
-            <p className="font-bold text-green-600 text-xs">
-              ${parseFloat(node.amount || 0).toFixed(2)}
-            </p>
-          </td>
-
-          {/* Registered */}
-          <td className="px-3 py-2.5">
-            <div className="flex items-center gap-1">
-              <Calendar className="w-3 h-3 text-gray-400" />
-              <p className="text-[11px] text-gray-600 text-nowrap">
-                {new Date(node.create_time * 1000).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "2-digit",
-                })}
-              </p>
-            </div>
-          </td>
-
-          {/* Member ID */}
-          <td className="px-3 py-2.5">
-            <p className="text-[10px] font-mono text-gray-500">
-              {node.member_id}
-            </p>
-          </td>
-
-          {/* Team Size */}
-          <td className="px-3 py-2.5 text-center">
-            {hasChildren && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-semibold">
-                <Users className="w-3 h-3" />
-                {node.children.length}
-              </span>
-            )}
-          </td>
-        </tr>
-
-        {/* Children */}
-        {hasChildren &&
-          isExpanded &&
-          node.children.map((child) => (
-            <TreeNodeRow key={child.member_id} node={child} isRoot={false} />
-          ))}
-      </>
-    );
-  };
-
-  // Recursive component to render member rows (paginated view)
-  const MemberRow = ({ member, level = 0 }) => {
-    const hasChildren = member.children && member.children.length > 0;
-    const isExpanded = expandedMembers.has(member.member_id);
-    const indent = level * 24;
-
-    return (
-      <>
-        <tr
-          className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-            level > 0 ? "bg-orange-50/30" : ""
-          }`}
-        >
-          <td className="px-4 py-3" style={{ paddingLeft: `${16 + indent}px` }}>
-            <div className="flex items-center gap-2">
-              {hasChildren ? (
-                <button
-                  onClick={() => toggleMember(member.member_id)}
-                  className="p-1 hover:bg-orange-100 rounded transition-colors flex-shrink-0"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-3.5 h-3.5 text-orange-600" />
-                  ) : (
-                    <ChevronRightIcon className="w-3.5 h-3.5 text-gray-400" />
-                  )}
-                </button>
-              ) : (
-                <div className="w-5" />
-              )}
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <span className="text-white font-bold text-xs">
-                    {member.nickname.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-gray-900 text-xs truncate">
-                    {member.nickname}
-                  </p>
-                  <p className="text-[10px] text-gray-500 truncate">
-                    {member.realname}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </td>
-
-          <td className="px-4 py-3">
-            <div className="flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-              <p className="text-xs text-gray-600 truncate max-w-xs">
-                {member.email}
-              </p>
-            </div>
-          </td>
-
-          <td className="px-4 py-3">
-            <span
-              className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                member.user_type === "agent"
-                  ? "bg-purple-100 text-purple-700"
-                  : "bg-green-100 text-green-700"
-              }`}
-            >
-              {member.user_type === "agent" ? "Agent" : "Direct"}
-            </span>
-          </td>
-
-          <td className="px-4 py-3 text-right">
-            <p className="font-bold text-gray-900 text-xs">
-              ${parseFloat(member.amount || 0).toFixed(2)}
-            </p>
-          </td>
-
-          <td className="px-4 py-3">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-gray-400" />
-              <p className="text-xs text-gray-600 text-nowrap">
-                {new Date(member.create_time * 1000).toLocaleDateString(
-                  "en-US",
-                  { month: "short", day: "numeric", year: "2-digit" }
-                )}
-              </p>
-            </div>
-          </td>
-
-          <td className="px-4 py-3">
-            <p className="text-xs font-mono text-gray-500">
-              {member.member_id}
-            </p>
-          </td>
-
-          <td className="px-4 py-3">
-            {hasChildren && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-[10px] font-semibold">
-                <Users className="w-3 h-3" />
-                {member.children.length}
-              </span>
-            )}
-          </td>
-        </tr>
-
-        {hasChildren &&
-          isExpanded &&
-          member.children.map((child) => (
-            <MemberRow key={child.member_id} member={child} level={level + 1} />
-          ))}
-      </>
-    );
-  };
-
-  // Calculate stats
   const stats = {
-    total: members.length,
-    agents: members.filter((m) => m.user_type === "agent").length,
-    directClients: members.filter((m) => m.user_type === "direct").length,
-    totalBalance: members.reduce(
+    total: allMembers.length,
+    agents: allMembers.filter((m) => m.userType === "agent").length,
+    directClients: allMembers.filter((m) => m.userType === "direct").length,
+    totalBalance: allMembers.reduce(
       (sum, m) => sum + parseFloat(m.amount || 0),
-      0
+      0,
     ),
+    totalTradingBalance: allMembers.reduce(
+      (sum, m) => sum + parseFloat(m.tradingBalance || 0),
+      0,
+    ),
+    kycCompleted: allMembers.filter((m) => m.kycStatus === "completed").length,
+    onboardedCall: allMembers.filter((m) => m.onboardedWithCall).length,
+    onboardedMessage: allMembers.filter((m) => m.onboardedWithMessage).length,
   };
 
-  if (loading && currentPage === 1 && members.length === 0) {
+  // ============ LOADING STATE ============
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-4">
           <Loader className="w-12 h-12 text-orange-600 animate-spin" />
-          <p className="text-gray-600 font-medium">Loading members...</p>
+          <p className="text-gray-600 font-medium">Loading team tree...</p>
         </div>
       </div>
     );
   }
 
-  if (error && members.length === 0) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white p-4">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-red-600" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Failed to Load Members
-          </h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => {
-              setCurrentPage(1);
-              fetchMembers();
-            }}
-            className="px-6 py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-medium transition-all shadow-md hover:shadow-lg"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  // ============ MAIN RENDER ============
   return (
     <>
       <Helmet>
-        <title>Agent Members - GTC FX</title>
+        <title>Team Network - GTC FX</title>
       </Helmet>
 
       <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2.5">
-              <Users className="w-7 h-7 text-orange-600" />
-              My Members
-            </h1>
-            <p className="text-gray-600 text-sm mt-1">
-              Manage your referred members and agents in a tree structure
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={openFullTree}
-              disabled={loadingTree}
-              className="flex items-center gap-1.5 px-4 py-2 bg-linear-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loadingTree ? (
-                <Loader className="w-4 h-4 animate-spin" />
-              ) : (
-                <Network className="w-4 h-4" />
-              )}
-              Full Tree
-            </button>
-            <button
-              onClick={() => setExpandedMembers(new Set())}
-              className="px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-medium transition-all"
-            >
-              Collapse All
-            </button>
-            <button
-              onClick={() =>
-                setExpandedMembers(new Set(members.map((m) => m.member_id)))
-              }
-              className="px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg text-xs font-medium transition-all"
-            >
-              Expand All
-            </button>
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <Network className="w-8 h-8 text-orange-600" />
+                Team Network Tree
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Complete hierarchical view of your entire network from database
+              </p>
+            </div>
             <button
               onClick={handleExportJSON}
-              disabled={members.length === 0 && !treeData}
-              className="flex items-center gap-1.5 px-4 py-2 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!treeData?.tree}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FileJson className="w-4 h-4" />
+              <FileJson className="w-5 h-5" />
               Export JSON
             </button>
           </div>
         </div>
 
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Users className="w-5 h-5 text-orange-600" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-600 font-medium mb-0.5">
-              Total Members
-            </p>
-            <p className="text-2xl font-bold text-gray-900">{totalMembers}</p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {/* Total Members */}
+          <StatsCard
+            icon={Users}
+            label="Total Members"
+            value={stats.total}
+            gradientFrom="from-orange-50"
+            gradientTo="to-orange-100"
+            iconBg="bg-orange-500"
+            subtitle={`${stats.agents} agents, ${stats.directClients} direct`}
+          />
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Award className="w-5 h-5 text-purple-600" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-600 font-medium mb-0.5">
-              Sub-Agents
-            </p>
-            <p className="text-2xl font-bold text-gray-900">{stats.agents}</p>
-          </div>
+          {/* Total Wallet Balance */}
+          <StatsCard
+            icon={DollarSign}
+            label="Total Wallet Balance"
+            value={`$${stats.totalBalance.toFixed(2)}`}
+            gradientFrom="from-green-50"
+            gradientTo="to-green-100"
+            iconBg="bg-green-500"
+            subtitle="Combined wallet balance"
+          />
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-600 font-medium mb-0.5">
-              Direct Clients
-            </p>
-            <p className="text-2xl font-bold text-gray-900">
-              {stats.directClients}
-            </p>
-          </div>
+          {/* Total Trading Balance */}
+          <StatsCard
+            icon={TrendingUp}
+            label="Total Trading Balance"
+            value={`$${stats.totalTradingBalance.toFixed(2)}`}
+            gradientFrom="from-blue-50"
+            gradientTo="to-blue-100"
+            iconBg="bg-blue-500"
+            subtitle="From MT5 accounts"
+          />
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-blue-600" />
-              </div>
-            </div>
-            <p className="text-xs text-gray-600 font-medium mb-0.5">
-              Total Balance
-            </p>
-            <p className="text-2xl font-bold text-gray-900">
-              ${stats.totalBalance.toFixed(2)}
-            </p>
-          </div>
+          {/* KYC Completed */}
+          <StatsCard
+            icon={Award}
+            label="KYC Completed"
+            value={stats.kycCompleted}
+            gradientFrom="from-purple-50"
+            gradientTo="to-purple-100"
+            iconBg="bg-purple-500"
+            subtitle={`${((stats.kycCompleted / stats.total) * 100).toFixed(1)}% completion`}
+          />
         </div>
 
-        {/* Search & Filter */}
-        <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Search Members
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by email, nickname, or real name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
-                />
-              </div>
-            </div>
+        {/* Filters */}
+        <FilterSection
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          filterUserType={filterUserType}
+          setFilterUserType={setFilterUserType}
+          filterKycStatus={filterKycStatus}
+          setFilterKycStatus={setFilterKycStatus}
+          filterOnboarded={filterOnboarded}
+          setFilterOnboarded={setFilterOnboarded}
+          onClear={handleClearFilters}
+        />
 
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Member Type
-              </label>
-              <select
-                value={filterUserType}
-                onChange={(e) => setFilterUserType(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
-              >
-                <option value="">All Members</option>
-                <option value="agent">Sub-Agents</option>
-                <option value="direct">Direct Clients</option>
-              </select>
-            </div>
-          </div>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+          <button
+            onClick={collapseAll}
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+          >
+            Collapse All
+          </button>
+          <button
+            onClick={expandAll}
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+          >
+            Expand All
+          </button>
         </div>
 
-        {/* Members Tree Table */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mb-6">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader className="w-8 h-8 text-orange-600 animate-spin" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">
-                      Member
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">
-                      Email
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">
-                      Type
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-900">
-                      Balance
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">
-                      Registered
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">
-                      ID
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900">
-                      Team
-                    </th>
+        {/* Tree Table */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Member
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Email
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Phone
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    KYC
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                    Level
+                  </th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
+                    Wallet
+                  </th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
+                    Trading
+                  </th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                    Joined
+                  </th>
+                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                    Details
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {treeData?.tree ? (
+                  <TreeNodeRow
+                    node={treeData.tree}
+                    isRoot={true}
+                    expandedNodes={expandedTreeNodes}
+                    onToggle={toggleTreeNode}
+                    onMemberClick={handleMemberClick}
+                    matchesFilter={matchesFilter}
+                  />
+                ) : (
+                  <tr>
+                    <td colSpan="10" className="px-6 py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                          <Users className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <p className="text-gray-600 font-medium">
+                          No team members found
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Your team network will appear here
+                        </p>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {memberTree.map((member) => (
-                    <MemberRow key={member.member_id} member={member} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {filteredMembers.length === 0 && !loading && (
-            <div className="text-center py-12 border-t border-gray-200">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Users className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-base font-semibold text-gray-900 mb-1">
-                No Members Found
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                {members.length === 0
-                  ? "You don't have any members yet"
-                  : "No members match your search criteria"}
-              </p>
-              {(searchTerm || filterUserType) && members.length === 0 && (
-                <button
-                  onClick={handleResetToFirstPage}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg text-sm font-medium transition-all"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Reset Filters
-                </button>
-              )}
-            </div>
-          )}
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-
-        {/* Pagination */}
-        {members.length > 0 && totalPages > 1 && (
-          <div className="flex items-center justify-center gap-3 py-4 mb-6">
-            <button
-              onClick={handlePrevPage}
-              disabled={currentPage === 1}
-              className="p-2 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-all"
-            >
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
-            </button>
-
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-600">Page</span>
-              <input
-                type="text"
-                value={pageInput}
-                onChange={handlePageInputChange}
-                onKeyDown={handlePageInputSubmit}
-                onBlur={handlePageInputBlur}
-                className="w-14 px-2 py-1.5 border border-gray-200 bg-gray-50 rounded-lg text-center text-xs focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none font-medium"
-              />
-              <span className="text-xs text-gray-600">of {totalPages}</span>
-            </div>
-
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage >= totalPages}
-              className="p-2 border border-gray-200 rounded-lg hover:bg-orange-50 hover:border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-200 transition-all"
-            >
-              <ChevronRight className="w-4 h-4 text-gray-600" />
-            </button>
-          </div>
-        )}
-
-        {/* Member Hierarchy side cards */}
-        {members.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Top Members by Balance */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-              <h2 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-orange-600" />
-                Top Members by Balance
-              </h2>
-              <div className="space-y-2">
-                {members
-                  .sort(
-                    (a, b) =>
-                      parseFloat(b.amount || 0) - parseFloat(a.amount || 0)
-                  )
-                  .slice(0, 5)
-                  .map((member, index) => (
-                    <div
-                      key={member.member_id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-orange-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <div className="relative">
-                          <div className="w-8 h-8 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                            <span className="text-white font-bold text-xs">
-                              {member.nickname.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          {index < 3 && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center border border-white">
-                              <span className="text-[9px] font-bold">
-                                {index + 1}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-gray-900 text-xs truncate">
-                            {member.nickname}
-                          </p>
-                          <p className="text-[10px] text-gray-500 truncate">
-                            {member.email}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="text-orange-600 font-bold text-xs flex-shrink-0 ml-2">
-                        ${parseFloat(member.amount || 0).toFixed(2)}
-                      </p>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* Recent Members */}
-            <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
-              <h2 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-orange-600" />
-                Recent Registrations
-              </h2>
-              <div className="space-y-2">
-                {members
-                  .sort((a, b) => b.create_time - a.create_time)
-                  .slice(0, 5)
-                  .map((member) => (
-                    <div
-                      key={member.member_id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-orange-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <div className="w-8 h-8 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                          <span className="text-white font-bold text-xs">
-                            {member.nickname.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-gray-900 text-xs truncate">
-                            {member.nickname}
-                          </p>
-                          <p className="text-[10px] text-gray-500">
-                            {new Date(
-                              member.create_time * 1000
-                            ).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                          member.user_type === "agent"
-                            ? "bg-purple-100 text-purple-700"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {member.user_type === "agent" ? "Agent" : "Direct"}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Full Tree Modal - Compact 90vh with reduced width */}
-      {showTreeModal && treeData && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-linear-to-r from-orange-50 to-orange-100">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                  <Network className="w-5 h-5 text-orange-600" />
-                  Complete Team Tree
-                </h2>
-                <p className="text-xs text-gray-600 mt-0.5">
-                  Hierarchical view of your entire network
-                </p>
-              </div>
-              <button
-                onClick={() => setShowTreeModal(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-
-            {/* Modal Body - Scrollable Table */}
-            <div ref={modalScrollRef} className="flex-1 overflow-y-auto">
-              {treeData.tree ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-gray-100 z-10">
-                      <tr className="border-b border-gray-200">
-                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
-                          Member
-                        </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
-                          Email
-                        </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
-                          Phone
-                        </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
-                          Type
-                        </th>
-                        <th className="px-3 py-2 text-center text-[11px] font-semibold text-gray-900">
-                          Level
-                        </th>
-                        <th className="px-3 py-2 text-right text-[11px] font-semibold text-gray-900">
-                          Balance
-                        </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
-                          Registered
-                        </th>
-                        <th className="px-3 py-2 text-left text-[11px] font-semibold text-gray-900">
-                          ID
-                        </th>
-                        <th className="px-3 py-2 text-center text-[11px] font-semibold text-gray-900">
-                          Team
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <TreeNodeRow node={treeData.tree} isRoot={true} />
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-12 bg-gray-50">
-                  <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium text-sm">
-                    No team members yet
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  if (treeData?.tree) {
-                    const allNodes = [];
-                    const collectNodes = (node) => {
-                      allNodes.push(node.member_id);
-                      if (node.children) {
-                        node.children.forEach(collectNodes);
-                      }
-                    };
-                    collectNodes(treeData.tree);
-                    setExpandedTreeNodes(new Set(allNodes));
-                  }
-                }}
-                className="px-3 py-1.5 border border-gray-200 hover:bg-white text-gray-700 rounded-lg text-xs font-medium transition-all"
-              >
-                Expand All
-              </button>
-              <button
-                onClick={() => {
-                  if (treeData?.tree?.member_id) {
-                    setExpandedTreeNodes(new Set([treeData.tree.member_id]));
-                  }
-                }}
-                className="px-3 py-1.5 border border-gray-200 hover:bg-white text-gray-700 rounded-lg text-xs font-medium transition-all"
-              >
-                Collapse All
-              </button>
-              <button
-                onClick={handleExportJSON}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg text-xs font-medium transition-all shadow-md hover:shadow-lg"
-              >
-                <FileJson className="w-3.5 h-3.5" />
-                Export JSON
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Detail Modal */}
+      {showDetailModal && (
+        <MemberDetailModal member={selectedMember} onClose={closeDetailModal} />
       )}
     </>
   );

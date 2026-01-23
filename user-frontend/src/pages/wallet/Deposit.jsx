@@ -67,7 +67,7 @@ const Deposit = () => {
   ];
 
   const selectedOption = cryptoOptions.find(
-    (opt) => opt.value === selectedCrypto
+    (opt) => opt.value === selectedCrypto,
   );
 
   const validateAmount = (value) => {
@@ -131,7 +131,7 @@ const Deposit = () => {
       setError(
         err.response?.data?.message ||
           err.response?.data?.error ||
-          "Failed to create deposit"
+          "Failed to create deposit",
       );
     } finally {
       setLoading(false);
@@ -145,7 +145,7 @@ const Deposit = () => {
     if (qrMethod === "blockbee") {
       // Fallback 1: QRServer API (public & reliable)
       const qrServerUrl = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(
-        `Pay ${amount} USD | ${selectedOption.label} | ${paymentAddress}`
+        `Pay ${amount} USD | ${selectedOption.label} | ${paymentAddress}`,
       )}&format=png&qzone=1`;
       setQrCodeUrl(qrServerUrl);
       setQrMethod("qrserver");
@@ -226,8 +226,8 @@ const Deposit = () => {
             deposit.blockBeeStatus === "pending_payment"
               ? "Waiting for payment..."
               : deposit.blockBeeStatus === "pending_confirmation"
-              ? "Payment detected, waiting for confirmations..."
-              : `Status: ${deposit.status}`;
+                ? "Payment detected, waiting for confirmations..."
+                : `Status: ${deposit.status}`;
           setError(statusMessage);
         }
       }
@@ -254,14 +254,6 @@ const Deposit = () => {
       <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back</span>
-          </button>
-
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">

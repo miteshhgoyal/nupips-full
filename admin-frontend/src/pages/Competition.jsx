@@ -270,13 +270,6 @@ const AdminCompetition = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 transition-colors text-sm sm:text-base"
-          >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            Back
-          </button>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
             <div>
@@ -616,7 +609,7 @@ const AdminCompetition = () => {
       )}
 
       {showDeleteModal && selectedCompetition && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-5 sm:p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-xl flex items-center justify-center">
@@ -819,7 +812,7 @@ const CreateCompetitionModal = ({ onClose, onSuccess, showMessage }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-xl sm:rounded-2xl w-full max-w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto my-4 sm:my-8">
         {/* Header - Responsive */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 flex items-center justify-between z-10">
@@ -1074,7 +1067,7 @@ const EditCompetitionModal = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-xl sm:rounded-2xl w-full max-w-full sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto my-4 sm:my-8">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 sm:p-6 flex items-center justify-between z-10">
           <h2 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
@@ -1722,7 +1715,7 @@ const WinnersModal = ({ competition, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
           <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
@@ -1773,10 +1766,10 @@ const WinnersModal = ({ competition, onClose }) => {
                           index === 0
                             ? "bg-yellow-100 text-yellow-700"
                             : index === 1
-                            ? "bg-gray-100 text-gray-700"
-                            : index === 2
-                            ? "bg-orange-100 text-orange-700"
-                            : "bg-blue-100 text-blue-700"
+                              ? "bg-gray-100 text-gray-700"
+                              : index === 2
+                                ? "bg-orange-100 text-orange-700"
+                                : "bg-blue-100 text-blue-700"
                         }`}
                       >
                         #{winner.rank}
@@ -1876,7 +1869,7 @@ const ParticipantsModal = ({ competition, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
@@ -2057,7 +2050,7 @@ const ParticipantsModal = ({ competition, onClose }) => {
                       <button
                         onClick={() => {
                           const el = document.getElementById(
-                            `details-${index}`
+                            `details-${index}`,
                           );
                           el.classList.toggle("hidden");
                         }}
@@ -2080,7 +2073,7 @@ const ParticipantsModal = ({ competition, onClose }) => {
                           </h4>
                           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                             {Object.entries(
-                              participant.scoreBreakdown.breakdown
+                              participant.scoreBreakdown.breakdown,
                             ).map(([key, value]) => (
                               <div
                                 key={key}
@@ -2143,7 +2136,7 @@ const ParticipantsModal = ({ competition, onClose }) => {
                                 <p className="text-xs text-gray-600">Volume</p>
                                 <p className="text-sm font-semibold text-gray-900">
                                   {participant.scoreBreakdown.metrics.tradingVolumeLots?.toFixed(
-                                    1
+                                    1,
                                   ) || "0.0"}{" "}
                                   lots
                                 </p>
@@ -2159,7 +2152,7 @@ const ParticipantsModal = ({ competition, onClose }) => {
                                 </p>
                                 <p className="text-sm font-semibold text-gray-900">
                                   {participant.scoreBreakdown.metrics.winRate?.toFixed(
-                                    1
+                                    1,
                                   ) || "0.0"}
                                   %
                                 </p>
@@ -2290,7 +2283,7 @@ const ParticipantsModal = ({ competition, onClose }) => {
                         Last calculated:{" "}
                         {participant.lastCalculated
                           ? new Date(
-                              participant.lastCalculated
+                              participant.lastCalculated,
                             ).toLocaleString()
                           : "Never"}
                       </div>

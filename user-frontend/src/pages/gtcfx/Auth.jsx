@@ -16,6 +16,9 @@ import {
   ArrowLeft,
   ExternalLink,
   UserPlus,
+  Sparkles,
+  BarChart3,
+  Users,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useGTCFxAuth } from "../../contexts/GTCFxAuthContext";
@@ -132,7 +135,7 @@ const GTCFxAuth = () => {
       } else {
         setSubmitError(
           response.data.message ||
-            "Login failed. Please check your credentials."
+            "Login failed. Please check your credentials.",
         );
       }
     } catch (error) {
@@ -140,7 +143,7 @@ const GTCFxAuth = () => {
         setSubmitError(error.response.data.message);
       } else if (error.message === "Network Error") {
         setSubmitError(
-          "Network error. Please check your connection and try again."
+          "Network error. Please check your connection and try again.",
         );
       } else {
         setSubmitError("Login failed. Please try again.");
@@ -173,7 +176,7 @@ const GTCFxAuth = () => {
 
   if (gtcLoading && !showSubscribeModal) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 flex items-center justify-center p-4">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-700 text-lg">Loading GTC FX...</p>
@@ -185,22 +188,21 @@ const GTCFxAuth = () => {
   if (gtcAuthenticated && gtcUser) {
     return (
       <>
-        <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
+        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 p-4 sm:p-6 lg:p-8">
           <div className="max-w-4xl mx-auto">
             <div className="mb-6">
               <Link
                 to="/gtcfx/brokers"
                 className="inline-flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors group"
               >
-                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-                <span className="text-sm font-medium">
+                <span className="text-xs text-orange-600 font-medium">
                   Back to Broker Selection
                 </span>
               </Link>
             </div>
 
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
                 <TrendingUp className="w-10 h-10 text-white" />
               </div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -211,9 +213,9 @@ const GTCFxAuth = () => {
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border-2 border-green-200 mb-6">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-lg border border-gray-200 mb-6">
               <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-8 border-b border-gray-200">
-                <div className="w-20 h-20 bg-linear-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg">
                   {gtcUser.avatar ? (
                     <img
                       src={gtcUser.avatar}
@@ -249,35 +251,35 @@ const GTCFxAuth = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                <div className="p-4 bg-orange-50 rounded-xl border border-orange-200">
+                <div className="p-5 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-orange-600" />
+                    <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center shadow-sm">
+                      <DollarSign className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 font-medium">
+                      <p className="text-sm text-gray-700 font-medium">
                         Account Balance
                       </p>
-                      <p className="text-xl font-bold text-gray-900">
+                      <p className="text-xl font-bold text-orange-900">
                         ${parseFloat(gtcUser.amount || 0).toFixed(2)}
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-blue-600" />
+                    <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-sm">
+                      <Calendar className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-600 font-medium">
+                      <p className="text-sm text-gray-700 font-medium">
                         Member Since
                       </p>
-                      <p className="text-xl font-bold text-gray-900">
+                      <p className="text-xl font-bold text-blue-900">
                         {gtcUser.create_time
                           ? new Date(
-                              parseInt(gtcUser.create_time) * 1000
+                              parseInt(gtcUser.create_time) * 1000,
                             ).toLocaleDateString("en-US", {
                               month: "short",
                               year: "numeric",
@@ -292,7 +294,7 @@ const GTCFxAuth = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Link
                   to="/gtcfx/dashboard"
-                  className="flex items-center justify-center gap-2 w-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg group"
+                  className="flex items-center justify-center gap-2 w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg group"
                 >
                   <span>Go to Dashboard</span>
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -311,28 +313,28 @@ const GTCFxAuth = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Link
                 to="/gtcfx/dashboard"
-                className="p-4 bg-white border-2 border-gray-200 hover:border-orange-500 rounded-xl hover:bg-orange-50 transition-all text-center group"
+                className="p-5 bg-white border border-gray-200 hover:border-orange-500 rounded-xl hover:bg-orange-50 transition-all text-center group"
               >
-                <TrendingUp className="w-8 h-8 text-orange-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                <Sparkles className="w-8 h-8 text-orange-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
                 <p className="font-semibold text-gray-900">Dashboard</p>
                 <p className="text-xs text-gray-500 mt-1">View overview</p>
               </Link>
 
               <Link
                 to="/gtcfx/profit-logs"
-                className="p-4 bg-white border-2 border-gray-200 hover:border-purple-500 rounded-xl hover:bg-purple-50 transition-all text-center group"
+                className="p-5 bg-white border border-gray-200 hover:border-purple-500 rounded-xl hover:bg-purple-50 transition-all text-center group"
               >
-                <DollarSign className="w-8 h-8 text-purple-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                <BarChart3 className="w-8 h-8 text-purple-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
                 <p className="font-semibold text-gray-900">Profit Logs</p>
                 <p className="text-xs text-gray-500 mt-1">Track earnings</p>
               </Link>
 
               <Link
                 to="/gtcfx/agent/members"
-                className="p-4 bg-white border-2 border-gray-200 hover:border-green-500 rounded-xl hover:bg-green-50 transition-all text-center group"
+                className="p-5 bg-white border border-gray-200 hover:border-green-500 rounded-xl hover:bg-green-50 transition-all text-center group"
               >
-                <Activity className="w-8 h-8 text-green-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                <p className="font-semibold text-gray-900">Agent Members</p>
+                <Users className="w-8 h-8 text-green-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                <p className="font-semibold text-gray-900">Team Network</p>
                 <p className="text-xs text-gray-500 mt-1">Manage team</p>
               </Link>
             </div>
@@ -350,22 +352,10 @@ const GTCFxAuth = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <div className="mb-6">
-            <Link
-              to="/gtcfx/brokers"
-              className="inline-flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors group"
-            >
-              <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-              <span className="text-sm font-medium">
-                Back to Broker Selection
-              </span>
-            </Link>
-          </div>
-
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-linear-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-lg mb-6">
               <TrendingUp className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -377,7 +367,7 @@ const GTCFxAuth = () => {
           </div>
 
           {uplinerReferralLink && (
-            <div className="mb-6 p-5 bg-linear-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl">
+            <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl shadow-sm">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <UserPlus className="w-5 h-5 text-green-600" />
@@ -491,7 +481,7 @@ const GTCFxAuth = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white py-4 px-6 rounded-xl font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isLoading ? (
                   <>
@@ -508,16 +498,15 @@ const GTCFxAuth = () => {
             </form>
           </div>
 
-          <div className="text-center mt-6">
-            <p className="text-gray-500 text-sm">
-              Need help?{" "}
-              <a
-                href="mailto:support@gtcfx.com"
-                className="text-orange-600 hover:text-orange-700 font-medium"
-              >
-                Contact GTC FX Support
-              </a>
-            </p>
+          <div className="text-center mt-3">
+            <Link
+              to="/gtcfx/brokers"
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-orange-600 transition-colors group"
+            >
+              <span className="text-xs text-orange-600 font-medium">
+                Back to Broker Selection
+              </span>
+            </Link>
           </div>
         </div>
       </div>

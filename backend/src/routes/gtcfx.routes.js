@@ -852,4 +852,170 @@ router.get('/upliner-referral-link', authenticateToken, async (req, res) => {
     }
 });
 
+// ====================== API: GET AGENT MEMBER TREE FROM DATABASE ======================
+// POST /api/gtcfx/agent/member_tree
+// Add this route to your gtcfx.routes.js file (around line 650, before export default router;)
+
+router.post('/agent/member_tree', authenticateToken, async (req, res) => {
+    try {
+        console.log('Fetching member tree from database for user:', req.user.userId);
+
+        // Get the current user to find their GTC session and user ID
+        const currentUser = await User.findById(req.user.userId).select('gtcfx');
+
+        // Check if GTC FX is logged in (same logic as /session route)
+        if (!currentUser || !currentUser.gtcfx || !currentUser.gtcfx.accessToken) {
+            return res.status(401).json({
+                success: false,
+                message: 'No GTC FX session found. Please login to GTC FX first.',
+                authenticated: false
+            });
+        }
+
+        // Get user's email from main User document (not from gtcfx.user)
+        const user = await User.findById(req.user.userId).select('email');
+        const userEmail = user.email;
+
+        if (!userEmail) {
+            return res.status(404).json({
+                success: false,
+                message: 'User email not found. Cannot identify your GTC account.',
+                authenticated: true
+            });
+        }
+
+        console.log('Looking for root member with email:', userEmail);
+
+        // Fetch all members from database
+        const allMembers = await GTCMember.find({}).lean();
+        console.log(`Found ${allMembers.length} total members in database`);
+
+        if (allMembers.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'No members found. Please sync data first.',
+                data: {
+                    tree: null,
+                    stats: {
+                        totalMembers: 0,
+                        totalAgents: 0,
+                        totalDirectClients: 0,
+                        maxLevel: 0
+                    }
+                }
+            });
+        }
+
+        // Create a map for quick lookup by gtcUserId
+        const memberMap = new Map();
+        let rootMember = null;
+
+        allMembers.forEach(member => {
+            const memberData = {
+                gtcUserId: member.gtcUserId,
+                email: member.email,
+                username: member.username,
+                name: member.name,
+                phone: member.phone,
+                amount: member.amount || 0,
+                tradingBalance: member.tradingBalance || 0,
+                tradingBalanceDetails: member.tradingBalanceDetails,
+                userType: member.userType || 'agent',
+                kycStatus: member.kycStatus || '',
+                onboardedWithCall: member.onboardedWithCall || false,
+                onboardedWithMessage: member.onboardedWithMessage || false,
+                onboardingDoneBy: member.onboardingDoneBy,
+                onboardingNotes: member.onboardingNotes || '',
+                onboardingCompletedAt: member.onboardingCompletedAt,
+                parentGtcUserId: member.parentGtcUserId,
+                level: member.level || 0,
+                uplineChain: member.uplineChain || [],
+                joinedAt: member.joinedAt,
+                lastUpdated: member.lastUpdated,
+                rawData: member.rawData || {},
+                children: []
+            };
+
+            memberMap.set(member.gtcUserId, memberData);
+
+            // Find root member by matching email
+            if (member.email && member.email.toLowerCase() === userEmail.toLowerCase()) {
+                rootMember = memberData;
+            }
+        });
+
+        console.log('Member map created with', memberMap.size, 'members');
+
+        if (!rootMember) {
+            return res.status(404).json({
+                success: false,
+                message: `Your account (${userEmail}) not found in GTC member database. Please sync data first.`
+            });
+        }
+
+        console.log('Root member found:', rootMember.username, '(', rootMember.email, ')');
+
+        // Build the tree structure
+        function buildTree(member, currentLevel = 0) {
+            // Set the current level
+            member.level = currentLevel;
+
+            // Find all direct children
+            const children = Array.from(memberMap.values()).filter(
+                m => m.parentGtcUserId === member.gtcUserId
+            );
+
+            console.log(`Building tree for ${member.username} at level ${currentLevel}, found ${children.length} children`);
+
+            // Recursively build children
+            member.children = children.map(child => buildTree(child, currentLevel + 1));
+
+            return member;
+        }
+
+        const tree = buildTree(rootMember);
+
+        // Calculate statistics
+        function calculateStats(node, stats = { totalMembers: 0, totalAgents: 0, totalDirectClients: 0, maxLevel: 0 }) {
+            stats.totalMembers++;
+
+            if (node.userType === 'agent') {
+                stats.totalAgents++;
+            } else {
+                stats.totalDirectClients++;
+            }
+
+            if (node.level > stats.maxLevel) {
+                stats.maxLevel = node.level;
+            }
+
+            if (node.children && node.children.length > 0) {
+                node.children.forEach(child => calculateStats(child, stats));
+            }
+
+            return stats;
+        }
+
+        const stats = calculateStats(tree);
+        console.log('Tree statistics:', stats);
+
+        res.status(200).json({
+            success: true,
+            message: 'Member tree fetched successfully from database',
+            data: {
+                tree: tree,
+                stats: stats
+            }
+        });
+
+    } catch (error) {
+        console.error('Error fetching member tree from database:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch member tree',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
+
 export default router;

@@ -1,5 +1,5 @@
-// App.jsx
-import React, { useState, useEffect, useMemo, useRef } from "react";
+// user/App.jsx
+import React, { useState, useEffect, useMemo } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -21,36 +21,23 @@ import {
   TrendingUp,
   Wallet,
   Users,
-  Coins,
   Link2,
   Swords,
 } from "lucide-react";
 import { CONFIG } from "./constants";
 import "./App.css";
-import api from "./services/api";
 
-// Import your pages
+// Page imports
 import Register from "./pages/Register";
 import Login from "./pages/Login";
-import ComingSoon from "./pages/others/ComingSoon";
-
 import Deposit from "./pages/wallet/Deposit";
 import Withdrawal from "./pages/wallet/Withdrawal";
 import TransactionHistory from "./pages/wallet/TransactionHistory";
-
 import BrokerSelection from "./pages/user/BrokerSelection";
-
-// Import GTC FX Pages
 import GTCFxAuth from "./pages/gtcfx/Auth";
 import GTCFxDashboard from "./pages/gtcfx/user/Dashboard";
-import GTCFxStrategies from "./pages/gtcfx/user/Strategies";
-import GTCFxStrategyDetail from "./pages/gtcfx/user/StrategyDetail";
-import GTCFxSubscriptions from "./pages/gtcfx/user/MySubscriptions";
 import GTCFxProfitLogs from "./pages/gtcfx/user/ProfitLogs";
-import GTCFxUnsubscribe from "./pages/gtcfx/user/Unsubscribe";
 import GTCFxAgentMembers from "./pages/gtcfx/user/AgentMembers";
-import GTCFxCommissionReport from "./pages/gtcfx/user/CommissionReport";
-
 import Profile from "./pages/user/Profile";
 import Dashboard from "./pages/user/Dashboard";
 import Transfer from "./pages/wallet/Transfer";
@@ -59,7 +46,6 @@ import Shop from "./pages/others/Shop";
 import Orders from "./pages/user/Orders";
 import ProductItem from "./pages/others/ProductItem";
 import PlaceOrder from "./pages/others/PlaceOrder";
-
 import Learn from "./pages/others/Learn";
 import CourseView from "./pages/others/CourseView";
 import LessonView from "./pages/others/LessonView";
@@ -68,41 +54,37 @@ import Competition from "./pages/Competition";
 import Notifications from "./pages/user/Notifications";
 
 // Navigation configuration
-const navbarLinks = [
+const NAVBAR_LINKS = [
   { name: "My Profile", href: "/profile", icon: NavUser },
   { name: "My Orders", href: "/orders", icon: ShoppingBag },
 ];
 
-// Base sidebar links always visible
-const baseSidebarLinks = [
-  { name: "Dashboard", href: "/dashboard", icon: Home },
+const BASE_SIDEBAR_LINKS = [
+  { name: "Nupips Dashboard", href: "/dashboard", icon: Home },
   { name: "Nupips Team", href: "/nupips-team", icon: Users },
   { name: "Shop", href: "/shop", icon: ShoppingBag },
   { name: "Learn", href: "/learn", icon: Book },
   { name: "Competition", href: "/competition", icon: Swords },
 ];
 
-// GTC FX sidebar section (only when connected)
-const gtcFxSidebarSection = {
+const GTC_FX_SECTION = {
   name: "GTC FX",
   icon: TrendingUp,
   subItems: [
     { name: "Authentication", href: "/gtcfx/auth" },
-    { name: "Dashboard", href: "/gtcfx/dashboard" },
+    { name: "GTC FX Dashboard", href: "/gtcfx/dashboard" },
     { name: "Profit Logs", href: "/gtcfx/profit-logs" },
     { name: "Agent Members", href: "/gtcfx/agent/members" },
   ],
 };
 
-// Broker connection link (only when not connected)
-const brokerConnectionLink = {
+const BROKER_CONNECTION_LINK = {
   name: "Connect Your Broker",
   href: "/brokers",
   icon: Link2,
 };
 
-// Wallet section (always visible)
-const walletSidebarSection = {
+const WALLET_SECTION = {
   name: "Wallet",
   icon: Wallet,
   subItems: [
@@ -113,6 +95,16 @@ const walletSidebarSection = {
     { name: "Transaction History", href: "/transaction-history" },
   ],
 };
+
+const NO_LAYOUT_ROUTES = [
+  "/login",
+  "/register",
+  "/verify-otp",
+  "/forgot-password",
+  "/reset-password",
+];
+
+const MOBILE_BREAKPOINT = 768;
 
 // Default Route Component
 const DefaultRoute = () => {
@@ -129,122 +121,97 @@ const DefaultRoute = () => {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <Navigate to="/dashboard" replace />;
+  return user ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/login" replace />
+  );
 };
 
-// Layout Wrapper Component with Dynamic Sidebar
+// Layout Wrapper Component
 const LayoutWrapper = ({ children }) => {
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarOpen, setSidebarOpen] = useState(
+    window.innerWidth >= MOBILE_BREAKPOINT,
+  );
+  const [isMobile, setIsMobile] = useState(
+    window.innerWidth < MOBILE_BREAKPOINT,
+  );
   const { gtcAuthenticated, gtcUser } = useGTCFxAuth();
 
-  // Check if current route should show layout
-  const noLayoutRoutes = [
-    "/login",
-    "/register",
-    "/verify-otp",
-    "/forgot-password",
-    "/reset-password",
-  ];
+  const showLayout = !NO_LAYOUT_ROUTES.includes(location.pathname);
 
-  const showLayout = !noLayoutRoutes.includes(location.pathname);
+  const sidebarLinks = useMemo(() => {
+    const links = [...BASE_SIDEBAR_LINKS];
 
-  // Generate dynamic sidebar links based on GTC FX connection status
-  const dynamicSidebarLinks = useMemo(() => {
-    const links = [...baseSidebarLinks];
-
-    // Add broker connection link if GTC FX is NOT connected
     if (!gtcAuthenticated && !gtcUser) {
-      links.push(brokerConnectionLink);
+      links.push(BROKER_CONNECTION_LINK);
     }
 
-    // Add GTC FX section if connected
     if (gtcAuthenticated && gtcUser) {
-      links.push(gtcFxSidebarSection);
+      links.push(GTC_FX_SECTION);
     }
 
-    // Always add wallet section at the end
-    links.push(walletSidebarSection);
-
+    links.push(WALLET_SECTION);
     return links;
   }, [gtcAuthenticated, gtcUser]);
 
   useEffect(() => {
-    const checkMobile = () => {
-      const isMobileNow = window.innerWidth < 768;
-      setIsMobile(isMobileNow);
-
-      if (isMobileNow) {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
+    const handleResize = () => {
+      const mobile = window.innerWidth < MOBILE_BREAKPOINT;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
     };
 
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-
-    window.toggleSidebar = toggleSidebar;
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    window.toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
     return () => {
-      window.removeEventListener("resize", checkMobile);
+      window.removeEventListener("resize", handleResize);
       delete window.toggleSidebar;
     };
   }, []);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  // If no layout needed, render children directly
   if (!showLayout) {
     return <>{children}</>;
   }
 
-  // Render with layout
+  const mainClasses = isMobile
+    ? "pt-16 px-0 md:px-6"
+    : `pt-20 md:pt-24 px-4 sm:px-6 lg:px-8 ${sidebarOpen ? "ml-64" : "ml-16"}`;
+
+  const contentClasses = `pb-0 pt-0 md:pb-8 md:pt-2 max-w-full ${
+    !isMobile && sidebarOpen ? "max-w-[calc(100vw-16rem)]" : ""
+  }`;
+
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-blue-50/30 relative overflow-x-hidden">
       <Navbar
-        toggleSidebar={toggleSidebar}
-        navigationLinks={navbarLinks}
+        toggleSidebar={() => setSidebarOpen((prev) => !prev)}
+        navigationLinks={NAVBAR_LINKS}
         config={CONFIG}
       />
       <Sidebar
         isOpen={sidebarOpen}
-        onToggle={toggleSidebar}
-        navigationLinks={dynamicSidebarLinks}
+        onToggle={() => setSidebarOpen((prev) => !prev)}
+        navigationLinks={sidebarLinks}
         config={CONFIG}
       />
 
-      {/* Mobile overlay */}
       {isMobile && sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
-          onClick={toggleSidebar}
+          onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <div className="bg-orange-50">
         <main
-          className={`transition-all duration-300 ease-in-out ${
-            isMobile
-              ? "pt-16 px-4 sm:px-6"
-              : `pt-20 md:pt-24 px-4 sm:px-6 lg:px-8 ${
-                  sidebarOpen ? "ml-64" : "ml-16"
-                }`
-          }`}
+          className={`transition-all duration-300 ease-in-out ${mainClasses}`}
         >
-          <div
-            className={`pb-6 pt-3 md:pb-8 md:pt-2 max-w-full ${
-              !isMobile && sidebarOpen ? "max-w-[calc(100vw-16rem)]" : ""
-            }`}
-          >
-            <div className="rounded-xl overflow-hidden border border-gray-200">
+          <div className={contentClasses}>
+            <div className="md:rounded-xl overflow-hidden border border-gray-200">
               {children}
             </div>
           </div>
@@ -262,7 +229,7 @@ function App() {
         <GTCFxAuthProvider>
           <LayoutWrapper>
             <Routes>
-              {/* Public routes - no authentication required */}
+              {/* Public routes */}
               <Route
                 path="/register"
                 element={
@@ -280,26 +247,7 @@ function App() {
                 }
               />
 
-              {/* Competition route - always available */}
-              <Route
-                path="/competition"
-                element={
-                  <ProtectedRoute>
-                    <Competition />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/brokers"
-                element={
-                  <ProtectedRoute>
-                    <BrokerSelection />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* Main App Protected routes */}
+              {/* Protected routes */}
               <Route
                 path="/dashboard"
                 element={
@@ -396,7 +344,24 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/competition"
+                element={
+                  <ProtectedRoute>
+                    <Competition />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/brokers"
+                element={
+                  <ProtectedRoute>
+                    <BrokerSelection />
+                  </ProtectedRoute>
+                }
+              />
 
+              {/* Wallet routes */}
               <Route
                 path="/deposit"
                 element={
@@ -430,7 +395,7 @@ function App() {
                 }
               />
 
-              {/* GTC FX Login - Only requires main auth */}
+              {/* GTC FX routes */}
               <Route
                 path="/gtcfx/auth"
                 element={
@@ -439,8 +404,6 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-
-              {/* GTC FX Protected Routes - Requires both main auth AND GTC FX auth */}
               <Route
                 path="/gtcfx/dashboard"
                 element={
@@ -472,10 +435,8 @@ function App() {
                 }
               />
 
-              {/* Default redirect */}
+              {/* Default routes */}
               <Route path="/" element={<DefaultRoute />} />
-
-              {/* 404 fallback */}
               <Route path="*" element={<DefaultRoute />} />
             </Routes>
           </LayoutWrapper>

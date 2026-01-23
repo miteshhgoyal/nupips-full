@@ -1,5 +1,5 @@
-// App.jsx
-import React, { useState, useEffect } from "react";
+// admin/App.jsx
+import React, { useState, useEffect, useMemo } from "react";
 import {
   BrowserRouter as Router,
   Routes,
@@ -26,7 +26,7 @@ import {
 import { CONFIG } from "./constants";
 import "./App.css";
 
-// Import your pages
+// Page imports
 import Login from "./pages/Login";
 import Orders from "./pages/Orders";
 import Products from "./pages/Products";
@@ -44,9 +44,9 @@ import Competition from "./pages/Competition";
 import Subadmins from "./pages/Subadmins";
 
 // Navigation configuration
-const navbarLinks = [{ name: "My Profile", href: "/profile", icon: NavUser }];
+const NAVBAR_LINKS = [{ name: "My Profile", href: "/profile", icon: NavUser }];
 
-const allSidebarLinks = [
+const ALL_SIDEBAR_LINKS = [
   {
     name: "Dashboard",
     href: "/dashboard",
@@ -70,32 +70,26 @@ const allSidebarLinks = [
     ],
   },
   { name: "Competition", href: "/competition", icon: Swords },
-  {
-    name: "GTC Members",
-    href: "/gtc-members",
-    icon: UsersIcon,
-  },
-  {
-    name: "Users",
-    href: "/users",
-    icon: UsersIcon,
-  },
-  {
-    name: "Courses",
-    href: "/courses",
-    icon: BookA,
-  },
+  { name: "GTC Members", href: "/gtc-members", icon: UsersIcon },
+  { name: "Nupips Membes", href: "/users", icon: UsersIcon },
+  { name: "Courses", href: "/courses", icon: BookA },
   {
     name: "System Configuration",
     href: "/system-configuration",
     icon: Settings,
   },
-  {
-    name: "Subadmins",
-    href: "/subadmins",
-    icon: UserCog,
-  },
+  { name: "Subadmins", href: "/subadmins", icon: UserCog },
 ];
+
+const NO_LAYOUT_ROUTES = [
+  "/login",
+  "/register",
+  "/verify-otp",
+  "/forgot-password",
+  "/reset-password",
+];
+
+const MOBILE_BREAKPOINT = 768;
 
 // Default Route Component
 const DefaultRoute = () => {
@@ -112,107 +106,88 @@ const DefaultRoute = () => {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <Navigate to="/dashboard" replace />;
+  return user ? (
+    <Navigate to="/dashboard" replace />
+  ) : (
+    <Navigate to="/login" replace />
+  );
 };
 
 // Layout Wrapper Component
 const LayoutWrapper = ({ children }) => {
   const location = useLocation();
   const { user, permissions } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarOpen, setSidebarOpen] = useState(
+    window.innerWidth >= MOBILE_BREAKPOINT,
+  );
+  const [isMobile, setIsMobile] = useState(
+    window.innerWidth < MOBILE_BREAKPOINT,
+  );
 
-  // Filter sidebar links based on user permissions
-  const filteredSidebarLinks = user
-    ? filterSidebarLinks(allSidebarLinks, user.userType, permissions)
-    : allSidebarLinks;
+  const showLayout = !NO_LAYOUT_ROUTES.includes(location.pathname);
 
-  // Check if current route should show layout
-  const noLayoutRoutes = [
-    "/login",
-    "/register",
-    "/verify-otp",
-    "/forgot-password",
-    "/reset-password",
-  ];
-
-  const showLayout = !noLayoutRoutes.includes(location.pathname);
+  const filteredSidebarLinks = useMemo(() => {
+    return user
+      ? filterSidebarLinks(ALL_SIDEBAR_LINKS, user.userType, permissions)
+      : ALL_SIDEBAR_LINKS;
+  }, [user, permissions]);
 
   useEffect(() => {
-    const checkMobile = () => {
-      const isMobileNow = window.innerWidth < 768;
-      setIsMobile(isMobileNow);
-
-      if (isMobileNow) {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
+    const handleResize = () => {
+      const mobile = window.innerWidth < MOBILE_BREAKPOINT;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
     };
 
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-
-    window.toggleSidebar = toggleSidebar;
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    window.toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
     return () => {
-      window.removeEventListener("resize", checkMobile);
+      window.removeEventListener("resize", handleResize);
       delete window.toggleSidebar;
     };
   }, []);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  // If no layout needed, render children directly
   if (!showLayout) {
     return <>{children}</>;
   }
 
-  // Render with layout
+  const mainClasses = isMobile
+    ? "pt-16 px-0 md:px-6"
+    : `pt-20 md:pt-24 px-4 sm:px-6 lg:px-8 ${sidebarOpen ? "ml-64" : "ml-16"}`;
+
+  const contentClasses = `pb-0 pt-0 md:pb-8 md:pt-2 max-w-full ${
+    !isMobile && sidebarOpen ? "max-w-[calc(100vw-16rem)]" : ""
+  }`;
+
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 to-blue-50/30 relative overflow-x-hidden">
       <Navbar
-        toggleSidebar={toggleSidebar}
-        navigationLinks={navbarLinks}
+        toggleSidebar={() => setSidebarOpen((prev) => !prev)}
+        navigationLinks={NAVBAR_LINKS}
         config={CONFIG}
       />
       <Sidebar
         isOpen={sidebarOpen}
-        onToggle={toggleSidebar}
+        onToggle={() => setSidebarOpen((prev) => !prev)}
         navigationLinks={filteredSidebarLinks}
         config={CONFIG}
       />
 
-      {/* Mobile overlay */}
       {isMobile && sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
-          onClick={toggleSidebar}
+          onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <div className="bg-orange-50">
         <main
-          className={`transition-all duration-300 ease-in-out ${
-            isMobile
-              ? "pt-16 px-4 sm:px-6"
-              : `pt-20 md:pt-24 px-4 sm:px-6 lg:px-8 ${
-                  sidebarOpen ? "ml-64" : "ml-16"
-                }`
-          }`}
+          className={`transition-all duration-300 ease-in-out ${mainClasses}`}
         >
-          <div
-            className={`pb-6 pt-3 md:pb-8 md:pt-2 max-w-full ${
-              !isMobile && sidebarOpen ? "max-w-[calc(100vw-16rem)]" : ""
-            }`}
-          >
-            <div className="rounded-xl overflow-hidden border border-gray-200">
+          <div className={contentClasses}>
+            <div className="md:rounded-xl overflow-hidden border border-gray-200">
               {children}
             </div>
           </div>
@@ -371,10 +346,8 @@ function App() {
               }
             />
 
-            {/* Default redirect */}
+            {/* Default routes */}
             <Route path="/" element={<DefaultRoute />} />
-
-            {/* 404 fallback */}
             <Route path="*" element={<DefaultRoute />} />
           </Routes>
         </LayoutWrapper>
