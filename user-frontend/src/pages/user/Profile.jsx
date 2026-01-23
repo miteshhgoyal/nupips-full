@@ -400,12 +400,12 @@ const Profile = () => {
             </div>
             <p
               className={`text-2xl font-bold ${
-                Number(data.financials?.netBalance || 0) >= 0
+                Number(data.financials?.netDeposits || 0) >= 0
                   ? "text-blue-900"
                   : "text-red-600"
               }`}
             >
-              ${Number(data.financials?.netBalance || 0).toFixed(2)}
+              ${Number(data.financials?.netDeposits || 0).toFixed(2)}
             </p>
             <p className="text-xs text-blue-700 mt-1">Deposits - Withdrawals</p>
           </div>

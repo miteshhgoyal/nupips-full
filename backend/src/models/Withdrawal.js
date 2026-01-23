@@ -97,7 +97,6 @@ const withdrawalSchema = new mongoose.Schema({
 // ==================== INDEXES ====================
 // Compound indexes for better query performance
 withdrawalSchema.index({ userId: 1, status: 1, createdAt: -1 });
-withdrawalSchema.index({ transactionId: 1 }); // Unique already, single index
 
 // BlockBee related indexes
 withdrawalSchema.index({ 'blockBee.payoutId': 1 });

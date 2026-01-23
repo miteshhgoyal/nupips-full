@@ -128,7 +128,6 @@ const depositSchema = new mongoose.Schema({
 // ==================== INDEXES ====================
 // Compound indexes for better query performance
 depositSchema.index({ userId: 1, status: 1, createdAt: -1 });
-depositSchema.index({ transactionId: 1 }); // Unique already, single index
 depositSchema.index({ status: 1 });
 
 // BlockBee related indexes

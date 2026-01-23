@@ -199,10 +199,8 @@ const Dashboard = () => {
   const {
     walletBalance = 0,
     financials = {},
-    tradingStats = {},
     referralDetails = {},
     downlineStats = {},
-    recentActivity = [],
     chartData = { deposits: [], withdrawals: [] },
     growth = {},
     orders = {},
@@ -341,50 +339,6 @@ const Dashboard = () => {
                   data={chartData.withdrawals}
                   color="blue"
                 />
-              </div>
-            </div>
-
-            {/* Trading Performance - Enhanced */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <Activity className="w-6 h-6 text-orange-600" />
-                  Trading Performance
-                </h3>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="p-5 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
-                  <p className="text-xs text-orange-700 font-semibold mb-2">
-                    Total Trades
-                  </p>
-                  <p className="text-2xl font-bold text-orange-900">
-                    {tradingStats.totalTrades || 0}
-                  </p>
-                </div>
-                <div className="p-5 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200">
-                  <p className="text-xs text-green-700 font-semibold mb-2">
-                    Volume (Lots)
-                  </p>
-                  <p className="text-2xl font-bold text-green-900">
-                    {Number(tradingStats.totalVolumeLots || 0).toFixed(2)}
-                  </p>
-                </div>
-                <div className="p-5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-                  <p className="text-xs text-blue-700 font-semibold mb-2">
-                    Total Profit
-                  </p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(tradingStats.totalProfit)}
-                  </p>
-                </div>
-                <div className="p-5 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl border border-purple-200">
-                  <p className="text-xs text-purple-700 font-semibold mb-2">
-                    Win Rate
-                  </p>
-                  <p className="text-2xl font-bold text-purple-900">
-                    {Number(tradingStats.winRate || 0).toFixed(1)}%
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -543,62 +497,6 @@ const Dashboard = () => {
                     </span>
                   </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Recent Activity */}
-            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-orange-600" />
-                Recent Activity
-              </h3>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {recentActivity && recentActivity.length > 0 ? (
-                  recentActivity.map((activity, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg hover:from-orange-50 hover:to-orange-100 transition-colors border border-gray-200"
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div
-                          className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-sm ${
-                            activity.type === "deposit"
-                              ? "bg-green-100"
-                              : activity.type === "withdrawal"
-                                ? "bg-blue-100"
-                                : "bg-purple-100"
-                          }`}
-                        >
-                          {getStatusIcon(activity.type, activity.status)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {activity.title}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {activity.date}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`text-sm font-bold ${
-                          activity.type === "deposit"
-                            ? "text-green-600"
-                            : activity.type === "withdrawal"
-                              ? "text-blue-600"
-                              : "text-gray-900"
-                        }`}
-                      >
-                        {activity.value}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">No recent activity</p>
-                  </div>
-                )}
               </div>
             </div>
           </div>

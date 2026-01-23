@@ -141,7 +141,7 @@ const UserSchema = new mongoose.Schema({
             type: Number,
             default: 0
         },
-        netBalance: {
+        netDeposits: {
             type: Number,
             default: 0
         },
@@ -152,30 +152,6 @@ const UserSchema = new mongoose.Schema({
         lastWithdrawalAt: {
             type: Date,
             default: null
-        }
-    },
-
-    // ========== Trading Statistics ==========
-    tradingStats: {
-        totalVolumeLots: {
-            type: Number,
-            default: 0
-        },
-        totalTrades: {
-            type: Number,
-            default: 0
-        },
-        totalProfit: {
-            type: Number,
-            default: 0
-        },
-        totalLoss: {
-            type: Number,
-            default: 0
-        },
-        winRate: {
-            type: Number,
-            default: 0
         }
     },
 
@@ -193,10 +169,6 @@ const UserSchema = new mongoose.Schema({
             type: Number,
             default: 0
         },
-        totalDownlineVolume: {
-            type: Number,
-            default: 0
-        }
     },
 
     // ========== GTC FX Authentication ==========
@@ -233,7 +205,6 @@ const UserSchema = new mongoose.Schema({
 // ==================== INDEXES ====================
 // Compound indexes for better query performance
 UserSchema.index({ email: 1, status: 1 });
-UserSchema.index({ username: 1 }); // Unique already, single index for lookups
 UserSchema.index({ userType: 1, status: 1 });
 UserSchema.index({ 'referralDetails.referredBy': 1 });
 UserSchema.index({ walletBalance: 1 });
@@ -287,7 +258,7 @@ UserSchema.methods.updateFinancials = async function () {
         }
 
         // Net balance
-        this.financials.netBalance = this.financials.totalDeposits - this.financials.totalWithdrawals;
+        this.financials.netDeposits = this.financials.totalDeposits - this.financials.totalWithdrawals;
 
         await this.save();
         return this.financials;
@@ -326,12 +297,6 @@ UserSchema.methods.updateDownlineStats = async function () {
         // Calculate cumulative balance (this user + all downline)
         const downlineBalance = allDownlineUsers.reduce((sum, u) => sum + (u.walletBalance || 0), 0);
         this.downlineStats.cumulativeBalance = (this.walletBalance || 0) + downlineBalance;
-
-        // Calculate total downline volume
-        this.downlineStats.totalDownlineVolume = allDownlineUsers.reduce(
-            (sum, u) => sum + (u.tradingStats?.totalVolumeLots || 0),
-            0
-        );
 
         // Update referral counts
         this.referralDetails.totalDirectReferrals = directReferrals.length;
@@ -374,7 +339,7 @@ UserSchema.methods.getReferralTreeWithDetails = async function (maxLevel = null)
         }
 
         const users = await mongoose.model('User').find(query)
-            .select('name username email phone walletBalance userType status tradingStats downlineStats');
+            .select('name username email phone walletBalance userType status downlineStats');
 
         // Merge tree data with user details
         return this.referralDetails.referralTree

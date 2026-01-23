@@ -115,7 +115,6 @@ const Dashboard = () => {
     const {
         walletBalance = 0,
         financials = {},
-        tradingStats = {},
         referralDetails = {},
         downlineStats = {},
         recentActivity = [],
@@ -190,16 +189,9 @@ const Dashboard = () => {
                 </View>
                 <View className="flex-row gap-3">
                     <SummaryCard
-                        icon={<Activity size={20} color="#ea580c" />}
-                        label="Total Trades"
-                        value={tradingStats.totalTrades || 0}
-                        valueColor="text-white"
-                        bgColor="bg-neutral-900/50"
-                    />
-                    <SummaryCard
                         icon={<Wallet size={20} color="#8b5cf6" />}
                         label="Total Saving"
-                        value={`$${(financials.netBalance || 0).toFixed(0)}`}
+                        value={`$${(financials.netDeposits || 0).toFixed(0)}`}
                         valueColor="text-white"
                         bgColor="bg-neutral-900/50"
                     />
@@ -249,32 +241,6 @@ const Dashboard = () => {
 
     const renderTrading = () => (
         <View className="px-5">
-            <View className="bg-neutral-900/50 rounded-2xl p-6 mb-6">
-                <View className="flex-row items-center mb-6">
-                    <Activity size={24} color="#ea580c" style={{ marginRight: 12 }} />
-                    <Text className="text-xl font-bold text-white">Trading Performance</Text>
-                </View>
-
-                <View className="flex-row gap-3 mb-3">
-                    <InfoCard label="Volume (Lots)" value={Number(tradingStats.totalVolumeLots || 0).toFixed(2)} />
-                    <InfoCard
-                        label="Total Profit"
-                        value={`$${(tradingStats.totalProfit || 0).toFixed(2)}`}
-                        bgColor="bg-green-500/10"
-                        textColor="text-green-400"
-                        border="border border-green-500/30"
-                    />
-                </View>
-
-                <View className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-5">
-                    <View className="flex-row items-center justify-between">
-                        <Text className="text-neutral-400 text-sm">Win Rate</Text>
-                        <Text className="text-orange-400 text-2xl font-bold">
-                            {Number(tradingStats.winRate || 0).toFixed(1)}%
-                        </Text>
-                    </View>
-                </View>
-            </View>
 
             {/* Income Breakdown */}
             <View className="bg-neutral-900/50 rounded-2xl p-6">

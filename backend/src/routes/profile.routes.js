@@ -68,8 +68,6 @@ router.put("/update", authenticateToken, async (req, res) => {
     }
 });
 
-// routes/profile.routes.js - Replace the /dashboard route with this enhanced version
-
 router.get('/dashboard', authenticateToken, async (req, res) => {
     try {
         const me = await User.findById(req.user.userId).select('-password');
@@ -112,13 +110,12 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         const [directUsers, allDownlineUsers] = await Promise.all([
             User.find({ _id: { $in: directReferralIds } }).select('name username userType walletBalance createdAt status'),
             User.find({ _id: { $in: me.referralDetails?.referralTree?.map(r => r.userId) || [] } })
-                .select('name username userType walletBalance tradingStats')
+                .select('name username userType walletBalance')
         ]);
 
         const agentsCount = directUsers.filter(u => u.userType === 'agent').length;
         const tradersCount = directUsers.filter(u => u.userType === 'trader').length;
         const cumulativeBalance = allDownlineUsers.reduce((sum, u) => sum + (u.walletBalance || 0), 0) + (me.walletBalance || 0);
-        const totalDownlineVolume = allDownlineUsers.reduce((sum, u) => sum + (u.tradingStats?.totalVolumeLots || 0), 0);
 
         // ==================== GTC MEMBER CHECK ====================
         let hasJoinedGTC = false;
@@ -190,11 +187,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 });
             });
 
-        // Sort by timestamp and take top 10
-        const recentActivity = activities
-            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-            .slice(0, 10);
-
         // ==================== CHART DATA (LAST 7 DAYS) ====================
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -253,15 +245,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 value: withdrawalMap[day.date] || 0,
                 date: day.date
             }))
-        };
-
-        // ==================== TRADING STATS ====================
-        const tradingStats = {
-            totalTrades: me.tradingStats?.totalTrades || 0,
-            totalVolumeLots: me.tradingStats?.totalVolumeLots || 0,
-            totalProfit: me.tradingStats?.totalProfit || 0,
-            totalLoss: me.tradingStats?.totalLoss || 0,
-            winRate: me.tradingStats?.winRate || 0
         };
 
         // ==================== MONTHLY GROWTH ====================
@@ -340,9 +323,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 lastWithdrawalAt: completedWithdrawals[0]?.completedAt || null
             },
 
-            // Trading Stats
-            tradingStats,
-
             // Referral Data
             referralDetails: {
                 totalDirectReferrals: directReferrals.length,
@@ -360,7 +340,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 totalAgents: agentsCount,
                 totalTraders: tradersCount,
                 cumulativeBalance,
-                totalDownlineVolume
             },
 
             // Growth Metrics
@@ -377,9 +356,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 onboardedWithCall: gtcMemberData?.onboardedWithCall || false,
                 onboardedWithMessage: gtcMemberData?.onboardedWithMessage || false
             },
-
-            // Recent Activity
-            recentActivity,
 
             // Chart Data
             chartData,

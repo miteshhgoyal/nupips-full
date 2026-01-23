@@ -80,22 +80,14 @@ const seedAdminUser = async () => {
                 pendingWithdrawals: 0,
                 totalRebateIncome: 0,
                 totalAffiliateIncome: 0,
-                netBalance: 0,
+                netDeposits: 0,
                 lastDepositAt: null,
                 lastWithdrawalAt: null
-            },
-            tradingStats: {
-                totalVolumeLots: 0,
-                totalTrades: 0,
-                totalProfit: 0,
-                totalLoss: 0,
-                winRate: 0
             },
             downlineStats: {
                 totalAgents: 0,
                 totalTraders: 0,
                 cumulativeBalance: 0,
-                totalDownlineVolume: 0
             },
             gtcfx: {
                 accessToken: null,
