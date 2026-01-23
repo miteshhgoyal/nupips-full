@@ -4,8 +4,10 @@ import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import Deposit from "../models/Deposit.js";
 import Withdrawal from "../models/Withdrawal.js";
+import Order from "../models/Order.js";
+import IncomeExpense from "../models/IncomeExpense.js";
+import GTCMember from "../models/GTCMember.js";
 import { authenticateToken } from "../middlewares/auth.middleware.js";
-import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -85,7 +87,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
             Deposit.find({ userId: me._id, status: { $in: ['pending', 'processing'] } }),
             Withdrawal.find({ userId: me._id, status: 'completed' }).sort({ createdAt: -1 }),
             Withdrawal.find({ userId: me._id, status: { $in: ['pending', 'processing'] } }),
-            mongoose.model('IncomeExpense').find({ userId: me._id }).sort({ date: -1 })
+            IncomeExpense.find({ userId: me._id }).sort({ date: -1 })
         ]);
 
         // Calculate financial summary
@@ -122,7 +124,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         let hasJoinedGTC = false;
         let gtcMemberData = null;
         try {
-            const GTCMember = mongoose.model('GTCMember');
             gtcMemberData = await GTCMember.findOne({
                 email: { $regex: new RegExp(`^${me.email}$`, 'i') }
             }).lean();
@@ -299,7 +300,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         // ==================== ORDERS DATA ====================
         let ordersData = { totalOrders: 0, totalSpent: 0, pendingOrders: 0 };
         try {
-            const Order = mongoose.model('Order');
             const [allOrders, pendingOrders] = await Promise.all([
                 Order.find({ userId: me._id }),
                 Order.find({ userId: me._id, status: { $ne: 'Delivered' } })
