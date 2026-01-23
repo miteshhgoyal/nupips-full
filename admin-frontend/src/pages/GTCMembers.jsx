@@ -1,4 +1,4 @@
-// pages/admin/GTCMembers.jsx - Complete version with Sync functionality
+// pages/admin/GTCMembers.jsx - COMPLETE VERSION with Export Modal functionality added
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -41,6 +41,7 @@ import {
   GitBranch,
   Minus,
   Plus,
+  Settings,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -127,7 +128,7 @@ const GTCMembers = () => {
 
   const [kycStats, setKycStats] = useState({
     completed: 0,
-    pending: 0, // This will include pending, rejected, and not started
+    pending: 0,
   });
 
   const [balanceStats, setBalanceStats] = useState({
@@ -138,11 +139,96 @@ const GTCMembers = () => {
   });
 
   const [additionalStats, setAdditionalStats] = useState({
-    recentJoins: 0, // Last 30 days
+    recentJoins: 0,
     completeOnboarding: 0,
   });
 
   const [exportingUser, setExportingUser] = useState(null);
+
+  // ========== NEW: Export Configuration Modal State ==========
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportConfig, setExportConfig] = useState({
+    type: "all", // 'all' or 'user'
+    member: null,
+    levelOption: "all", // 'all', 'direct', 'custom'
+    customLevel: 1,
+    columns: {
+      basic: true,
+      contact: true,
+      hierarchy: true,
+      financial: true,
+      kyc: true,
+      onboarding: true,
+      technical: true,
+      timestamps: true,
+    },
+  });
+
+  // Column categories definition
+  const COLUMN_CATEGORIES = {
+    basic: {
+      label: "Basic Information",
+      description: "Name, Username, GTC User ID",
+      fields: ["GTC User ID", "Username", "Name"],
+    },
+    contact: {
+      label: "Contact Details",
+      description: "Email and Phone",
+      fields: ["Email", "Phone"],
+    },
+    hierarchy: {
+      label: "Hierarchy & Relationships",
+      description: "Level, Parent, Downline counts",
+      fields: [
+        "Level",
+        "User Type",
+        "Parent GTC ID",
+        "Relationship",
+        "Direct Downline Count",
+        "Total Downline Count",
+        "Upline Chain Count",
+      ],
+    },
+    financial: {
+      label: "Financial Data",
+      description: "Balances and earnings",
+      fields: [
+        "Personal Trading Balance",
+        "Personal Wallet Balance",
+        "Downline Total Trading Balance",
+        "Downline Total Wallet Balance",
+        "Total Network Trading Balance",
+        "Total Network Wallet Balance",
+      ],
+    },
+    kyc: {
+      label: "KYC & Compliance",
+      description: "Verification status",
+      fields: ["KYC Status", "Downline with KYC"],
+    },
+    onboarding: {
+      label: "Onboarding Status",
+      description: "Onboarding progress and notes",
+      fields: [
+        "Onboarded With Call",
+        "Onboarded With Message",
+        "Onboarding Status",
+        "Onboarded By",
+        "Onboarding Notes",
+        "Downline Fully Onboarded",
+      ],
+    },
+    technical: {
+      label: "Technical Details",
+      description: "MT5 accounts and technical info",
+      fields: ["MT5 Accounts Count"],
+    },
+    timestamps: {
+      label: "Timestamps",
+      description: "Join and update dates",
+      fields: ["Joined At", "Last Updated"],
+    },
+  };
 
   useEffect(() => {
     fetchCurrentUser();
@@ -663,7 +749,6 @@ const GTCMembers = () => {
               `Sync completed! ${response.data.syncResult.stats.totalMembers} members synced in ${response.data.syncResult.stats.duration}`,
             );
             fetchMembers();
-            fetchOnboardingStats();
           }
         })
         .catch((err) => {
@@ -1229,16 +1314,45 @@ const GTCMembers = () => {
     };
   };
 
-  const exportUserWithDownline = async (member) => {
-    try {
-      setExportingUser(member.gtcUserId);
-      setSuccess(`Preparing export for ${member.name || member.username}...`);
+  // ========== NEW: Export Helper Functions ==========
+  const filterMembersByLevel = (
+    member,
+    allMembers,
+    levelOption,
+    customLevel,
+  ) => {
+    if (levelOption === "direct") {
+      // Only direct children
+      return allMembers.filter((m) => m.parentGtcUserId === member.gtcUserId);
+    } else if (levelOption === "custom") {
+      // Up to custom level
+      const findDescendantsUpToLevel = (parentId, currentLevel, maxLevel) => {
+        if (currentLevel > maxLevel) return [];
 
-      // Fetch all members to build the tree
-      const response = await api.get("/admin/gtc-members?limit=10000");
-      const allMembers = response.data.allMembers || response.data.data;
+        const directChildren = allMembers.filter(
+          (m) => m.parentGtcUserId === parentId,
+        );
+        let descendants = [...directChildren];
 
-      // Find all descendants
+        if (currentLevel < maxLevel) {
+          directChildren.forEach((child) => {
+            descendants = [
+              ...descendants,
+              ...findDescendantsUpToLevel(
+                child.gtcUserId,
+                currentLevel + 1,
+                maxLevel,
+              ),
+            ];
+          });
+        }
+
+        return descendants;
+      };
+
+      return findDescendantsUpToLevel(member.gtcUserId, 1, customLevel);
+    } else {
+      // All descendants
       const findAllDescendants = (parentId) => {
         const directChildren = allMembers.filter(
           (m) => m.parentGtcUserId === parentId,
@@ -1255,71 +1369,96 @@ const GTCMembers = () => {
         return allDescendants;
       };
 
-      const descendants = findAllDescendants(member.gtcUserId);
-      const exportMembers = [member, ...descendants];
+      return findAllDescendants(member.gtcUserId);
+    }
+  };
 
-      const csvData = [
-        [
-          "GTC User ID",
-          "Username",
-          "Name",
-          "Email",
-          "Phone",
-          "Level",
-          "User Type",
-          "Parent GTC ID",
-          "Relationship",
-          "Direct Downline Count",
-          "Total Downline Count",
-          "Downline with KYC",
-          "Downline Fully Onboarded",
-          "Personal Trading Balance",
-          "Personal Wallet Balance",
-          "Downline Total Trading Balance",
-          "Downline Total Wallet Balance",
-          "Total Network Trading Balance",
-          "Total Network Wallet Balance",
-          "KYC Status",
-          "Onboarded With Call",
-          "Onboarded With Message",
-          "Onboarding Status",
-          "Onboarded By",
-          "Onboarding Notes",
-          "Upline Chain Count",
-          "MT5 Accounts Count",
-          "Joined At",
-          "Last Updated",
-        ],
-        ...exportMembers.map((m) => {
-          const downlineStats = calculateDownlineStats(m, allMembers);
-          const onboardingStatus =
-            m.onboardedWithCall && m.onboardedWithMessage
-              ? "Complete"
-              : m.onboardedWithCall || m.onboardedWithMessage
-                ? "Partial"
-                : "Not Started";
+  const buildCSVWithConfig = (
+    members,
+    allMembers,
+    config,
+    baseMember = null,
+  ) => {
+    const headers = [];
+    const { columns } = config;
 
-          const relationship =
-            m.gtcUserId === member.gtcUserId
-              ? "Self"
-              : m.parentGtcUserId === member.gtcUserId
-                ? "Direct Child"
-                : "Indirect Descendant";
+    // Build headers based on selected categories
+    if (columns.basic) headers.push("GTC User ID", "Username", "Name");
+    if (columns.contact) headers.push("Email", "Phone");
+    if (columns.hierarchy) {
+      headers.push(
+        "Level",
+        "User Type",
+        "Parent GTC ID",
+        ...(baseMember ? ["Relationship"] : []),
+        "Direct Downline Count",
+        "Total Downline Count",
+        "Upline Chain Count",
+      );
+    }
+    if (columns.financial) {
+      headers.push(
+        "Personal Trading Balance",
+        "Personal Wallet Balance",
+        "Downline Total Trading Balance",
+        "Downline Total Wallet Balance",
+        "Total Network Trading Balance",
+        "Total Network Wallet Balance",
+      );
+    }
+    if (columns.kyc) headers.push("KYC Status", "Downline with KYC");
+    if (columns.onboarding) {
+      headers.push(
+        "Onboarded With Call",
+        "Onboarded With Message",
+        "Onboarding Status",
+        "Onboarded By",
+        "Onboarding Notes",
+        "Downline Fully Onboarded",
+      );
+    }
+    if (columns.technical) headers.push("MT5 Accounts Count");
+    if (columns.timestamps) headers.push("Joined At", "Last Updated");
 
-          return [
-            m.gtcUserId,
-            m.username,
-            m.name || "N/A",
-            m.email,
-            m.phone || "N/A",
+    const csvData = [
+      headers,
+      ...members.map((m) => {
+        const row = [];
+        const downlineStats = calculateDownlineStats(m, allMembers);
+        const onboardingStatus =
+          m.onboardedWithCall && m.onboardedWithMessage
+            ? "Complete"
+            : m.onboardedWithCall || m.onboardedWithMessage
+              ? "Partial"
+              : "Not Started";
+
+        const relationship = baseMember
+          ? m.gtcUserId === baseMember.gtcUserId
+            ? "Self"
+            : m.parentGtcUserId === baseMember.gtcUserId
+              ? "Direct Child"
+              : "Indirect Descendant"
+          : null;
+
+        if (columns.basic) {
+          row.push(m.gtcUserId, m.username, m.name || "N/A");
+        }
+        if (columns.contact) {
+          row.push(m.email, m.phone || "N/A");
+        }
+        if (columns.hierarchy) {
+          row.push(
             m.level,
             m.userType || "agent",
             m.parentGtcUserId || "Root",
-            relationship,
+            ...(baseMember ? [relationship] : []),
             downlineStats.directDownlineCount,
             downlineStats.totalDownlineCount,
-            downlineStats.downlineWithKYC,
-            downlineStats.downlineOnboarded,
+            m.uplineChain?.length || 0,
+          );
+        }
+        if (columns.financial) {
+          row.push(
             (m.tradingBalance || 0).toFixed(2),
             (m.amount || 0).toFixed(2),
             downlineStats.downlineTotalTradingBalance.toFixed(2),
@@ -1331,150 +1470,169 @@ const GTCMembers = () => {
             (
               (m.amount || 0) + downlineStats.downlineTotalWalletBalance
             ).toFixed(2),
-            m.kycStatus || "Not Started",
+          );
+        }
+        if (columns.kyc) {
+          row.push(m.kycStatus || "Not Started", downlineStats.downlineWithKYC);
+        }
+        if (columns.onboarding) {
+          row.push(
             m.onboardedWithCall ? "Yes" : "No",
             m.onboardedWithMessage ? "Yes" : "No",
             onboardingStatus,
             m.onboardingDoneBy?.name || "N/A",
-            m.onboardingNotes || "N/A",
-            m.uplineChain?.length || 0,
-            m.tradingBalanceDetails?.mtAccounts?.length || 0,
+            (m.onboardingNotes || "N/A").replace(/"/g, '""'), // Escape quotes
+            downlineStats.downlineOnboarded,
+          );
+        }
+        if (columns.technical) {
+          row.push(m.tradingBalanceDetails?.mtAccounts?.length || 0);
+        }
+        if (columns.timestamps) {
+          row.push(
             new Date(m.joinedAt).toLocaleDateString(),
             new Date(m.lastUpdated).toLocaleDateString(),
-          ];
-        }),
-      ];
+          );
+        }
 
-      const csvContent =
-        "data:text/csv;charset=utf-8," +
-        csvData
-          .map((row) => row.map((cell) => `"${cell}"`).join(","))
-          .join("\n");
-      const link = document.createElement("a");
-      link.setAttribute("href", encodeURI(csvContent));
-      link.setAttribute(
-        "download",
-        `gtc-${member.username}-downline-${new Date().getTime()}.csv`,
-      );
-      link.click();
+        return row;
+      }),
+    ];
 
-      setSuccess(
-        `Export completed! ${exportMembers.length} members exported (1 + ${descendants.length} downline)`,
-      );
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err) {
-      console.error("Export user error:", err);
-      setError("Failed to export user data. Please try again.");
-    } finally {
-      setExportingUser(null);
-    }
+    return csvData;
   };
 
-  const exportToCSV = async () => {
+  const downloadCSV = (csvData, filename) => {
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      csvData.map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
+
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", filename);
+    link.click();
+  };
+
+  const handleExportConfirm = async () => {
     try {
+      const { type, member, levelOption, customLevel } = exportConfig;
+
       setSuccess("Preparing export data...");
 
       // Fetch all members for accurate calculations
       const response = await api.get("/admin/gtc-members?limit=10000");
       const allMembers = response.data.allMembers || response.data.data;
 
-      const csvData = [
-        [
-          "GTC User ID",
-          "Username",
-          "Name",
-          "Email",
-          "Phone",
-          "Level",
-          "User Type",
-          "Parent GTC ID",
-          "Direct Downline Count",
-          "Total Downline Count",
-          "Downline with KYC",
-          "Downline Fully Onboarded",
-          "Personal Trading Balance",
-          "Personal Wallet Balance",
-          "Downline Total Trading Balance",
-          "Downline Total Wallet Balance",
-          "Total Network Trading Balance",
-          "Total Network Wallet Balance",
-          "KYC Status",
-          "Onboarded With Call",
-          "Onboarded With Message",
-          "Onboarding Status",
-          "Onboarded By",
-          "Onboarding Notes",
-          "Upline Chain Count",
-          "MT5 Accounts Count",
-          "Joined At",
-          "Last Updated",
-        ],
-        ...allMembers.map((m) => {
-          const downlineStats = calculateDownlineStats(m, allMembers);
-          const onboardingStatus =
-            m.onboardedWithCall && m.onboardedWithMessage
-              ? "Complete"
-              : m.onboardedWithCall || m.onboardedWithMessage
-                ? "Partial"
-                : "Not Started";
+      let exportMembers;
+      let filename;
+      let baseMember = null;
 
-          return [
-            m.gtcUserId,
-            m.username,
-            m.name || "N/A",
-            m.email,
-            m.phone || "N/A",
-            m.level,
-            m.userType || "agent",
-            m.parentGtcUserId || "Root",
-            downlineStats.directDownlineCount,
-            downlineStats.totalDownlineCount,
-            downlineStats.downlineWithKYC,
-            downlineStats.downlineOnboarded,
-            (m.tradingBalance || 0).toFixed(2),
-            (m.amount || 0).toFixed(2),
-            downlineStats.downlineTotalTradingBalance.toFixed(2),
-            downlineStats.downlineTotalWalletBalance.toFixed(2),
-            (
-              (m.tradingBalance || 0) +
-              downlineStats.downlineTotalTradingBalance
-            ).toFixed(2),
-            (
-              (m.amount || 0) + downlineStats.downlineTotalWalletBalance
-            ).toFixed(2),
-            m.kycStatus || "Not Started",
-            m.onboardedWithCall ? "Yes" : "No",
-            m.onboardedWithMessage ? "Yes" : "No",
-            onboardingStatus,
-            m.onboardingDoneBy?.name || "N/A",
-            m.onboardingNotes || "N/A",
-            m.uplineChain?.length || 0,
-            m.tradingBalanceDetails?.mtAccounts?.length || 0,
-            new Date(m.joinedAt).toLocaleDateString(),
-            new Date(m.lastUpdated).toLocaleDateString(),
-          ];
-        }),
-      ];
+      if (type === "user" && member) {
+        // User-specific export
+        baseMember = member;
+        const descendants = filterMembersByLevel(
+          member,
+          allMembers,
+          levelOption,
+          customLevel,
+        );
+        exportMembers = [member, ...descendants];
 
-      const csvContent =
-        "data:text/csv;charset=utf-8," +
-        csvData
-          .map((row) => row.map((cell) => `"${cell}"`).join(","))
-          .join("\n");
-      const link = document.createElement("a");
-      link.setAttribute("href", encodeURI(csvContent));
-      link.setAttribute(
-        "download",
-        `gtc-members-complete-${new Date().getTime()}.csv`,
+        const levelText =
+          levelOption === "direct"
+            ? "direct"
+            : levelOption === "custom"
+              ? `${customLevel}-levels`
+              : "full";
+        filename = `gtc-${member.username}-${levelText}-downline-${new Date().getTime()}.csv`;
+      } else {
+        // Full export
+        exportMembers = allMembers;
+        filename = `gtc-members-complete-${new Date().getTime()}.csv`;
+      }
+
+      const csvData = buildCSVWithConfig(
+        exportMembers,
+        allMembers,
+        exportConfig,
+        baseMember,
       );
-      link.click();
+      downloadCSV(csvData, filename);
 
-      setSuccess("Export completed successfully!");
+      setSuccess(
+        `Export completed! ${exportMembers.length} members exported${
+          baseMember ? ` (1 + ${exportMembers.length - 1} downline)` : ""
+        }`,
+      );
+      setShowExportModal(false);
+      setExportingUser(null);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error("Export error:", err);
       setError("Failed to export data. Please try again.");
+    } finally {
+      setExportingUser(null);
     }
+  };
+
+  const openExportModal = (type, member = null) => {
+    setExportConfig({
+      type,
+      member,
+      levelOption: "all",
+      customLevel: 1,
+      columns: {
+        basic: true,
+        contact: true,
+        hierarchy: true,
+        financial: true,
+        kyc: true,
+        onboarding: true,
+        technical: true,
+        timestamps: true,
+      },
+    });
+    setShowExportModal(true);
+  };
+
+  const toggleColumnCategory = (category) => {
+    setExportConfig((prev) => ({
+      ...prev,
+      columns: {
+        ...prev.columns,
+        [category]: !prev.columns[category],
+      },
+    }));
+  };
+
+  const selectAllColumns = () => {
+    setExportConfig((prev) => ({
+      ...prev,
+      columns: Object.keys(prev.columns).reduce(
+        (acc, key) => ({ ...acc, [key]: true }),
+        {},
+      ),
+    }));
+  };
+
+  const deselectAllColumns = () => {
+    setExportConfig((prev) => ({
+      ...prev,
+      columns: Object.keys(prev.columns).reduce(
+        (acc, key) => ({ ...acc, [key]: false }),
+        {},
+      ),
+    }));
+  };
+
+  // KEEP ORIGINAL EXPORT FUNCTIONS (for backward compatibility)
+  const exportUserWithDownline = async (member) => {
+    setExportingUser(member.gtcUserId);
+    openExportModal("user", member);
+  };
+
+  const exportToCSV = async () => {
+    openExportModal("all");
   };
 
   const formatDate = (date) => {
@@ -1507,7 +1665,6 @@ const GTCMembers = () => {
       <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-8">
-
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
@@ -1532,6 +1689,7 @@ const GTCMembers = () => {
                 )}
                 Full Tree
               </button>
+
               <button
                 onClick={() => setShowSyncModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md"
@@ -1539,6 +1697,7 @@ const GTCMembers = () => {
                 <Shuffle className="w-5 h-5" />
                 Sync GTC
               </button>
+
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
@@ -1549,6 +1708,7 @@ const GTCMembers = () => {
                 />
                 Refresh
               </button>
+
               <button
                 onClick={exportToCSV}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md"
@@ -1586,7 +1746,7 @@ const GTCMembers = () => {
           </div>
         )}
 
-        {/* Stats Cards */}
+        {/* Stats Cards - KEEP ORIGINAL STATS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
           {/* Row 1 - General & KYC Stats */}
           <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
@@ -1748,7 +1908,7 @@ const GTCMembers = () => {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* KEEP ALL ORIGINAL FILTERS CODE */}
         <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
           <div className="flex items-center gap-2 mb-4">
             <Filter className="w-5 h-5 text-orange-600" />
@@ -1783,7 +1943,7 @@ const GTCMembers = () => {
                 className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="">All Levels</option>
-                {Array.from({ length: stats.maxLevel || 10 }, (_, i) => (
+                {Array.from({ length: stats.maxLevel + 10 }, (_, i) => (
                   <option key={i} value={i}>
                     Level {i}
                   </option>
@@ -1840,7 +2000,7 @@ const GTCMembers = () => {
           </div>
         </div>
 
-        {/* Members Table */}
+        {/* KEEP COMPLETE ORIGINAL TABLE - Just add export button in actions */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -2237,8 +2397,8 @@ const GTCMembers = () => {
             </table>
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
+          {/* Pagination - KEEP ORIGINAL */}
+          {members.length > 0 && (
             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
               <p className="text-sm text-gray-600">
                 Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
@@ -2270,6 +2430,264 @@ const GTCMembers = () => {
           )}
         </div>
       </div>
+
+      {/* ========== NEW: Export Configuration Modal ========== */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-green-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <Settings className="w-6 h-6 text-green-600" />
+                    Export Configuration
+                  </h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {exportConfig.type === "user"
+                      ? `Exporting: ${exportConfig.member?.name || exportConfig.member?.username}`
+                      : "Exporting all GTC members"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowExportModal(false);
+                    setExportingUser(null);
+                  }}
+                  className="p-2 hover:bg-green-200 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Level Selection (only for user export) */}
+              {exportConfig.type === "user" && (
+                <div className="bg-blue-50 rounded-xl p-5 border border-blue-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-blue-600" />
+                    Downline Level Selection
+                  </h3>
+                  <div className="space-y-3">
+                    <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-blue-400 transition-colors">
+                      <input
+                        type="radio"
+                        name="levelOption"
+                        value="direct"
+                        checked={exportConfig.levelOption === "direct"}
+                        onChange={(e) =>
+                          setExportConfig({
+                            ...exportConfig,
+                            levelOption: e.target.value,
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">
+                          Direct Members Only
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Export only level 1 (direct referrals)
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-blue-400 transition-colors">
+                      <input
+                        type="radio"
+                        name="levelOption"
+                        value="custom"
+                        checked={exportConfig.levelOption === "custom"}
+                        onChange={(e) =>
+                          setExportConfig({
+                            ...exportConfig,
+                            levelOption: e.target.value,
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">
+                          Custom Levels
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Export up to specific level depth
+                        </p>
+                        {exportConfig.levelOption === "custom" && (
+                          <div className="mt-3 flex items-center gap-3">
+                            <label className="text-sm font-medium text-gray-700">
+                              Levels:
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={exportConfig.customLevel}
+                              onChange={(e) =>
+                                setExportConfig({
+                                  ...exportConfig,
+                                  customLevel: parseInt(e.target.value) || 1,
+                                })
+                              }
+                              className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <span className="text-sm text-gray-500">
+                              (Include downline up to level{" "}
+                              {exportConfig.customLevel})
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-blue-400 transition-colors">
+                      <input
+                        type="radio"
+                        name="levelOption"
+                        value="all"
+                        checked={exportConfig.levelOption === "all"}
+                        onChange={(e) =>
+                          setExportConfig({
+                            ...exportConfig,
+                            levelOption: e.target.value,
+                          })
+                        }
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">
+                          Full Downline
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Export all descendants (all levels)
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Column Selection */}
+              <div className="bg-orange-50 rounded-xl p-5 border border-orange-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-orange-600" />
+                    Select Columns to Export
+                  </h3>
+                  <span className="text-sm font-medium text-gray-600">
+                    {Object.values(exportConfig.columns).filter(Boolean).length}{" "}
+                    of {Object.keys(exportConfig.columns).length} selected
+                  </span>
+                </div>
+
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={selectAllColumns}
+                    className="px-3 py-1.5 text-sm bg-green-100 hover:bg-green-200 text-green-700 rounded-lg font-medium transition-colors"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={deselectAllColumns}
+                    className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+                  >
+                    Deselect All
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Object.entries(COLUMN_CATEGORIES).map(([key, category]) => (
+                    <label
+                      key={key}
+                      className="flex items-start gap-3 p-4 bg-white rounded-lg border border-gray-200 cursor-pointer hover:border-orange-400 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={exportConfig.columns[key]}
+                        onChange={() => toggleColumnCategory(key)}
+                        className="w-5 h-5 mt-0.5 text-orange-600 rounded focus:ring-2 focus:ring-orange-500"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 mb-1">
+                          {category.label}
+                        </p>
+                        <p className="text-xs text-gray-500 mb-2">
+                          {category.description}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {category.fields.slice(0, 3).map((field, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded"
+                            >
+                              {field}
+                            </span>
+                          ))}
+                          {category.fields.length > 3 && (
+                            <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
+                              +{category.fields.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  {Object.values(exportConfig.columns).filter(Boolean)
+                    .length === 0 ? (
+                    <span className="text-red-600 font-medium">
+                      Please select at least one column category
+                    </span>
+                  ) : (
+                    <span>
+                      Ready to export with{" "}
+                      <strong>
+                        {
+                          Object.values(exportConfig.columns).filter(Boolean)
+                            .length
+                        }
+                      </strong>{" "}
+                      column categories
+                    </span>
+                  )}
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowExportModal(false);
+                      setExportingUser(null);
+                    }}
+                    className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleExportConfirm}
+                    disabled={
+                      Object.values(exportConfig.columns).filter(Boolean)
+                        .length === 0
+                    }
+                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Download className="w-5 h-5" />
+                    Export CSV
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sync Modal */}
       {showSyncModal && (
