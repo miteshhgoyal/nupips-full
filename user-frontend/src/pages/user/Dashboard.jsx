@@ -245,9 +245,6 @@ const Dashboard = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-md">
-              <Sparkles className="w-7 h-7 text-white" />
-            </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
                 Welcome back, {data?.user?.name?.split(" ")[0] || "User"}!
