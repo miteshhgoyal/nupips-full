@@ -34,6 +34,6 @@ agent members page bug... uses fixed data only not fresh users downline. - to ch
 
 ---
 
-nupips team... and admin side... in user list sectiosn add more kind of filters too. and top 10 higest.. lowest balance etc stuff too.
+nupips team... and admin side... in user list sectiosn add more kind of filters too. and top 10 higest.. lowest balance etc stuff too. - done
 
 admin side sync gtc .. automated syncings to be done..

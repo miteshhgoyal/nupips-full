@@ -1056,8 +1056,20 @@ router.get('/gtc-members/export', async (req, res) => {
 // ============================================
 router.get('/gtc-members', async (req, res) => {
     try {
-        const { page = 1, limit = 20, level, hasParent, search } = req.query;
+        const {
+            page = 1,
+            limit = 20,
+            level,
+            hasParent,
+            search,
+            onboardingStatus,
+            tradingBalanceFilter,
+            walletBalanceFilter,
+            sortBy = 'joinedDate',
+            sortOrder = 'desc'
+        } = req.query;
 
+        // Build base filter
         const filter = {};
 
         if (level) {
@@ -1079,21 +1091,131 @@ router.get('/gtc-members', async (req, res) => {
             ];
         }
 
-        const skip = (parseInt(page) - 1) * parseInt(limit);
+        // Onboarding status filter
+        if (onboardingStatus) {
+            if (onboardingStatus === 'both') {
+                filter.onboardedWithCall = true;
+                filter.onboardedWithMessage = true;
+            } else if (onboardingStatus === 'call') {
+                filter.onboardedWithCall = true;
+            } else if (onboardingStatus === 'message') {
+                filter.onboardedWithMessage = true;
+            } else if (onboardingStatus === 'none') {
+                filter.onboardedWithCall = false;
+                filter.onboardedWithMessage = false;
+            } else if (onboardingStatus === 'partial') {
+                filter.$or = [
+                    { onboardedWithCall: true, onboardedWithMessage: false },
+                    { onboardedWithCall: false, onboardedWithMessage: true }
+                ];
+            }
+        }
 
-        // Fetch paginated members and total count
+        // Trading balance filter - UPDATED with top10 and bottom10
+        if (tradingBalanceFilter && tradingBalanceFilter !== 'all') {
+            switch (tradingBalanceFilter) {
+                case 'zero':
+                    filter.$or = [
+                        { tradingBalance: 0 },
+                        { tradingBalance: { $exists: false } }
+                    ];
+                    break;
+                case 'low':
+                    filter.tradingBalance = { $gt: 0, $lte: 100 };
+                    break;
+                case 'medium':
+                    filter.tradingBalance = { $gt: 100, $lte: 1000 };
+                    break;
+                case 'high':
+                    filter.tradingBalance = { $gt: 1000 };
+                    break;
+                // No filter needed for top10/bottom10 - handled in sorting and limit
+            }
+        }
+
+        // Wallet balance filter - UPDATED with top10 and bottom10
+        if (walletBalanceFilter && walletBalanceFilter !== 'all') {
+            switch (walletBalanceFilter) {
+                case 'zero':
+                    filter.$or = [
+                        { amount: 0 },
+                        { amount: { $exists: false } }
+                    ];
+                    break;
+                case 'low':
+                    filter.amount = { $gt: 0, $lte: 100 };
+                    break;
+                case 'medium':
+                    filter.amount = { $gt: 100, $lte: 1000 };
+                    break;
+                case 'high':
+                    filter.amount = { $gt: 1000 };
+                    break;
+                // No filter needed for top10/bottom10 - handled in sorting and limit
+            }
+        }
+
+        // Build sort object - UPDATED to handle top10/bottom10 filters
+        let sortObj = {};
+        let customLimit = parseInt(limit);
+
+        // Handle top10/bottom10 for trading balance
+        if (tradingBalanceFilter === 'top10') {
+            sortObj.tradingBalance = -1; // Descending (highest first)
+            customLimit = 10;
+        } else if (tradingBalanceFilter === 'bottom10') {
+            sortObj.tradingBalance = 1; // Ascending (lowest first)
+            customLimit = 10;
+        }
+        // Handle top10/bottom10 for wallet balance
+        else if (walletBalanceFilter === 'top10') {
+            sortObj.amount = -1; // Descending (highest first)
+            customLimit = 10;
+        } else if (walletBalanceFilter === 'bottom10') {
+            sortObj.amount = 1; // Ascending (lowest first)
+            customLimit = 10;
+        }
+        // Default sorting based on sortBy parameter
+        else {
+            switch (sortBy) {
+                case 'name':
+                    sortObj.name = sortOrder === 'asc' ? 1 : -1;
+                    break;
+                case 'tradingBalance':
+                    sortObj.tradingBalance = sortOrder === 'asc' ? 1 : -1;
+                    break;
+                case 'walletBalance':
+                    sortObj.amount = sortOrder === 'asc' ? 1 : -1;
+                    break;
+                case 'level':
+                    sortObj.level = sortOrder === 'asc' ? 1 : -1;
+                    break;
+                case 'joinedDate':
+                default:
+                    sortObj.joinedAt = sortOrder === 'asc' ? 1 : -1;
+                    break;
+            }
+        }
+
+        // Calculate skip - but don't skip for top10/bottom10
+        const skip = (tradingBalanceFilter === 'top10' || tradingBalanceFilter === 'bottom10' ||
+            walletBalanceFilter === 'top10' || walletBalanceFilter === 'bottom10')
+            ? 0
+            : (parseInt(page) - 1) * parseInt(limit);
+
+        // Fetch paginated members with filters and sorting
         const [members, total] = await Promise.all([
             GTCMember.find(filter)
-                .sort({ joinedAt: -1 })
+                .sort(sortObj)
                 .skip(skip)
-                .limit(parseInt(limit))
+                .limit(customLimit)
                 .populate('onboardingDoneBy', 'name email username userType')
                 .lean(),
             GTCMember.countDocuments(filter),
         ]);
 
-        // Calculate comprehensive stats for ALL members (not just current page)
-        const [allMembersStats, kycStats, balanceStats, onboardingStats, additionalStats] = await Promise.all([
+        // Calculate stats for ALL members (without filters) - for global stats
+        const [globalStats, kycStats, balanceStats, onboardingStats, additionalStats] = await Promise.all([
             // Basic stats
             GTCMember.aggregate([
                 {
@@ -1206,7 +1328,7 @@ router.get('/gtc-members', async (req, res) => {
                             {
                                 $match: {
                                     joinedAt: {
-                                        $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+                                        $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
                                     },
                                 },
                             },
@@ -1217,13 +1339,13 @@ router.get('/gtc-members', async (req, res) => {
             ]),
         ]);
 
-        // Format all stats
+        // Format global stats
         const formattedStats = {
-            total: allMembersStats[0].totalMembers[0]?.count || 0,
-            withParent: allMembersStats[0].withParent[0]?.count || 0,
-            rootMembers: allMembersStats[0].rootMembers[0]?.count || 0,
-            avgLevel: allMembersStats[0].avgLevel[0]?.avg || 0,
-            maxLevel: allMembersStats[0].maxLevel[0]?.max || 0,
+            total: globalStats[0].totalMembers[0]?.count || 0,
+            withParent: globalStats[0].withParent[0]?.count || 0,
+            rootMembers: globalStats[0].rootMembers[0]?.count || 0,
+            avgLevel: globalStats[0].avgLevel[0]?.avg || 0,
+            maxLevel: globalStats[0].maxLevel[0]?.max || 0,
         };
 
         const formattedKycStats = {
@@ -1251,6 +1373,10 @@ router.get('/gtc-members', async (req, res) => {
             completeOnboarding: onboardingStats[0].bothOnboarded[0]?.count || 0,
         };
 
+        // Calculate pagination - special handling for top10/bottom10
+        const isTop10Bottom10 = tradingBalanceFilter === 'top10' || tradingBalanceFilter === 'bottom10' ||
+            walletBalanceFilter === 'top10' || walletBalanceFilter === 'bottom10';
+
         res.status(200).json({
             success: true,
             data: members,
@@ -1260,10 +1386,10 @@ router.get('/gtc-members', async (req, res) => {
             onboardingStats: formattedOnboardingStats,
             additionalStats: formattedAdditionalStats,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total,
-                pages: Math.ceil(total / parseInt(limit)),
+                page: isTop10Bottom10 ? 1 : parseInt(page),
+                limit: customLimit,
+                total: isTop10Bottom10 ? members.length : total,
+                pages: isTop10Bottom10 ? 1 : Math.ceil(total / parseInt(limit)),
             },
         });
     } catch (error) {

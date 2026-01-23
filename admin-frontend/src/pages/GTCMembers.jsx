@@ -44,6 +44,8 @@ import {
   TrendingDown,
   ArrowUp,
   ArrowDown,
+  Zap,
+  Target,
 } from "lucide-react";
 import api from "../services/api";
 import { useNavigate } from "react-router-dom";
@@ -154,7 +156,7 @@ const GTCMembers = () => {
 
   const [exportingUser, setExportingUser] = useState(null);
 
-  // ========== NEW: Export Configuration Modal State ==========
+  // ========== Export Configuration Modal State ==========
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportConfig, setExportConfig] = useState({
     type: "all", // 'all' or 'user'
@@ -243,7 +245,16 @@ const GTCMembers = () => {
     fetchCurrentUser();
     fetchMembers();
     fetchAvailableUsers();
-  }, [currentPage, filterLevel, filterHasParent, filterOnboardingStatus]);
+  }, [
+    currentPage,
+    filterLevel,
+    filterHasParent,
+    filterOnboardingStatus,
+    filterTradingBalance,
+    filterWalletBalance,
+    sortBy,
+    sortOrder,
+  ]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -280,44 +291,30 @@ const GTCMembers = () => {
       if (filterLevel) params.append("level", filterLevel);
       if (filterHasParent) params.append("hasParent", filterHasParent);
       if (searchQuery) params.append("search", searchQuery);
+      if (filterOnboardingStatus) {
+        params.append("onboardingStatus", filterOnboardingStatus);
+      }
+
+      // Add advanced filters
+      if (filterTradingBalance && filterTradingBalance !== "all") {
+        params.append("tradingBalanceFilter", filterTradingBalance);
+      }
+      if (filterWalletBalance && filterWalletBalance !== "all") {
+        params.append("walletBalanceFilter", filterWalletBalance);
+      }
+
+      // Add sorting
+      params.append("sortBy", sortBy);
+      params.append("sortOrder", sortOrder);
 
       const response = await api.get(`/admin/gtc-members?${params.toString()}`);
 
       if (response.data.success) {
-        let filteredMembers = response.data.data;
-
-        // Apply onboarding status filter on frontend
-        if (filterOnboardingStatus) {
-          if (filterOnboardingStatus === "both") {
-            filteredMembers = filteredMembers.filter(
-              (m) => m.onboardedWithCall && m.onboardedWithMessage,
-            );
-          } else if (filterOnboardingStatus === "call") {
-            filteredMembers = filteredMembers.filter(
-              (m) => m.onboardedWithCall,
-            );
-          } else if (filterOnboardingStatus === "message") {
-            filteredMembers = filteredMembers.filter(
-              (m) => m.onboardedWithMessage,
-            );
-          } else if (filterOnboardingStatus === "none") {
-            filteredMembers = filteredMembers.filter(
-              (m) => !m.onboardedWithCall && !m.onboardedWithMessage,
-            );
-          } else if (filterOnboardingStatus === "partial") {
-            filteredMembers = filteredMembers.filter(
-              (m) =>
-                (m.onboardedWithCall && !m.onboardedWithMessage) ||
-                (!m.onboardedWithCall && m.onboardedWithMessage),
-            );
-          }
-        }
-
-        setMembers(filteredMembers);
+        setMembers(response.data.data);
         setTotalCount(response.data.pagination.total);
         setTotalPages(response.data.pagination.pages);
 
-        // Set all stats from backend (these are now calculated for ALL members)
+        // Set all stats from backend
         setStats(response.data.stats);
         setKycStats(response.data.kycStats);
         setBalanceStats(response.data.balanceStats);
@@ -331,106 +328,6 @@ const GTCMembers = () => {
       setLoading(false);
     }
   };
-
-  const getFilteredAndSortedMembers = () => {
-    let filtered = [...members];
-
-    // Trading Balance filter
-    if (filterTradingBalance !== "all") {
-      filtered = filtered.filter((m) => {
-        const balance = m.tradingBalance || 0;
-        switch (filterTradingBalance) {
-          case "zero":
-            return balance === 0;
-          case "low":
-            return balance > 0 && balance <= 100;
-          case "medium":
-            return balance > 100 && balance <= 1000;
-          case "high":
-            return balance > 1000;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Wallet Balance filter
-    if (filterWalletBalance !== "all") {
-      filtered = filtered.filter((m) => {
-        const balance = m.amount || 0;
-        switch (filterWalletBalance) {
-          case "zero":
-            return balance === 0;
-          case "low":
-            return balance > 0 && balance <= 100;
-          case "medium":
-            return balance > 100 && balance <= 1000;
-          case "high":
-            return balance > 1000;
-          default:
-            return true;
-        }
-      });
-    }
-
-    // Sorting
-    filtered.sort((a, b) => {
-      let aVal, bVal;
-
-      switch (sortBy) {
-        case "name":
-          aVal = (a.name || "").toLowerCase();
-          bVal = (b.name || "").toLowerCase();
-          break;
-        case "tradingBalance":
-          aVal = a.tradingBalance || 0;
-          bVal = b.tradingBalance || 0;
-          break;
-        case "walletBalance":
-          aVal = a.amount || 0;
-          bVal = b.amount || 0;
-          break;
-        case "level":
-          aVal = a.level || 0;
-          bVal = b.level || 0;
-          break;
-        case "joinedDate":
-        default:
-          aVal = new Date(a.joinedAt);
-          bVal = new Date(b.joinedAt);
-          break;
-      }
-
-      if (sortOrder === "asc") {
-        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
-      } else {
-        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
-      }
-    });
-
-    return filtered;
-  };
-
-  const filteredMembers = getFilteredAndSortedMembers();
-
-  // Top/Bottom Rankings
-  const top10ByTradingBalance = [...members]
-    .sort((a, b) => (b.tradingBalance || 0) - (a.tradingBalance || 0))
-    .slice(0, 10);
-
-  const top5ByWalletBalance = [...members]
-    .sort((a, b) => (b.amount || 0) - (a.amount || 0))
-    .slice(0, 5);
-
-  const bottom10ByTradingBalance = [...members]
-    .filter((m) => (m.tradingBalance || 0) > 0)
-    .sort((a, b) => (a.tradingBalance || 0) - (b.tradingBalance || 0))
-    .slice(0, 10);
-
-  const bottom5ByWalletBalance = [...members]
-    .filter((m) => (m.amount || 0) > 0)
-    .sort((a, b) => (a.amount || 0) - (b.amount || 0))
-    .slice(0, 5);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -827,6 +724,10 @@ const GTCMembers = () => {
     setFilterHasParent("");
     setFilterOnboardingStatus("");
     setSearchQuery("");
+    setFilterTradingBalance("all");
+    setFilterWalletBalance("all");
+    setSortBy("joinedDate");
+    setSortOrder("desc");
     setCurrentPage(1);
     setTimeout(fetchMembers, 100);
   };
@@ -1423,7 +1324,7 @@ const GTCMembers = () => {
     };
   };
 
-  // ========== NEW: Export Helper Functions ==========
+  // ========== Export Helper Functions ==========
   const filterMembersByLevel = (
     member,
     allMembers,
@@ -2017,317 +1918,240 @@ const GTCMembers = () => {
           </div>
         </div>
 
-        {/* Top/Bottom Rankings */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Top 10 Trading Balance */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">
-                Top 10 by Trading Balance
-              </h3>
-            </div>
-            <div className="space-y-2">
-              {top10ByTradingBalance.slice(0, 5).map((member, idx) => (
-                <div
-                  key={member.gtcUserId}
-                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-gray-400 w-6">
-                      #{idx + 1}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {member.name || member.username}
-                    </span>
-                  </div>
-                  <span className="text-sm font-bold text-green-600">
-                    ${(member.tradingBalance || 0).toFixed(2)}
-                  </span>
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 overflow-hidden transition-all duration-300">
+          <div className="p-6 bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
+                  <Filter className="w-5 h-5 text-white" />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Top 5 Wallet Balance */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">
-                Top 5 by Wallet Balance
-              </h3>
-            </div>
-            <div className="space-y-2">
-              {top5ByWalletBalance.map((member, idx) => (
-                <div
-                  key={member.gtcUserId}
-                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-gray-400 w-6">
-                      #{idx + 1}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {member.name || member.username}
-                    </span>
-                  </div>
-                  <span className="text-sm font-bold text-blue-600">
-                    ${(member.amount || 0).toFixed(2)}
-                  </span>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">
+                    Filters & Sorting
+                  </h2>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    Search and filter members by various criteria
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Bottom 10 Trading Balance */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-red-600" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900">
-                Bottom 10 by Trading Balance
-              </h3>
-            </div>
-            <div className="space-y-2">
-              {bottom10ByTradingBalance.slice(0, 5).map((member, idx) => (
-                <div
-                  key={member.gtcUserId}
-                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm bg-white hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-all shadow-sm border border-gray-200"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-gray-400 w-6">
-                      #{idx + 1}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {member.name || member.username}
-                    </span>
-                  </div>
-                  <span className="text-sm font-bold text-red-600">
-                    ${(member.tradingBalance || 0).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Bottom 5 Wallet Balance */}
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-5 h-5 text-orange-600" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900">
-                Bottom 5 by Wallet Balance
-              </h3>
-            </div>
-            <div className="space-y-2">
-              {bottom5ByWalletBalance.map((member, idx) => (
-                <div
-                  key={member.gtcUserId}
-                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                  <Settings className="w-4 h-4" />
+                  {showAdvancedFilters ? "Hide Advanced" : "Show Advanced"}
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-300 ${
+                      showAdvancedFilters ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                <button
+                  onClick={handleClearFilters}
+                  className="flex items-center gap-2 px-4 py-2 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-medium transition-all border border-red-200"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-gray-400 w-6">
-                      #{idx + 1}
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {member.name || member.username}
-                    </span>
-                  </div>
-                  <span className="text-sm font-bold text-orange-600">
-                    ${(member.amount || 0).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ENHANCED Filters */}
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <Filter className="w-5 h-5 text-orange-600" />
-              <h2 className="text-lg font-bold text-gray-900">
-                Filters & Sorting
-              </h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
-              >
-                {showAdvancedFilters ? "Hide Advanced" : "Show Advanced"}
-              </button>
-              <button
-                onClick={() => {
-                  handleClearFilters();
-                  setFilterTradingBalance("all");
-                  setFilterWalletBalance("all");
-                  setSortBy("joinedDate");
-                  setSortOrder("desc");
-                }}
-                className="px-4 py-2 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors"
-              >
-                Clear All
-              </button>
-            </div>
-          </div>
-
-          {/* Basic Filters Row */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                  placeholder="Search by GTC ID, email, or username..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
+                  <X className="w-4 h-4" />
+                  Clear All
+                </button>
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Level
-              </label>
-              <select
-                value={filterLevel}
-                onChange={(e) => setFilterLevel(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="">All Levels</option>
-                {Array.from({ length: stats.maxLevel + 10 }, (_, i) => (
-                  <option key={i} value={i}>
-                    Level {i}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Parent Status
-              </label>
-              <select
-                value={filterHasParent}
-                onChange={(e) => setFilterHasParent(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="">All</option>
-                <option value="true">Has Parent</option>
-                <option value="false">Root Members</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Onboarding Status
-              </label>
-              <select
-                value={filterOnboardingStatus}
-                onChange={(e) => setFilterOnboardingStatus(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="">All Status</option>
-                <option value="both">Both Completed</option>
-                <option value="call">Call Only</option>
-                <option value="message">Message Only</option>
-                <option value="none">Not Started</option>
-              </select>
-            </div>
           </div>
 
-          {/* Sort Controls */}
-          <div className="flex items-center gap-2 mb-4">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="flex-1 px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            >
-              <option value="joinedDate">Sort: Join Date</option>
-              <option value="name">Sort: Name</option>
-              <option value="tradingBalance">Sort: Trading Balance</option>
-              <option value="walletBalance">Sort: Wallet Balance</option>
-              <option value="level">Sort: Level</option>
-            </select>
-            <button
-              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50"
-              title={sortOrder === "asc" ? "Ascending" : "Descending"}
-            >
-              {sortOrder === "asc" ? (
-                <ArrowUp className="w-5 h-5 text-gray-600" />
-              ) : (
-                <ArrowDown className="w-5 h-5 text-gray-600" />
-              )}
-            </button>
-          </div>
+          <div className="p-6">
+            {/* Basic Filters Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+              <div className="lg:col-span-2">
+                <label className="bloc text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Search className="w-4 h-4 text-gray-500" />
+                  Search Members
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                    placeholder="Search by GTC ID, email, or username..."
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                  />
+                </div>
+              </div>
 
-          {/* Advanced Filters */}
-          {showAdvancedFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-gray-500" />
+                  Level
+                </label>
+                <select
+                  value={filterLevel}
+                  onChange={(e) => setFilterLevel(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                >
+                  <option value="">All Levels</option>
+                  {Array.from({ length: stats.maxLevel + 10 }, (_, i) => (
+                    <option key={i} value={i}>
+                      Level {i}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Network className="w-4 h-4 text-gray-500" />
+                  Parent Status
+                </label>
+                <select
+                  value={filterHasParent}
+                  onChange={(e) => setFilterHasParent(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                >
+                  <option value="">All Members</option>
+                  <option value="true">Has Parent</option>
+                  <option value="false">Root Members</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-gray-500" />
+                  Onboarding
+                </label>
+                <select
+                  value={filterOnboardingStatus}
+                  onChange={(e) => setFilterOnboardingStatus(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                >
+                  <option value="">All Status</option>
+                  <option value="both">Both Completed</option>
+                  <option value="call">Call Only</option>
+                  <option value="message">Message Only</option>
+                  <option value="none">Not Started</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Sort Controls */}
+            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <ArrowDown className="w-4 h-4 text-gray-500" />
+                Sort By:
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all text-sm"
+              >
+                <option value="joinedDate">Join Date</option>
+                <option value="name">Name</option>
+                <option value="tradingBalance">Trading Balance</option>
+                <option value="walletBalance">Wallet Balance</option>
+                <option value="level">Level</option>
+              </select>
+              <button
+                onClick={() =>
+                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                }
+                className="p-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all group"
+                title={sortOrder === "asc" ? "Ascending" : "Descending"}
+              >
+                {sortOrder === "asc" ? (
+                  <ArrowUp className="w-5 h-5 text-gray-600 group-hover:text-orange-600 transition-colors" />
+                ) : (
+                  <ArrowDown className="w-5 h-5 text-gray-600 group-hover:text-orange-600 transition-colors" />
+                )}
+              </button>
+            </div>
+
+            {/* Advanced Filters - Smooth Collapse/Expand */}
+            <div
+              className={`grid grid-cols-1 md:grid-cols-2 gap-4 transition-all duration-300 ease-in-out origin-top ${
+                showAdvancedFilters
+                  ? "opacity-100 max-h-96 scale-y-100"
+                  : "opacity-0 max-h-0 scale-y-0 overflow-hidden"
+              }`}
+            >
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-green-600" />
                   Trading Balance
                 </label>
                 <select
                   value={filterTradingBalance}
                   onChange={(e) => setFilterTradingBalance(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                 >
                   <option value="all">All Trading Balance</option>
-                  <option value="zero">Zero Balance</option>
-                  <option value="low">Low ($0 - $100)</option>
-                  <option value="medium">Medium ($100 - $1,000)</option>
+                  <option value="top10">Top 10 (Highest)</option>
+                  <option value="bottom10">Bottom 10 (Lowest)</option>
                   <option value="high">High (&gt; $1,000)</option>
+                  <option value="medium">Medium ($100 - $1,000)</option>
+                  <option value="low">Low ($0 - $100)</option>
+                  <option value="zero">Zero Balance</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-blue-600" />
                   Wallet Balance
                 </label>
                 <select
                   value={filterWalletBalance}
                   onChange={(e) => setFilterWalletBalance(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 >
                   <option value="all">All Wallet Balance</option>
-                  <option value="zero">Zero Balance</option>
-                  <option value="low">Low ($0 - $100)</option>
-                  <option value="medium">Medium ($100 - $1,000)</option>
+                  <option value="top10">Top 10 (Highest)</option>
+                  <option value="bottom10">Bottom 10 (Lowest)</option>
                   <option value="high">High (&gt; $1,000)</option>
+                  <option value="medium">Medium ($100 - $1,000)</option>
+                  <option value="low">Low ($0 - $100)</option>
+                  <option value="zero">Zero Balance</option>
                 </select>
               </div>
             </div>
-          )}
 
-          {/* Search Button and Results Summary */}
-          <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200">
-            <button
-              onClick={handleSearch}
-              className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
+            {/* Action Buttons and Results Summary */}
+            <div
+              className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 transition-all duration-300 ${
+                showAdvancedFilters
+                  ? "mt-6 pt-6 border-t border-gray-200"
+                  : "mt-4"
+              }`}
             >
-              Apply Filters
-            </button>
-            <div className="text-sm text-gray-600">
-              <span className="font-medium">Showing:</span>{" "}
-              <span className="font-bold text-orange-600">
-                {filteredMembers.length}
-              </span>{" "}
-              of <span className="font-bold">{members.length}</span> members
+              <button
+                onClick={handleSearch}
+                disabled={loading}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-5 h-5" />
+                    Apply Filters
+                  </>
+                )}
+              </button>
+
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 text-sm">
+                  <UsersIcon className="w-4 h-4 text-blue-600" />
+                  <span className="text-gray-700">Showing:</span>
+                  <span className="font-bold text-blue-600 text-lg">
+                    {members.length}
+                  </span>
+                  <span className="text-gray-500">of</span>
+                  <span className="font-bold text-gray-900">{totalCount}</span>
+                  <span className="text-gray-700">members</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2706,7 +2530,7 @@ const GTCMembers = () => {
                             >
                               <Network className="w-4 h-4" />
                             </button>
-                            {/* NEW: Per-user export button */}
+                            {/* Per-user export button */}
                             <button
                               onClick={() => exportUserWithDownline(member)}
                               disabled={exportingUser === member.gtcUserId}
@@ -2763,7 +2587,7 @@ const GTCMembers = () => {
         </div>
       </div>
 
-      {/* ========== NEW: Export Configuration Modal ========== */}
+      {/* ========== Export Configuration Modal ========== */}
       {showExportModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
