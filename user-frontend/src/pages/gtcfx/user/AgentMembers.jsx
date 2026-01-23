@@ -325,7 +325,7 @@ const TreeNodeRow = ({
 
         {/* KYC */}
         <td className="px-6 py-4">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 text-nowrap">
             {getKycBadge(node.kycStatus)}
           </div>
         </td>
@@ -817,14 +817,6 @@ const GTCFxAgentMembers = () => {
                 Complete hierarchical view of your entire network from database
               </p>
             </div>
-            <button
-              onClick={handleExportJSON}
-              disabled={!treeData?.tree}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FileJson className="w-5 h-5" />
-              Export JSON
-            </button>
           </div>
         </div>
 

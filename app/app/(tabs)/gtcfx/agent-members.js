@@ -744,20 +744,6 @@ const GTCFxAgentMembers = () => {
                         </View>
                     </View>
                 )}
-
-                {/* Export Button */}
-                <View className="px-5 mb-6">
-                    <TouchableOpacity
-                        onPress={handleExportJSON}
-                        disabled={!treeData}
-                        className={`py-4 rounded-2xl flex-row items-center justify-center ${treeData ? 'bg-orange-500' : 'bg-neutral-800/50'
-                            }`}
-                        activeOpacity={0.7}
-                    >
-                        <FileJson size={20} color="#ffffff" style={{ marginRight: 8 }} />
-                        <Text className="text-white font-bold text-base">Export Team Data (JSON)</Text>
-                    </TouchableOpacity>
-                </View>
             </ScrollView>
         </SafeAreaView>
     );

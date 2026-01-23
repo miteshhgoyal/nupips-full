@@ -371,25 +371,6 @@ const GTCFxProfitLogs = () => {
     link.click();
   };
 
-  const handleExportJSON = () => {
-    const dataToExport = {
-      summary,
-      logs: profitLogs,
-      exported_at: new Date().toISOString(),
-    };
-
-    const jsonString = JSON.stringify(dataToExport, null, 2);
-    const blob = new Blob([jsonString], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `profit-logs-${new Date().getTime()}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   const handleLogClick = (log) => {
     setSelectedLog(log);
     setShowDetailModal(true);
@@ -475,13 +456,6 @@ const GTCFxProfitLogs = () => {
               >
                 <Download className="w-5 h-5" />
                 CSV
-              </button>
-              <button
-                onClick={handleExportJSON}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
-              >
-                <FileJson className="w-5 h-5" />
-                JSON
               </button>
             </div>
           </div>
