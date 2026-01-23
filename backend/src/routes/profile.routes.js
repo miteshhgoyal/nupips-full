@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import Deposit from "../models/Deposit.js";
 import Withdrawal from "../models/Withdrawal.js";
 import { authenticateToken } from "../middlewares/auth.middleware.js";
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -65,181 +66,336 @@ router.put("/update", authenticateToken, async (req, res) => {
     }
 });
 
-// Get dashboard data with REAL DATA
-router.get("/dashboard", authenticateToken, async (req, res) => {
+// routes/profile.routes.js - Replace the /dashboard route with this enhanced version
+
+router.get('/dashboard', authenticateToken, async (req, res) => {
     try {
-        const me = await User.findById(req.user.userId).select("-password");
-        if (!me) return res.status(404).json({ message: "User not found" });
+        const me = await User.findById(req.user.userId).select('-password');
+        if (!me) return res.status(404).json({ message: 'User not found' });
 
-        // Build dashboard payload
-        const dashboard = {
-            walletBalance: me.walletBalance || 0,
-            financials: me.financials || {},
-            tradingStats: me.tradingStats || {},
-            referralDetails: me.referralDetails || {},
-            downlineStats: me.downlineStats || {},
-            recentActivity: [],
-            chartData: {
-                deposits: [],
-                withdrawals: [],
-            },
-        };
+        // ==================== FINANCIAL DATA ====================
+        const [
+            completedDeposits,
+            pendingDeposits,
+            completedWithdrawals,
+            pendingWithdrawals,
+            incomeExpenseData
+        ] = await Promise.all([
+            Deposit.find({ userId: me._id, status: 'completed' }).sort({ createdAt: -1 }),
+            Deposit.find({ userId: me._id, status: { $in: ['pending', 'processing'] } }),
+            Withdrawal.find({ userId: me._id, status: 'completed' }).sort({ createdAt: -1 }),
+            Withdrawal.find({ userId: me._id, status: { $in: ['pending', 'processing'] } }),
+            mongoose.model('IncomeExpense').find({ userId: me._id }).sort({ date: -1 })
+        ]);
 
-        // ==================== REAL RECENT ACTIVITY ====================
+        // Calculate financial summary
+        const totalDeposits = completedDeposits.reduce((sum, d) => sum + d.amount, 0);
+        const pendingDepositsAmount = pendingDeposits.reduce((sum, d) => sum + d.amount, 0);
+        const totalWithdrawals = completedWithdrawals.reduce((sum, w) => sum + w.netAmount, 0);
+        const pendingWithdrawalsAmount = pendingWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+
+        // Income breakdown
+        const rebateIncome = incomeExpenseData
+            .filter(ie => ie.type === 'income' && ie.category === 'rebate')
+            .reduce((sum, ie) => sum + ie.amount, 0);
+
+        const affiliateIncome = incomeExpenseData
+            .filter(ie => ie.type === 'income' && ie.category === 'affiliate')
+            .reduce((sum, ie) => sum + ie.amount, 0);
+
+        // ==================== REFERRAL DATA ====================
+        const directReferrals = me.referralDetails?.referralTree?.filter(r => r.level === 1) || [];
+        const directReferralIds = directReferrals.map(r => r.userId);
+
+        const [directUsers, allDownlineUsers] = await Promise.all([
+            User.find({ _id: { $in: directReferralIds } }).select('name username userType walletBalance createdAt status'),
+            User.find({ _id: { $in: me.referralDetails?.referralTree?.map(r => r.userId) || [] } })
+                .select('name username userType walletBalance tradingStats')
+        ]);
+
+        const agentsCount = directUsers.filter(u => u.userType === 'agent').length;
+        const tradersCount = directUsers.filter(u => u.userType === 'trader').length;
+        const cumulativeBalance = allDownlineUsers.reduce((sum, u) => sum + (u.walletBalance || 0), 0) + (me.walletBalance || 0);
+        const totalDownlineVolume = allDownlineUsers.reduce((sum, u) => sum + (u.tradingStats?.totalVolumeLots || 0), 0);
+
+        // ==================== GTC MEMBER CHECK ====================
+        let hasJoinedGTC = false;
+        let gtcMemberData = null;
         try {
-            // Get last 5 deposits
-            const recentDeposits = await Deposit.find({
-                userId: me._id,
-                status: { $in: ["completed"] },
-            })
-                .sort({ createdAt: -1 })
-                .limit(3)
-                .lean();
-
-            // Get last 5 withdrawals
-            const recentWithdrawals = await Withdrawal.find({
-                userId: me._id,
-                status: { $in: ["completed"] },
-            })
-                .sort({ createdAt: -1 })
-                .limit(3)
-                .lean();
-
-            // Get recent referrals (last 3 users referred by this user)
-            const recentReferrals = await User.find({
-                "referralDetails.referredBy": me._id,
-            })
-                .sort({ createdAt: -1 })
-                .limit(2)
-                .select("name username createdAt")
-                .lean();
-
-            // Combine and format activities
-            const activities = [];
-
-            recentDeposits.forEach((dep) => {
-                activities.push({
-                    type: "deposit",
-                    title: `Deposit ${dep.status === "completed" ? "Completed" : "Pending"}`,
-                    date: getRelativeTime(dep.createdAt),
-                    value: `+$${Number(dep.amount).toFixed(2)}`,
-                    timestamp: dep.createdAt,
-                });
-            });
-
-            recentWithdrawals.forEach((wd) => {
-                activities.push({
-                    type: "withdrawal",
-                    title: `Withdrawal ${wd.status === "completed" ? "Processed" : "Pending"}`,
-                    date: getRelativeTime(wd.createdAt),
-                    value: `-$${Number(wd.amount).toFixed(2)}`,
-                    timestamp: wd.createdAt,
-                });
-            });
-
-            recentReferrals.forEach((ref) => {
-                activities.push({
-                    type: "referral",
-                    title: "New Referral",
-                    date: getRelativeTime(ref.createdAt),
-                    value: ref.username || ref.name,
-                    timestamp: ref.createdAt,
-                });
-            });
-
-            // Sort by timestamp (most recent first) and take top 10
-            dashboard.recentActivity = activities
-                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-                .slice(0, 10);
-        } catch (activityError) {
-            console.error("Error fetching recent activity:", activityError);
-            // Continue with empty activity if error
+            const GTCMember = mongoose.model('GTCMember');
+            gtcMemberData = await GTCMember.findOne({
+                email: { $regex: new RegExp(`^${me.email}$`, 'i') }
+            }).lean();
+            hasJoinedGTC = !!gtcMemberData;
+        } catch (err) {
+            console.error('Error checking GTC membership:', err);
         }
 
-        // ==================== REAL CHART DATA (Last 7 Days) ====================
-        try {
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        // ==================== RECENT ACTIVITY ====================
+        const activities = [];
 
-            // Get deposits for last 7 days
-            const weeklyDeposits = await Deposit.aggregate([
+        // Recent deposits
+        completedDeposits.slice(0, 3).forEach(dep => {
+            activities.push({
+                type: 'deposit',
+                title: 'Deposit Completed',
+                date: getRelativeTime(dep.completedAt || dep.createdAt),
+                value: `₹${Number(dep.amount).toFixed(2)}`,
+                timestamp: dep.completedAt || dep.createdAt,
+                status: 'completed',
+                icon: 'TrendingUp'
+            });
+        });
+
+        // Pending deposits
+        pendingDeposits.slice(0, 2).forEach(dep => {
+            activities.push({
+                type: 'deposit',
+                title: 'Deposit Pending',
+                date: getRelativeTime(dep.createdAt),
+                value: `₹${Number(dep.amount).toFixed(2)}`,
+                timestamp: dep.createdAt,
+                status: 'pending',
+                icon: 'Clock'
+            });
+        });
+
+        // Recent withdrawals
+        completedWithdrawals.slice(0, 3).forEach(wd => {
+            activities.push({
+                type: 'withdrawal',
+                title: 'Withdrawal Processed',
+                date: getRelativeTime(wd.completedAt || wd.createdAt),
+                value: `-₹${Number(wd.netAmount).toFixed(2)}`,
+                timestamp: wd.completedAt || wd.createdAt,
+                status: 'completed',
+                icon: 'TrendingDown'
+            });
+        });
+
+        // Recent referrals
+        directUsers
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 3)
+            .forEach(ref => {
+                activities.push({
+                    type: 'referral',
+                    title: 'New Referral',
+                    date: getRelativeTime(ref.createdAt),
+                    value: ref.username,
+                    timestamp: ref.createdAt,
+                    status: 'completed',
+                    icon: 'Users'
+                });
+            });
+
+        // Sort by timestamp and take top 10
+        const recentActivity = activities
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+            .slice(0, 10);
+
+        // ==================== CHART DATA (LAST 7 DAYS) ====================
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const [weeklyDeposits, weeklyWithdrawals] = await Promise.all([
+            Deposit.aggregate([
                 {
                     $match: {
                         userId: me._id,
-                        status: "completed",
-                        createdAt: { $gte: sevenDaysAgo },
-                    },
+                        status: 'completed',
+                        completedAt: { $gte: sevenDaysAgo }
+                    }
                 },
                 {
                     $group: {
-                        _id: {
-                            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-                        },
-                        total: { $sum: "$amount" },
-                    },
+                        _id: { $dateToString: { format: '%Y-%m-%d', date: '$completedAt' } },
+                        total: { $sum: '$amount' }
+                    }
                 },
-                { $sort: { _id: 1 } },
-            ]);
-
-            // Get withdrawals for last 7 days
-            const weeklyWithdrawals = await Withdrawal.aggregate([
+                { $sort: { '_id': 1 } }
+            ]),
+            Withdrawal.aggregate([
                 {
                     $match: {
                         userId: me._id,
-                        status: "completed",
-                        createdAt: { $gte: sevenDaysAgo },
-                    },
+                        status: 'completed',
+                        completedAt: { $gte: sevenDaysAgo }
+                    }
                 },
                 {
                     $group: {
-                        _id: {
-                            $dateToString: { format: "%Y-%m-%d", date: "$createdAt" },
-                        },
-                        total: { $sum: "$amount" },
-                    },
+                        _id: { $dateToString: { format: '%Y-%m-%d', date: '$completedAt' } },
+                        total: { $sum: '$netAmount' }
+                    }
                 },
-                { $sort: { _id: 1 } },
-            ]);
+                { $sort: { '_id': 1 } }
+            ])
+        ]);
 
-            // Build 7-day chart data
-            const last7Days = getLast7Days();
-            const depositMap = {};
-            const withdrawalMap = {};
+        // Build 7-day chart data
+        const last7Days = getLast7Days();
+        const depositMap = {};
+        const withdrawalMap = {};
 
-            weeklyDeposits.forEach((d) => {
-                depositMap[d._id] = d.total;
-            });
+        weeklyDeposits.forEach(d => depositMap[d._id] = d.total);
+        weeklyWithdrawals.forEach(w => withdrawalMap[w._id] = w.total);
 
-            weeklyWithdrawals.forEach((w) => {
-                withdrawalMap[w._id] = w.total;
-            });
-
-            dashboard.chartData.deposits = last7Days.map((day) => ({
+        const chartData = {
+            deposits: last7Days.map(day => ({
                 label: day.label,
                 value: depositMap[day.date] || 0,
-            }));
-
-            dashboard.chartData.withdrawals = last7Days.map((day) => ({
+                date: day.date
+            })),
+            withdrawals: last7Days.map(day => ({
                 label: day.label,
                 value: withdrawalMap[day.date] || 0,
-            }));
-        } catch (chartError) {
-            console.error("Error generating chart data:", chartError);
-            // Fallback to empty chart data
-            dashboard.chartData.deposits = getLast7Days().map((d) => ({
-                label: d.label,
-                value: 0,
-            }));
-            dashboard.chartData.withdrawals = getLast7Days().map((d) => ({
-                label: d.label,
-                value: 0,
-            }));
+                date: day.date
+            }))
+        };
+
+        // ==================== TRADING STATS ====================
+        const tradingStats = {
+            totalTrades: me.tradingStats?.totalTrades || 0,
+            totalVolumeLots: me.tradingStats?.totalVolumeLots || 0,
+            totalProfit: me.tradingStats?.totalProfit || 0,
+            totalLoss: me.tradingStats?.totalLoss || 0,
+            winRate: me.tradingStats?.winRate || 0
+        };
+
+        // ==================== MONTHLY GROWTH ====================
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const [monthlyDeposits, monthlyWithdrawals] = await Promise.all([
+            Deposit.aggregate([
+                {
+                    $match: {
+                        userId: me._id,
+                        status: 'completed',
+                        completedAt: { $gte: thirtyDaysAgo }
+                    }
+                },
+                { $group: { _id: null, total: { $sum: '$amount' } } }
+            ]),
+            Withdrawal.aggregate([
+                {
+                    $match: {
+                        userId: me._id,
+                        status: 'completed',
+                        completedAt: { $gte: thirtyDaysAgo }
+                    }
+                },
+                { $group: { _id: null, total: { $sum: '$netAmount' } } }
+            ])
+        ]);
+
+        const growthData = {
+            monthlyDeposits: monthlyDeposits[0]?.total || 0,
+            monthlyWithdrawals: monthlyWithdrawals[0]?.total || 0,
+            monthlyNet: (monthlyDeposits[0]?.total || 0) - (monthlyWithdrawals[0]?.total || 0)
+        };
+
+        // ==================== ORDERS DATA ====================
+        let ordersData = { totalOrders: 0, totalSpent: 0, pendingOrders: 0 };
+        try {
+            const Order = mongoose.model('Order');
+            const [allOrders, pendingOrders] = await Promise.all([
+                Order.find({ userId: me._id }),
+                Order.find({ userId: me._id, status: { $ne: 'Delivered' } })
+            ]);
+
+            ordersData = {
+                totalOrders: allOrders.length,
+                totalSpent: allOrders.reduce((sum, o) => sum + (o.amount || 0), 0),
+                pendingOrders: pendingOrders.length
+            };
+        } catch (err) {
+            console.error('Error fetching orders:', err);
         }
+
+        // ==================== BUILD RESPONSE ====================
+        const dashboard = {
+            // User Info
+            user: {
+                name: me.name,
+                username: me.username,
+                email: me.email,
+                userType: me.userType,
+                status: me.status
+            },
+
+            // Financial Summary
+            walletBalance: me.walletBalance || 0,
+            financials: {
+                totalDeposits,
+                totalWithdrawals,
+                pendingDeposits: pendingDepositsAmount,
+                pendingWithdrawals: pendingWithdrawalsAmount,
+                netDeposits: totalDeposits - totalWithdrawals,
+                totalRebateIncome: rebateIncome,
+                totalAffiliateIncome: affiliateIncome,
+                totalIncome: rebateIncome + affiliateIncome,
+                lastDepositAt: completedDeposits[0]?.completedAt || null,
+                lastWithdrawalAt: completedWithdrawals[0]?.completedAt || null
+            },
+
+            // Trading Stats
+            tradingStats,
+
+            // Referral Data
+            referralDetails: {
+                totalDirectReferrals: directReferrals.length,
+                totalDownlineUsers: me.referralDetails?.referralTree?.length || 0,
+                recentReferrals: directUsers.slice(0, 5).map(u => ({
+                    name: u.name,
+                    username: u.username,
+                    userType: u.userType,
+                    joinedAt: u.createdAt
+                }))
+            },
+
+            // Downline Stats
+            downlineStats: {
+                totalAgents: agentsCount,
+                totalTraders: tradersCount,
+                cumulativeBalance,
+                totalDownlineVolume
+            },
+
+            // Growth Metrics
+            growth: growthData,
+
+            // Orders
+            orders: ordersData,
+
+            // GTC Status
+            gtc: {
+                hasJoined: hasJoinedGTC,
+                tradingBalance: gtcMemberData?.tradingBalance || 0,
+                kycStatus: gtcMemberData?.kycStatus || '',
+                onboardedWithCall: gtcMemberData?.onboardedWithCall || false,
+                onboardedWithMessage: gtcMemberData?.onboardedWithMessage || false
+            },
+
+            // Recent Activity
+            recentActivity,
+
+            // Chart Data
+            chartData,
+
+            // Quick Stats
+            quickStats: {
+                depositsCount: completedDeposits.length,
+                withdrawalsCount: completedWithdrawals.length,
+                activeReferrals: directUsers.filter(u => u.status === 'active').length
+            }
+        };
 
         res.json(dashboard);
     } catch (e) {
-        console.error("Dashboard error:", e);
-        res.status(500).json({ message: "Failed to load dashboard" });
+        console.error('Dashboard error:', e);
+        res.status(500).json({ message: 'Failed to load dashboard' });
     }
 });
 
