@@ -93,7 +93,6 @@ const Users = () => {
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
-
     try {
       const params = new URLSearchParams({
         page: currentPage,
@@ -104,7 +103,10 @@ const Users = () => {
       if (filterType) params.append("userType", filterType);
       if (searchQuery) params.append("search", searchQuery);
 
-      const response = await api.get(`/admin/users?${params.toString()}`);
+      // Use the new endpoint with GTC status
+      const response = await api.get(
+        `/admin/users-with-gtc-status?${params.toString()}`,
+      );
 
       if (response.data.success) {
         setUsers(response.data.data);
@@ -449,7 +451,6 @@ const Users = () => {
       <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-8">
-
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
@@ -509,7 +510,7 @@ const Users = () => {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
@@ -551,6 +552,30 @@ const Users = () => {
             </div>
             <p className="text-2xl font-bold text-orange-900">
               {formatCurrency(stats.totalBalance)}
+            </p>
+          </div>
+
+          <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-sm font-medium text-green-900">Joined GTC</p>
+            </div>
+            <p className="text-2xl font-bold text-green-900">
+              {stats.joinedGTC || 0}
+            </p>
+          </div>
+
+          <div className="bg-linear-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
+                <XCircle className="w-5 h-5 text-white" />
+              </div>
+              <p className="text-sm font-medium text-red-900">Not Joined GTC</p>
+            </div>
+            <p className="text-2xl font-bold text-red-900">
+              {stats.notJoinedGTC || 0}
             </p>
           </div>
         </div>
@@ -658,23 +683,48 @@ const Users = () => {
                   users.map((user) => (
                     <tr
                       key={user._id}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                      className={`border-b border-gray-100 transition-colors ${
+                        user.hasJoinedGTC
+                          ? "bg-green-50 hover:bg-green-100"
+                          : "bg-red-50 hover:bg-red-100"
+                      }`}
                     >
+                      {/* User Info */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                            <User className="w-5 h-5 text-orange-600" />
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              user.hasJoinedGTC ? "bg-green-200" : "bg-red-200"
+                            }`}
+                          >
+                            <User
+                              className={`w-5 h-5 ${
+                                user.hasJoinedGTC
+                                  ? "text-green-700"
+                                  : "text-red-700"
+                              }`}
+                            />
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">
-                              {user.name}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-gray-900">
+                                {user.name}
+                              </p>
+                              {user.hasJoinedGTC && (
+                                <span className="px-2 py-0.5 bg-green-200 text-green-800 text-xs font-semibold rounded-full flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  GTC
+                                </span>
+                              )}
+                            </div>
                             <p className="text-xs font-mono text-gray-500">
-                              @{user.username}
+                              {user.username}
                             </p>
                           </div>
                         </div>
                       </td>
+
+                      {/* Contact */}
                       <td className="px-6 py-4">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -687,25 +737,35 @@ const Users = () => {
                           </div>
                         </div>
                       </td>
+
+                      {/* Type */}
                       <td className="px-6 py-4">
                         <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 capitalize">
                           {user.userType}
                         </span>
                       </td>
+
+                      {/* Status */}
                       <td className="px-6 py-4">
                         {getStatusBadge(user.status)}
                       </td>
+
+                      {/* Wallet Balance */}
                       <td className="px-6 py-4 text-right">
-                        <p className="font-bold text-green-600">
+                        <p className="font-bold text-green-600 text-nowrap">
                           {formatCurrency(user.walletBalance)}
                         </p>
                       </td>
+
+                      {/* Joined */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-sm text-gray-600 text-nowrap">
                           <Calendar className="w-4 h-4 text-gray-400" />
                           {formatDate(user.createdAt)}
                         </div>
                       </td>
+
+                      {/* Actions */}
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
@@ -879,7 +939,7 @@ const Users = () => {
                   </div>
                   <p className="text-2xl font-bold text-orange-900">
                     {formatCurrency(
-                      selectedUser.financials?.totalAffiliateIncome
+                      selectedUser.financials?.totalAffiliateIncome,
                     )}
                   </p>
                 </div>
@@ -1097,7 +1157,7 @@ const Users = () => {
                     _id: "root",
                     children: treeData.tree,
                   },
-                  true
+                  true,
                 )}
               </div>
 

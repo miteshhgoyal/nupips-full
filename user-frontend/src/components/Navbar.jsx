@@ -67,7 +67,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
         {
           _id: "2",
           type: "wallet",
-          message: "₹500 credited to wallet",
+          message: "$500 credited to wallet",
           title: "Deposit confirmed",
           isRead: false,
           createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
@@ -152,8 +152,8 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
       await authAPI.put(`/notifications/${notificationId}/read`);
       setNotifications((prev) =>
         prev.map((notif) =>
-          notif._id === notificationId ? { ...notif, isRead: true } : notif
-        )
+          notif._id === notificationId ? { ...notif, isRead: true } : notif,
+        ),
       );
     } catch (error) {
       console.error("Failed to mark as read:", error);
@@ -164,7 +164,7 @@ const Navbar = ({ toggleSidebar, navigationLinks, config }) => {
     try {
       await authAPI.put("/notifications/read-all");
       setNotifications((prev) =>
-        prev.map((notif) => ({ ...notif, isRead: true }))
+        prev.map((notif) => ({ ...notif, isRead: true })),
       );
     } catch (error) {
       console.error("Failed to mark all as read:", error);

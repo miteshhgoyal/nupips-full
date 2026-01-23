@@ -38,7 +38,7 @@ import Profile from "./pages/Profile";
 import Dashboard from "./pages/Dashboard";
 import Deposits from "./pages/Deposits";
 import Withdrawals from "./pages/Withdrawals";
-import Users from "./pages/Users";
+import NupipsMembers from "./pages/NupipsMembers";
 import GTCMembers from "./pages/GTCMembers";
 import Competition from "./pages/Competition";
 import Subadmins from "./pages/Subadmins";
@@ -293,7 +293,7 @@ function App() {
               path="/users"
               element={
                 <ProtectedRoute>
-                  <Users />
+                  <NupipsMembers />
                 </ProtectedRoute>
               }
             />

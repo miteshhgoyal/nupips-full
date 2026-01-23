@@ -2,7 +2,7 @@
 
 - in main nupips user dashboard - trading performance section - fix it ... what api is used for this section ? and what is net balance ? add total gtc users in dashboard.
 
-sidebar dashboard updates.
+sidebar dashboard updates. - done
 
 gtc dashboard - account balance > gtc wallet balance. - done
 

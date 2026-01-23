@@ -783,6 +783,97 @@ router.get('/users', async (req, res) => {
     }
 });
 
+router.get('/users-with-gtc-status', async (req, res) => {
+    try {
+        const { status, userType, search, page = 1, limit = 20 } = req.query;
+
+        // Build filter for users
+        const filter = {
+            email: { $ne: process.env.ADMIN_EMAIL },
+            userType: { $ne: 'subadmin' }
+        };
+
+        if (status) filter.status = status;
+        if (userType) filter.userType = userType;
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { username: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        const skip = parseInt(page - 1) * parseInt(limit);
+
+        // Fetch users
+        const [users, total, stats] = await Promise.all([
+            User.find(filter)
+                .select('-password -gtcfx.accessToken -gtcfx.refreshToken')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .lean(),
+            User.countDocuments(filter),
+            User.aggregate([
+                {
+                    $facet: {
+                        totalUsers: [{ $count: 'count' }],
+                        activeUsers: [{ $match: { status: 'active' } }, { $count: 'count' }],
+                        inactiveUsers: [{ $match: { status: 'inactive' } }, { $count: 'count' }],
+                        agentUsers: [{ $match: { userType: 'agent' } }, { $count: 'count' }],
+                        traderUsers: [{ $match: { userType: 'trader' } }, { $count: 'count' }],
+                        totalWalletBalance: [{ $group: { _id: null, total: { $sum: '$walletBalance' } } }]
+                    }
+                }
+            ])
+        ]);
+
+        // Get all GTC members emails
+        const gtcMembers = await GTCMember.find({}).select('email').lean();
+        const gtcEmailsSet = new Set(gtcMembers.map(m => m.email.toLowerCase().trim()));
+
+        // Add hasJoinedGTC flag to each user
+        const usersWithGTCStatus = users.map(user => ({
+            ...user,
+            hasJoinedGTC: gtcEmailsSet.has(user.email.toLowerCase().trim())
+        }));
+
+        // Calculate GTC join stats
+        const joinedGTCCount = usersWithGTCStatus.filter(u => u.hasJoinedGTC).length;
+        const notJoinedGTCCount = usersWithGTCStatus.filter(u => !u.hasJoinedGTC).length;
+
+        const formattedStats = {
+            total: stats[0].totalUsers[0]?.count || 0,
+            active: stats[0].activeUsers[0]?.count || 0,
+            inactive: stats[0].inactiveUsers[0]?.count || 0,
+            agents: stats[0].agentUsers[0]?.count || 0,
+            traders: stats[0].traderUsers[0]?.count || 0,
+            totalBalance: stats[0].totalWalletBalance[0]?.total || 0,
+            joinedGTC: joinedGTCCount,
+            notJoinedGTC: notJoinedGTCCount
+        };
+
+        res.status(200).json({
+            success: true,
+            data: usersWithGTCStatus,
+            stats: formattedStats,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        console.error('Get users with GTC status error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch users with GTC status',
+            error: error.message
+        });
+    }
+});
+
 router.get('/users/list', async (req, res) => {
     try {
         const users = await User.find({
