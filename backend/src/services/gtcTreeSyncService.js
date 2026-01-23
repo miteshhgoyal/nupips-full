@@ -31,17 +31,42 @@ async function fetchTradingBalance(memberId, accessToken, retries = 2) {
             const mtAccounts = response.data.data.mt_account || [];
             const wallet = response.data.data.wallet || {};
 
+            // Calculate total trading balance with proper currency conversion
             const totalTradingBalance = mtAccounts.reduce((sum, account) => {
-                return sum + parseFloat(account.balance || 0);
+                const balance = parseFloat(account.balance || 0);
+                const currency = account.currency?.toUpperCase();
+
+                // USC is cents (1 USC = 0.01 USD), USD is dollars
+                if (currency === 'USC') {
+                    return sum + (balance / 100);
+                } else if (currency === 'USD') {
+                    return sum + balance;
+                } else {
+                    // Unknown currency - log warning and treat as USD
+                    console.warn(`Unknown currency: ${currency} for account ${account.loginid} (Member: ${memberId})`);
+                    return sum + balance;
+                }
             }, 0);
 
+            // Wallet balance is already in USD
             const walletBalance = parseFloat(wallet.amount || 0);
 
             return {
                 tradingBalance: totalTradingBalance,
                 walletBalance: walletBalance,
                 tradingBalanceDetails: {
-                    mtAccounts,
+                    mtAccounts: mtAccounts.map(account => ({
+                        loginid: account.loginid,
+                        account_name: account.account_name,
+                        balance: parseFloat(account.balance || 0),
+                        balanceUSD: account.currency?.toUpperCase() === 'USC'
+                            ? parseFloat(account.balance || 0) / 100
+                            : parseFloat(account.balance || 0),
+                        credit: parseFloat(account.credit || 0),
+                        equity: parseFloat(account.equity || 0),
+                        margin: parseFloat(account.margin || 0),
+                        currency: account.currency
+                    })),
                     wallet,
                     lastFetched: new Date(),
                 },

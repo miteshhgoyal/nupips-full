@@ -68,14 +68,21 @@ const TradingAccountsTooltip = ({ accounts }) => {
     );
   }
 
-  const totalBalance = accounts.reduce(
-    (sum, acc) => sum + parseFloat(acc.balance || 0),
-    0,
-  );
-  const totalEquity = accounts.reduce(
-    (sum, acc) => sum + parseFloat(acc.equity || 0),
-    0,
-  );
+  const totalBalance = accounts.reduce((sum, acc) => {
+    const balance = parseFloat(acc.balance || 0);
+    const currency = acc.currency?.toUpperCase();
+
+    // USC is cents (divide by 100), USD is dollars
+    return sum + (currency === "USC" ? balance / 100 : balance);
+  }, 0);
+
+  const totalEquity = accounts.reduce((sum, acc) => {
+    const equity = parseFloat(acc.equity || 0);
+    const currency = acc.currency?.toUpperCase();
+
+    // USC is cents (divide by 100), USD is dollars
+    return sum + (currency === "USC" ? equity / 100 : equity);
+  }, 0);
 
   return (
     <div className="absolute z-50 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 -mt-6 right-0">
@@ -463,9 +470,6 @@ const GTCFxDashboard = () => {
               .length,
             kycPending: allMembers.filter((m) => m.kycStatus === "pending")
               .length,
-            onboardedCall: allMembers.filter((m) => m.onboardedWithCall).length,
-            onboardedMessage: allMembers.filter((m) => m.onboardedWithMessage)
-              .length,
             recentMembers: allMembers
               .sort((a, b) => b.joinedAt - a.joinedAt)
               .slice(0, 5),
@@ -563,10 +567,13 @@ const GTCFxDashboard = () => {
 
   // Calculate total trading balance
   const totalTradingBalance =
-    tradingAccounts?.reduce(
-      (sum, acc) => sum + parseFloat(acc.balance || 0),
-      0,
-    ) || 0;
+    tradingAccounts?.reduce((sum, acc) => {
+      const balance = parseFloat(acc.balance || 0);
+      const currency = acc.currency?.toUpperCase();
+
+      // USC is cents (divide by 100), USD is dollars
+      return sum + (currency === "USC" ? balance / 100 : balance);
+    }, 0) || 0;
 
   return (
     <>

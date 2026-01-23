@@ -121,8 +121,6 @@ const FilterSection = ({
   setFilterUserType,
   filterKycStatus,
   setFilterKycStatus,
-  filterOnboarded,
-  setFilterOnboarded,
   onClear,
 }) => (
   <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
@@ -179,24 +177,6 @@ const FilterSection = ({
           <option value="completed">Completed</option>
           <option value="pending">Pending</option>
           <option value="">Not Started</option>
-        </select>
-      </div>
-
-      {/* Onboarding Status */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Onboarding
-        </label>
-        <select
-          value={filterOnboarded}
-          onChange={(e) => setFilterOnboarded(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all"
-        >
-          <option value="">All</option>
-          <option value="call">Called</option>
-          <option value="message">Messaged</option>
-          <option value="both">Both</option>
-          <option value="none">Not Contacted</option>
         </select>
       </div>
 
@@ -277,40 +257,6 @@ const TreeNodeRow = ({
     );
   };
 
-  const getOnboardingBadge = (member) => {
-    const hasCall = member.onboardedWithCall;
-    const hasMessage = member.onboardedWithMessage;
-
-    if (hasCall && hasMessage) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
-          <CheckCircle className="w-3 h-3" />
-          Full Contact
-        </span>
-      );
-    } else if (hasCall) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
-          <Phone className="w-3 h-3" />
-          Called
-        </span>
-      );
-    } else if (hasMessage) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-semibold">
-          <Mail className="w-3 h-3" />
-          Messaged
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
-        <XCircle className="w-3 h-3" />
-        Not Contacted
-      </span>
-    );
-  };
-
   return (
     <>
       <tr
@@ -377,7 +323,7 @@ const TreeNodeRow = ({
           </div>
         </td>
 
-        {/* KYC & Onboarding Status */}
+        {/* KYC */}
         <td className="px-6 py-4">
           <div className="flex flex-col gap-1">
             {getKycBadge(node.kycStatus)}
@@ -633,7 +579,6 @@ const GTCFxAgentMembers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUserType, setFilterUserType] = useState("");
   const [filterKycStatus, setFilterKycStatus] = useState("");
-  const [filterOnboarded, setFilterOnboarded] = useState("");
 
   // Detail modal
   const [selectedMember, setSelectedMember] = useState(null);
@@ -781,7 +726,6 @@ const GTCFxAgentMembers = () => {
     setSearchTerm("");
     setFilterUserType("");
     setFilterKycStatus("");
-    setFilterOnboarded("");
   };
 
   const handleExportJSON = () => {
@@ -818,21 +762,9 @@ const GTCFxAgentMembers = () => {
     const matchesKyc =
       filterKycStatus === "" || member.kycStatus === filterKycStatus;
 
-    let matchesOnboarding = true;
-    if (filterOnboarded === "call") {
-      matchesOnboarding = member.onboardedWithCall === true;
-    } else if (filterOnboarded === "message") {
-      matchesOnboarding = member.onboardedWithMessage === true;
-    } else if (filterOnboarded === "both") {
-      matchesOnboarding =
-        member.onboardedWithCall === true &&
-        member.onboardedWithMessage === true;
-    } else if (filterOnboarded === "none") {
-      matchesOnboarding =
-        !member.onboardedWithCall && !member.onboardedWithMessage;
-    }
+    
 
-    return matchesSearch && matchesType && matchesKyc && matchesOnboarding;
+    return matchesSearch && matchesType && matchesKyc;
   };
 
   // ============ STATS CALCULATION ============
@@ -851,8 +783,6 @@ const GTCFxAgentMembers = () => {
       0,
     ),
     kycCompleted: allMembers.filter((m) => m.kycStatus === "completed").length,
-    onboardedCall: allMembers.filter((m) => m.onboardedWithCall).length,
-    onboardedMessage: allMembers.filter((m) => m.onboardedWithMessage).length,
   };
 
   // ============ LOADING STATE ============
@@ -961,8 +891,6 @@ const GTCFxAgentMembers = () => {
           setFilterUserType={setFilterUserType}
           filterKycStatus={filterKycStatus}
           setFilterKycStatus={setFilterKycStatus}
-          filterOnboarded={filterOnboarded}
-          setFilterOnboarded={setFilterOnboarded}
           onClear={handleClearFilters}
         />
 

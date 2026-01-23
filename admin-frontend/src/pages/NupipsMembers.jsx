@@ -1,4 +1,4 @@
-// pages/admin/Users.jsx
+// pages/admin/Users.jsx - Enhanced with Advanced Filters
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -30,6 +30,10 @@ import {
   ChevronRight as ChevronRightIcon,
   Save,
   TrendingUp,
+  TrendingDown,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -56,10 +60,18 @@ const Users = () => {
     totalBalance: 0,
   });
 
-  // Filters
+  // Basic Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [filterType, setFilterType] = useState("");
+  const [filterGTC, setFilterGTC] = useState("");
+
+  // Advanced Filters
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [filterWalletBalance, setFilterWalletBalance] = useState("all");
+  const [filterDeposits, setFilterDeposits] = useState("all");
+  const [filterWithdrawals, setFilterWithdrawals] = useState("all");
+  const [sortBy, setSortBy] = useState("joinedDate");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -88,7 +100,7 @@ const Users = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, filterStatus, filterType]);
+  }, [currentPage, filterStatus, filterGTC]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -100,10 +112,8 @@ const Users = () => {
       });
 
       if (filterStatus) params.append("status", filterStatus);
-      if (filterType) params.append("userType", filterType);
       if (searchQuery) params.append("search", searchQuery);
 
-      // Use the new endpoint with GTC status
       const response = await api.get(
         `/admin/users-with-gtc-status?${params.toString()}`,
       );
@@ -135,11 +145,142 @@ const Users = () => {
 
   const handleClearFilters = () => {
     setFilterStatus("");
-    setFilterType("");
+    setFilterGTC("");
     setSearchQuery("");
+    setFilterWalletBalance("all");
+    setFilterDeposits("all");
+    setFilterWithdrawals("all");
+    setSortBy("joinedDate");
+    setSortOrder("desc");
     setCurrentPage(1);
     setTimeout(fetchUsers, 100);
   };
+
+  // Advanced filtering and sorting logic
+  const getFilteredAndSortedUsers = () => {
+    let filtered = [...users];
+
+    // GTC filter
+    if (filterGTC === "registered") {
+      filtered = filtered.filter((u) => u.hasJoinedGTC);
+    } else if (filterGTC === "not-registered") {
+      filtered = filtered.filter((u) => !u.hasJoinedGTC);
+    }
+
+    // Wallet balance filter
+    if (filterWalletBalance !== "all") {
+      filtered = filtered.filter((u) => {
+        const balance = u.walletBalance || 0;
+        switch (filterWalletBalance) {
+          case "zero":
+            return balance === 0;
+          case "low":
+            return balance > 0 && balance <= 100;
+          case "medium":
+            return balance > 100 && balance <= 1000;
+          case "high":
+            return balance > 1000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Deposits filter
+    if (filterDeposits !== "all") {
+      filtered = filtered.filter((u) => {
+        const deposits = u.financials?.totalDeposits || 0;
+        switch (filterDeposits) {
+          case "zero":
+            return deposits === 0;
+          case "low":
+            return deposits > 0 && deposits <= 500;
+          case "medium":
+            return deposits > 500 && deposits <= 5000;
+          case "high":
+            return deposits > 5000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Withdrawals filter
+    if (filterWithdrawals !== "all") {
+      filtered = filtered.filter((u) => {
+        const withdrawals = u.financials?.totalWithdrawals || 0;
+        switch (filterWithdrawals) {
+          case "zero":
+            return withdrawals === 0;
+          case "low":
+            return withdrawals > 0 && withdrawals <= 500;
+          case "medium":
+            return withdrawals > 500 && withdrawals <= 5000;
+          case "high":
+            return withdrawals > 5000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Sorting
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+
+      switch (sortBy) {
+        case "name":
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+          break;
+        case "walletBalance":
+          aVal = a.walletBalance || 0;
+          bVal = b.walletBalance || 0;
+          break;
+        case "deposits":
+          aVal = a.financials?.totalDeposits || 0;
+          bVal = b.financials?.totalDeposits || 0;
+          break;
+        case "withdrawals":
+          aVal = a.financials?.totalWithdrawals || 0;
+          bVal = b.financials?.totalWithdrawals || 0;
+          break;
+        case "totalEarnings":
+          aVal =
+            (a.financials?.totalRebateIncome || 0) +
+            (a.financials?.totalAffiliateIncome || 0);
+          bVal =
+            (b.financials?.totalRebateIncome || 0) +
+            (b.financials?.totalAffiliateIncome || 0);
+          break;
+        case "joinedDate":
+        default:
+          aVal = new Date(a.createdAt);
+          bVal = new Date(b.createdAt);
+          break;
+      }
+
+      if (sortOrder === "asc") {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredUsers = getFilteredAndSortedUsers();
+
+  // Get top 10 and bottom 10 by wallet balance
+  const top10ByWallet = [...users]
+    .sort((a, b) => (b.walletBalance || 0) - (a.walletBalance || 0))
+    .slice(0, 10);
+
+  const bottom10ByWallet = [...users]
+    .filter((u) => (u.walletBalance || 0) > 0)
+    .sort((a, b) => (a.walletBalance || 0) - (b.walletBalance || 0))
+    .slice(0, 10);
 
   const openDetailModal = async (user) => {
     try {
@@ -173,7 +314,7 @@ const Users = () => {
     try {
       const response = await api.patch(
         `/admin/users/${selectedUser._id}`,
-        editForm
+        editForm,
       );
 
       if (response.data.success) {
@@ -230,7 +371,7 @@ const Users = () => {
         <div
           className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
             isRoot
-              ? "bg-linear-to-r from-orange-500 to-orange-600 border-orange-700 shadow-lg"
+              ? "bg-gradient-to-r from-orange-500 to-orange-600 border-orange-700 shadow-lg"
               : "bg-white border-gray-200 hover:border-orange-300 hover:shadow-sm"
           } mb-2`}
         >
@@ -302,8 +443,8 @@ const Users = () => {
                   isRoot
                     ? "bg-white/20 text-white"
                     : node.status === "active"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-600"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-600"
                 }`}
               >
                 {node.status}
@@ -370,17 +511,23 @@ const Users = () => {
         "Phone",
         "Type",
         "Status",
+        "GTC Status",
         "Wallet Balance",
+        "Total Deposits",
+        "Total Withdrawals",
         "Created At",
       ],
-      ...users.map((u) => [
+      ...filteredUsers.map((u) => [
         u.name,
         u.username,
         u.email,
         u.phone,
         u.userType,
         u.status,
-        u.walletBalance,
+        u.hasJoinedGTC ? "Registered" : "Not Registered",
+        u.walletBalance || 0,
+        u.financials?.totalDeposits || 0,
+        u.financials?.totalWithdrawals || 0,
         new Date(u.createdAt).toLocaleDateString(),
       ]),
     ];
@@ -395,7 +542,7 @@ const Users = () => {
   };
 
   const formatCurrency = (amount) => {
-    return `$${parseFloat(amount || 0).toFixed(2)}`;
+    return `₹${parseFloat(amount || 0).toFixed(2)}`;
   };
 
   const formatDate = (date) => {
@@ -448,7 +595,7 @@ const Users = () => {
         <title>Manage Users - Admin</title>
       </Helmet>
 
-      <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -511,7 +658,7 @@ const Users = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                 <UsersIcon className="w-5 h-5 text-white" />
@@ -521,7 +668,7 @@ const Users = () => {
             <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
           </div>
 
-          <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-5 h-5 text-white" />
@@ -531,7 +678,7 @@ const Users = () => {
             <p className="text-2xl font-bold text-green-900">{stats.active}</p>
           </div>
 
-          <div className="bg-linear-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
                 <Network className="w-5 h-5 text-white" />
@@ -541,7 +688,7 @@ const Users = () => {
             <p className="text-2xl font-bold text-purple-900">{stats.agents}</p>
           </div>
 
-          <div className="bg-linear-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
@@ -555,7 +702,7 @@ const Users = () => {
             </p>
           </div>
 
-          <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                 <CheckCircle className="w-5 h-5 text-white" />
@@ -567,7 +714,7 @@ const Users = () => {
             </p>
           </div>
 
-          <div className="bg-linear-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center">
                 <XCircle className="w-5 h-5 text-white" />
@@ -580,59 +727,215 @@ const Users = () => {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-orange-600" />
-            <h2 className="text-lg font-bold text-gray-900">Filters</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by name, email, or username..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
+        {/* Top/Bottom 10 Quick View */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Top 10 by Wallet Balance */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-green-600" />
               </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Top 10 by Wallet Balance
+              </h3>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status
-              </label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+            <div className="space-y-2">
+              {top10ByWallet.slice(0, 5).map((user, idx) => (
+                <div
+                  key={user._id}
+                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-400 w-6">
+                      #{idx + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {user.name}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-green-600">
+                    {formatCurrency(user.walletBalance)}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 mt-4">
+          {/* Bottom 10 by Wallet Balance */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Bottom 10 by Wallet Balance
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {bottom10ByWallet.slice(0, 5).map((user, idx) => (
+                <div
+                  key={user._id}
+                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-400 w-6">
+                      #{idx + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {user.name}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-red-600">
+                    {formatCurrency(user.walletBalance)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced Filters */}
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Filter className="w-5 h-5 text-orange-600" />
+              <h2 className="text-lg font-bold text-gray-900">
+                Filters & Sorting
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+              >
+                {showAdvancedFilters ? "Hide Advanced" : "Show Advanced"}
+              </button>
+              <button
+                onClick={handleClearFilters}
+                className="px-4 py-2 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          {/* Basic Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div className="md:col-span-2 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, email, or username..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+
+            <select
+              value={filterGTC}
+              onChange={(e) => setFilterGTC(e.target.value)}
+              className="px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="">GTC Status: All</option>
+              <option value="registered">GTC Registered</option>
+              <option value="not-registered">Not Registered</option>
+            </select>
+          </div>
+
+          {/* Sort Controls */}
+          <div className="flex items-center gap-2">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="joinedDate">Sort: Join Date</option>
+              <option value="name">Sort: Name</option>
+              <option value="walletBalance">Sort: Wallet Balance</option>
+              <option value="deposits">Sort: Deposits</option>
+              <option value="withdrawals">Sort: Withdrawals</option>
+              <option value="totalEarnings">Sort: Earnings</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+              className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50"
+              title={sortOrder === "asc" ? "Ascending" : "Descending"}
+            >
+              {sortOrder === "asc" ? (
+                <ArrowUp className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ArrowDown className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
             <button
               onClick={handleSearch}
               className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
             >
               Search
             </button>
-            <button
-              onClick={handleClearFilters}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
-            >
-              Clear
-            </button>
+          </div>
+
+          {/* Advanced Filters */}
+          {showAdvancedFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 mt-4 border-t border-gray-200">
+              <select
+                value={filterWalletBalance}
+                onChange={(e) => setFilterWalletBalance(e.target.value)}
+                className="px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="all">Wallet Balance: All</option>
+                <option value="zero">Zero Balance</option>
+                <option value="low">Low (₹0 - ₹100)</option>
+                <option value="medium">Medium (₹100 - ₹1,000)</option>
+                <option value="high">High (&gt; ₹1,000)</option>
+              </select>
+
+              <select
+                value={filterDeposits}
+                onChange={(e) => setFilterDeposits(e.target.value)}
+                className="px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="all">Total Deposits: All</option>
+                <option value="zero">No Deposits</option>
+                <option value="low">Low (₹0 - ₹500)</option>
+                <option value="medium">Medium (₹500 - ₹5,000)</option>
+                <option value="high">High (&gt; ₹5,000)</option>
+              </select>
+
+              <select
+                value={filterWithdrawals}
+                onChange={(e) => setFilterWithdrawals(e.target.value)}
+                className="px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="all">Total Withdrawals: All</option>
+                <option value="zero">No Withdrawals</option>
+                <option value="low">Low (₹0 - ₹500)</option>
+                <option value="medium">Medium (₹500 - ₹5,000)</option>
+                <option value="high">High (&gt; ₹5,000)</option>
+              </select>
+            </div>
+          )}
+
+          {/* Active Filters Summary */}
+          <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
+            <span className="font-medium">Showing:</span>
+            <span className="font-bold text-orange-600">
+              {filteredUsers.length}
+            </span>
+            <span>of</span>
+            <span className="font-bold">{users.length}</span>
+            <span>users</span>
           </div>
         </div>
 
@@ -649,13 +952,16 @@ const Users = () => {
                     Contact
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Type
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     Status
                   </th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
                     Wallet Balance
+                  </th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
+                    Deposits
+                  </th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
+                    Withdrawals
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
                     Joined
@@ -666,9 +972,9 @@ const Users = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.length === 0 ? (
+                {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="px-6 py-16 text-center">
+                    <td colSpan="8" className="px-6 py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
                           <UsersIcon className="w-8 h-8 text-gray-400" />
@@ -680,7 +986,7 @@ const Users = () => {
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => (
+                  filteredUsers.map((user) => (
                     <tr
                       key={user._id}
                       className={`border-b border-gray-100 transition-colors ${
@@ -738,13 +1044,6 @@ const Users = () => {
                         </div>
                       </td>
 
-                      {/* Type */}
-                      <td className="px-6 py-4">
-                        <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 capitalize">
-                          {user.userType}
-                        </span>
-                      </td>
-
                       {/* Status */}
                       <td className="px-6 py-4">
                         {getStatusBadge(user.status)}
@@ -754,6 +1053,22 @@ const Users = () => {
                       <td className="px-6 py-4 text-right">
                         <p className="font-bold text-green-600 text-nowrap">
                           {formatCurrency(user.walletBalance)}
+                        </p>
+                      </td>
+
+                      {/* Deposits */}
+                      <td className="px-6 py-4 text-right">
+                        <p className="font-semibold text-blue-600 text-nowrap">
+                          {formatCurrency(user.financials?.totalDeposits || 0)}
+                        </p>
+                      </td>
+
+                      {/* Withdrawals */}
+                      <td className="px-6 py-4 text-right">
+                        <p className="font-semibold text-red-600 text-nowrap">
+                          {formatCurrency(
+                            user.financials?.totalWithdrawals || 0,
+                          )}
                         </p>
                       </td>
 
@@ -804,7 +1119,7 @@ const Users = () => {
         {users.length > 0 && (
           <div className="flex items-center justify-between mt-6">
             <p className="text-sm text-gray-600">
-              Showing {users.length} of {totalCount} users
+              Showing {filteredUsers.length} of {totalCount} users
             </p>
 
             <div className="flex items-center gap-2">

@@ -18,3 +18,22 @@ show what users have joined gtc or not .. - done
 in profit logs .. remove share fees, management fees - done
 put full tree view make a seprate page.. - done
 
+---
+
+a nupips user can only see email and phone of his direct members only - not full downline... and rest will be masked. - done
+
+add gtcfx regisrerd or not thing in nupips team page too in the user side. - done
+
+user side remove onboarded downline user or not - done
+
+in admin side gtc members .. while downloading csv of downline of a user... open a popup to ask if to include data of only direct downline or full dowlnine or how many levels downline. - done
+
+Trading Balance accounts calculations are wrong everywhere. - competition and dashboard.. - done
+
+agent members page bug... uses fixed data only not fresh users downline. - to check yet.
+
+---
+
+nupips team... and admin side... in user list sectiosn add more kind of filters too. and top 10 higest.. lowest balance etc stuff too.
+
+admin side sync gtc .. automated syncings to be done..

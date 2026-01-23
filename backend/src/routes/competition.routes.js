@@ -111,15 +111,44 @@ async function fetchBalanceInfo(memberId, authHeader) {
         if (response.data.code === 200) {
             const childData = response.data.data;
 
+            // Wallet balance (already in USD)
             const walletBalance = parseFloat(childData.wallet?.amount || 0);
+
+            // Trading balance - sum all MT5 accounts with currency conversion
             const tradingBalance = (childData.mt_account || []).reduce((sum, account) => {
-                return sum + parseFloat(account.balance || 0);
+                const balance = parseFloat(account.balance || 0);
+                const currency = account.currency?.toUpperCase();
+
+                // USC is cents, so divide by 100 to convert to USD
+                // USD is already in dollars
+                if (currency === 'USC') {
+                    return sum + (balance / 100);
+                } else if (currency === 'USD') {
+                    return sum + balance;
+                } else {
+                    // Unknown currency - log warning and treat as USD
+                    console.warn(`Unknown currency: ${currency} for account ${account.loginid}`);
+                    return sum + balance;
+                }
             }, 0);
 
             return {
                 walletBalance,
                 tradingBalance,
-                totalGTCBalance: walletBalance + tradingBalance
+                totalGTCBalance: walletBalance + tradingBalance,
+                // Also return detailed MT5 account info for reference
+                mtAccounts: (childData.mt_account || []).map(account => ({
+                    loginId: account.loginid,
+                    accountName: account.account_name,
+                    balance: parseFloat(account.balance || 0),
+                    balanceUSD: account.currency?.toUpperCase() === 'USC'
+                        ? parseFloat(account.balance || 0) / 100
+                        : parseFloat(account.balance || 0),
+                    credit: parseFloat(account.credit || 0),
+                    equity: parseFloat(account.equity || 0),
+                    margin: parseFloat(account.margin || 0),
+                    currency: account.currency
+                }))
             };
         }
 

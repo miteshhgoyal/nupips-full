@@ -7,7 +7,6 @@ import {
   Filter,
   Loader,
   AlertCircle,
-  ArrowLeft,
   X,
   Eye,
   RefreshCw,
@@ -42,9 +41,12 @@ import {
   Minus,
   Plus,
   Settings,
+  TrendingDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { useNavigate } from "react-router-dom";
 
 const GTCMembers = () => {
   const navigate = useNavigate();
@@ -81,6 +83,13 @@ const GTCMembers = () => {
   const [filterLevel, setFilterLevel] = useState("");
   const [filterHasParent, setFilterHasParent] = useState("");
   const [filterOnboardingStatus, setFilterOnboardingStatus] = useState("");
+
+  // Advanced Filters
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [filterTradingBalance, setFilterTradingBalance] = useState("all");
+  const [filterWalletBalance, setFilterWalletBalance] = useState("all");
+  const [sortBy, setSortBy] = useState("joinedDate");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -322,6 +331,106 @@ const GTCMembers = () => {
       setLoading(false);
     }
   };
+
+  const getFilteredAndSortedMembers = () => {
+    let filtered = [...members];
+
+    // Trading Balance filter
+    if (filterTradingBalance !== "all") {
+      filtered = filtered.filter((m) => {
+        const balance = m.tradingBalance || 0;
+        switch (filterTradingBalance) {
+          case "zero":
+            return balance === 0;
+          case "low":
+            return balance > 0 && balance <= 100;
+          case "medium":
+            return balance > 100 && balance <= 1000;
+          case "high":
+            return balance > 1000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Wallet Balance filter
+    if (filterWalletBalance !== "all") {
+      filtered = filtered.filter((m) => {
+        const balance = m.amount || 0;
+        switch (filterWalletBalance) {
+          case "zero":
+            return balance === 0;
+          case "low":
+            return balance > 0 && balance <= 100;
+          case "medium":
+            return balance > 100 && balance <= 1000;
+          case "high":
+            return balance > 1000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Sorting
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+
+      switch (sortBy) {
+        case "name":
+          aVal = (a.name || "").toLowerCase();
+          bVal = (b.name || "").toLowerCase();
+          break;
+        case "tradingBalance":
+          aVal = a.tradingBalance || 0;
+          bVal = b.tradingBalance || 0;
+          break;
+        case "walletBalance":
+          aVal = a.amount || 0;
+          bVal = b.amount || 0;
+          break;
+        case "level":
+          aVal = a.level || 0;
+          bVal = b.level || 0;
+          break;
+        case "joinedDate":
+        default:
+          aVal = new Date(a.joinedAt);
+          bVal = new Date(b.joinedAt);
+          break;
+      }
+
+      if (sortOrder === "asc") {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+
+    return filtered;
+  };
+
+  const filteredMembers = getFilteredAndSortedMembers();
+
+  // Top/Bottom Rankings
+  const top10ByTradingBalance = [...members]
+    .sort((a, b) => (b.tradingBalance || 0) - (a.tradingBalance || 0))
+    .slice(0, 10);
+
+  const top5ByWalletBalance = [...members]
+    .sort((a, b) => (b.amount || 0) - (a.amount || 0))
+    .slice(0, 5);
+
+  const bottom10ByTradingBalance = [...members]
+    .filter((m) => (m.tradingBalance || 0) > 0)
+    .sort((a, b) => (a.tradingBalance || 0) - (b.tradingBalance || 0))
+    .slice(0, 10);
+
+  const bottom5ByWalletBalance = [...members]
+    .filter((m) => (m.amount || 0) > 0)
+    .sort((a, b) => (a.amount || 0) - (b.amount || 0))
+    .slice(0, 5);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -1908,14 +2017,170 @@ const GTCMembers = () => {
           </div>
         </div>
 
-        {/* KEEP ALL ORIGINAL FILTERS CODE */}
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-orange-600" />
-            <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+        {/* Top/Bottom Rankings */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {/* Top 10 Trading Balance */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-green-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Top 10 by Trading Balance
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {top10ByTradingBalance.slice(0, 5).map((member, idx) => (
+                <div
+                  key={member.gtcUserId}
+                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-400 w-6">
+                      #{idx + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {member.name || member.username}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-green-600">
+                    ${(member.tradingBalance || 0).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* Top 5 Wallet Balance */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Top 5 by Wallet Balance
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {top5ByWalletBalance.map((member, idx) => (
+                <div
+                  key={member.gtcUserId}
+                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-400 w-6">
+                      #{idx + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {member.name || member.username}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-blue-600">
+                    ${(member.amount || 0).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom 10 Trading Balance */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <TrendingDown className="w-5 h-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Bottom 10 by Trading Balance
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {bottom10ByTradingBalance.slice(0, 5).map((member, idx) => (
+                <div
+                  key={member.gtcUserId}
+                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-400 w-6">
+                      #{idx + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {member.name || member.username}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-red-600">
+                    ${(member.tradingBalance || 0).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom 5 Wallet Balance */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-5 h-5 text-orange-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Bottom 5 by Wallet Balance
+              </h3>
+            </div>
+            <div className="space-y-2">
+              {bottom5ByWalletBalance.map((member, idx) => (
+                <div
+                  key={member.gtcUserId}
+                  className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-400 w-6">
+                      #{idx + 1}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {member.name || member.username}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold text-orange-600">
+                    ${(member.amount || 0).toFixed(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ENHANCED Filters */}
+        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Filter className="w-5 h-5 text-orange-600" />
+              <h2 className="text-lg font-bold text-gray-900">
+                Filters & Sorting
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+              >
+                {showAdvancedFilters ? "Hide Advanced" : "Show Advanced"}
+              </button>
+              <button
+                onClick={() => {
+                  handleClearFilters();
+                  setFilterTradingBalance("all");
+                  setFilterWalletBalance("all");
+                  setSortBy("joinedDate");
+                  setSortOrder("desc");
+                }}
+                className="px-4 py-2 text-sm bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          {/* Basic Filters Row */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Search
@@ -1984,19 +2249,86 @@ const GTCMembers = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 mt-4">
+          {/* Sort Controls */}
+          <div className="flex items-center gap-2 mb-4">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            >
+              <option value="joinedDate">Sort: Join Date</option>
+              <option value="name">Sort: Name</option>
+              <option value="tradingBalance">Sort: Trading Balance</option>
+              <option value="walletBalance">Sort: Wallet Balance</option>
+              <option value="level">Sort: Level</option>
+            </select>
+            <button
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+              className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50"
+              title={sortOrder === "asc" ? "Ascending" : "Descending"}
+            >
+              {sortOrder === "asc" ? (
+                <ArrowUp className="w-5 h-5 text-gray-600" />
+              ) : (
+                <ArrowDown className="w-5 h-5 text-gray-600" />
+              )}
+            </button>
+          </div>
+
+          {/* Advanced Filters */}
+          {showAdvancedFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Trading Balance
+                </label>
+                <select
+                  value={filterTradingBalance}
+                  onChange={(e) => setFilterTradingBalance(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                >
+                  <option value="all">All Trading Balance</option>
+                  <option value="zero">Zero Balance</option>
+                  <option value="low">Low ($0 - $100)</option>
+                  <option value="medium">Medium ($100 - $1,000)</option>
+                  <option value="high">High (&gt; $1,000)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Wallet Balance
+                </label>
+                <select
+                  value={filterWalletBalance}
+                  onChange={(e) => setFilterWalletBalance(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                >
+                  <option value="all">All Wallet Balance</option>
+                  <option value="zero">Zero Balance</option>
+                  <option value="low">Low ($0 - $100)</option>
+                  <option value="medium">Medium ($100 - $1,000)</option>
+                  <option value="high">High (&gt; $1,000)</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Search Button and Results Summary */}
+          <div className="flex items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200">
             <button
               onClick={handleSearch}
-              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
+              className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-medium transition-colors"
             >
-              Search
+              Apply Filters
             </button>
-            <button
-              onClick={handleClearFilters}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
-            >
-              Clear
-            </button>
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Showing:</span>{" "}
+              <span className="font-bold text-orange-600">
+                {filteredMembers.length}
+              </span>{" "}
+              of <span className="font-bold">{members.length}</span> members
+            </div>
           </div>
         </div>
 

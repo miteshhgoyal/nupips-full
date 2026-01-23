@@ -853,17 +853,13 @@ router.get('/upliner-referral-link', authenticateToken, async (req, res) => {
 });
 
 // ====================== API: GET AGENT MEMBER TREE FROM DATABASE ======================
-// POST /api/gtcfx/agent/member_tree
-// Add this route to your gtcfx.routes.js file (around line 650, before export default router;)
 
 router.post('/agent/member_tree', authenticateToken, async (req, res) => {
     try {
-        console.log('Fetching member tree from database for user:', req.user.userId);
-
-        // Get the current user to find their GTC session and user ID
+        // Get the current user to find their GTC session
         const currentUser = await User.findById(req.user.userId).select('gtcfx');
 
-        // Check if GTC FX is logged in (same logic as /session route)
+        // Check if GTC FX is logged in
         if (!currentUser || !currentUser.gtcfx || !currentUser.gtcfx.accessToken) {
             return res.status(401).json({
                 success: false,
@@ -872,23 +868,58 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
             });
         }
 
-        // Get user's email from main User document (not from gtcfx.user)
-        const user = await User.findById(req.user.userId).select('email');
-        const userEmail = user.email;
+        // Get GTC user info from /account_info API to get the actual GTC member ID
+        let gtcUserInfo;
+        try {
+            const accountInfoResponse = await gtcAxios.post(
+                '/api/v3/account_info',
+                {},
+                {
+                    headers: { Authorization: `Bearer ${currentUser.gtcfx.accessToken}` },
+                    timeout: 10000
+                }
+            );
 
-        if (!userEmail) {
-            return res.status(404).json({
+            if (accountInfoResponse.data.code !== 200 || !accountInfoResponse.data.data) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Failed to fetch GTC account info',
+                    authenticated: true
+                });
+            }
+
+            gtcUserInfo = accountInfoResponse.data.data;
+        } catch (error) {
+            console.error('Error fetching GTC account info:', error.message);
+
+            if (error.response?.status === 401) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'GTC FX session expired. Please login again.',
+                    authenticated: false
+                });
+            }
+
+            return res.status(500).json({
                 success: false,
-                message: 'User email not found. Cannot identify your GTC account.',
+                message: 'Failed to fetch GTC account information',
                 authenticated: true
             });
         }
 
-        console.log('Looking for root member with email:', userEmail);
+        // Extract GTC user ID from account info
+        const gtcUserId = gtcUserInfo.id?.toString();
+
+        if (!gtcUserId) {
+            return res.status(404).json({
+                success: false,
+                message: 'GTC user ID not found in account info',
+                authenticated: true
+            });
+        }
 
         // Fetch all members from database
         const allMembers = await GTCMember.find({}).lean();
-        console.log(`Found ${allMembers.length} total members in database`);
 
         if (allMembers.length === 0) {
             return res.status(200).json({
@@ -919,6 +950,9 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
                 phone: member.phone,
                 amount: member.amount || 0,
                 tradingBalance: member.tradingBalance || 0,
+                walletBalance: member.tradingBalanceDetails?.wallet?.amount
+                    ? parseFloat(member.tradingBalanceDetails.wallet.amount)
+                    : 0,
                 tradingBalanceDetails: member.tradingBalanceDetails,
                 userType: member.userType || 'agent',
                 kycStatus: member.kycStatus || '',
@@ -938,22 +972,20 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
 
             memberMap.set(member.gtcUserId, memberData);
 
-            // Find root member by matching email
-            if (member.email && member.email.toLowerCase() === userEmail.toLowerCase()) {
+            // Find root member by matching GTC user ID
+            if (member.gtcUserId === gtcUserId) {
                 rootMember = memberData;
             }
         });
 
-        console.log('Member map created with', memberMap.size, 'members');
-
         if (!rootMember) {
             return res.status(404).json({
                 success: false,
-                message: `Your account (${userEmail}) not found in GTC member database. Please sync data first.`
+                message: `Your GTC account (ID: ${gtcUserId}) not found in member database. Please sync data first.`,
+                gtcUserId: gtcUserId,
+                authenticated: true
             });
         }
-
-        console.log('Root member found:', rootMember.username, '(', rootMember.email, ')');
 
         // Build the tree structure
         function buildTree(member, currentLevel = 0) {
@@ -965,8 +997,6 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
                 m => m.parentGtcUserId === member.gtcUserId
             );
 
-            console.log(`Building tree for ${member.username} at level ${currentLevel}, found ${children.length} children`);
-
             // Recursively build children
             member.children = children.map(child => buildTree(child, currentLevel + 1));
 
@@ -976,7 +1006,16 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
         const tree = buildTree(rootMember);
 
         // Calculate statistics
-        function calculateStats(node, stats = { totalMembers: 0, totalAgents: 0, totalDirectClients: 0, maxLevel: 0 }) {
+        function calculateStats(node, stats = {
+            totalMembers: 0,
+            totalAgents: 0,
+            totalDirectClients: 0,
+            maxLevel: 0,
+            totalTradingBalance: 0,
+            totalWalletBalance: 0,
+            membersWithKYC: 0,
+            fullyOnboarded: 0
+        }) {
             stats.totalMembers++;
 
             if (node.userType === 'agent') {
@@ -989,6 +1028,17 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
                 stats.maxLevel = node.level;
             }
 
+            stats.totalTradingBalance += node.tradingBalance || 0;
+            stats.totalWalletBalance += node.walletBalance || 0;
+
+            if (node.kycStatus === 'completed') {
+                stats.membersWithKYC++;
+            }
+
+            if (node.onboardedWithCall && node.onboardedWithMessage) {
+                stats.fullyOnboarded++;
+            }
+
             if (node.children && node.children.length > 0) {
                 node.children.forEach(child => calculateStats(child, stats));
             }
@@ -997,14 +1047,19 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
         }
 
         const stats = calculateStats(tree);
-        console.log('Tree statistics:', stats);
 
         res.status(200).json({
             success: true,
             message: 'Member tree fetched successfully from database',
             data: {
                 tree: tree,
-                stats: stats
+                stats: stats,
+                rootMemberInfo: {
+                    gtcUserId: rootMember.gtcUserId,
+                    email: rootMember.email,
+                    username: rootMember.username,
+                    name: rootMember.name
+                }
             }
         });
 
