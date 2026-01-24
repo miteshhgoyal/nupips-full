@@ -852,6 +852,49 @@ router.get('/upliner-referral-link', authenticateToken, async (req, res) => {
     }
 });
 
+// ====================== HELPER FUNCTIONS FOR MASKING ======================
+
+/**
+ * Mask email address
+ * Example: john.doe@example.com -> j***e@e***.com
+ */
+function maskEmail(email) {
+    if (!email || typeof email !== 'string') return '';
+
+    const [localPart, domain] = email.split('@');
+    if (!localPart || !domain) return email;
+
+    const maskedLocal = localPart.length <= 2
+        ? localPart[0] + '*'
+        : localPart[0] + '*'.repeat(localPart.length - 2) + localPart[localPart.length - 1];
+
+    const domainParts = domain.split('.');
+    const maskedDomainName = domainParts[0].length <= 2
+        ? domainParts[0][0] + '*'
+        : domainParts[0][0] + '*'.repeat(domainParts[0].length - 1);
+
+    const maskedDomain = [maskedDomainName, ...domainParts.slice(1)].join('.');
+
+    return `${maskedLocal}@${maskedDomain}`;
+}
+
+/**
+ * Mask phone number
+ * Example: +1234567890 -> +123****890
+ */
+function maskPhone(phone) {
+    if (!phone || typeof phone !== 'string') return '';
+
+    const cleaned = phone.replace(/\s+/g, '');
+    if (cleaned.length <= 6) return '*'.repeat(cleaned.length);
+
+    const visibleStart = 3;
+    const visibleEnd = 3;
+    const maskedMiddle = '*'.repeat(cleaned.length - visibleStart - visibleEnd);
+
+    return cleaned.substring(0, visibleStart) + maskedMiddle + cleaned.substring(cleaned.length - visibleEnd);
+}
+
 // ====================== API: GET AGENT MEMBER TREE FROM DATABASE ======================
 
 router.post('/agent/member_tree', authenticateToken, async (req, res) => {
@@ -987,10 +1030,19 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
             });
         }
 
-        // Build the tree structure
-        function buildTree(member, currentLevel = 0) {
+        // Build the tree structure with masking applied
+        function buildTree(member, currentLevel = 0, parentLevel = -1) {
             // Set the current level
             member.level = currentLevel;
+
+            // Mask email and phone for downline members (level 2 and beyond)
+            // Level 0 = root user (no masking)
+            // Level 1 = direct downline (no masking)
+            // Level 2+ = indirect downline (mask email and phone)
+            if (currentLevel > 1) {
+                member.email = maskEmail(member.email);
+                member.phone = maskPhone(member.phone);
+            }
 
             // Find all direct children
             const children = Array.from(memberMap.values()).filter(
@@ -998,7 +1050,7 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
             );
 
             // Recursively build children
-            member.children = children.map(child => buildTree(child, currentLevel + 1));
+            member.children = children.map(child => buildTree(child, currentLevel + 1, currentLevel));
 
             return member;
         }
