@@ -700,7 +700,7 @@ router.post('/sync-member-tree', async (req, res) => {
         console.log('Processing tree data...');
 
         // Step 3: Sync the tree to database
-        const result = await syncMemberTreeFromAPI(response.data);
+        const result = await syncMemberTreeFromAPI(response.data, token);
 
         console.log('Sync complete:', result.stats);
 
