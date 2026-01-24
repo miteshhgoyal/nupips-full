@@ -1031,7 +1031,10 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
         }
 
         // Build the tree structure with masking applied
-        function buildTree(member, currentLevel = 0, parentLevel = -1) {
+        function buildTree(memberData, currentLevel = 0) {
+            // Create a COPY of the member to avoid mutating the original
+            const member = { ...memberData };
+
             // Set the current level
             member.level = currentLevel;
 
@@ -1044,13 +1047,13 @@ router.post('/agent/member_tree', authenticateToken, async (req, res) => {
                 member.phone = maskPhone(member.phone);
             }
 
-            // Find all direct children
-            const children = Array.from(memberMap.values()).filter(
+            // Find all direct children from the original memberMap
+            const directChildren = Array.from(memberMap.values()).filter(
                 m => m.parentGtcUserId === member.gtcUserId
             );
 
-            // Recursively build children
-            member.children = children.map(child => buildTree(child, currentLevel + 1, currentLevel));
+            // Recursively build children (each will get its own copy)
+            member.children = directChildren.map(child => buildTree(child, currentLevel + 1));
 
             return member;
         }
