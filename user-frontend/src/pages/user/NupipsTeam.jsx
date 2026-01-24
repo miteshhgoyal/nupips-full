@@ -430,7 +430,7 @@ const NupipsTeam = () => {
                   isRoot ? "text-white" : "text-green-600"
                 }`}
               >
-                ₹{totalEarnings.toFixed(2)}
+                ${totalEarnings.toFixed(2)}
               </p>
               {hasChildren && (
                 <span
@@ -583,7 +583,7 @@ const NupipsTeam = () => {
               </p>
             </div>
             <p className="text-2xl font-bold text-orange-900">
-              ₹{Number(stats?.totalAffiliateIncome || 0).toFixed(2)}
+              ${Number(stats?.totalAffiliateIncome || 0).toFixed(2)}
             </p>
             <p className="text-xs text-orange-700 mt-1">From referrals</p>
           </div>
@@ -646,7 +646,7 @@ const NupipsTeam = () => {
                 </h3>
               </div>
               <p className="text-3xl font-bold">
-                ₹
+                $
                 {(
                   (stats?.totalRebateIncome || 0) +
                   (stats?.totalAffiliateIncome || 0)
@@ -660,13 +660,13 @@ const NupipsTeam = () => {
               <div className="bg-white/20 rounded-lg px-4 py-2 mb-2">
                 <p className="text-xs opacity-90">Team Wallet Balance</p>
                 <p className="text-xl font-bold">
-                  ₹{Number(stats?.totalBalance || 0).toFixed(2)}
+                  ${Number(stats?.totalBalance || 0).toFixed(2)}
                 </p>
               </div>
               <div className="bg-white/20 rounded-lg px-4 py-2">
                 <p className="text-xs opacity-90">Team Deposits</p>
                 <p className="text-xl font-bold">
-                  ₹{Number(stats?.totalDeposits || 0).toFixed(2)}
+                  ${Number(stats?.totalDeposits || 0).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -700,7 +700,7 @@ const NupipsTeam = () => {
                     </span>
                   </div>
                   <span className="text-sm font-bold text-green-600">
-                    ₹{(member.walletBalance || 0).toFixed(2)}
+                    ${(member.walletBalance || 0).toFixed(2)}
                   </span>
                 </div>
               ))}
@@ -732,7 +732,7 @@ const NupipsTeam = () => {
                     </span>
                   </div>
                   <span className="text-sm font-bold text-red-600">
-                    ₹{(member.walletBalance || 0).toFixed(2)}
+                    ${(member.walletBalance || 0).toFixed(2)}
                   </span>
                 </div>
               ))}
@@ -838,9 +838,9 @@ const NupipsTeam = () => {
               >
                 <option value="all">Wallet Balance: All</option>
                 <option value="zero">Zero Balance</option>
-                <option value="low">Low (₹0 - ₹100)</option>
-                <option value="medium">Medium (₹100 - ₹1,000)</option>
-                <option value="high">High (&gt; ₹1,000)</option>
+                <option value="low">Low ($0 - $100)</option>
+                <option value="medium">Medium ($100 - $1,000)</option>
+                <option value="high">High (&gt; $1,000)</option>
               </select>
 
               <select
@@ -850,9 +850,9 @@ const NupipsTeam = () => {
               >
                 <option value="all">Total Deposits: All</option>
                 <option value="zero">No Deposits</option>
-                <option value="low">Low (₹0 - ₹500)</option>
-                <option value="medium">Medium (₹500 - ₹5,000)</option>
-                <option value="high">High (&gt; ₹5,000)</option>
+                <option value="low">Low ($0 - $500)</option>
+                <option value="medium">Medium ($500 - $5,000)</option>
+                <option value="high">High (&gt; $5,000)</option>
               </select>
 
               <select
@@ -862,9 +862,9 @@ const NupipsTeam = () => {
               >
                 <option value="all">Total Withdrawals: All</option>
                 <option value="zero">No Withdrawals</option>
-                <option value="low">Low (₹0 - ₹500)</option>
-                <option value="medium">Medium (₹500 - ₹5,000)</option>
-                <option value="high">High (&gt; ₹5,000)</option>
+                <option value="low">Low ($0 - $500)</option>
+                <option value="medium">Medium ($500 - $5,000)</option>
+                <option value="high">High (&gt; $5,000)</option>
               </select>
             </div>
           )}
@@ -1022,14 +1022,14 @@ const NupipsTeam = () => {
                         {/* Wallet Balance */}
                         <td className="px-4 py-4 text-right">
                           <p className="font-bold text-purple-700">
-                            ₹{Number(member.walletBalance || 0).toFixed(2)}
+                            ${Number(member.walletBalance || 0).toFixed(2)}
                           </p>
                         </td>
 
                         {/* Deposits */}
                         <td className="px-4 py-4 text-right">
                           <p className="font-semibold text-green-700">
-                            ₹
+                            $
                             {Number(
                               member.financials?.totalDeposits || 0,
                             ).toFixed(2)}
@@ -1039,7 +1039,7 @@ const NupipsTeam = () => {
                         {/* Withdrawals */}
                         <td className="px-4 py-4 text-right">
                           <p className="font-semibold text-red-700">
-                            ₹
+                            $
                             {Number(
                               member.financials?.totalWithdrawals || 0,
                             ).toFixed(2)}
@@ -1049,7 +1049,7 @@ const NupipsTeam = () => {
                         {/* Total Earnings */}
                         <td className="px-4 py-4 text-right">
                           <p className="font-bold text-gray-900">
-                            ₹{totalEarnings.toFixed(2)}
+                            ${totalEarnings.toFixed(2)}
                           </p>
                         </td>
 
@@ -1226,7 +1226,7 @@ const NupipsTeam = () => {
                     </p>
                   </div>
                   <p className="text-2xl font-bold text-green-900">
-                    ₹
+                    $
                     {Number(
                       selectedUser.financials?.totalRebateIncome || 0,
                     ).toFixed(2)}
@@ -1241,7 +1241,7 @@ const NupipsTeam = () => {
                     </p>
                   </div>
                   <p className="text-2xl font-bold text-blue-900">
-                    ₹
+                    $
                     {Number(
                       selectedUser.financials?.totalAffiliateIncome || 0,
                     ).toFixed(2)}
@@ -1256,7 +1256,7 @@ const NupipsTeam = () => {
                     </p>
                   </div>
                   <p className="text-2xl font-bold text-purple-900">
-                    ₹{Number(selectedUser.walletBalance || 0).toFixed(2)}
+                    ${Number(selectedUser.walletBalance || 0).toFixed(2)}
                   </p>
                 </div>
 
@@ -1268,7 +1268,7 @@ const NupipsTeam = () => {
                     </p>
                   </div>
                   <p className="text-2xl font-bold text-orange-900">
-                    ₹
+                    $
                     {(
                       (selectedUser.financials?.totalRebateIncome || 0) +
                       (selectedUser.financials?.totalAffiliateIncome || 0)
@@ -1285,7 +1285,7 @@ const NupipsTeam = () => {
                   <div>
                     <p className="text-xs text-gray-600 mb-1">Total Deposits</p>
                     <p className="text-lg font-semibold text-gray-900">
-                      ₹
+                      $
                       {Number(
                         selectedUser.financials?.totalDeposits || 0,
                       ).toFixed(2)}
@@ -1296,7 +1296,7 @@ const NupipsTeam = () => {
                       Total Withdrawals
                     </p>
                     <p className="text-lg font-semibold text-gray-900">
-                      ₹
+                      $
                       {Number(
                         selectedUser.financials?.totalWithdrawals || 0,
                       ).toFixed(2)}

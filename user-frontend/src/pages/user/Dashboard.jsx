@@ -62,7 +62,7 @@ const MiniChart = ({ title, data, color = "orange" }) => {
             <div
               className={`w-full ${colorMap[color].bar} rounded-t-lg transition-all cursor-pointer shadow-sm`}
               style={{ height: `${(d.value / max) * 100}%` }}
-              title={`${d.label}: ₹${d.value.toFixed(2)}`}
+              title={`${d.label}: $${d.value.toFixed(2)}`}
             />
           </div>
         ))}
@@ -210,7 +210,7 @@ const Dashboard = () => {
 
   const formatCurrency = (amount) => {
     if (hideBalances) return "••••••";
-    return `₹${Number(amount || 0).toFixed(2)}`;
+    return `$${Number(amount || 0).toFixed(2)}`;
   };
 
   const getStatusIcon = (type, status) => {

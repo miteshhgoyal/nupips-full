@@ -542,7 +542,7 @@ const Users = () => {
   };
 
   const formatCurrency = (amount) => {
-    return `₹${parseFloat(amount || 0).toFixed(2)}`;
+    return `$${parseFloat(amount || 0).toFixed(2)}`;
   };
 
   const formatDate = (date) => {
@@ -896,9 +896,9 @@ const Users = () => {
               >
                 <option value="all">Wallet Balance: All</option>
                 <option value="zero">Zero Balance</option>
-                <option value="low">Low (₹0 - ₹100)</option>
-                <option value="medium">Medium (₹100 - ₹1,000)</option>
-                <option value="high">High (&gt; ₹1,000)</option>
+                <option value="low">Low ($0 - $100)</option>
+                <option value="medium">Medium ($100 - $1,000)</option>
+                <option value="high">High (&gt; $1,000)</option>
               </select>
 
               <select
@@ -908,9 +908,9 @@ const Users = () => {
               >
                 <option value="all">Total Deposits: All</option>
                 <option value="zero">No Deposits</option>
-                <option value="low">Low (₹0 - ₹500)</option>
-                <option value="medium">Medium (₹500 - ₹5,000)</option>
-                <option value="high">High (&gt; ₹5,000)</option>
+                <option value="low">Low ($0 - $500)</option>
+                <option value="medium">Medium ($500 - $5,000)</option>
+                <option value="high">High (&gt; $5,000)</option>
               </select>
 
               <select
@@ -920,9 +920,9 @@ const Users = () => {
               >
                 <option value="all">Total Withdrawals: All</option>
                 <option value="zero">No Withdrawals</option>
-                <option value="low">Low (₹0 - ₹500)</option>
-                <option value="medium">Medium (₹500 - ₹5,000)</option>
-                <option value="high">High (&gt; ₹5,000)</option>
+                <option value="low">Low ($0 - $500)</option>
+                <option value="medium">Medium ($500 - $5,000)</option>
+                <option value="high">High (&gt; $5,000)</option>
               </select>
             </div>
           )}

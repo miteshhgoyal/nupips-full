@@ -138,7 +138,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 type: 'deposit',
                 title: 'Deposit Completed',
                 date: getRelativeTime(dep.completedAt || dep.createdAt),
-                value: `₹${Number(dep.amount).toFixed(2)}`,
+                value: `$${Number(dep.amount).toFixed(2)}`,
                 timestamp: dep.completedAt || dep.createdAt,
                 status: 'completed',
                 icon: 'TrendingUp'
@@ -151,7 +151,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 type: 'deposit',
                 title: 'Deposit Pending',
                 date: getRelativeTime(dep.createdAt),
-                value: `₹${Number(dep.amount).toFixed(2)}`,
+                value: `$${Number(dep.amount).toFixed(2)}`,
                 timestamp: dep.createdAt,
                 status: 'pending',
                 icon: 'Clock'
@@ -164,7 +164,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 type: 'withdrawal',
                 title: 'Withdrawal Processed',
                 date: getRelativeTime(wd.completedAt || wd.createdAt),
-                value: `-₹${Number(wd.netAmount).toFixed(2)}`,
+                value: `-$${Number(wd.netAmount).toFixed(2)}`,
                 timestamp: wd.completedAt || wd.createdAt,
                 status: 'completed',
                 icon: 'TrendingDown'
