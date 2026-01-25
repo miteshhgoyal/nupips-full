@@ -1,9 +1,8 @@
-// routes/incomes.routes.js - UPDATED VERSION
+// routes/incomes.routes.js - UPDATED FOR NEW MODEL
 import express from "express";
 import IncomeExpense from "../models/IncomeExpense.js";
 import SystemConfig from "../models/SystemConfig.js";
-import { authenticateToken } from "../middlewares/auth.middleware.js";
-import { getUserMilestoneProgress } from "../services/milestoneService.js";
+import User from "../models/User.js";
 
 const router = express.Router();
 
@@ -22,21 +21,29 @@ router.get("/", authenticateToken, async (req, res) => {
     }
 });
 
-// Get milestone progress and income rules
+// Get milestone progress and income rules (NOW uses model methods)
 router.get("/milestones", authenticateToken, async (req, res) => {
     try {
-        const milestoneProgress = await getUserMilestoneProgress(req.user.userId);
+        const user = await User.findById(req.user.userId).select('financials');
         const systemConfig = await SystemConfig.getOrCreateConfig();
+        const lifetimeRebateIncome = user?.financials?.totalRebateIncome || 0;
+
+        // Use model static method to check unlocked levels
+        const unlockedLevels = [];
+        for (let level = 1; level <= systemConfig.maxUplineLevels; level++) {
+            const isUnlocked = await SystemConfig.isLevelUnlocked(lifetimeRebateIncome, level);
+            if (isUnlocked) unlockedLevels.push(level);
+        }
 
         res.json({
             success: true,
             data: {
-                ...milestoneProgress,
+                lifetimeRebateIncome,
+                unlockedLevels,
                 rules: {
                     traderPercentage: systemConfig.traderPercentage,
                     systemPercentage: systemConfig.systemPercentage,
                     uplineDistribution: systemConfig.uplineDistribution,
-                    milestones: systemConfig.milestones
                 }
             }
         });

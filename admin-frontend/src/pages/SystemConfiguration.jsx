@@ -1,4 +1,4 @@
-// SystemConfiguration.jsx - UPDATED WITH MILESTONES TAB
+// SystemConfiguration.jsx
 import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -24,8 +24,6 @@ import {
   Key,
   Globe,
   Play,
-  Award,
-  Target,
   Lock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -49,9 +47,27 @@ const SystemConfiguration = () => {
     traderPercentage: 25,
     maxUplineLevels: 10,
     uplineDistribution: [
-      { level: 1, percentage: 20 },
-      { level: 2, percentage: 10 },
-      { level: 3, percentage: 5 },
+      {
+        level: 1,
+        percentage: 20,
+        requiredRebateIncome: 0,
+        description: "Direct referral income (always unlocked)",
+        enabled: true,
+      },
+      {
+        level: 2,
+        percentage: 10,
+        requiredRebateIncome: 100,
+        description: "Unlock at $100 lifetime rebate",
+        enabled: true,
+      },
+      {
+        level: 3,
+        percentage: 5,
+        requiredRebateIncome: 500,
+        description: "Unlock at $500 lifetime rebate",
+        enabled: true,
+      },
     ],
     performanceFeeFrequency: "monthly",
     performanceFeeDates: [1],
@@ -66,32 +82,11 @@ const SystemConfiguration = () => {
       gtcApiUrl: "",
       runSyncOnStartup: false,
     },
-    milestones: {
-      enabled: true,
-      levels: [
-        {
-          level: 1,
-          requiredRebateIncome: 0,
-          description: "Direct referral income (always unlocked)",
-        },
-        {
-          level: 2,
-          requiredRebateIncome: 1000,
-          description: "Unlock at $1,000 lifetime rebate",
-        },
-        {
-          level: 3,
-          requiredRebateIncome: 5000,
-          description: "Unlock at $5,000 lifetime rebate",
-        },
-      ],
-    },
   });
 
   const tabs = [
     { id: "pamm", label: "PAMM Strategy", icon: TrendingUp },
     { id: "distribution", label: "Fee Distribution", icon: Percent },
-    { id: "milestones", label: "Income Milestones", icon: Award }, // NEW TAB
     { id: "schedule", label: "Fee Schedule", icon: Calendar },
     { id: "sync", label: "Auto Sync", icon: RefreshCw },
   ];
@@ -126,31 +121,6 @@ const SystemConfiguration = () => {
             runSyncOnStartup:
               data.autoSyncGTCMemberTree?.runSyncOnStartup || false,
           },
-          milestones: {
-            enabled:
-              data.milestones?.enabled !== undefined
-                ? data.milestones.enabled
-                : true,
-            levels: data.milestones?.levels?.sort(
-              (a, b) => a.level - b.level,
-            ) || [
-              {
-                level: 1,
-                requiredRebateIncome: 0,
-                description: "Direct referral income (always unlocked)",
-              },
-              {
-                level: 2,
-                requiredRebateIncome: 1000,
-                description: "Unlock at $1,000 lifetime rebate",
-              },
-              {
-                level: 3,
-                requiredRebateIncome: 5000,
-                description: "Unlock at $5,000 lifetime rebate",
-              },
-            ],
-          },
         });
       }
     } catch (e) {
@@ -159,6 +129,10 @@ const SystemConfiguration = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadConfig();
+  }, []);
 
   const validateConfig = () => {
     const {
@@ -171,7 +145,6 @@ const SystemConfiguration = () => {
       performanceFeeTime,
       pammUuid,
       autoSyncGTCMemberTree,
-      milestones,
     } = formData;
 
     if (systemPercentage < 0 || systemPercentage > 100) {
@@ -193,6 +166,12 @@ const SystemConfiguration = () => {
       }
       if (item.level < 1 || levels.has(item.level)) {
         return "Upline levels must be unique positive integers";
+      }
+      if (item.requiredRebateIncome < 0) {
+        return `Required rebate for level ${item.level} must be non-negative`;
+      }
+      if (item.level === 1 && item.requiredRebateIncome !== 0) {
+        return "Level 1 must have $0 requirement (always unlocked)";
       }
       levels.add(item.level);
       total += item.percentage;
@@ -228,50 +207,6 @@ const SystemConfiguration = () => {
       }
     }
 
-    // Validate milestones
-    if (milestones?.levels) {
-      if (milestones.levels.length === 0) {
-        return "At least one milestone level is required";
-      }
-
-      const milestoneLevels = new Set();
-      for (const milestone of milestones.levels) {
-        if (milestone.level < 1) {
-          return "Milestone levels must be positive integers";
-        }
-        if (milestoneLevels.has(milestone.level)) {
-          return `Duplicate milestone level: ${milestone.level}`;
-        }
-        milestoneLevels.add(milestone.level);
-
-        if (milestone.requiredRebateIncome < 0) {
-          return `Required rebate for level ${milestone.level} must be non-negative`;
-        }
-
-        if (milestone.level === 1 && milestone.requiredRebateIncome !== 0) {
-          return "Level 1 must have $0 requirement (always unlocked)";
-        }
-
-        // Check if milestone level exists in upline distribution
-        if (!uplineDistribution.find((d) => d.level === milestone.level)) {
-          return `Milestone level ${milestone.level} must exist in upline distribution`;
-        }
-      }
-
-      // Check ascending order
-      const sorted = [...milestones.levels].sort(
-        (a, b) => a.requiredRebateIncome - b.requiredRebateIncome,
-      );
-      for (let i = 1; i < sorted.length; i++) {
-        if (
-          sorted[i].requiredRebateIncome <= sorted[i - 1].requiredRebateIncome
-        ) {
-          return "Milestone requirements must be in strictly increasing order";
-        }
-      }
-    }
-
-    // Validate sync configuration if enabled
     if (autoSyncGTCMemberTree?.syncEnabled) {
       if (
         !autoSyncGTCMemberTree.syncFrequency ||
@@ -368,68 +303,6 @@ const SystemConfiguration = () => {
     });
   };
 
-  const updateMilestonesField = (field, value) => {
-    setFormData({
-      ...formData,
-      milestones: {
-        ...formData.milestones,
-        [field]: value,
-      },
-    });
-  };
-
-  const updateMilestoneLevel = (index, field, value) => {
-    const newLevels = [...formData.milestones.levels];
-    newLevels[index] = {
-      ...newLevels[index],
-      [field]: value,
-    };
-    updateMilestonesField("levels", newLevels);
-  };
-
-  const addMilestoneLevel = () => {
-    const currentLevels = formData.milestones.levels;
-    const nextLevel = Math.max(...currentLevels.map((m) => m.level), 0) + 1;
-
-    if (nextLevel > 20) {
-      setError("Maximum 20 milestone levels allowed");
-      return;
-    }
-
-    // Check if this level exists in upline distribution
-    if (!formData.uplineDistribution.find((d) => d.level === nextLevel)) {
-      setError(
-        `Level ${nextLevel} doesn't exist in upline distribution. Add it there first.`,
-      );
-      return;
-    }
-
-    const newMilestone = {
-      level: nextLevel,
-      requiredRebateIncome: 0,
-      description: `Unlock affiliate income from downline level ${nextLevel}`,
-    };
-
-    updateMilestonesField("levels", [...currentLevels, newMilestone]);
-  };
-
-  const removeMilestoneLevel = (index) => {
-    const levels = formData.milestones.levels;
-
-    if (levels[index].level === 1) {
-      setError("Cannot remove Level 1 (it's always unlocked)");
-      return;
-    }
-
-    if (levels.length <= 1) {
-      setError("At least one milestone level is required");
-      return;
-    }
-
-    const newLevels = levels.filter((_, i) => i !== index);
-    updateMilestonesField("levels", newLevels);
-  };
-
   const handlePercentageChange = (field, value) => {
     if (value === "" || value === "0") {
       updateField(field, 0);
@@ -447,35 +320,29 @@ const SystemConfiguration = () => {
     }
   };
 
+  const updateUplineField = (level, field, value) => {
+    setFormData({
+      ...formData,
+      uplineDistribution: formData.uplineDistribution.map((item) =>
+        item.level === level ? { ...item, [field]: value } : item,
+      ),
+    });
+  };
+
   const updateUplinePercentage = (level, value) => {
     if (value === "" || value === "0") {
-      setFormData({
-        ...formData,
-        uplineDistribution: formData.uplineDistribution.map((item) =>
-          item.level === level ? { ...item, percentage: 0 } : item,
-        ),
-      });
+      updateUplineField(level, "percentage", 0);
       return;
     }
     const cleanedValue = value.replace(/^0+/, "");
     if (cleanedValue === "") {
-      setFormData({
-        ...formData,
-        uplineDistribution: formData.uplineDistribution.map((item) =>
-          item.level === level ? { ...item, percentage: 0 } : item,
-        ),
-      });
+      updateUplineField(level, "percentage", 0);
       return;
     }
     const numValue = parseFloat(cleanedValue);
     if (!isNaN(numValue)) {
       const validValue = Math.max(0, Math.min(100, numValue));
-      setFormData({
-        ...formData,
-        uplineDistribution: formData.uplineDistribution.map((item) =>
-          item.level === level ? { ...item, percentage: validValue } : item,
-        ),
-      });
+      updateUplineField(level, "percentage", validValue);
     }
   };
 
@@ -490,7 +357,13 @@ const SystemConfiguration = () => {
       ...formData,
       uplineDistribution: [
         ...formData.uplineDistribution,
-        { level: nextLevel, percentage: 0 },
+        {
+          level: nextLevel,
+          percentage: 0,
+          requiredRebateIncome: 0,
+          description: `Level ${nextLevel} income`,
+          enabled: true,
+        },
       ],
     });
   };
@@ -498,15 +371,6 @@ const SystemConfiguration = () => {
   const removeUplineLevel = (level) => {
     if (formData.uplineDistribution.length <= 1) {
       setError("At least one upline level required");
-      return;
-    }
-
-    // Check if any milestone uses this level
-    const milestoneUsesLevel = formData.milestones?.levels?.some(
-      (m) => m.level === level,
-    );
-    if (milestoneUsesLevel) {
-      setError(`Cannot remove level ${level} - it's used in milestones`);
       return;
     }
 
@@ -574,10 +438,6 @@ const SystemConfiguration = () => {
     return `Custom: ${cron}`;
   };
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -614,7 +474,7 @@ const SystemConfiguration = () => {
                 System Configuration
               </h1>
               <p className="text-gray-600 mt-2">
-                Configure PAMM, fees, milestones, schedule, and auto sync
+                Configure PAMM, fees, schedule, and auto sync
               </p>
             </div>
           </div>
@@ -839,7 +699,7 @@ const SystemConfiguration = () => {
                 </div>
               )}
 
-              {/* Fee Distribution Tab */}
+              {/* Fee Distribution Tab - NOW WITH MILESTONE FIELDS */}
               {activeTab === "distribution" && (
                 <div className="space-y-6">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -954,11 +814,11 @@ const SystemConfiguration = () => {
                     </div>
                   </div>
 
-                  {/* Upline Distribution */}
+                  {/* Upline Distribution with Milestone Settings */}
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-base sm:text-lg font-bold text-gray-900">
-                        Upline Distribution
+                        Upline Distribution & Unlock Requirements
                       </h4>
                       {editing && (
                         <button
@@ -971,35 +831,53 @@ const SystemConfiguration = () => {
                       )}
                     </div>
 
-                    <div className="bg-gray-50 rounded-xl p-3 sm:p-4 border border-gray-200 divide-y divide-gray-200">
+                    <div className="space-y-4">
                       {formData.uplineDistribution.map((item) => (
                         <div
                           key={item.level}
-                          className="flex items-center justify-between py-3 sm:py-4 gap-3"
+                          className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200"
                         >
-                          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs sm:text-sm font-bold text-blue-700">
-                                L{item.level}
-                              </span>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                                <span className="text-sm font-bold text-white">
+                                  L{item.level}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-bold text-gray-900">
+                                  Level {item.level}
+                                  {item.level === 1 && (
+                                    <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                      Always Unlocked
+                                    </span>
+                                  )}
+                                </p>
+                                {!editing && (
+                                  <p className="text-sm text-gray-600">
+                                    {item.description || "No description"}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                                Level {item.level}
-                              </p>
-                              <p className="text-xs sm:text-sm text-gray-500 truncate">
-                                Direct Upline Share
-                              </p>
-                            </div>
+                            {editing && item.level !== 1 && (
+                              <button
+                                onClick={() => removeUplineLevel(item.level)}
+                                className="p-2 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
+                                title="Remove level"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </button>
+                            )}
                           </div>
 
-                          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                            {!editing ? (
-                              <span className="text-lg sm:text-2xl font-bold text-gray-900">
-                                {item.percentage}%
-                              </span>
-                            ) : (
-                              <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* Percentage */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-2">
+                                Percentage (%)
+                              </label>
+                              {editing ? (
                                 <input
                                   type="number"
                                   min="0"
@@ -1018,20 +896,105 @@ const SystemConfiguration = () => {
                                       e.target.value,
                                     )
                                   }
-                                  className="w-20 sm:w-24 px-2 sm:px-3 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent text-right text-sm"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
                                 />
-                                <span className="text-gray-700 text-sm">%</span>
-                              </>
-                            )}
-                            {editing && (
-                              <button
-                                onClick={() => removeUplineLevel(item.level)}
-                                className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center transition-colors flex-shrink-0"
-                                title="Remove level"
-                              >
-                                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
-                              </button>
-                            )}
+                              ) : (
+                                <p className="text-lg font-bold text-blue-600">
+                                  {item.percentage}%
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Required Rebate Income */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-2">
+                                Required Rebate ($)
+                              </label>
+                              {editing ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="100"
+                                  value={item.requiredRebateIncome}
+                                  onChange={(e) =>
+                                    updateUplineField(
+                                      item.level,
+                                      "requiredRebateIncome",
+                                      parseFloat(e.target.value) || 0,
+                                    )
+                                  }
+                                  disabled={item.level === 1}
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                />
+                              ) : (
+                                <p className="text-lg font-bold text-green-600">
+                                  ${item.requiredRebateIncome.toFixed(2)}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Description */}
+                            <div className="md:col-span-1 lg:col-span-1">
+                              <label className="block text-xs font-medium text-gray-700 mb-2">
+                                Description
+                              </label>
+                              {editing ? (
+                                <input
+                                  type="text"
+                                  value={item.description || ""}
+                                  onChange={(e) =>
+                                    updateUplineField(
+                                      item.level,
+                                      "description",
+                                      e.target.value,
+                                    )
+                                  }
+                                  placeholder="e.g., Unlock at $1,000 rebate"
+                                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
+                                />
+                              ) : null}
+                            </div>
+
+                            {/* Enabled Toggle */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-2">
+                                Status
+                              </label>
+                              {editing ? (
+                                <button
+                                  onClick={() =>
+                                    updateUplineField(
+                                      item.level,
+                                      "enabled",
+                                      !item.enabled,
+                                    )
+                                  }
+                                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                                    item.enabled
+                                      ? "bg-green-500"
+                                      : "bg-gray-300"
+                                  }`}
+                                >
+                                  <span
+                                    className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                                      item.enabled
+                                        ? "translate-x-7"
+                                        : "translate-x-1"
+                                    }`}
+                                  />
+                                </button>
+                              ) : (
+                                <span
+                                  className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                                    item.enabled
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-gray-100 text-gray-600"
+                                  }`}
+                                >
+                                  {item.enabled ? "Enabled" : "Disabled"}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1056,179 +1019,6 @@ const SystemConfiguration = () => {
                       </p>
                     )}
                   </div>
-                </div>
-              )}
-
-              {/* NEW: Income Milestones Tab */}
-              {activeTab === "milestones" && (
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <Award className="w-6 h-6 text-orange-600" />
-                        Income Level Milestones
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Configure rebate income requirements to unlock downline
-                        income levels
-                      </p>
-                    </div>
-                    {editing && (
-                      <button
-                        onClick={addMilestoneLevel}
-                        className="px-3 py-1 bg-orange-100 text-orange-700 text-sm rounded-lg hover:bg-orange-200 transition-colors flex items-center gap-1"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Add Milestone
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Milestones Enabled Toggle */}
-                  <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 mb-1">
-                          Enable Milestone System
-                        </label>
-                        <p className="text-xs text-gray-600">
-                          When enabled, users must reach rebate milestones to
-                          unlock income levels
-                        </p>
-                      </div>
-                      {editing ? (
-                        <button
-                          onClick={() =>
-                            updateMilestonesField(
-                              "enabled",
-                              !formData.milestones.enabled,
-                            )
-                          }
-                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                            formData.milestones.enabled
-                              ? "bg-green-500"
-                              : "bg-gray-300"
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                              formData.milestones.enabled
-                                ? "translate-x-7"
-                                : "translate-x-1"
-                            }`}
-                          />
-                        </button>
-                      ) : (
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            formData.milestones.enabled
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {formData.milestones.enabled ? "Enabled" : "Disabled"}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Milestone Levels */}
-                  <div className="space-y-3">
-                    {formData.milestones.levels?.map((milestone, index) => (
-                      <div
-                        key={index}
-                        className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                              {milestone.level === 1 ? (
-                                <Target className="w-5 h-5 text-white" />
-                              ) : (
-                                <Lock className="w-5 h-5 text-white" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-bold text-gray-900">
-                                Level {milestone.level}
-                                {milestone.level === 1 && (
-                                  <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                                    Always Unlocked
-                                  </span>
-                                )}
-                              </p>
-                              {!editing && (
-                                <p className="text-sm text-gray-600">
-                                  {milestone.description || "No description"}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          {editing && milestone.level !== 1 && (
-                            <button
-                              onClick={() => removeMilestoneLevel(index)}
-                              className="p-2 bg-red-100 hover:bg-red-200 rounded-lg transition-colors"
-                              title="Remove milestone"
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Required Rebate Income */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-2">
-                              Required Lifetime Rebate Income ($)
-                            </label>
-                            {editing ? (
-                              <input
-                                type="number"
-                                min="0"
-                                step="100"
-                                value={milestone.requiredRebateIncome}
-                                onChange={(e) =>
-                                  updateMilestoneLevel(
-                                    index,
-                                    "requiredRebateIncome",
-                                    parseFloat(e.target.value) || 0,
-                                  )
-                                }
-                                disabled={milestone.level === 1}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                              />
-                            ) : (
-                              <p className="text-lg font-bold text-green-600">
-                                ${milestone.requiredRebateIncome.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Description */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-2">
-                              Description
-                            </label>
-                            {editing ? (
-                              <input
-                                type="text"
-                                value={milestone.description || ""}
-                                onChange={(e) =>
-                                  updateMilestoneLevel(
-                                    index,
-                                    "description",
-                                    e.target.value,
-                                  )
-                                }
-                                placeholder="e.g., Unlock at $1,000 rebate"
-                                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500"
-                              />
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
 
                   {/* Info Box */}
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
@@ -1236,7 +1026,7 @@ const SystemConfiguration = () => {
                       <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div className="text-sm text-blue-900">
                         <p className="font-semibold mb-2">
-                          How Milestones Work:
+                          How Income Unlocking Works:
                         </p>
                         <ul className="list-disc list-inside space-y-1 text-blue-800">
                           <li>
@@ -1251,11 +1041,11 @@ const SystemConfiguration = () => {
                             unlocked
                           </li>
                           <li>
-                            Milestones auto-update after each performance fee
-                            sync
+                            Disabled levels do not distribute income regardless
+                            of user progress
                           </li>
                           <li>
-                            When disabled, all levels are unlocked for everyone
+                            Levels auto-update after each performance fee sync
                           </li>
                         </ul>
                       </div>

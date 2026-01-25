@@ -18,18 +18,33 @@ const SystemSchema = new mongoose.Schema({
         max: 100
     },
 
-    // ========== Upline Distribution ==========
+    // ========== Upline Distribution (Milestones Integrated) ==========
     uplineDistribution: [{
         level: {
             type: Number,
             required: true,
-            min: 1
+            min: 1,
+            unique: true  // Prevents duplicate levels
         },
         percentage: {
             type: Number,
             required: true,
             min: 0,
             max: 100
+        },
+        requiredRebateIncome: {
+            type: Number,
+            required: true,
+            min: 0,
+            default: 0  // Milestone unlock threshold
+        },
+        description: {
+            type: String,
+            default: ''
+        },
+        enabled: {
+            type: Boolean,
+            default: true
         }
     }],
     maxUplineLevels: {
@@ -37,31 +52,6 @@ const SystemSchema = new mongoose.Schema({
         default: 10,
         min: 1,
         max: 20
-    },
-
-    // ========== Milestone-Based Level Unlocking ==========
-    milestones: {
-        enabled: {
-            type: Boolean,
-            default: true
-        },
-        levels: [{
-            level: {
-                type: Number,
-                required: true,
-                min: 1
-            },
-            requiredRebateIncome: {
-                type: Number,
-                required: true,
-                min: 0,
-                default: 0
-            },
-            description: {
-                type: String,
-                default: ''
-            }
-        }]
     },
 
     // ========== Performance Fee Configuration ==========
@@ -204,9 +194,27 @@ SystemSchema.statics.getOrCreateConfig = async function () {
                 systemPercentage: 40,
                 traderPercentage: 25,
                 uplineDistribution: [
-                    { level: 1, percentage: 20 },
-                    { level: 2, percentage: 10 },
-                    { level: 3, percentage: 5 }
+                    {
+                        level: 1,
+                        percentage: 20,
+                        requiredRebateIncome: 0,
+                        description: 'Direct referral income (always unlocked!)',
+                        enabled: true
+                    },
+                    {
+                        level: 2,
+                        percentage: 10,
+                        requiredRebateIncome: 100,
+                        description: 'Unlock at ₹100 lifetime rebate income',
+                        enabled: true
+                    },
+                    {
+                        level: 3,
+                        percentage: 5,
+                        requiredRebateIncome: 500,
+                        description: 'Unlock at ₹500 lifetime rebate income',
+                        enabled: true
+                    }
                 ],
                 maxUplineLevels: 10,
                 performanceFeeFrequency: "monthly",
@@ -214,17 +222,6 @@ SystemSchema.statics.getOrCreateConfig = async function () {
                 performanceFeeTime: "00:00",
                 pammUuid: null,
                 pammEnabled: false,
-                // Default milestones
-                milestones: {
-                    enabled: true,
-                    levels: [
-                        { level: 1, requiredRebateIncome: 0, description: 'Direct referral income (always unlocked)' },
-                        { level: 2, requiredRebateIncome: 1000, description: 'Unlock at $1,000 lifetime rebate' },
-                        { level: 3, requiredRebateIncome: 5000, description: 'Unlock at $5,000 lifetime rebate' },
-                        { level: 4, requiredRebateIncome: 10000, description: 'Unlock at $10,000 lifetime rebate' },
-                        { level: 5, requiredRebateIncome: 25000, description: 'Unlock at $25,000 lifetime rebate' }
-                    ]
-                },
                 autoSyncGTCMemberTree: {
                     syncEnabled: false,
                     syncFrequency: "0 2 * * *",
@@ -243,18 +240,8 @@ SystemSchema.statics.getOrCreateConfig = async function () {
                 }
             });
         } else {
-            // Ensure milestones exist
-            if (!config.milestones) {
-                config.milestones = {
-                    enabled: true,
-                    levels: [
-                        { level: 1, requiredRebateIncome: 0, description: 'Direct referral income (always unlocked)' },
-                        { level: 2, requiredRebateIncome: 1000, description: 'Unlock at $1,000 lifetime rebate' },
-                        { level: 3, requiredRebateIncome: 5000, description: 'Unlock at $5,000 lifetime rebate' }
-                    ]
-                };
-                await config.save();
-            }
+            // AUTO-MIGRATION: Merge old milestones into uplineDistribution
+            await migrateMilestones(config);
 
             // Ensure autoSyncGTCMemberTree exists
             if (!config.autoSyncGTCMemberTree) {
@@ -284,12 +271,46 @@ SystemSchema.statics.getOrCreateConfig = async function () {
     }
 };
 
+// MIGRATION FUNCTION - Removes all milestone code
+async function migrateMilestones(config) {
+    // Remove old milestones if exists
+    if (config.milestones) {
+        console.log('Migrating old milestones to uplineDistribution...');
+
+        // Merge milestones into existing distribution
+        config.uplineDistribution = config.uplineDistribution.map((dist, index) => {
+            const oldMilestone = config.milestones?.levels?.[index];
+            return {
+                ...dist,
+                requiredRebateIncome: oldMilestone?.requiredRebateIncome || dist.requiredRebateIncome || 0,
+                enabled: true
+            };
+        });
+
+        // Ensure levels are sequential and unique
+        config.uplineDistribution.forEach((item, index) => {
+            item.level = index + 1;
+        });
+
+        delete config.milestones;
+        await config.save();
+        console.log('✅ Migration complete!');
+    }
+}
+
 // ==================== PRE-SAVE HOOKS ====================
 
 SystemSchema.pre('save', function (next) {
     let total = this.systemPercentage + this.traderPercentage;
 
     if (this.uplineDistribution && Array.isArray(this.uplineDistribution)) {
+        // Validate levels are unique and sequential
+        const levels = this.uplineDistribution.map(item => item.level);
+        const uniqueLevels = [...new Set(levels)];
+        if (uniqueLevels.length !== levels.length) {
+            return next(new Error('Duplicate levels found in uplineDistribution'));
+        }
+
         this.uplineDistribution.forEach(item => {
             total += item.percentage;
         });
@@ -297,11 +318,6 @@ SystemSchema.pre('save', function (next) {
 
     if (total > 100) {
         return next(new Error(`Total percentage (${total}%) exceeds 100%`));
-    }
-
-    // Ensure milestones.levels are sorted by level
-    if (this.milestones?.levels) {
-        this.milestones.levels.sort((a, b) => a.level - b.level);
     }
 
     // Ensure autoSyncGTCMemberTree.lastSyncStats has all required fields
@@ -325,6 +341,20 @@ SystemSchema.pre('save', function (next) {
 
     next();
 });
+
+// ==================== QUERY HELPERS ====================
+
+// Get distribution for specific level
+SystemSchema.methods.getDistributionForLevel = function (level) {
+    return this.uplineDistribution.find(dist => dist.level === level);
+};
+
+// Check if level is unlocked for user rebate income
+SystemSchema.statics.isLevelUnlocked = async function (userRebateIncome, level) {
+    const config = await this.getOrCreateConfig();
+    const dist = config.getDistributionForLevel(level);
+    return dist && userRebateIncome >= dist.requiredRebateIncome && dist.enabled;
+};
 
 // ==================== EXPORT ====================
 

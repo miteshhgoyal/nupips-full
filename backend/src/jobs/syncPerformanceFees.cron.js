@@ -1,11 +1,9 @@
-// jobs/syncPerformanceFees.cron.js - UPDATED VERSION
 import cron from 'node-cron';
 import User from '../models/User.js';
 import SystemConfig from '../models/SystemConfig.js';
 import axios from 'axios';
 import https from 'https';
 import { addIncomeExpenseEntry } from '../utils/walletUtils.js';
-import { updateUserMilestones, getUnlockedUplinerDistribution } from '../services/milestoneService.js';
 
 const gtcAxios = axios.create({
     baseURL: process.env.GTC_FX_API_URL || 'https://test.gtctrader1203.top',
@@ -80,7 +78,7 @@ async function syncUserPerformanceFees(user, systemConfig) {
         const traderPerc = systemConfig.traderPercentage / 100;
         const traderShare = totalPerformanceFee * traderPerc;
 
-        // ==================== MILESTONE-BASED DISTRIBUTION ====================
+        // ==================== UPLINE DISTRIBUTION (Using Model Logic) ====================
 
         // 1. Credit trader with 'performancefee' (rebate income)
         const traderEntry = await addIncomeExpenseEntry(
@@ -97,27 +95,23 @@ async function syncUserPerformanceFees(user, systemConfig) {
         // 3. Refresh user to get updated rebate income
         const refreshedUser = await User.findById(user._id);
 
-        // 4. Update milestones based on new rebate income
-        await updateUserMilestones(refreshedUser._id);
+        // 4. Get unlocked upline distribution using model method
+        const unlockedDistribution = systemConfig.uplineDistribution.filter(async (dist) => {
+            return await SystemConfig.isLevelUnlocked(refreshedUser.financials?.totalRebateIncome || 0, dist.level);
+        });
 
-        // 5. Get final updated user with unlocked levels
-        const finalUser = await User.findById(user._id);
-
-        // 6. Get unlocked upline distribution
-        const unlockedDistribution = getUnlockedUplinerDistribution(finalUser, systemConfig);
-
-        console.log(`User ${user._id} unlocked levels:`, finalUser.milestones?.unlockedLevels || [1]);
-        console.log(`Distributing to ${unlockedDistribution.length} unlocked levels`);
+        console.log(`User ${user._id} unlocked levels count: ${unlockedDistribution.length}`);
+        console.log(`Distributing to unlocked levels only`);
 
         // Filter upliners to exclude admins
-        const upliners = (Array.isArray(finalUser.upliners) ? finalUser.upliners : []).filter(upliner =>
+        const upliners = (Array.isArray(refreshedUser.upliners) ? refreshedUser.upliners : []).filter(upliner =>
             !(upliner.email && upliner.email.includes("admin@nupips.com"))
         );
 
         let distributedUplinerShare = 0;
         let unallocatedUplinerShare = 0;
 
-        // 7. Distribute to UNLOCKED levels only
+        // 5. Distribute to UNLOCKED levels only
         for (const dist of unlockedDistribution) {
             const uplinerPercent = dist.percentage / 100;
             const uplinerUser = upliners[dist.level - 1]; // level 1 = index 0
@@ -131,81 +125,75 @@ async function syncUserPerformanceFees(user, systemConfig) {
                     'income',
                     'downlineincome',
                     uplinerShare,
-                    `Level ${dist.level} downline income from user ${finalUser._id}`
+                    `Level ${dist.level} downline income from user ${refreshedUser._id}`
                 );
 
                 await User.findByIdAndUpdate(uplinerUser._id, {
                     $push: { incomeExpenseHistory: traderEntry._id },
                 });
 
-                console.log(`  ✅ Level ${dist.level} distributed: $${uplinerShare.toFixed(4)}`);
+                console.log(`  Level ${dist.level} distributed: $${uplinerShare.toFixed(4)}`);
             } else {
                 // Upliner slot empty - goes to system
                 const uplinerShare = totalPerformanceFee * uplinerPercent;
                 unallocatedUplinerShare += uplinerShare;
-                console.log(`  ⚠️  Level ${dist.level} unassigned: $${uplinerShare.toFixed(4)} → system`);
+                console.log(`  Level ${dist.level} unassigned: $${uplinerShare.toFixed(4)} → system`);
             }
         }
 
-        // 8. Calculate locked level income (goes to system)
+        // 6. Calculate DISABLED levels income (goes to system)
         const allUplinerConfig = systemConfig.uplineDistribution;
-        const lockedDistribution = allUplinerConfig.filter(dist =>
-            !(finalUser.milestones?.unlockedLevels || [1]).includes(dist.level)
-        );
+        const disabledDistribution = allUplinerConfig.filter(dist => !unlockedDistribution.some(u => u.level === dist.level));
 
-        let lockedLevelIncome = 0;
-        for (const dist of lockedDistribution) {
+        let disabledLevelIncome = 0;
+        for (const dist of disabledDistribution) {
             const uplinerPercent = dist.percentage / 100;
             const share = totalPerformanceFee * uplinerPercent;
-            lockedLevelIncome += share;
-            console.log(`  🔒 Level ${dist.level} locked: $${share.toFixed(4)} → system`);
+            disabledLevelIncome += share;
+            console.log(`  Level ${dist.level} disabled: $${share.toFixed(4)} → system`);
         }
 
-        // 9. Calculate final system share
+        // 7. Calculate final system share
         const totalUplinerPerc = allUplinerConfig.reduce((sum, d) => sum + d.percentage, 0) / 100;
         const baseSystemShare = totalPerformanceFee * systemPerc;
-        const systemShare = baseSystemShare + unallocatedUplinerShare + lockedLevelIncome;
+        const systemShare = baseSystemShare + unallocatedUplinerShare + disabledLevelIncome;
 
-        // 10. Credit system
+        // 8. Credit system
         const systemEntry = await addIncomeExpenseEntry(
             systemConfig._id,
             'income',
             'commission',
             systemShare,
-            `System: base=${baseSystemShare.toFixed(2)}, unassigned=${unallocatedUplinerShare.toFixed(2)}, locked=${lockedLevelIncome.toFixed(2)} from user ${finalUser._id}`
+            `System: base=${baseSystemShare.toFixed(2)}, unassigned=${unallocatedUplinerShare.toFixed(2)}, disabled=${disabledLevelIncome.toFixed(2)} from user ${refreshedUser._id}`
         );
 
         await SystemConfig.findByIdAndUpdate(systemConfig._id, {
             $push: { incomeExpenseHistory: systemEntry._id }
         });
 
-        // 11. Update user lastPerformanceFeesFetch timestamp
-        await User.findByIdAndUpdate(finalUser._id, {
+        // 9. Update user lastPerformanceFeesFetch timestamp
+        await User.findByIdAndUpdate(refreshedUser._id, {
             $set: { 'gtcfx.lastPerformanceFeesFetch': today }
         });
 
         console.log(`
-╔════════════════════════════════════════════════════════════════╗
-║ User ${finalUser._id} Performance Fee Distribution
-╠════════════════════════════════════════════════════════════════╣
-║ Total Fee:        $${totalPerformanceFee.toFixed(4)}
-║ Trader Share:     $${traderShare.toFixed(4)} (${(traderPerc * 100).toFixed(1)}%)
-║ Distributed:      $${distributedUplinerShare.toFixed(4)}
-║ Locked Levels:    $${lockedLevelIncome.toFixed(4)}
-║ System Total:     $${systemShare.toFixed(4)}
-║ Unlocked Levels:  ${(finalUser.milestones?.unlockedLevels || [1]).join(', ')}
-╚════════════════════════════════════════════════════════════════╝
+User ${refreshedUser._id} Performance Fee Distribution:
+├── Total Fee:        $${totalPerformanceFee.toFixed(4)}
+├── Trader Share:     $${traderShare.toFixed(4)} (${(traderPerc * 100).toFixed(1)}%)
+├── Distributed:      $${distributedUplinerShare.toFixed(4)}
+├── Disabled Levels:  $${disabledLevelIncome.toFixed(4)}
+└── System Total:     $${systemShare.toFixed(4)}
         `);
 
         return {
             success: true,
-            userId: finalUser._id,
+            userId: refreshedUser._id,
             amount: totalPerformanceFee,
-            unlockedLevels: finalUser.milestones?.unlockedLevels || [1],
+            unlockedCount: unlockedDistribution.length,
             distribution: {
                 trader: traderShare,
                 upliners: distributedUplinerShare,
-                locked: lockedLevelIncome,
+                disabled: disabledLevelIncome,
                 system: systemShare
             }
         };
@@ -254,7 +242,7 @@ export async function startPerformanceFeesCron() {
             try {
                 const users = await User.find({
                     'gtcfx.accessToken': { $exists: true, $ne: null }
-                }).select('_id gtcfx walletBalance upliners email financials milestones');
+                }).select('_id gtcfx walletBalance upliners email financials');
 
                 console.log(`Found ${users.length} users with GTC FX accounts`);
 
@@ -268,7 +256,7 @@ export async function startPerformanceFeesCron() {
                     skipped: 0,
                     failed: 0,
                     totalAmount: 0,
-                    totalLocked: 0
+                    totalDisabled: 0
                 };
 
                 for (const user of filteredUsers) {
@@ -277,7 +265,7 @@ export async function startPerformanceFeesCron() {
                     if (result.success) {
                         results.success++;
                         results.totalAmount += result.amount || 0;
-                        results.totalLocked += result.distribution?.locked || 0;
+                        results.totalDisabled += result.distribution?.disabled || 0;
                     } else if (result.skipped) {
                         results.skipped++;
                     } else if (result.error) {
@@ -288,15 +276,12 @@ export async function startPerformanceFeesCron() {
                 }
 
                 console.log(`
-╔════════════════════════════════════════════════════════════════╗
-║ SYNC COMPLETE
-╠════════════════════════════════════════════════════════════════╣
-║ Success:        ${results.success}
-║ Skipped:        ${results.skipped}
-║ Failed:         ${results.failed}
-║ Total Amount:   $${results.totalAmount.toFixed(2)}
-║ Locked Income:  $${results.totalLocked.toFixed(2)}
-╚════════════════════════════════════════════════════════════════╝
+SYNC COMPLETE:
+├── Success:     ${results.success}
+├── Skipped:     ${results.skipped}
+├── Failed:      ${results.failed}
+├── Total Amount: $${results.totalAmount.toFixed(2)}
+└── Disabled Income: $${results.totalDisabled.toFixed(2)}
                 `);
             } catch (error) {
                 console.error('Cron job failed:', error);

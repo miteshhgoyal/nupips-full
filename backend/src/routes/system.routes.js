@@ -1,5 +1,3 @@
-// routes/system.routes.js - UPDATED WITH MILESTONES
-
 import express from 'express';
 import SystemConfig from '../models/SystemConfig.js';
 import User from '../models/User.js';
@@ -41,8 +39,7 @@ const validateConfigUpdate = (req, res, next) => {
         performanceFeeTime,
         pammUuid,
         pammEnabled,
-        autoSyncGTCMemberTree,
-        milestones // NEW
+        autoSyncGTCMemberTree
     } = req.body;
 
     if (systemPercentage === undefined || systemPercentage < 0 || systemPercentage > 100) {
@@ -77,16 +74,34 @@ const validateConfigUpdate = (req, res, next) => {
     let totalPercentage = systemPercentage + traderPercentage;
 
     for (const item of uplineDistribution) {
-        if (item.level < 1 || levels.has(item.level)) {
+        if (typeof item.level !== 'number' || item.level < 1 || levels.has(item.level)) {
             return res.status(400).json({
                 success: false,
                 message: 'Upline levels must be unique positive integers'
             });
         }
-        if (item.percentage < 0 || item.percentage > 100) {
+        if (typeof item.percentage !== 'number' || item.percentage < 0 || item.percentage > 100) {
             return res.status(400).json({
                 success: false,
                 message: 'Upline percentages must be between 0-100'
+            });
+        }
+        if (typeof item.requiredRebateIncome !== 'number' || item.requiredRebateIncome < 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'requiredRebateIncome must be a non-negative number'
+            });
+        }
+        if (item.description && typeof item.description !== 'string') {
+            return res.status(400).json({
+                success: false,
+                message: 'Description must be a string'
+            });
+        }
+        if (typeof item.enabled !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                message: 'enabled must be a boolean'
             });
         }
         levels.add(item.level);
@@ -140,94 +155,6 @@ const validateConfigUpdate = (req, res, next) => {
                 success: false,
                 message: 'PAMM UUID must be a valid UUID v4 format'
             });
-        }
-    }
-
-    // ========== VALIDATE MILESTONES ==========
-    if (milestones && typeof milestones === 'object') {
-        // Validate enabled flag
-        if (typeof milestones.enabled !== 'boolean') {
-            return res.status(400).json({
-                success: false,
-                message: 'milestones.enabled must be a boolean'
-            });
-        }
-
-        // Validate levels array
-        if (milestones.levels && Array.isArray(milestones.levels)) {
-            if (milestones.levels.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'At least one milestone level is required'
-                });
-            }
-
-            const milestoneLevels = new Set();
-
-            for (const milestone of milestones.levels) {
-                // Validate level number
-                if (typeof milestone.level !== 'number' || milestone.level < 1) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'Milestone levels must be positive integers'
-                    });
-                }
-
-                // Check for duplicate levels
-                if (milestoneLevels.has(milestone.level)) {
-                    return res.status(400).json({
-                        success: false,
-                        message: `Duplicate milestone level: ${milestone.level}`
-                    });
-                }
-                milestoneLevels.add(milestone.level);
-
-                // Validate required rebate income
-                if (typeof milestone.requiredRebateIncome !== 'number' || milestone.requiredRebateIncome < 0) {
-                    return res.status(400).json({
-                        success: false,
-                        message: `Required rebate income for level ${milestone.level} must be a non-negative number`
-                    });
-                }
-
-                // Level 1 must have 0 requirement (always unlocked)
-                if (milestone.level === 1 && milestone.requiredRebateIncome !== 0) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'Level 1 must have 0 required rebate income (always unlocked)'
-                    });
-                }
-
-                // Validate description
-                if (milestone.description && typeof milestone.description !== 'string') {
-                    return res.status(400).json({
-                        success: false,
-                        message: `Description for level ${milestone.level} must be a string`
-                    });
-                }
-            }
-
-            // Ensure levels are in ascending order by requiredRebateIncome
-            const sortedMilestones = [...milestones.levels].sort((a, b) => a.requiredRebateIncome - b.requiredRebateIncome);
-            for (let i = 1; i < sortedMilestones.length; i++) {
-                if (sortedMilestones[i].requiredRebateIncome <= sortedMilestones[i - 1].requiredRebateIncome) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'Milestone requirements must be in strictly increasing order'
-                    });
-                }
-            }
-
-            // Check that milestone levels match upline distribution levels
-            const uplinerLevels = new Set(uplineDistribution.map(d => d.level));
-            const allMilestoneLevelsExist = milestones.levels.every(m => uplinerLevels.has(m.level));
-
-            if (!allMilestoneLevelsExist) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'All milestone levels must exist in upline distribution'
-                });
-            }
         }
     }
 
@@ -296,14 +223,13 @@ const validateConfigUpdate = (req, res, next) => {
         systemPercentage,
         traderPercentage,
         maxUplineLevels,
-        uplineDistribution,
+        uplineDistribution: uplineDistribution.sort((a, b) => a.level - b.level),
         performanceFeeFrequency,
         performanceFeeDates: performanceFeeFrequency === 'monthly' ? performanceFeeDates : [],
         performanceFeeTime,
         pammUuid: pammUuid?.trim() || null,
         pammEnabled: Boolean(pammEnabled),
-        autoSyncGTCMemberTree: autoSyncGTCMemberTree || {},
-        milestones: milestones || {} // NEW
+        autoSyncGTCMemberTree: autoSyncGTCMemberTree || {}
     };
     next();
 };
@@ -395,8 +321,7 @@ router.put('/config',
                 performanceFeeTime,
                 pammUuid,
                 pammEnabled,
-                autoSyncGTCMemberTree,
-                milestones // NEW
+                autoSyncGTCMemberTree
             } = req.validatedData;
 
             let config = await SystemConfig.getOrCreateConfig();
@@ -404,31 +329,12 @@ router.put('/config',
             config.systemPercentage = systemPercentage;
             config.traderPercentage = traderPercentage;
             config.maxUplineLevels = maxUplineLevels;
-            config.uplineDistribution = uplineDistribution.sort((a, b) => a.level - b.level);
+            config.uplineDistribution = uplineDistribution;
             config.performanceFeeFrequency = performanceFeeFrequency;
             config.performanceFeeDates = performanceFeeDates;
             config.performanceFeeTime = performanceFeeTime;
             config.pammUuid = pammUuid;
             config.pammEnabled = pammEnabled;
-
-            // ========== UPDATE MILESTONES ==========
-            if (milestones && typeof milestones === 'object') {
-                const existingMilestones = config.milestones || {};
-
-                config.milestones = {
-                    enabled: milestones.enabled !== undefined
-                        ? Boolean(milestones.enabled)
-                        : (existingMilestones.enabled || true),
-
-                    levels: milestones.levels && Array.isArray(milestones.levels)
-                        ? milestones.levels.map(m => ({
-                            level: m.level,
-                            requiredRebateIncome: m.requiredRebateIncome || 0,
-                            description: m.description || ''
-                        })).sort((a, b) => a.level - b.level)
-                        : (existingMilestones.levels || [])
-                };
-            }
 
             // Update autoSyncGTCMemberTree configuration
             if (autoSyncGTCMemberTree && typeof autoSyncGTCMemberTree === 'object') {

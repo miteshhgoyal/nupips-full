@@ -1,3 +1,4 @@
+// NupipsIncomes.jsx - UPDATED FOR NEW MODEL
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -20,6 +21,9 @@ import {
   Target,
   Info,
   CheckCircle,
+  DollarSign,
+  Users,
+  Percent,
 } from "lucide-react";
 import api from "../../services/api";
 
@@ -27,7 +31,7 @@ const NupipsIncomes = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [incomes, setIncomes] = useState([]);
-  const [milestones, setMilestones] = useState(null);
+  const [milestoneData, setMilestoneData] = useState(null);
 
   // Detail modal
   const [selectedIncome, setSelectedIncome] = useState(null);
@@ -60,7 +64,7 @@ const NupipsIncomes = () => {
       ]);
 
       setIncomes(incomesRes.data.incomes || []);
-      setMilestones(milestonesRes.data.data || null);
+      setMilestoneData(milestonesRes.data.data || null);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load data");
     } finally {
@@ -130,6 +134,12 @@ const NupipsIncomes = () => {
       performancefee: "Performance Fee (Rebate)",
       downlineincome: "Downline Income (Affiliate)",
       commission: "System Commission",
+      deposit: "Deposit",
+      performance_fee: "Performance Fee",
+      internal_transfer: "Internal Transfer",
+      trading_spend: "Trading Spend",
+      shopping_spend: "Shopping Spend",
+      other: "Other",
     };
     return labels[category] || category.replace(/_/g, " ");
   };
@@ -139,34 +149,82 @@ const NupipsIncomes = () => {
       performancefee: "bg-green-100 text-green-800",
       downlineincome: "bg-blue-100 text-blue-800",
       commission: "bg-orange-100 text-orange-800",
+      deposit: "bg-purple-100 text-purple-800",
+      performance_fee: "bg-green-100 text-green-800",
+      internal_transfer: "bg-gray-100 text-gray-800",
+      trading_spend: "bg-red-100 text-red-800",
+      shopping_spend: "bg-yellow-100 text-yellow-800",
+      other: "bg-gray-100 text-gray-800",
     };
     return colors[category] || "bg-gray-100 text-gray-800";
   };
 
-  // Calculate progress bar width based on highest unlocked level
-  const getProgressBarWidth = () => {
-    if (!milestones?.progress || milestones.progress.length === 0) return 0;
+  // Get income source info based on category
+  const getIncomeSource = (category) => {
+    const sources = {
+      performancefee:
+        "Earned from your trading performance fees on GTC FX platform",
+      downlineincome:
+        "Earned from your downline's trading performance (affiliate income)",
+      commission: "System commission income",
+      deposit: "Wallet deposit",
+      performance_fee: "Performance fee from trading",
+      internal_transfer: "Internal wallet transfer",
+      other: "Miscellaneous income",
+    };
+    return sources[category] || "Income source";
+  };
 
-    const totalLevels = milestones.progress.length;
-    const unlockedCount = milestones.unlockedLevels?.length || 1;
+  // Calculate progress for each level
+  const getLevelProgress = () => {
+    if (!milestoneData?.rules?.uplineDistribution) return [];
 
-    // Get the current progress within the current level
-    const currentLevel =
-      milestones.progress.find((p) => !p.isUnlocked) ||
-      milestones.progress[milestones.progress.length - 1];
-    const currentLevelIndex = milestones.progress.findIndex(
-      (p) => p.level === currentLevel.level,
-    );
+    const lifetimeRebate = milestoneData.lifetimeRebateIncome || 0;
+    const unlockedLevels = milestoneData.unlockedLevels || [1];
+    const distribution = milestoneData.rules.uplineDistribution || [];
 
-    if (currentLevel.isUnlocked) {
-      return 100; // All levels unlocked
-    }
+    return distribution.map((level) => {
+      const isUnlocked = unlockedLevels.includes(level.level);
+      const required = level.requiredRebateIncome || 0;
+      const current = Math.min(lifetimeRebate, required);
+      const percentage = required > 0 ? (current / required) * 100 : 100;
 
-    // Calculate progress: (completed levels + partial progress of current level) / total levels
-    const completedLevels = currentLevelIndex;
-    const currentLevelProgress = currentLevel.percentage / 100;
+      return {
+        level: level.level,
+        percentage: level.percentage,
+        required: required,
+        current: current,
+        progress: Math.min(100, percentage),
+        isUnlocked: isUnlocked,
+        description: level.description || `Level ${level.level}`,
+        enabled: level.enabled !== false,
+      };
+    });
+  };
 
-    return ((completedLevels + currentLevelProgress) / totalLevels) * 100;
+  // Get next milestone to unlock
+  const getNextMilestone = () => {
+    const progress = getLevelProgress();
+    const nextLocked = progress.find((p) => !p.isUnlocked && p.enabled);
+
+    if (!nextLocked) return null;
+
+    const lifetimeRebate = milestoneData?.lifetimeRebateIncome || 0;
+    return {
+      level: nextLocked.level,
+      required: nextLocked.required,
+      remaining: nextLocked.required - lifetimeRebate,
+      description: nextLocked.description,
+    };
+  };
+
+  // Calculate overall progress
+  const getOverallProgress = () => {
+    const progress = getLevelProgress();
+    if (progress.length === 0) return 0;
+
+    const unlockedCount = progress.filter((p) => p.isUnlocked).length;
+    return (unlockedCount / progress.length) * 100;
   };
 
   if (loading) {
@@ -179,6 +237,9 @@ const NupipsIncomes = () => {
       </div>
     );
   }
+
+  const levelProgress = getLevelProgress();
+  const nextMilestone = getNextMilestone();
 
   return (
     <>
@@ -193,7 +254,7 @@ const NupipsIncomes = () => {
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
                   <Trophy className="w-8 h-8 text-orange-600" />
-                  Income & Milestones
+                  Income & Level Progress
                 </h1>
                 <p className="text-gray-600 mt-2">
                   Track your earnings and unlock new income levels
@@ -210,8 +271,8 @@ const NupipsIncomes = () => {
             </div>
           )}
 
-          {/* Milestones Section */}
-          {milestones && milestones.milestonesEnabled && (
+          {/* Income Level Progress Section */}
+          {milestoneData && levelProgress.length > 0 && (
             <div className="mb-8 bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl shadow-lg border border-orange-200 overflow-hidden">
               {/* Header with Toggle */}
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6">
@@ -220,7 +281,7 @@ const NupipsIncomes = () => {
                     <Award className="w-6 h-6 text-white" />
                     <div>
                       <h2 className="text-xl font-bold text-white">
-                        Your Milestone Progress
+                        Your Income Level Progress
                       </h2>
                       <p className="text-orange-100 text-sm mt-1">
                         Unlock higher income levels by reaching lifetime rebate
@@ -255,13 +316,18 @@ const NupipsIncomes = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                       <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
                         <div className="flex items-center gap-2 mb-1">
-                          <TrendingUp className="w-5 h-5 text-green-600" />
+                          <DollarSign className="w-5 h-5 text-green-600" />
                           <p className="text-sm font-medium text-green-900">
                             Lifetime Rebate Income
                           </p>
                         </div>
                         <p className="text-2xl font-bold text-green-900">
-                          ${milestones.lifetimeRebate?.toFixed(2) || "0.00"}
+                          $
+                          {milestoneData.lifetimeRebateIncome?.toFixed(2) ||
+                            "0.00"}
+                        </p>
+                        <p className="text-xs text-green-700 mt-1">
+                          From performance fees
                         </p>
                       </div>
 
@@ -273,8 +339,11 @@ const NupipsIncomes = () => {
                           </p>
                         </div>
                         <p className="text-2xl font-bold text-blue-900">
-                          {milestones.unlockedLevels?.length || 1} /{" "}
-                          {milestones.progress?.length || 0}
+                          {milestoneData.unlockedLevels?.length || 1} /{" "}
+                          {levelProgress.length}
+                        </p>
+                        <p className="text-xs text-blue-700 mt-1">
+                          {getOverallProgress().toFixed(0)}% complete
                         </p>
                       </div>
 
@@ -286,19 +355,19 @@ const NupipsIncomes = () => {
                           </p>
                         </div>
                         <p className="text-2xl font-bold text-purple-900">
-                          {milestones.nextMilestone
-                            ? `$${milestones.nextMilestone.remaining.toFixed(0)}`
+                          {nextMilestone
+                            ? `$${nextMilestone.remaining.toFixed(0)}`
                             : "All Unlocked!"}
                         </p>
-                        {milestones.nextMilestone && (
+                        {nextMilestone && (
                           <p className="text-xs text-purple-700 mt-1">
-                            Level {milestones.nextMilestone.level}
+                            To unlock Level {nextMilestone.level}
                           </p>
                         )}
                       </div>
                     </div>
 
-                    {/* Single Horizontal Progress Bar */}
+                    {/* Horizontal Progress Bar */}
                     <div className="bg-white rounded-xl p-6 border border-orange-200">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold text-gray-900">
@@ -316,112 +385,150 @@ const NupipsIncomes = () => {
                         </div>
                       </div>
 
-                      {milestones.progress &&
-                        milestones.progress.length > 0 && (
-                          <>
-                            {/* Progress Bar */}
-                            <div className="relative mb-6">
-                              {/* Background Bar */}
-                              <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-                                {/* Orange Progress Fill */}
-                                <div
-                                  className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all duration-700 ease-out"
-                                  style={{ width: `${getProgressBarWidth()}%` }}
-                                />
+                      {/* Progress Bar */}
+                      <div className="relative mb-6">
+                        {/* Background Bar */}
+                        <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                          {/* Orange Progress Fill */}
+                          <div
+                            className="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all duration-700 ease-out"
+                            style={{ width: `${getOverallProgress()}%` }}
+                          />
+                        </div>
+
+                        {/* Level Markers */}
+                        <div className="flex justify-between mt-4">
+                          {levelProgress.map((level) => (
+                            <div
+                              key={level.level}
+                              className="flex flex-col items-center"
+                              style={{
+                                width: `${100 / levelProgress.length}%`,
+                                position: "relative",
+                              }}
+                            >
+                              {/* Level Circle */}
+                              <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 ${
+                                  level.isUnlocked
+                                    ? "bg-orange-500 text-white border-orange-600 shadow-lg"
+                                    : "bg-gray-200 text-gray-500 border-gray-300"
+                                }`}
+                              >
+                                {level.isUnlocked ? (
+                                  <Unlock className="w-5 h-5" />
+                                ) : (
+                                  <Lock className="w-5 h-5" />
+                                )}
                               </div>
 
-                              {/* Level Markers */}
-                              <div className="flex justify-between mt-4">
-                                {milestones.progress.map((milestone, index) => (
-                                  <div
-                                    key={milestone.level}
-                                    className="flex flex-col items-center"
-                                    style={{
-                                      width: `${100 / milestones.progress.length}%`,
-                                      position: "relative",
-                                    }}
-                                  >
-                                    {/* Level Circle */}
-                                    <div
-                                      className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 ${
-                                        milestone.isUnlocked
-                                          ? "bg-orange-500 text-white border-orange-600 shadow-lg"
-                                          : "bg-gray-200 text-gray-500 border-gray-300"
-                                      }`}
-                                    >
-                                      {milestone.isUnlocked ? (
-                                        <Unlock className="w-5 h-5" />
-                                      ) : (
-                                        <Lock className="w-5 h-5" />
-                                      )}
-                                    </div>
-
-                                    {/* Level Label */}
-                                    <div className="mt-2 text-center">
-                                      <p
-                                        className={`text-xs font-bold ${
-                                          milestone.isUnlocked
-                                            ? "text-orange-600"
-                                            : "text-gray-600"
-                                        }`}
-                                      >
-                                        L{milestone.level}
-                                      </p>
-                                      <p className="text-[10px] text-gray-500 mt-0.5">
-                                        ${milestone.required.toFixed(0)}
-                                      </p>
-                                      {milestone.level === 1 && (
-                                        <span className="inline-block mt-1 text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-                                          Base
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
+                              {/* Level Label */}
+                              <div className="mt-2 text-center">
+                                <p
+                                  className={`text-xs font-bold ${
+                                    level.isUnlocked
+                                      ? "text-orange-600"
+                                      : "text-gray-600"
+                                  }`}
+                                >
+                                  L{level.level}
+                                </p>
+                                <p className="text-[10px] text-gray-500 mt-0.5">
+                                  ${level.required.toFixed(0)}
+                                </p>
+                                <p className="text-[9px] text-gray-600 mt-0.5">
+                                  {level.percentage}%
+                                </p>
+                                {level.level === 1 && (
+                                  <span className="inline-block mt-1 text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
+                                    Base
+                                  </span>
+                                )}
                               </div>
                             </div>
+                          ))}
+                        </div>
+                      </div>
 
-                            {/* Progress Info */}
-                            {milestones.nextMilestone && (
-                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
-                                <Info className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
-                                <p className="text-xs text-yellow-800">
-                                  Earn{" "}
-                                  <span className="font-bold">
-                                    $
-                                    {milestones.nextMilestone.remaining.toFixed(
-                                      2,
-                                    )}
-                                  </span>{" "}
-                                  more in rebate income to unlock{" "}
-                                  <span className="font-bold">
-                                    Level {milestones.nextMilestone.level}
-                                  </span>
-                                </p>
-                              </div>
-                            )}
-                          </>
-                        )}
+                      {/* Progress Info */}
+                      {nextMilestone && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+                          <Info className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-yellow-800">
+                            Earn{" "}
+                            <span className="font-bold">
+                              ${nextMilestone.remaining.toFixed(2)}
+                            </span>{" "}
+                            more in rebate income to unlock{" "}
+                            <span className="font-bold">
+                              Level {nextMilestone.level}
+                            </span>{" "}
+                            and start earning{" "}
+                            <span className="font-bold">
+                              {
+                                levelProgress.find(
+                                  (l) => l.level === nextMilestone.level,
+                                )?.percentage
+                              }
+                              %
+                            </span>{" "}
+                            from that level
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Income Rules Explainer - Compact */}
+                  {/* Income Distribution Info */}
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-t border-blue-200 p-4">
                     <div className="flex items-start gap-3">
                       <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                       <div className="text-xs text-blue-900">
-                        <p className="font-semibold mb-1.5">
-                          How Income Levels Work:
+                        <p className="font-semibold mb-2">
+                          How Income Distribution Works:
                         </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-blue-800">
-                          <div>
-                            • <strong>Level 1:</strong> Always unlocked
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="bg-white/50 rounded-lg p-3">
+                            <p className="font-semibold mb-1">
+                              Performance Fee (Rebate):
+                            </p>
+                            <p>
+                              You earn{" "}
+                              <strong>
+                                {milestoneData?.rules?.traderPercentage}%
+                              </strong>{" "}
+                              of your trading performance fees. This income
+                              unlocks higher levels.
+                            </p>
                           </div>
-                          <div>
-                            • <strong>Level 2+:</strong> Unlock via milestones
+                          <div className="bg-white/50 rounded-lg p-3">
+                            <p className="font-semibold mb-1">
+                              Downline Income (Affiliate):
+                            </p>
+                            <p>
+                              Earn from your downline's performance based on
+                              unlocked levels. Locked levels go to system.
+                            </p>
                           </div>
-                          <div>• Locked income goes to system</div>
-                          <div>• Rebate income unlocks levels</div>
+                          <div className="bg-white/50 rounded-lg p-3">
+                            <p className="font-semibold mb-1">
+                              Level Unlocking:
+                            </p>
+                            <p>
+                              Level 1 is always unlocked. Higher levels unlock
+                              when you reach lifetime rebate milestones.
+                            </p>
+                          </div>
+                          <div className="bg-white/50 rounded-lg p-3">
+                            <p className="font-semibold mb-1">System Share:</p>
+                            <p>
+                              System takes{" "}
+                              <strong>
+                                {milestoneData?.rules?.systemPercentage}%
+                              </strong>{" "}
+                              + income from locked/unassigned levels.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -431,7 +538,7 @@ const NupipsIncomes = () => {
             </div>
           )}
 
-          {/* Summary Cards with Gradients */}
+          {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200 shadow-sm">
               <div className="flex items-center gap-3 mb-2">
@@ -715,18 +822,31 @@ const NupipsIncomes = () => {
                     Category
                   </span>
                   <span
-                    className={`text-sm font-semibold px-3 py-1 rounded-full ${getCategoryColor(selectedIncome.category)}`}
+                    className={`text-sm font-semibold px-3 py-1 rounded-full ${getCategoryColor(
+                      selectedIncome.category,
+                    )}`}
                   >
                     {getCategoryLabel(selectedIncome.category)}
                   </span>
                 </div>
 
-                {/* Description */}
+                {/* Income Source */}
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                  <h3 className="text-sm font-semibold text-blue-900 mb-2">
-                    Description
+                  <h3 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                    <Info className="w-4 h-4" />
+                    Income Source
                   </h3>
                   <p className="text-sm text-blue-900">
+                    {getIncomeSource(selectedIncome.category)}
+                  </p>
+                </div>
+
+                {/* Description */}
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-100">
+                  <h3 className="text-sm font-semibold text-purple-900 mb-2">
+                    Description
+                  </h3>
+                  <p className="text-sm text-purple-900">
                     {selectedIncome.description || "No description provided"}
                   </p>
                 </div>
@@ -734,10 +854,20 @@ const NupipsIncomes = () => {
                 {/* Date */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium text-gray-600">
-                    Date
+                    Date & Time
                   </span>
                   <span className="text-sm font-mono text-gray-900">
                     {formatDate(selectedIncome.date)}
+                  </span>
+                </div>
+
+                {/* Transaction ID */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium text-gray-600">
+                    Transaction ID
+                  </span>
+                  <span className="text-xs font-mono text-gray-600">
+                    {selectedIncome._id}
                   </span>
                 </div>
               </div>
