@@ -3,6 +3,7 @@ import express from "express";
 import IncomeExpense from "../models/IncomeExpense.js";
 import SystemConfig from "../models/SystemConfig.js";
 import User from "../models/User.js";
+import { authenticateToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
