@@ -276,7 +276,7 @@ const NupipsIncomes = () => {
             <div className="mb-8 bg-white rounded-2xl shadow-lg border border-orange-200 overflow-hidden">
               {/* Header with Toggle */}
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
                     <Award className="w-6 h-6 text-white" />
                     <div>
