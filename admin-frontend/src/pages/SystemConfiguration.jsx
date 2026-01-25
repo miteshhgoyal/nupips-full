@@ -407,7 +407,7 @@ const SystemConfiguration = () => {
     const newMilestone = {
       level: nextLevel,
       requiredRebateIncome: 0,
-      description: `Unlock level ${nextLevel}`,
+      description: `Unlock affiliate income from downline level ${nextLevel}`,
     };
 
     updateMilestonesField("levels", [...currentLevels, newMilestone]);
