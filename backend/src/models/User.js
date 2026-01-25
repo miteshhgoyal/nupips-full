@@ -218,12 +218,13 @@ UserSchema.methods.updateFinancials = async function () {
     try {
         const Deposit = mongoose.model('Deposit');
         const Withdrawal = mongoose.model('Withdrawal');
+        const IncomeExpense = mongoose.model('IncomeExpense');
 
         // Completed deposits
         const completedDeposits = await Deposit.find({
             userId: this._id,
             status: 'completed'
-        });
+        }).sort({ completedAt: -1 });
         this.financials.totalDeposits = completedDeposits.reduce((sum, d) => sum + d.amount, 0);
 
         // Pending deposits
@@ -235,14 +236,14 @@ UserSchema.methods.updateFinancials = async function () {
 
         // Last deposit
         if (completedDeposits.length > 0) {
-            this.financials.lastDepositAt = completedDeposits[completedDeposits.length - 1].completedAt;
+            this.financials.lastDepositAt = completedDeposits[0].completedAt || completedDeposits[0].createdAt;
         }
 
         // Completed withdrawals
         const completedWithdrawals = await Withdrawal.find({
             userId: this._id,
             status: 'completed'
-        });
+        }).sort({ completedAt: -1 });
         this.financials.totalWithdrawals = completedWithdrawals.reduce((sum, w) => sum + w.netAmount, 0);
 
         // Pending withdrawals
@@ -254,16 +255,68 @@ UserSchema.methods.updateFinancials = async function () {
 
         // Last withdrawal
         if (completedWithdrawals.length > 0) {
-            this.financials.lastWithdrawalAt = completedWithdrawals[completedWithdrawals.length - 1].completedAt;
+            this.financials.lastWithdrawalAt = completedWithdrawals[0].completedAt || completedWithdrawals[0].createdAt;
         }
 
         // Net balance
         this.financials.netDeposits = this.financials.totalDeposits - this.financials.totalWithdrawals;
 
+        // ========== UPDATE INCOME TOTALS ==========
+        // Rebate income (from IncomeExpense collection)
+        const rebateIncomes = await IncomeExpense.find({
+            userId: this._id,
+            type: 'income',
+            category: 'rebate'
+        });
+        this.financials.totalRebateIncome = rebateIncomes.reduce((sum, ie) => sum + ie.amount, 0);
+
+        // Affiliate income (from IncomeExpense collection)
+        const affiliateIncomes = await IncomeExpense.find({
+            userId: this._id,
+            type: 'income',
+            category: 'affiliate'
+        });
+        this.financials.totalAffiliateIncome = affiliateIncomes.reduce((sum, ie) => sum + ie.amount, 0);
+
         await this.save();
         return this.financials;
     } catch (error) {
         console.error('Error updating financials:', error);
+        throw error;
+    }
+};
+
+/**
+ * Update only income totals (lighter than full updateFinancials)
+ * Call this when IncomeExpense records change
+ */
+UserSchema.methods.updateIncomes = async function () {
+    try {
+        const IncomeExpense = mongoose.model('IncomeExpense');
+
+        // Rebate income
+        const rebateIncomes = await IncomeExpense.find({
+            userId: this._id,
+            type: 'income',
+            category: 'rebate'
+        });
+        this.financials.totalRebateIncome = rebateIncomes.reduce((sum, ie) => sum + ie.amount, 0);
+
+        // Affiliate income
+        const affiliateIncomes = await IncomeExpense.find({
+            userId: this._id,
+            type: 'income',
+            category: 'affiliate'
+        });
+        this.financials.totalAffiliateIncome = affiliateIncomes.reduce((sum, ie) => sum + ie.amount, 0);
+
+        await this.save();
+        return {
+            totalRebateIncome: this.financials.totalRebateIncome,
+            totalAffiliateIncome: this.financials.totalAffiliateIncome
+        };
+    } catch (error) {
+        console.error('Error updating incomes:', error);
         throw error;
     }
 };
@@ -354,6 +407,22 @@ UserSchema.methods.getReferralTreeWithDetails = async function (maxLevel = null)
     } catch (error) {
         console.error('Error getting referral tree with details:', error);
         throw error;
+    }
+};
+
+// ==================== STATIC METHODS ====================
+
+/**
+ * Update income totals for a specific user (called from IncomeExpense hooks)
+ */
+UserSchema.statics.syncIncomeForUser = async function (userId) {
+    try {
+        const user = await this.findById(userId);
+        if (user) {
+            await user.updateIncomes();
+        }
+    } catch (error) {
+        console.error('Error syncing income for user:', error);
     }
 };
 

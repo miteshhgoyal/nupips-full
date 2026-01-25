@@ -22,6 +22,7 @@ import competitionRoutes from './routes/competition.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 
 import { startPerformanceFeesCron } from './jobs/syncPerformanceFees.cron.js';
+import { startMemberTreeSyncCron } from './jobs/syncMemberTree.cron.js';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -102,6 +103,7 @@ connectDB()
 
             // Start cron jobs after DB connection
             startPerformanceFeesCron();
+            startMemberTreeSyncCron();
         });
     })
     .catch(err => {
