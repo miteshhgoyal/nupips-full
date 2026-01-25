@@ -1700,13 +1700,13 @@ const GTCMembers = () => {
                 Full Tree
               </button>
 
-              <button
+              {/* <button
                 onClick={() => setShowSyncModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all shadow-sm hover:shadow-md"
               >
                 <Shuffle className="w-5 h-5" />
                 Sync GTC
-              </button>
+              </button> */}
 
               <button
                 onClick={handleRefresh}

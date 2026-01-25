@@ -73,6 +73,60 @@ const SystemSchema = new mongoose.Schema({
         default: false
     },
 
+    // ========== Auto Sync GTC Member Tree Configuration ==========
+    autoSyncGTCMemberTree: {
+        syncEnabled: {
+            type: Boolean,
+            default: false
+        },
+        syncFrequency: {
+            type: String,
+            default: "0 2 * * *", // Default: Daily at 2 AM
+            validate: {
+                validator: function (v) {
+                    // Basic cron validation - 5 parts separated by spaces
+                    const parts = v.trim().split(/\s+/);
+                    return parts.length === 5;
+                },
+                message: 'Sync frequency must be a valid cron expression (5 parts)'
+            }
+        },
+        gtcLoginAccount: {
+            type: String,
+            default: null,
+            trim: true
+        },
+        gtcLoginPassword: {
+            type: String,
+            default: null,
+            // Encrypted in production
+        },
+        gtcApiUrl: {
+            type: String,
+            default: null,
+            trim: true
+        },
+        runSyncOnStartup: {
+            type: Boolean,
+            default: false
+        },
+        lastSyncAt: {
+            type: Date,
+            default: null
+        },
+        lastSyncStatus: {
+            type: String,
+            enum: ['success', 'failed', 'pending', null],
+            default: null
+        },
+        lastSyncStats: {
+            processed: { type: Number, default: 0 },
+            updated: { type: Number, default: 0 },
+            created: { type: Number, default: 0 },
+            errors: { type: Number, default: 0 }
+        }
+    },
+
     // ========== Timestamps ==========
     updatedAt: {
         type: Date,
@@ -116,7 +170,23 @@ SystemSchema.statics.getOrCreateConfig = async function () {
                 performanceFeeDates: [1], // default: 1st of month
                 performanceFeeTime: "00:00",
                 pammUuid: null,
-                pammEnabled: false
+                pammEnabled: false,
+                autoSyncGTCMemberTree: {
+                    syncEnabled: false,
+                    syncFrequency: "0 2 * * *",
+                    gtcLoginAccount: null,
+                    gtcLoginPassword: null,
+                    gtcApiUrl: null,
+                    runSyncOnStartup: false,
+                    lastSyncAt: null,
+                    lastSyncStatus: null,
+                    lastSyncStats: {
+                        processed: 0,
+                        updated: 0,
+                        created: 0,
+                        errors: 0
+                    }
+                }
             });
         }
         return config;

@@ -17,6 +17,12 @@ import {
   Copy,
   Check,
   Calendar,
+  RefreshCw,
+  Clock,
+  Server,
+  Key,
+  Globe,
+  Play,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -25,12 +31,14 @@ const SystemConfiguration = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [config, setConfig] = useState(null);
   const [editing, setEditing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState("pamm");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     systemPercentage: 40,
@@ -46,12 +54,21 @@ const SystemConfiguration = () => {
     performanceFeeTime: "00:00",
     pammUuid: "",
     pammEnabled: false,
+    autoSyncGTCMemberTree: {
+      syncEnabled: false,
+      syncFrequency: "0 2 * * *",
+      gtcLoginAccount: "",
+      gtcLoginPassword: "",
+      gtcApiUrl: "",
+      runSyncOnStartup: false,
+    },
   });
 
   const tabs = [
     { id: "pamm", label: "PAMM Strategy", icon: TrendingUp },
     { id: "distribution", label: "Fee Distribution", icon: Percent },
     { id: "schedule", label: "Fee Schedule", icon: Calendar },
+    { id: "sync", label: "Auto Sync", icon: RefreshCw },
   ];
 
   const loadConfig = async () => {
@@ -73,6 +90,17 @@ const SystemConfiguration = () => {
           performanceFeeTime: data.performanceFeeTime || "00:00",
           pammUuid: data.pammUuid || "",
           pammEnabled: data.pammEnabled || false,
+          autoSyncGTCMemberTree: {
+            syncEnabled: data.autoSyncGTCMemberTree?.syncEnabled || false,
+            syncFrequency:
+              data.autoSyncGTCMemberTree?.syncFrequency || "0 2 * * *",
+            gtcLoginAccount: data.autoSyncGTCMemberTree?.gtcLoginAccount || "",
+            gtcLoginPassword:
+              data.autoSyncGTCMemberTree?.gtcLoginPassword || "",
+            gtcApiUrl: data.autoSyncGTCMemberTree?.gtcApiUrl || "",
+            runSyncOnStartup:
+              data.autoSyncGTCMemberTree?.runSyncOnStartup || false,
+          },
         });
       }
     } catch (e) {
@@ -92,6 +120,7 @@ const SystemConfiguration = () => {
       performanceFeeDates,
       performanceFeeTime,
       pammUuid,
+      autoSyncGTCMemberTree,
     } = formData;
 
     if (systemPercentage < 0 || systemPercentage > 100) {
@@ -148,6 +177,43 @@ const SystemConfiguration = () => {
       }
     }
 
+    // Validate sync configuration if enabled
+    if (autoSyncGTCMemberTree?.syncEnabled) {
+      if (
+        !autoSyncGTCMemberTree.syncFrequency ||
+        autoSyncGTCMemberTree.syncFrequency.trim().split(/\s+/).length !== 5
+      ) {
+        return "Sync frequency must be a valid cron expression (5 parts)";
+      }
+
+      if (
+        !autoSyncGTCMemberTree.gtcLoginAccount ||
+        !autoSyncGTCMemberTree.gtcLoginAccount.trim()
+      ) {
+        return "GTC login account is required when sync is enabled";
+      }
+
+      if (
+        !autoSyncGTCMemberTree.gtcLoginPassword ||
+        !autoSyncGTCMemberTree.gtcLoginPassword.trim()
+      ) {
+        return "GTC login password is required when sync is enabled";
+      }
+
+      if (
+        !autoSyncGTCMemberTree.gtcApiUrl ||
+        !autoSyncGTCMemberTree.gtcApiUrl.trim()
+      ) {
+        return "GTC API URL is required when sync is enabled";
+      }
+
+      try {
+        new URL(autoSyncGTCMemberTree.gtcApiUrl.trim());
+      } catch {
+        return "GTC API URL must be a valid URL";
+      }
+    }
+
     return "";
   };
 
@@ -175,30 +241,50 @@ const SystemConfiguration = () => {
     }
   };
 
+  const handleManualSync = async () => {
+    setError("");
+    setSyncing(true);
+    try {
+      const res = await api.post("/system/sync/trigger");
+      if (res.data.success) {
+        setSuccess(
+          "Manual sync triggered successfully! Check logs for progress.",
+        );
+        setTimeout(() => setSuccess(""), 5000);
+        setTimeout(() => loadConfig(), 2000);
+      }
+    } catch (e) {
+      setError(e.response?.data?.message || "Failed to trigger manual sync");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const updateField = (field, value) => {
     setFormData({ ...formData, [field]: value });
   };
 
-  // Fixed function to handle percentage input properly - prevents leading zeros
+  const updateSyncField = (field, value) => {
+    setFormData({
+      ...formData,
+      autoSyncGTCMemberTree: {
+        ...formData.autoSyncGTCMemberTree,
+        [field]: value,
+      },
+    });
+  };
+
   const handlePercentageChange = (field, value) => {
-    // Handle empty or zero-only input
     if (value === "" || value === "0") {
       updateField(field, 0);
       return;
     }
-
-    // Remove ALL leading zeros
     const cleanedValue = value.replace(/^0+/, "");
-
-    // If nothing left after removing zeros, set to 0
     if (cleanedValue === "") {
       updateField(field, 0);
       return;
     }
-
     const numValue = parseFloat(cleanedValue);
-
-    // Ensure value is within valid range
     if (!isNaN(numValue)) {
       const validValue = Math.max(0, Math.min(100, numValue));
       updateField(field, validValue);
@@ -206,7 +292,6 @@ const SystemConfiguration = () => {
   };
 
   const updateUplinePercentage = (level, value) => {
-    // Handle empty or zero-only input
     if (value === "" || value === "0") {
       setFormData({
         ...formData,
@@ -216,11 +301,7 @@ const SystemConfiguration = () => {
       });
       return;
     }
-
-    // Remove ALL leading zeros
     const cleanedValue = value.replace(/^0+/, "");
-
-    // If nothing left after removing zeros, set to 0
     if (cleanedValue === "") {
       setFormData({
         ...formData,
@@ -230,9 +311,7 @@ const SystemConfiguration = () => {
       });
       return;
     }
-
     const numValue = parseFloat(cleanedValue);
-
     if (!isNaN(numValue)) {
       const validValue = Math.max(0, Math.min(100, numValue));
       setFormData({
@@ -315,6 +394,20 @@ const SystemConfiguration = () => {
     });
   };
 
+  const formatLastSync = (date) => {
+    if (!date) return "Never";
+    return new Date(date).toLocaleString();
+  };
+
+  const getCronDescription = (cron) => {
+    if (cron === "0 2 * * *") return "Daily at 2:00 AM";
+    if (cron === "0 0 * * *") return "Daily at midnight";
+    if (cron === "*/30 * * * *") return "Every 30 minutes";
+    if (cron === "0 */6 * * *") return "Every 6 hours";
+    if (cron === "0 0 * * 0") return "Weekly on Sunday at midnight";
+    return `Custom: ${cron}`;
+  };
+
   useEffect(() => {
     loadConfig();
   }, []);
@@ -355,8 +448,8 @@ const SystemConfiguration = () => {
                 System Configuration
               </h1>
               <p className="text-gray-600 mt-2">
-                Configure PAMM strategy, fee distribution, and processing
-                schedule
+                Configure PAMM strategy, fee distribution, processing schedule,
+                and auto sync
               </p>
             </div>
           </div>
@@ -588,7 +681,7 @@ const SystemConfiguration = () => {
                     Fee Distribution Settings
                   </h3>
 
-                  {/* Summary Cards - Improved mobile layout with reordering */}
+                  {/* Summary Cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* System Percentage */}
                     <div className="bg-orange-50 rounded-xl p-4 sm:p-6 border border-orange-200">
@@ -613,7 +706,6 @@ const SystemConfiguration = () => {
                           step="0.1"
                           value={formData.systemPercentage}
                           onInput={(e) => {
-                            // Clean leading zeros immediately on input
                             e.target.value = e.target.value.replace(
                               /^0+(?=\d)/,
                               "",
@@ -653,7 +745,6 @@ const SystemConfiguration = () => {
                           step="0.1"
                           value={formData.traderPercentage}
                           onInput={(e) => {
-                            // Clean leading zeros immediately on input
                             e.target.value = e.target.value.replace(
                               /^0+(?=\d)/,
                               "",
@@ -670,7 +761,7 @@ const SystemConfiguration = () => {
                       )}
                     </div>
 
-                    {/* Total Allocation - Shows last on mobile, third on desktop */}
+                    {/* Total Allocation */}
                     <div className="bg-purple-50 rounded-xl p-4 sm:p-6 border border-purple-200 order-last sm:order-none">
                       <div className="flex flex-col sm:block">
                         <p className="text-xs sm:text-sm font-medium text-purple-900 mb-1 sm:mb-2">
@@ -751,7 +842,6 @@ const SystemConfiguration = () => {
                                   step="0.1"
                                   value={item.percentage}
                                   onInput={(e) => {
-                                    // Clean leading zeros immediately on input
                                     e.target.value = e.target.value.replace(
                                       /^0+(?=\d)/,
                                       "",
@@ -921,6 +1011,429 @@ const SystemConfiguration = () => {
                           {formData.performanceFeeTime}
                         </p>
                       )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Auto Sync Tab */}
+              {activeTab === "sync" && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Auto Sync Configuration
+                  </h3>
+
+                  {/* Sync Enabled Toggle */}
+                  <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-1">
+                          Enable Auto Sync
+                        </label>
+                        <p className="text-xs text-gray-600">
+                          Automatically sync member tree from GTC API
+                        </p>
+                      </div>
+                      {editing ? (
+                        <button
+                          onClick={() =>
+                            updateSyncField(
+                              "syncEnabled",
+                              !formData.autoSyncGTCMemberTree.syncEnabled,
+                            )
+                          }
+                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                            formData.autoSyncGTCMemberTree.syncEnabled
+                              ? "bg-green-500"
+                              : "bg-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                              formData.autoSyncGTCMemberTree.syncEnabled
+                                ? "translate-x-7"
+                                : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      ) : (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            formData.autoSyncGTCMemberTree.syncEnabled
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {formData.autoSyncGTCMemberTree.syncEnabled
+                            ? "Enabled"
+                            : "Disabled"}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Last Sync Status */}
+                    {config?.autoSyncGTCMemberTree && (
+                      <div className="mt-4 pt-4 border-t border-purple-200 space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Last Sync:</span>
+                          <span className="font-medium text-gray-900">
+                            {formatLastSync(
+                              config.autoSyncGTCMemberTree.lastSyncAt,
+                            )}
+                          </span>
+                        </div>
+                        {config.autoSyncGTCMemberTree.lastSyncStatus && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Status:</span>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                config.autoSyncGTCMemberTree.lastSyncStatus ===
+                                "success"
+                                  ? "bg-green-100 text-green-700"
+                                  : config.autoSyncGTCMemberTree
+                                        .lastSyncStatus === "failed"
+                                    ? "bg-red-100 text-red-700"
+                                    : "bg-yellow-100 text-yellow-700"
+                              }`}
+                            >
+                              {config.autoSyncGTCMemberTree.lastSyncStatus}
+                            </span>
+                          </div>
+                        )}
+                        {config.autoSyncGTCMemberTree.lastSyncStats &&
+                          config.autoSyncGTCMemberTree.lastSyncStats.processed >
+                            0 && (
+                            <div className="mt-2 p-2 bg-white rounded-lg text-xs">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <span className="text-gray-600">
+                                    Processed:
+                                  </span>
+                                  <span className="ml-1 font-semibold">
+                                    {
+                                      config.autoSyncGTCMemberTree.lastSyncStats
+                                        .processed
+                                    }
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-600">
+                                    Created:
+                                  </span>
+                                  <span className="ml-1 font-semibold text-green-600">
+                                    {
+                                      config.autoSyncGTCMemberTree.lastSyncStats
+                                        .created
+                                    }
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-600">
+                                    Updated:
+                                  </span>
+                                  <span className="ml-1 font-semibold text-blue-600">
+                                    {
+                                      config.autoSyncGTCMemberTree.lastSyncStats
+                                        .updated
+                                    }
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-600">Errors:</span>
+                                  <span className="ml-1 font-semibold text-red-600">
+                                    {
+                                      config.autoSyncGTCMemberTree.lastSyncStats
+                                        .errors
+                                    }
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sync Frequency */}
+                  <div className="p-4 bg-white rounded-xl border border-gray-200">
+                    <div className="flex items-start gap-3 mb-3">
+                      <Clock className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <label className="block text-sm font-semibold text-gray-900 mb-1">
+                          Sync Frequency (Cron Expression)
+                        </label>
+                        <p className="text-xs text-gray-600 mb-3">
+                          Schedule when member tree should sync (minute hour day
+                          month weekday)
+                        </p>
+
+                        {editing ? (
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={
+                                formData.autoSyncGTCMemberTree.syncFrequency
+                              }
+                              onChange={(e) =>
+                                updateSyncField("syncFrequency", e.target.value)
+                              }
+                              placeholder="0 2 * * *"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 font-mono text-sm"
+                            />
+                            <p className="text-xs text-gray-500">
+                              {getCronDescription(
+                                formData.autoSyncGTCMemberTree.syncFrequency,
+                              )}
+                            </p>
+                            <div className="text-xs text-gray-500 space-y-1">
+                              <p>Common examples:</p>
+                              <ul className="list-disc list-inside ml-2 space-y-1">
+                                <li>
+                                  <code className="bg-gray-100 px-1 py-0.5 rounded">
+                                    0 2 * * *
+                                  </code>{" "}
+                                  - Daily at 2:00 AM
+                                </li>
+                                <li>
+                                  <code className="bg-gray-100 px-1 py-0.5 rounded">
+                                    */30 * * * *
+                                  </code>{" "}
+                                  - Every 30 minutes
+                                </li>
+                                <li>
+                                  <code className="bg-gray-100 px-1 py-0.5 rounded">
+                                    0 */6 * * *
+                                  </code>{" "}
+                                  - Every 6 hours
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <p className="font-mono text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg inline-block">
+                              {formData.autoSyncGTCMemberTree.syncFrequency}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              {getCronDescription(
+                                formData.autoSyncGTCMemberTree.syncFrequency,
+                              )}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* GTC Credentials */}
+                  <div className="space-y-4">
+                    {/* GTC API URL */}
+                    <div className="p-4 bg-white rounded-xl border border-gray-200">
+                      <div className="flex items-start gap-3">
+                        <Globe className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <label className="block text-sm font-semibold text-gray-900 mb-1">
+                            GTC API URL
+                          </label>
+                          <p className="text-xs text-gray-600 mb-3">
+                            Base URL for GTC FX API
+                          </p>
+
+                          {editing ? (
+                            <input
+                              type="url"
+                              value={formData.autoSyncGTCMemberTree.gtcApiUrl}
+                              onChange={(e) =>
+                                updateSyncField("gtcApiUrl", e.target.value)
+                              }
+                              placeholder="https://api.gtcfx.com"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 text-sm"
+                            />
+                          ) : (
+                            <p className="font-mono text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg break-all">
+                              {formData.autoSyncGTCMemberTree.gtcApiUrl ||
+                                "Not configured"}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* GTC Login Account */}
+                    <div className="p-4 bg-white rounded-xl border border-gray-200">
+                      <div className="flex items-start gap-3">
+                        <Server className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <label className="block text-sm font-semibold text-gray-900 mb-1">
+                            GTC Login Account
+                          </label>
+                          <p className="text-xs text-gray-600 mb-3">
+                            Account username for GTC API authentication
+                          </p>
+
+                          {editing ? (
+                            <input
+                              type="text"
+                              value={
+                                formData.autoSyncGTCMemberTree.gtcLoginAccount
+                              }
+                              onChange={(e) =>
+                                updateSyncField(
+                                  "gtcLoginAccount",
+                                  e.target.value,
+                                )
+                              }
+                              placeholder="your-account-name"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 text-sm"
+                            />
+                          ) : (
+                            <p className="font-mono text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                              {formData.autoSyncGTCMemberTree.gtcLoginAccount ||
+                                "Not configured"}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* GTC Login Password */}
+                    <div className="p-4 bg-white rounded-xl border border-gray-200">
+                      <div className="flex items-start gap-3">
+                        <Key className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <label className="block text-sm font-semibold text-gray-900 mb-1">
+                            GTC Login Password
+                          </label>
+                          <p className="text-xs text-gray-600 mb-3">
+                            Account password for GTC API authentication
+                          </p>
+
+                          {editing ? (
+                            <div className="relative">
+                              <input
+                                type={showPassword ? "text" : "password"}
+                                value={
+                                  formData.autoSyncGTCMemberTree
+                                    .gtcLoginPassword
+                                }
+                                onChange={(e) =>
+                                  updateSyncField(
+                                    "gtcLoginPassword",
+                                    e.target.value,
+                                  )
+                                }
+                                placeholder="••••••••"
+                                className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 text-sm"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                              >
+                                {showPassword ? "Hide" : "Show"}
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="font-mono text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded-lg">
+                              {formData.autoSyncGTCMemberTree.gtcLoginPassword
+                                ? "••••••••"
+                                : "Not configured"}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Run on Startup Toggle */}
+                  <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-1">
+                          Run Sync on Startup
+                        </label>
+                        <p className="text-xs text-gray-600">
+                          Trigger initial sync 5 seconds after server starts
+                        </p>
+                      </div>
+                      {editing ? (
+                        <button
+                          onClick={() =>
+                            updateSyncField(
+                              "runSyncOnStartup",
+                              !formData.autoSyncGTCMemberTree.runSyncOnStartup,
+                            )
+                          }
+                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                            formData.autoSyncGTCMemberTree.runSyncOnStartup
+                              ? "bg-green-500"
+                              : "bg-gray-300"
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                              formData.autoSyncGTCMemberTree.runSyncOnStartup
+                                ? "translate-x-7"
+                                : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      ) : (
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            formData.autoSyncGTCMemberTree.runSyncOnStartup
+                              ? "bg-green-100 text-green-700"
+                              : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {formData.autoSyncGTCMemberTree.runSyncOnStartup
+                            ? "Enabled"
+                            : "Disabled"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Manual Sync Button */}
+                  {!editing && formData.autoSyncGTCMemberTree.syncEnabled && (
+                    <div className="p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                            Manual Sync
+                          </h4>
+                          <p className="text-xs text-gray-600">
+                            Trigger immediate member tree sync
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleManualSync}
+                          disabled={syncing}
+                          className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold transition-all shadow-sm hover:shadow-md disabled:opacity-50 flex items-center gap-2"
+                        >
+                          {syncing ? (
+                            <Loader className="w-5 h-5 animate-spin" />
+                          ) : (
+                            <Play className="w-5 h-5" />
+                          )}
+                          Trigger Sync
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Warning */}
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-xs text-yellow-800">
+                        <p className="font-semibold mb-1">Security Notice</p>
+                        <p>
+                          Credentials are stored in the database. Ensure your
+                          database is properly secured. Consider using
+                          environment variables for production.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

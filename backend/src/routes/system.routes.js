@@ -6,6 +6,7 @@ import User from '../models/User.js';
 import IncomeExpense from '../models/IncomeExpense.js';
 import { authenticateToken } from '../middlewares/auth.middleware.js';
 import { startPerformanceFeesCron } from '../jobs/syncPerformanceFees.cron.js';
+import { startMemberTreeSyncCron, triggerManualSync } from '../jobs/syncMemberTree.cron.js';
 
 const router = express.Router();
 
@@ -39,7 +40,8 @@ const validateConfigUpdate = (req, res, next) => {
         performanceFeeDates,
         performanceFeeTime,
         pammUuid,
-        pammEnabled
+        pammEnabled,
+        autoSyncGTCMemberTree
     } = req.body;
 
     if (systemPercentage === undefined || systemPercentage < 0 || systemPercentage > 100) {
@@ -140,6 +142,67 @@ const validateConfigUpdate = (req, res, next) => {
         }
     }
 
+    // Validate autoSyncGTCMemberTree configuration if provided
+    if (autoSyncGTCMemberTree && typeof autoSyncGTCMemberTree === 'object') {
+        const {
+            syncEnabled,
+            syncFrequency,
+            gtcLoginAccount,
+            gtcLoginPassword,
+            gtcApiUrl
+        } = autoSyncGTCMemberTree;
+
+        if (syncEnabled) {
+            // Validate cron expression (basic validation)
+            if (!syncFrequency || typeof syncFrequency !== 'string') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Sync frequency is required when sync is enabled'
+                });
+            }
+
+            const cronParts = syncFrequency.trim().split(/\s+/);
+            if (cronParts.length !== 5) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Sync frequency must be a valid cron expression (5 parts: minute hour day month weekday)'
+                });
+            }
+
+            // Validate GTC credentials
+            if (!gtcLoginAccount || !gtcLoginAccount.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'GTC login account is required when sync is enabled'
+                });
+            }
+
+            if (!gtcLoginPassword || !gtcLoginPassword.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'GTC login password is required when sync is enabled'
+                });
+            }
+
+            if (!gtcApiUrl || !gtcApiUrl.trim()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'GTC API URL is required when sync is enabled'
+                });
+            }
+
+            // Validate URL format
+            try {
+                new URL(gtcApiUrl.trim());
+            } catch (e) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'GTC API URL must be a valid URL'
+                });
+            }
+        }
+    }
+
     req.validatedData = {
         systemPercentage,
         traderPercentage,
@@ -149,7 +212,8 @@ const validateConfigUpdate = (req, res, next) => {
         performanceFeeDates: performanceFeeFrequency === 'monthly' ? performanceFeeDates : [],
         performanceFeeTime,
         pammUuid: pammUuid?.trim() || null,
-        pammEnabled: Boolean(pammEnabled)
+        pammEnabled: Boolean(pammEnabled),
+        autoSyncGTCMemberTree: autoSyncGTCMemberTree || {}
     };
     next();
 };
@@ -240,7 +304,8 @@ router.put('/config',
                 performanceFeeDates,
                 performanceFeeTime,
                 pammUuid,
-                pammEnabled
+                pammEnabled,
+                autoSyncGTCMemberTree
             } = req.validatedData;
 
             let config = await SystemConfig.getOrCreateConfig();
@@ -254,12 +319,26 @@ router.put('/config',
             config.performanceFeeTime = performanceFeeTime;
             config.pammUuid = pammUuid;
             config.pammEnabled = pammEnabled;
+
+            // Update autoSyncGTCMemberTree configuration
+            if (autoSyncGTCMemberTree && typeof autoSyncGTCMemberTree === 'object') {
+                config.autoSyncGTCMemberTree = {
+                    ...config.autoSyncGTCMemberTree,
+                    ...autoSyncGTCMemberTree
+                };
+            }
+
             config.updatedAt = new Date();
 
             await config.save();
 
             // Restart the cron job scheduling with updated config
             await startPerformanceFeesCron();
+
+            // Restart member tree sync cron if enabled
+            if (config.autoSyncGTCMemberTree?.syncEnabled) {
+                await startMemberTreeSyncCron();
+            }
 
             res.json({
                 success: true,
@@ -276,5 +355,44 @@ router.put('/config',
         }
     }
 );
+
+// Manual sync trigger (admin only)
+router.post('/sync/trigger', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const config = await SystemConfig.getOrCreateConfig();
+
+        if (!config.autoSyncGTCMemberTree?.syncEnabled) {
+            return res.status(400).json({
+                success: false,
+                message: 'Auto sync is not enabled. Please enable it in system configuration first.'
+            });
+        }
+
+        const syncConfig = config.autoSyncGTCMemberTree;
+        if (!syncConfig.gtcLoginAccount || !syncConfig.gtcLoginPassword || !syncConfig.gtcApiUrl) {
+            return res.status(400).json({
+                success: false,
+                message: 'Sync credentials are not configured. Please configure them in system settings.'
+            });
+        }
+
+        // Trigger manual sync in the background
+        triggerManualSync().catch(err => {
+            console.error('Manual sync error:', err);
+        });
+
+        res.json({
+            success: true,
+            message: 'Manual sync triggered. Check logs for progress.'
+        });
+    } catch (error) {
+        console.error('Trigger sync error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to trigger manual sync',
+            error: error.message
+        });
+    }
+});
 
 export default router;
