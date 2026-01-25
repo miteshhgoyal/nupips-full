@@ -96,11 +96,11 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 
         // Income breakdown
         const rebateIncome = incomeExpenseData
-            .filter(ie => ie.type === 'income' && ie.category === 'rebate')
+            .filter(ie => ie.type === 'income' && ie.category === 'performancefee')
             .reduce((sum, ie) => sum + ie.amount, 0);
 
         const affiliateIncome = incomeExpenseData
-            .filter(ie => ie.type === 'income' && ie.category === 'affiliate')
+            .filter(ie => ie.type === 'income' && ie.category === 'downlineincome')
             .reduce((sum, ie) => sum + ie.amount, 0);
 
         // ==================== REFERRAL DATA ====================
@@ -443,7 +443,7 @@ router.get("/sponsor", authenticateToken, async (req, res) => {
                 walletBalance: hideDetails ? null : (sponsor.walletBalance || 0),
                 totalDeposits: hideDetails ? null : (sponsor.financials?.totalDeposits || 0),
                 totalWithdrawals: hideDetails ? null : (sponsor.financials?.totalWithdrawals || 0),
-                downlineCount: hideDetails ? null : (sponsor.downlineStats?.totalTraders + sponsor.downlineStats?.totalAgents || 0),
+                downlineCount: hideDetails ? null : ((sponsor.downlineStats?.totalTraders || 0) + (sponsor.downlineStats?.totalAgents || 0)),
 
                 // Privacy indicator
                 detailsHidden: hideDetails
@@ -481,7 +481,7 @@ function getLast7Days() {
         const d = new Date();
         d.setDate(d.getDate() - i);
         days.push({
-            date: d.toISOString().split("T"), // YYYY-MM-DD format
+            date: d.toISOString().split("T")[0], // YYYY-MM-DD format
             label: dayNames[d.getDay()],
         });
     }

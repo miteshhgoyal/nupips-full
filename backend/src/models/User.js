@@ -266,7 +266,7 @@ UserSchema.methods.updateFinancials = async function () {
         const rebateIncomes = await IncomeExpense.find({
             userId: this._id,
             type: 'income',
-            category: 'rebate'
+            category: 'performancefee'
         });
         this.financials.totalRebateIncome = rebateIncomes.reduce((sum, ie) => sum + ie.amount, 0);
 
@@ -274,7 +274,7 @@ UserSchema.methods.updateFinancials = async function () {
         const affiliateIncomes = await IncomeExpense.find({
             userId: this._id,
             type: 'income',
-            category: 'affiliate'
+            category: 'downlineincome'
         });
         this.financials.totalAffiliateIncome = affiliateIncomes.reduce((sum, ie) => sum + ie.amount, 0);
 
@@ -298,7 +298,7 @@ UserSchema.methods.updateIncomes = async function () {
         const rebateIncomes = await IncomeExpense.find({
             userId: this._id,
             type: 'income',
-            category: 'rebate'
+            category: 'performancefee'
         });
         this.financials.totalRebateIncome = rebateIncomes.reduce((sum, ie) => sum + ie.amount, 0);
 
@@ -306,7 +306,7 @@ UserSchema.methods.updateIncomes = async function () {
         const affiliateIncomes = await IncomeExpense.find({
             userId: this._id,
             type: 'income',
-            category: 'affiliate'
+            category: 'downlineincome'
         });
         this.financials.totalAffiliateIncome = affiliateIncomes.reduce((sum, ie) => sum + ie.amount, 0);
 
