@@ -115,6 +115,17 @@ const UserSchema = new mongoose.Schema({
         default: []
     },
 
+    // ========== Milestone Tracking ==========
+    milestones: {
+        unlockedLevels: [{
+            type: Number
+        }],
+        lastUpdatedAt: {
+            type: Date,
+            default: null
+        }
+    },
+
     // ========== Financial Tracking ==========
     financials: {
         totalDeposits: {

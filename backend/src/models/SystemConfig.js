@@ -39,6 +39,31 @@ const SystemSchema = new mongoose.Schema({
         max: 20
     },
 
+    // ========== Milestone-Based Level Unlocking ==========
+    milestones: {
+        enabled: {
+            type: Boolean,
+            default: true
+        },
+        levels: [{
+            level: {
+                type: Number,
+                required: true,
+                min: 1
+            },
+            requiredRebateIncome: {
+                type: Number,
+                required: true,
+                min: 0,
+                default: 0
+            },
+            description: {
+                type: String,
+                default: ''
+            }
+        }]
+    },
+
     // ========== Performance Fee Configuration ==========
     performanceFeeFrequency: {
         type: String,
@@ -47,7 +72,6 @@ const SystemSchema = new mongoose.Schema({
     },
     performanceFeeDates: [{
         type: Number,
-        // For monthly: 1-31; for daily frequency, this can be empty
         min: 1,
         max: 31
     }],
@@ -82,10 +106,9 @@ const SystemSchema = new mongoose.Schema({
             },
             syncFrequency: {
                 type: String,
-                default: "0 2 * * *", // Default: Daily at 2 AM
+                default: "0 2 * * *",
                 validate: {
                     validator: function (v) {
-                        // Basic cron validation - 5 parts separated by spaces
                         const parts = v.trim().split(/\s+/);
                         return parts.length === 5;
                     },
@@ -100,7 +123,6 @@ const SystemSchema = new mongoose.Schema({
             gtcLoginPassword: {
                 type: String,
                 default: null,
-                // Encrypted in production
             },
             gtcApiUrl: {
                 type: String,
@@ -169,15 +191,10 @@ const SystemSchema = new mongoose.Schema({
     collection: 'systemconfigs'
 });
 
-// ==================== INDEXES ====================
-// No explicit indexes needed - MongoDB will handle _id automatically
-// Add indexes if specific query patterns emerge
-
 // ==================== STATIC METHODS ====================
 
 /**
  * Get or create system configuration
- * Ensures there's always exactly one config document
  */
 SystemSchema.statics.getOrCreateConfig = async function () {
     try {
@@ -193,10 +210,21 @@ SystemSchema.statics.getOrCreateConfig = async function () {
                 ],
                 maxUplineLevels: 10,
                 performanceFeeFrequency: "monthly",
-                performanceFeeDates: [1], // default: 1st of month
+                performanceFeeDates: [1],
                 performanceFeeTime: "00:00",
                 pammUuid: null,
                 pammEnabled: false,
+                // Default milestones
+                milestones: {
+                    enabled: true,
+                    levels: [
+                        { level: 1, requiredRebateIncome: 0, description: 'Direct referral income (always unlocked)' },
+                        { level: 2, requiredRebateIncome: 1000, description: 'Unlock at $1,000 lifetime rebate' },
+                        { level: 3, requiredRebateIncome: 5000, description: 'Unlock at $5,000 lifetime rebate' },
+                        { level: 4, requiredRebateIncome: 10000, description: 'Unlock at $10,000 lifetime rebate' },
+                        { level: 5, requiredRebateIncome: 25000, description: 'Unlock at $25,000 lifetime rebate' }
+                    ]
+                },
                 autoSyncGTCMemberTree: {
                     syncEnabled: false,
                     syncFrequency: "0 2 * * *",
@@ -215,7 +243,20 @@ SystemSchema.statics.getOrCreateConfig = async function () {
                 }
             });
         } else {
-            // Ensure autoSyncGTCMemberTree exists with all required fields
+            // Ensure milestones exist
+            if (!config.milestones) {
+                config.milestones = {
+                    enabled: true,
+                    levels: [
+                        { level: 1, requiredRebateIncome: 0, description: 'Direct referral income (always unlocked)' },
+                        { level: 2, requiredRebateIncome: 1000, description: 'Unlock at $1,000 lifetime rebate' },
+                        { level: 3, requiredRebateIncome: 5000, description: 'Unlock at $5,000 lifetime rebate' }
+                    ]
+                };
+                await config.save();
+            }
+
+            // Ensure autoSyncGTCMemberTree exists
             if (!config.autoSyncGTCMemberTree) {
                 config.autoSyncGTCMemberTree = {
                     syncEnabled: false,
@@ -234,17 +275,6 @@ SystemSchema.statics.getOrCreateConfig = async function () {
                     }
                 };
                 await config.save();
-            } else {
-                // Ensure lastSyncStats exists
-                if (!config.autoSyncGTCMemberTree.lastSyncStats) {
-                    config.autoSyncGTCMemberTree.lastSyncStats = {
-                        processed: 0,
-                        updated: 0,
-                        created: 0,
-                        errors: 0
-                    };
-                    await config.save();
-                }
             }
         }
         return config;
@@ -256,9 +286,6 @@ SystemSchema.statics.getOrCreateConfig = async function () {
 
 // ==================== PRE-SAVE HOOKS ====================
 
-/**
- * Pre-save middleware to validate total percentage doesn't exceed 100%
- */
 SystemSchema.pre('save', function (next) {
     let total = this.systemPercentage + this.traderPercentage;
 
@@ -272,6 +299,11 @@ SystemSchema.pre('save', function (next) {
         return next(new Error(`Total percentage (${total}%) exceeds 100%`));
     }
 
+    // Ensure milestones.levels are sorted by level
+    if (this.milestones?.levels) {
+        this.milestones.levels.sort((a, b) => a.level - b.level);
+    }
+
     // Ensure autoSyncGTCMemberTree.lastSyncStats has all required fields
     if (this.autoSyncGTCMemberTree) {
         if (!this.autoSyncGTCMemberTree.lastSyncStats) {
@@ -282,7 +314,6 @@ SystemSchema.pre('save', function (next) {
                 errors: 0
             };
         } else {
-            // Ensure all stat fields exist
             this.autoSyncGTCMemberTree.lastSyncStats = {
                 processed: this.autoSyncGTCMemberTree.lastSyncStats.processed || 0,
                 updated: this.autoSyncGTCMemberTree.lastSyncStats.updated || 0,

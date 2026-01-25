@@ -3,7 +3,6 @@ import { Helmet } from "react-helmet";
 import {
   Loader,
   AlertCircle,
-  ArrowLeft,
   TrendingUp,
   Filter,
   Download,
@@ -13,15 +12,21 @@ import {
   ChevronRight,
   Eye,
   X,
+  Award,
+  Lock,
+  Unlock,
+  Trophy,
+  Target,
+  Info,
+  CheckCircle,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 
 const NupipsIncomes = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [incomes, setIncomes] = useState([]);
+  const [milestones, setMilestones] = useState(null);
 
   // Detail modal
   const [selectedIncome, setSelectedIncome] = useState(null);
@@ -38,17 +43,22 @@ const NupipsIncomes = () => {
   const itemsPerPage = 20;
 
   useEffect(() => {
-    fetchIncomes();
+    fetchData();
   }, []);
 
-  const fetchIncomes = async () => {
+  const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get("/incomes/");
-      setIncomes(response.data.incomes || []);
+      const [incomesRes, milestonesRes] = await Promise.all([
+        api.get("/incomes/"),
+        api.get("/incomes/milestones"),
+      ]);
+
+      setIncomes(incomesRes.data.incomes || []);
+      setMilestones(milestonesRes.data.data || null);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to load income data");
+      setError(err.response?.data?.message || "Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -66,7 +76,7 @@ const NupipsIncomes = () => {
         (i) =>
           i.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
           i.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          i.amount.toString().includes(searchQuery)
+          i.amount.toString().includes(searchQuery),
       );
     }
 
@@ -87,7 +97,7 @@ const NupipsIncomes = () => {
 
   const paginatedIncomes = filteredIncomes.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
   const totalPages = Math.ceil(filteredIncomes.length / itemsPerPage);
 
@@ -131,6 +141,24 @@ const NupipsIncomes = () => {
     link.click();
   };
 
+  const getCategoryLabel = (category) => {
+    const labels = {
+      performancefee: "Performance Fee (Rebate)",
+      downlineincome: "Downline Income (Affiliate)",
+      commission: "System Commission",
+    };
+    return labels[category] || category.replace(/_/g, " ");
+  };
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      performancefee: "bg-green-100 text-green-800",
+      downlineincome: "bg-blue-100 text-blue-800",
+      commission: "bg-orange-100 text-orange-800",
+    };
+    return colors[category] || "bg-gray-100 text-gray-800";
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -145,269 +173,482 @@ const NupipsIncomes = () => {
   return (
     <>
       <Helmet>
-        <title>Income History - Nupips</title>
+        <title>Income & Milestones - Nupips</title>
       </Helmet>
-      <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <TrendingUp className="w-8 h-8 text-orange-600" />
-                Income History
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Track all your income sources
-              </p>
-            </div>
-            <button
-              onClick={exportToCSV}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
-            >
-              <Download className="w-5 h-5" />
-              Export CSV
-            </button>
-          </div>
-        </div>
-
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        )}
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-white" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <Trophy className="w-8 h-8 text-orange-600" />
+                  Income & Milestones
+                </h1>
+                <p className="text-gray-600 mt-2">
+                  Track your earnings and unlock new income levels
+                </p>
               </div>
-              <p className="text-sm font-medium text-green-900">Total Income</p>
-            </div>
-            <p className="text-2xl font-bold text-green-900">
-              ${totalIncome.toFixed(2)}
-            </p>
-            <p className="text-xs text-green-700 mt-1">
-              {filteredIncomes.length} income entries
-            </p>
-          </div>
-
-          <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-white" />
-              </div>
-              <p className="text-sm font-medium text-blue-900">
-                Average Income
-              </p>
-            </div>
-            <p className="text-2xl font-bold text-blue-900">
-              $
-              {filteredIncomes.length > 0
-                ? (totalIncome / filteredIncomes.length).toFixed(2)
-                : "0.00"}
-            </p>
-            <p className="text-xs text-blue-700 mt-1">per entry</p>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Filter className="w-5 h-5 text-orange-600" />
-            <h2 className="text-lg font-bold text-gray-900">Filters</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Category Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat === "all"
-                      ? "All Categories"
-                      : cat.replace(/_/g, " ").charAt(0).toUpperCase() +
-                        cat.replace(/_/g, " ").slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Search */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Search
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Category or description"
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Date From */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                From Date
-              </label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
-            </div>
-
-            {/* Clear Filters */}
-            <div className="flex items-end">
               <button
-                onClick={() => {
-                  setFilterCategory("all");
-                  setSearchQuery("");
-                  setDateFrom("");
-                  setDateTo("");
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                onClick={exportToCSV}
+                className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 rounded-xl font-medium transition-colors shadow-sm border border-gray-200"
               >
-                Clear Filters
+                <Download className="w-5 h-5" />
+                Export CSV
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Incomes Table */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Date
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Category
-                  </th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
-                    Amount
-                  </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
-                    Description
-                  </th>
-                  <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
-                    Details
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedIncomes.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-16 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                          <TrendingUp className="w-8 h-8 text-gray-400" />
-                        </div>
-                        <p className="text-gray-600 font-medium">
-                          No income records found
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          Your income history will appear here
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedIncomes.map((income) => (
-                    <tr
-                      key={income._id}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+          {/* Error Alert */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          {/* Milestones Section */}
+          {milestones && milestones.milestonesEnabled && (
+            <div className="mb-8 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <Award className="w-6 h-6 text-white" />
+                  <h2 className="text-xl font-bold text-white">
+                    Your Milestone Progress
+                  </h2>
+                </div>
+                <p className="text-orange-100 text-sm">
+                  Unlock higher income levels by reaching lifetime rebate
+                  milestones
+                </p>
+              </div>
+
+              <div className="p-6">
+                {/* Current Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <TrendingUp className="w-5 h-5 text-green-600" />
+                      <p className="text-sm font-medium text-green-900">
+                        Lifetime Rebate Income
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold text-green-900">
+                      ${milestones.lifetimeRebate?.toFixed(2) || "0.00"}
+                    </p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Unlock className="w-5 h-5 text-blue-600" />
+                      <p className="text-sm font-medium text-blue-900">
+                        Unlocked Levels
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-900">
+                      {milestones.unlockedLevels?.length || 1} /{" "}
+                      {milestones.progress?.length || 0}
+                    </p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Target className="w-5 h-5 text-purple-600" />
+                      <p className="text-sm font-medium text-purple-900">
+                        Next Milestone
+                      </p>
+                    </div>
+                    <p className="text-2xl font-bold text-purple-900">
+                      {milestones.nextMilestone
+                        ? `$${milestones.nextMilestone.remaining.toFixed(0)}`
+                        : "All Unlocked!"}
+                    </p>
+                    {milestones.nextMilestone && (
+                      <p className="text-xs text-purple-700 mt-1">
+                        Level {milestones.nextMilestone.level}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Milestone Progress Bars */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Income Level Milestones
+                    </h3>
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <span>Unlocked</span>
+                      <Lock className="w-4 h-4 text-gray-400 ml-2" />
+                      <span>Locked</span>
+                    </div>
+                  </div>
+
+                  {milestones.progress?.map((milestone) => (
+                    <div
+                      key={milestone.level}
+                      className={`relative p-4 rounded-xl border-2 transition-all ${
+                        milestone.isUnlocked
+                          ? "bg-green-50 border-green-300 shadow-sm"
+                          : "bg-gray-50 border-gray-200"
+                      }`}
                     >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          <p className="text-sm text-gray-900">
-                            {formatDate(income.date)}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              milestone.isUnlocked
+                                ? "bg-green-500 text-white"
+                                : "bg-gray-300 text-gray-600"
+                            }`}
+                          >
+                            {milestone.isUnlocked ? (
+                              <Unlock className="w-5 h-5" />
+                            ) : (
+                              <Lock className="w-5 h-5" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900">
+                              Level {milestone.level}
+                              {milestone.level === 1 && (
+                                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                                  Always Unlocked
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {milestone.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        {milestone.isUnlocked && (
+                          <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Unlocked
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">
+                            ${milestone.current.toFixed(2)} / $
+                            {milestone.required.toFixed(2)}
+                          </span>
+                          <span
+                            className={`font-semibold ${
+                              milestone.isUnlocked
+                                ? "text-green-600"
+                                : "text-gray-600"
+                            }`}
+                          >
+                            {milestone.percentage.toFixed(0)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              milestone.isUnlocked
+                                ? "bg-gradient-to-r from-green-500 to-green-600"
+                                : "bg-gradient-to-r from-gray-400 to-gray-500"
+                            }`}
+                            style={{ width: `${milestone.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {!milestone.isUnlocked && milestone.level > 1 && (
+                        <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <p className="text-xs text-yellow-800 flex items-center gap-2">
+                            <Info className="w-3 h-3" />
+                            <span>
+                              Earn $
+                              {(milestone.required - milestone.current).toFixed(
+                                2,
+                              )}{" "}
+                              more in rebate income to unlock this level
+                            </span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Income Rules Explainer */}
+              <div className="bg-blue-50 border-t border-blue-200 p-6">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-blue-900">
+                    <p className="font-semibold mb-2">
+                      How Income Levels Work:
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 text-blue-800">
+                      <li>
+                        <strong>Level 1:</strong> Always unlocked - earn from
+                        direct referrals
+                      </li>
+                      <li>
+                        <strong>Level 2+:</strong> Unlock by reaching lifetime
+                        rebate milestones
+                      </li>
+                      <li>
+                        Income from locked levels goes to system until you
+                        unlock them
+                      </li>
+                      <li>
+                        Your lifetime rebate income determines your unlocked
+                        levels
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-sm font-medium text-gray-600">
+                  Total Income
+                </p>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">
+                ${totalIncome.toFixed(2)}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {filteredIncomes.length} income entries
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-white" />
+                </div>
+                <p className="text-sm font-medium text-gray-600">
+                  Average Income
+                </p>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">
+                $
+                {filteredIncomes.length > 0
+                  ? (totalIncome / filteredIncomes.length).toFixed(2)
+                  : "0.00"}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">per entry</p>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="w-5 h-5 text-orange-600" />
+              <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Category Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category
+                </label>
+                <select
+                  value={filterCategory}
+                  onChange={(e) => setFilterCategory(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                >
+                  <option value="all">All Categories</option>
+                  {categories
+                    .filter((c) => c !== "all")
+                    .map((cat) => (
+                      <option key={cat} value={cat}>
+                        {getCategoryLabel(cat)}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Search */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Category or description"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Date From */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  From Date
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Clear Filters */}
+              <div className="flex items-end">
+                <button
+                  onClick={() => {
+                    setFilterCategory("all");
+                    setSearchQuery("");
+                    setDateFrom("");
+                    setDateTo("");
+                    setCurrentPage(1);
+                  }}
+                  className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Incomes Table */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Date
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Category
+                    </th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
+                      Amount
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      Description
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                      Details
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedIncomes.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                            <TrendingUp className="w-8 h-8 text-gray-400" />
+                          </div>
+                          <p className="text-gray-600 font-medium">
+                            No income records found
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Your income history will appear here
                           </p>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-semibold capitalize">
-                          {income.category.replace(/_/g, " ")}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <p className="text-sm font-bold text-green-600">
-                          +${parseFloat(income.amount).toFixed(2)}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-gray-600 max-w-xs truncate">
-                          {income.description || "-"}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => openDetailModal(income)}
-                          className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Pagination */}
-        {filteredIncomes.length > 0 && (
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-gray-600">
-              Showing {paginatedIncomes.length} of {filteredIncomes.length}{" "}
-              entries
-            </p>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
-              </button>
-              <span className="px-4 py-2 text-sm font-medium text-gray-700">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() =>
-                  setCurrentPage(Math.min(totalPages, currentPage + 1))
-                }
-                disabled={currentPage === totalPages}
-                className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-5 h-5 text-gray-600" />
-              </button>
+                  ) : (
+                    paginatedIncomes.map((income) => (
+                      <tr
+                        key={income._id}
+                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-gray-400" />
+                            <p className="text-sm text-gray-900">
+                              {formatDate(income.date)}
+                            </p>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(
+                              income.category,
+                            )}`}
+                          >
+                            {getCategoryLabel(income.category)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <p className="text-sm font-bold text-green-600">
+                            +${parseFloat(income.amount).toFixed(2)}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-gray-600 max-w-xs truncate">
+                            {income.description || "-"}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() => openDetailModal(income)}
+                            className="p-2 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-lg transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        )}
+
+          {/* Pagination */}
+          {filteredIncomes.length > 0 && (
+            <div className="flex items-center justify-between mt-6">
+              <p className="text-sm text-gray-600">
+                Showing {paginatedIncomes.length} of {filteredIncomes.length}{" "}
+                entries
+              </p>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <span className="px-4 py-2 text-sm font-medium text-gray-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Detail Modal */}
@@ -440,7 +681,7 @@ const NupipsIncomes = () => {
             {/* Content */}
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
               {/* Amount highlight */}
-              <div className="mb-6 text-center p-4 bg-linear-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
+              <div className="mb-6 text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
                 <p className="text-xs text-gray-600 mb-1">Amount</p>
                 <p className="text-3xl font-bold text-green-600">
                   +${parseFloat(selectedIncome.amount).toFixed(2)}
@@ -454,8 +695,10 @@ const NupipsIncomes = () => {
                   <span className="text-sm font-medium text-gray-600">
                     Category
                   </span>
-                  <span className="text-sm font-semibold text-gray-900 capitalize">
-                    {selectedIncome.category.replace(/_/g, " ")}
+                  <span
+                    className={`text-sm font-semibold px-3 py-1 rounded-full ${getCategoryColor(selectedIncome.category)}`}
+                  >
+                    {getCategoryLabel(selectedIncome.category)}
                   </span>
                 </div>
 
@@ -485,7 +728,7 @@ const NupipsIncomes = () => {
             <div className="p-6 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={closeDetailModal}
-                className="w-full py-3 bg-linear-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md"
+                className="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold transition-all shadow-sm hover:shadow-md"
               >
                 Close
               </button>

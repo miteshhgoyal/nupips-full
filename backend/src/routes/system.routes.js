@@ -1,4 +1,4 @@
-// routes/system.routes.js
+// routes/system.routes.js - UPDATED WITH MILESTONES
 
 import express from 'express';
 import SystemConfig from '../models/SystemConfig.js';
@@ -41,7 +41,8 @@ const validateConfigUpdate = (req, res, next) => {
         performanceFeeTime,
         pammUuid,
         pammEnabled,
-        autoSyncGTCMemberTree
+        autoSyncGTCMemberTree,
+        milestones // NEW
     } = req.body;
 
     if (systemPercentage === undefined || systemPercentage < 0 || systemPercentage > 100) {
@@ -142,6 +143,94 @@ const validateConfigUpdate = (req, res, next) => {
         }
     }
 
+    // ========== VALIDATE MILESTONES ==========
+    if (milestones && typeof milestones === 'object') {
+        // Validate enabled flag
+        if (typeof milestones.enabled !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                message: 'milestones.enabled must be a boolean'
+            });
+        }
+
+        // Validate levels array
+        if (milestones.levels && Array.isArray(milestones.levels)) {
+            if (milestones.levels.length === 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'At least one milestone level is required'
+                });
+            }
+
+            const milestoneLevels = new Set();
+
+            for (const milestone of milestones.levels) {
+                // Validate level number
+                if (typeof milestone.level !== 'number' || milestone.level < 1) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Milestone levels must be positive integers'
+                    });
+                }
+
+                // Check for duplicate levels
+                if (milestoneLevels.has(milestone.level)) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Duplicate milestone level: ${milestone.level}`
+                    });
+                }
+                milestoneLevels.add(milestone.level);
+
+                // Validate required rebate income
+                if (typeof milestone.requiredRebateIncome !== 'number' || milestone.requiredRebateIncome < 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Required rebate income for level ${milestone.level} must be a non-negative number`
+                    });
+                }
+
+                // Level 1 must have 0 requirement (always unlocked)
+                if (milestone.level === 1 && milestone.requiredRebateIncome !== 0) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Level 1 must have 0 required rebate income (always unlocked)'
+                    });
+                }
+
+                // Validate description
+                if (milestone.description && typeof milestone.description !== 'string') {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Description for level ${milestone.level} must be a string`
+                    });
+                }
+            }
+
+            // Ensure levels are in ascending order by requiredRebateIncome
+            const sortedMilestones = [...milestones.levels].sort((a, b) => a.requiredRebateIncome - b.requiredRebateIncome);
+            for (let i = 1; i < sortedMilestones.length; i++) {
+                if (sortedMilestones[i].requiredRebateIncome <= sortedMilestones[i - 1].requiredRebateIncome) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Milestone requirements must be in strictly increasing order'
+                    });
+                }
+            }
+
+            // Check that milestone levels match upline distribution levels
+            const uplinerLevels = new Set(uplineDistribution.map(d => d.level));
+            const allMilestoneLevelsExist = milestones.levels.every(m => uplinerLevels.has(m.level));
+
+            if (!allMilestoneLevelsExist) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'All milestone levels must exist in upline distribution'
+                });
+            }
+        }
+    }
+
     // Validate autoSyncGTCMemberTree configuration if provided
     if (autoSyncGTCMemberTree && typeof autoSyncGTCMemberTree === 'object') {
         const {
@@ -213,7 +302,8 @@ const validateConfigUpdate = (req, res, next) => {
         performanceFeeTime,
         pammUuid: pammUuid?.trim() || null,
         pammEnabled: Boolean(pammEnabled),
-        autoSyncGTCMemberTree: autoSyncGTCMemberTree || {}
+        autoSyncGTCMemberTree: autoSyncGTCMemberTree || {},
+        milestones: milestones || {} // NEW
     };
     next();
 };
@@ -305,7 +395,8 @@ router.put('/config',
                 performanceFeeTime,
                 pammUuid,
                 pammEnabled,
-                autoSyncGTCMemberTree
+                autoSyncGTCMemberTree,
+                milestones // NEW
             } = req.validatedData;
 
             let config = await SystemConfig.getOrCreateConfig();
@@ -320,14 +411,30 @@ router.put('/config',
             config.pammUuid = pammUuid;
             config.pammEnabled = pammEnabled;
 
-            // Update autoSyncGTCMemberTree configuration - PROPERLY HANDLE UPDATES
+            // ========== UPDATE MILESTONES ==========
+            if (milestones && typeof milestones === 'object') {
+                const existingMilestones = config.milestones || {};
+
+                config.milestones = {
+                    enabled: milestones.enabled !== undefined
+                        ? Boolean(milestones.enabled)
+                        : (existingMilestones.enabled || true),
+
+                    levels: milestones.levels && Array.isArray(milestones.levels)
+                        ? milestones.levels.map(m => ({
+                            level: m.level,
+                            requiredRebateIncome: m.requiredRebateIncome || 0,
+                            description: m.description || ''
+                        })).sort((a, b) => a.level - b.level)
+                        : (existingMilestones.levels || [])
+                };
+            }
+
+            // Update autoSyncGTCMemberTree configuration
             if (autoSyncGTCMemberTree && typeof autoSyncGTCMemberTree === 'object') {
-                // Get existing sync config or create default
                 const existingSync = config.autoSyncGTCMemberTree?.toObject?.() || config.autoSyncGTCMemberTree || {};
 
-                // Build the updated sync config by merging
                 const updatedSync = {
-                    // User-editable fields from frontend (with fallback to existing or defaults)
                     syncEnabled: autoSyncGTCMemberTree.syncEnabled !== undefined
                         ? Boolean(autoSyncGTCMemberTree.syncEnabled)
                         : (existingSync.syncEnabled || false),
@@ -352,7 +459,6 @@ router.put('/config',
                         ? Boolean(autoSyncGTCMemberTree.runSyncOnStartup)
                         : (existingSync.runSyncOnStartup || false),
 
-                    // System-managed fields - ALWAYS preserve from existing or set defaults
                     lastSyncAt: existingSync.lastSyncAt || null,
                     lastSyncStatus: existingSync.lastSyncStatus || null,
                     lastSyncStats: existingSync.lastSyncStats || {
@@ -363,7 +469,6 @@ router.put('/config',
                     }
                 };
 
-                // Ensure lastSyncStats has all required fields
                 if (updatedSync.lastSyncStats) {
                     updatedSync.lastSyncStats = {
                         processed: updatedSync.lastSyncStats.processed || 0,
@@ -373,7 +478,6 @@ router.put('/config',
                     };
                 }
 
-                // Set the entire object at once
                 config.set('autoSyncGTCMemberTree', updatedSync);
             }
 
@@ -425,7 +529,6 @@ router.post('/sync/trigger', authenticateToken, requireAdmin, async (req, res) =
             });
         }
 
-        // Trigger manual sync in the background
         triggerManualSync().catch(err => {
             console.error('Manual sync error:', err);
         });
