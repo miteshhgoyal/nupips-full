@@ -1686,7 +1686,7 @@ const GTCMembers = () => {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               <button
                 onClick={loadFullTree}
                 disabled={loadingFullTree}
