@@ -273,10 +273,10 @@ const NupipsIncomes = () => {
 
           {/* Income Level Progress Section */}
           {milestoneData && levelProgress.length > 0 && (
-            <div className="mb-8 bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl shadow-lg border border-orange-200 overflow-hidden">
+            <div className="mb-8 bg-white rounded-2xl shadow-lg border border-orange-200 overflow-hidden">
               {/* Header with Toggle */}
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Award className="w-6 h-6 text-white" />
                     <div>
@@ -487,7 +487,7 @@ const NupipsIncomes = () => {
                         <p className="font-semibold mb-2">
                           How Income Distribution Works:
                         </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           <div className="bg-white/50 rounded-lg p-3">
                             <p className="font-semibold mb-1">
                               Performance Fee (Rebate):
@@ -519,7 +519,7 @@ const NupipsIncomes = () => {
                               when you reach lifetime rebate milestones.
                             </p>
                           </div>
-                          <div className="bg-white/50 rounded-lg p-3">
+                          {/* <div className="bg-white/50 rounded-lg p-3">
                             <p className="font-semibold mb-1">System Share:</p>
                             <p>
                               System takes{" "}
@@ -528,7 +528,7 @@ const NupipsIncomes = () => {
                               </strong>{" "}
                               + income from locked/unassigned levels.
                             </p>
-                          </div>
+                          </div> */}
                         </div>
                       </div>
                     </div>
