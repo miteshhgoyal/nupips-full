@@ -320,12 +320,61 @@ router.put('/config',
             config.pammUuid = pammUuid;
             config.pammEnabled = pammEnabled;
 
-            // Update autoSyncGTCMemberTree configuration
+            // Update autoSyncGTCMemberTree configuration - PROPERLY HANDLE UPDATES
             if (autoSyncGTCMemberTree && typeof autoSyncGTCMemberTree === 'object') {
-                config.autoSyncGTCMemberTree = {
-                    ...config.autoSyncGTCMemberTree,
-                    ...autoSyncGTCMemberTree
+                // Get existing sync config or create default
+                const existingSync = config.autoSyncGTCMemberTree?.toObject?.() || config.autoSyncGTCMemberTree || {};
+
+                // Build the updated sync config by merging
+                const updatedSync = {
+                    // User-editable fields from frontend (with fallback to existing or defaults)
+                    syncEnabled: autoSyncGTCMemberTree.syncEnabled !== undefined
+                        ? Boolean(autoSyncGTCMemberTree.syncEnabled)
+                        : (existingSync.syncEnabled || false),
+
+                    syncFrequency: autoSyncGTCMemberTree.syncFrequency
+                        || existingSync.syncFrequency
+                        || "0 2 * * *",
+
+                    gtcLoginAccount: autoSyncGTCMemberTree.gtcLoginAccount !== undefined
+                        ? (autoSyncGTCMemberTree.gtcLoginAccount || null)
+                        : (existingSync.gtcLoginAccount || null),
+
+                    gtcLoginPassword: autoSyncGTCMemberTree.gtcLoginPassword !== undefined
+                        ? (autoSyncGTCMemberTree.gtcLoginPassword || null)
+                        : (existingSync.gtcLoginPassword || null),
+
+                    gtcApiUrl: autoSyncGTCMemberTree.gtcApiUrl !== undefined
+                        ? (autoSyncGTCMemberTree.gtcApiUrl || null)
+                        : (existingSync.gtcApiUrl || null),
+
+                    runSyncOnStartup: autoSyncGTCMemberTree.runSyncOnStartup !== undefined
+                        ? Boolean(autoSyncGTCMemberTree.runSyncOnStartup)
+                        : (existingSync.runSyncOnStartup || false),
+
+                    // System-managed fields - ALWAYS preserve from existing or set defaults
+                    lastSyncAt: existingSync.lastSyncAt || null,
+                    lastSyncStatus: existingSync.lastSyncStatus || null,
+                    lastSyncStats: existingSync.lastSyncStats || {
+                        processed: 0,
+                        updated: 0,
+                        created: 0,
+                        errors: 0
+                    }
                 };
+
+                // Ensure lastSyncStats has all required fields
+                if (updatedSync.lastSyncStats) {
+                    updatedSync.lastSyncStats = {
+                        processed: updatedSync.lastSyncStats.processed || 0,
+                        updated: updatedSync.lastSyncStats.updated || 0,
+                        created: updatedSync.lastSyncStats.created || 0,
+                        errors: updatedSync.lastSyncStats.errors || 0
+                    };
+                }
+
+                // Set the entire object at once
+                config.set('autoSyncGTCMemberTree', updatedSync);
             }
 
             config.updatedAt = new Date();

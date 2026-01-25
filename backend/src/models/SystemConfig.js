@@ -75,56 +75,82 @@ const SystemSchema = new mongoose.Schema({
 
     // ========== Auto Sync GTC Member Tree Configuration ==========
     autoSyncGTCMemberTree: {
-        syncEnabled: {
-            type: Boolean,
-            default: false
-        },
-        syncFrequency: {
-            type: String,
-            default: "0 2 * * *", // Default: Daily at 2 AM
-            validate: {
-                validator: function (v) {
-                    // Basic cron validation - 5 parts separated by spaces
-                    const parts = v.trim().split(/\s+/);
-                    return parts.length === 5;
+        type: {
+            syncEnabled: {
+                type: Boolean,
+                default: false
+            },
+            syncFrequency: {
+                type: String,
+                default: "0 2 * * *", // Default: Daily at 2 AM
+                validate: {
+                    validator: function (v) {
+                        // Basic cron validation - 5 parts separated by spaces
+                        const parts = v.trim().split(/\s+/);
+                        return parts.length === 5;
+                    },
+                    message: 'Sync frequency must be a valid cron expression (5 parts)'
+                }
+            },
+            gtcLoginAccount: {
+                type: String,
+                default: null,
+                trim: true
+            },
+            gtcLoginPassword: {
+                type: String,
+                default: null,
+                // Encrypted in production
+            },
+            gtcApiUrl: {
+                type: String,
+                default: null,
+                trim: true
+            },
+            runSyncOnStartup: {
+                type: Boolean,
+                default: false
+            },
+            lastSyncAt: {
+                type: Date,
+                default: null
+            },
+            lastSyncStatus: {
+                type: String,
+                enum: ['success', 'failed', 'pending', null],
+                default: null
+            },
+            lastSyncStats: {
+                type: {
+                    processed: { type: Number, default: 0 },
+                    updated: { type: Number, default: 0 },
+                    created: { type: Number, default: 0 },
+                    errors: { type: Number, default: 0 }
                 },
-                message: 'Sync frequency must be a valid cron expression (5 parts)'
+                default: () => ({
+                    processed: 0,
+                    updated: 0,
+                    created: 0,
+                    errors: 0
+                })
             }
         },
-        gtcLoginAccount: {
-            type: String,
-            default: null,
-            trim: true
-        },
-        gtcLoginPassword: {
-            type: String,
-            default: null,
-            // Encrypted in production
-        },
-        gtcApiUrl: {
-            type: String,
-            default: null,
-            trim: true
-        },
-        runSyncOnStartup: {
-            type: Boolean,
-            default: false
-        },
-        lastSyncAt: {
-            type: Date,
-            default: null
-        },
-        lastSyncStatus: {
-            type: String,
-            enum: ['success', 'failed', 'pending', null],
-            default: null
-        },
-        lastSyncStats: {
-            processed: { type: Number, default: 0 },
-            updated: { type: Number, default: 0 },
-            created: { type: Number, default: 0 },
-            errors: { type: Number, default: 0 }
-        }
+        default: () => ({
+            syncEnabled: false,
+            syncFrequency: "0 2 * * *",
+            gtcLoginAccount: null,
+            gtcLoginPassword: null,
+            gtcApiUrl: null,
+            runSyncOnStartup: false,
+            lastSyncAt: null,
+            lastSyncStatus: null,
+            lastSyncStats: {
+                processed: 0,
+                updated: 0,
+                created: 0,
+                errors: 0
+            }
+        })
     },
 
     // ========== Timestamps ==========
@@ -188,6 +214,38 @@ SystemSchema.statics.getOrCreateConfig = async function () {
                     }
                 }
             });
+        } else {
+            // Ensure autoSyncGTCMemberTree exists with all required fields
+            if (!config.autoSyncGTCMemberTree) {
+                config.autoSyncGTCMemberTree = {
+                    syncEnabled: false,
+                    syncFrequency: "0 2 * * *",
+                    gtcLoginAccount: null,
+                    gtcLoginPassword: null,
+                    gtcApiUrl: null,
+                    runSyncOnStartup: false,
+                    lastSyncAt: null,
+                    lastSyncStatus: null,
+                    lastSyncStats: {
+                        processed: 0,
+                        updated: 0,
+                        created: 0,
+                        errors: 0
+                    }
+                };
+                await config.save();
+            } else {
+                // Ensure lastSyncStats exists
+                if (!config.autoSyncGTCMemberTree.lastSyncStats) {
+                    config.autoSyncGTCMemberTree.lastSyncStats = {
+                        processed: 0,
+                        updated: 0,
+                        created: 0,
+                        errors: 0
+                    };
+                    await config.save();
+                }
+            }
         }
         return config;
     } catch (error) {
@@ -212,6 +270,26 @@ SystemSchema.pre('save', function (next) {
 
     if (total > 100) {
         return next(new Error(`Total percentage (${total}%) exceeds 100%`));
+    }
+
+    // Ensure autoSyncGTCMemberTree.lastSyncStats has all required fields
+    if (this.autoSyncGTCMemberTree) {
+        if (!this.autoSyncGTCMemberTree.lastSyncStats) {
+            this.autoSyncGTCMemberTree.lastSyncStats = {
+                processed: 0,
+                updated: 0,
+                created: 0,
+                errors: 0
+            };
+        } else {
+            // Ensure all stat fields exist
+            this.autoSyncGTCMemberTree.lastSyncStats = {
+                processed: this.autoSyncGTCMemberTree.lastSyncStats.processed || 0,
+                updated: this.autoSyncGTCMemberTree.lastSyncStats.updated || 0,
+                created: this.autoSyncGTCMemberTree.lastSyncStats.created || 0,
+                errors: this.autoSyncGTCMemberTree.lastSyncStats.errors || 0
+            };
+        }
     }
 
     next();
