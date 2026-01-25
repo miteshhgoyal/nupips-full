@@ -166,16 +166,20 @@ async function syncMemberTree() {
         }
 
         // Step 3: Sync tree to database
-        console.log('💾 Syncing tree to database...');
+        console.log('Syncing tree to database...');
         const result = await syncMemberTreeFromAPI(treeData, accessToken);
 
         console.log('');
-        console.log('✅ Sync completed successfully!');
-        console.log('📊 Stats:', {
+        console.log('Sync completed successfully!');
+        console.log('Stats:', {
             processed: result.stats.processed,
-            updated: result.stats.updated,
-            created: result.stats.created,
-            errors: result.stats.errors,
+            totalMembers: result.stats.totalMembers,
+            kycStats: result.stats.kycStats,
+            tradingBalanceFetched: result.stats.tradingBalanceFetched,
+            balanceFetchSuccess: result.stats.balanceFetchSuccess,
+            balanceFetchErrors: result.stats.balanceFetchErrors,
+            duration: result.stats.duration,
+            timestamp: result.stats.timestamp,
         });
         console.log('='.repeat(60));
         console.log('');
