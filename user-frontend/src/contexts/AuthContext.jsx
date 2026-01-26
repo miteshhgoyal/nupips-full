@@ -90,16 +90,6 @@ export const AuthProvider = ({ children }) => {
       // 3. Fetch last 7 days only (not 30) for login - faster + less overlap
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      const response = await api.post("/gtcfx/fetch-performance-fees", {
-        startDate: sevenDaysAgo.toISOString().split("T")[0],
-        endDate: new Date().toISOString().split("T")[0],
-      });
-
-      if (response.data.wasSkipped) {
-      } else if (response.data.totalPerformanceFee > 0) {
-      } else {
-      }
     } catch (error) {
       console.warn(
         "Auto-fetch skipped:",
@@ -139,7 +129,6 @@ export const AuthProvider = ({ children }) => {
     logout,
     checkAuth,
     updateUser,
-    autoFetchPerformanceFees,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

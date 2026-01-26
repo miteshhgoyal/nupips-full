@@ -247,108 +247,21 @@ router.post('/sync-user', authenticateToken, async (req, res) => {
     }
 });
 
-// Fetch Performance Fees
-router.post('/fetch-performance-fees', authenticateToken, async (req, res) => {
-    try {
-        const { userId } = req.user;
-        const { startDate, endDate, forceUpdate = false } = req.body;
-
-        if (!startDate || !endDate) {
-            return res.status(400).json({ message: 'Start date and end date are required' });
-        }
-
-        const user = await User.findById(userId).select('gtcfx');
-        if (!user?.gtcfx?.accessToken) {
-            return res.status(401).json({ message: 'GTC FX account not linked' });
-        }
-
-        const lastFetch = user.gtcfx?.lastPerformanceFeesFetch;
-        const fetchEndDate = new Date(endDate);
-
-        if (!forceUpdate && lastFetch && lastFetch >= new Date(startDate)) {
-            return res.status(409).json({
-                message: 'Performance fees for this period already fetched',
-                lastFetched: lastFetch,
-                skipWalletUpdate: true
-            });
-        }
-
-        const response = await gtcAxios.post('/api/v3/share_profit_log', {
-            starttime: Math.floor(new Date(startDate).getTime() / 1000),
-            endtime: Math.floor(new Date(endDate).getTime() / 1000),
-            page: 1,
-            pagesize: 100
-        }, {
-            headers: { Authorization: `Bearer ${user.gtcfx.accessToken}` }
-        });
-
-        if (response.data.code !== 200) {
-            return res.status(400).json({
-                message: response.data.message || 'Failed to fetch performance fees',
-                code: response.data.code
-            });
-        }
-
-        const profitLogs = response.data.data.list;
-        const totalPerformanceFee = profitLogs.reduce((sum, log) =>
-            sum + parseFloat(log.performace_fee || 0), 0);
-
-        let newWalletBalance = user.walletBalance;
-
-        if (totalPerformanceFee > 0 && (!lastFetch || forceUpdate || lastFetch < new Date(startDate))) {
-            const incomeEntry = await addIncomeExpenseEntry(
-                userId,
-                'income',
-                'performancefee',
-                totalPerformanceFee,
-                `Performance fees from ${startDate} to ${endDate}`
-            );
-
-            await User.findByIdAndUpdate(userId, {
-                $push: { incomeExpenseHistory: incomeEntry._id },
-                $set: {
-                    'gtcfx.lastPerformanceFeesFetch': new Date(),
-                    $inc: { walletBalance: totalPerformanceFee }
-                }
-            });
-
-            newWalletBalance += totalPerformanceFee;
-        }
-
-        res.json({
-            message: totalPerformanceFee > 0
-                ? 'Performance fees fetched and wallet updated successfully'
-                : 'No new performance fees found',
-            totalPerformanceFee: totalPerformanceFee.toFixed(4),
-            profitLogsCount: profitLogs.length,
-            newWalletBalance,
-            lastFetchUpdated: new Date().toISOString(),
-            wasSkipped: !!lastFetch && lastFetch >= new Date(startDate) && !forceUpdate
-        });
-
-    } catch (error) {
-        console.error('Error in fetch-performance-fees route:', error);
-
-        if (error.response?.status === 401) {
-            return res.status(401).json({ message: 'GTC FX session expired. Please re-authenticate.' });
-        }
-        if (error.code === 'ECONNREFUSED') {
-            return res.status(503).json({ message: 'GTC FX API unavailable' });
-        }
-        if (error.code === 'ETIMEDOUT') {
-            return res.status(504).json({ message: 'GTC FX API timeout' });
-        }
-
-        res.status(500).json({ message: 'Server error fetching performance fees' });
-    }
-});
-
 // ====================== WEBHOOK HELPER ======================
 function verifyGtcSignature(req) {
     const secret = process.env.GTC_WEBHOOK_SECRET;
     const signature = req.headers['x-gtc-signature'];
 
-    if (!secret || !signature) return true;
+    // FAIL CLOSED - reject if not configured
+    if (!secret) {
+        console.error('GTC_WEBHOOK_SECRET not configured!');
+        return false;
+    }
+
+    if (!signature) {
+        console.error('Missing x-gtc-signature header');
+        return false;
+    }
 
     try {
         const expected = crypto
@@ -534,120 +447,6 @@ router.post('/webhook/member-update', async (req, res) => {
     }
 });
 
-// ====================== API: GET ALL GTC MEMBERS ======================
-// GET /api/gtcfx/members
-router.get('/members', authenticateToken, async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 100;
-        const skip = (page - 1) * limit;
-        const { kycStatus } = req.query;
-
-        // Build query
-        let query = {};
-        if (kycStatus) {
-            query.kycStatus = kycStatus;
-        }
-
-        const members = await GTCMember.find(query)
-            .sort({ joinedAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .lean();
-
-        const total = await GTCMember.countDocuments(query);
-
-        res.json({
-            success: true,
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-            count: members.length,
-            members,
-        });
-    } catch (error) {
-        console.error('Get members error:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch members' });
-    }
-});
-
-// ====================== API: GET MEMBER BY GTC USER ID ======================
-// GET /api/gtcfx/members/:gtcUserId
-router.get('/members/:gtcUserId', authenticateToken, async (req, res) => {
-    try {
-        const { gtcUserId } = req.params;
-
-        const member = await GTCMember.findOne({ gtcUserId }).lean();
-
-        if (!member) {
-            return res.status(404).json({ success: false, message: 'Member not found' });
-        }
-
-        res.json({
-            success: true,
-            member,
-        });
-    } catch (error) {
-        console.error('Get member error:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch member' });
-    }
-});
-
-// ====================== API: GET MEMBER TREE (DOWNLINE) ======================
-// GET /api/gtcfx/members/:gtcUserId/tree
-router.get('/members/:gtcUserId/tree', authenticateToken, async (req, res) => {
-    try {
-        const { gtcUserId } = req.params;
-
-        const member = await GTCMember.findOne({ gtcUserId }).lean();
-
-        if (!member) {
-            return res.status(404).json({ success: false, message: 'Member not found' });
-        }
-
-        // Find all members who have this gtcUserId in their upline chain
-        const downline = await GTCMember.find({
-            'uplineChain.gtcUserId': gtcUserId,
-        })
-            .sort({ level: 1, joinedAt: -1 })
-            .lean();
-
-        res.json({
-            success: true,
-            member,
-            downlineCount: downline.length,
-            downline,
-        });
-    } catch (error) {
-        console.error('Get member tree error:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch member tree' });
-    }
-});
-
-// ====================== API: GET MEMBER'S DIRECT CHILDREN ======================
-// GET /api/gtcfx/members/:gtcUserId/children
-router.get('/members/:gtcUserId/children', authenticateToken, async (req, res) => {
-    try {
-        const { gtcUserId } = req.params;
-
-        const children = await GTCMember.find({
-            parentGtcUserId: gtcUserId,
-        })
-            .sort({ joinedAt: -1 })
-            .lean();
-
-        res.json({
-            success: true,
-            count: children.length,
-            children,
-        });
-    } catch (error) {
-        console.error('Get member children error:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch member children' });
-    }
-});
-
 // ====================== SYNC MEMBER TREE FROM GTC API ======================
 router.post('/sync-member-tree', async (req, res) => {
     try {
@@ -775,49 +574,6 @@ router.get('/kyc-stats', authenticateToken, async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching KYC stats:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// ====================== GET MEMBER HIERARCHY ======================
-router.get('/member/:gtcUserId/hierarchy', async (req, res) => {
-    try {
-        const { gtcUserId } = req.params;
-
-        // Get the member
-        const member = await GTCMember.findOne({ gtcUserId });
-
-        if (!member) {
-            return res.status(404).json({
-                success: false,
-                message: 'Member not found'
-            });
-        }
-
-        // Get direct children
-        const children = await GTCMember.find({
-            parentGtcUserId: gtcUserId
-        }).select('gtcUserId email username name level userType amount');
-
-        // Get all descendants count (recursive)
-        const descendants = await GTCMember.countDocuments({
-            uplineChain: {
-                $elemMatch: { gtcUserId: gtcUserId }
-            }
-        });
-
-        res.status(200).json({
-            success: true,
-            data: {
-                member,
-                directChildren: children,
-                directChildrenCount: children.length,
-                totalDescendants: descendants,
-            }
-        });
-
-    } catch (error) {
-        console.error('Error fetching member hierarchy:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

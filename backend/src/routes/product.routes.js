@@ -138,39 +138,6 @@ router.get('/list', async (req, res) => {
     }
 });
 
-// Search products - PUBLIC
-router.get('/search', async (req, res) => {
-    try {
-        const { q, category, minPrice, maxPrice } = req.query;
-        let query = {};
-
-        if (q) {
-            query.$or = [
-                { name: { $regex: q, $options: 'i' } },
-                { description: { $regex: q, $options: 'i' } }
-            ];
-        }
-
-        if (category) query.category = category;
-        if (minPrice || maxPrice) {
-            query.price = {};
-            if (minPrice) query.price.$gte = Number(minPrice);
-            if (maxPrice) query.price.$lte = Number(maxPrice);
-        }
-
-        const products = await Product.find(query).limit(20).lean();
-
-        res.json({
-            success: true,
-            total: products.length,
-            products
-        });
-    } catch (error) {
-        console.error('Search products error:', error);
-        res.status(500).json({ message: 'Failed to search products' });
-    }
-});
-
 // Get product statistics
 router.get('/stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
@@ -195,23 +162,6 @@ router.get('/stats', authenticateToken, requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Get product stats error:', error);
         res.status(500).json({ message: 'Failed to fetch product statistics' });
-    }
-});
-
-// Get single product - PUBLIC
-router.post('/single', async (req, res) => {
-    try {
-        const { productId } = req.body;
-        const product = await Product.findById(productId).lean();
-
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-
-        res.json({ success: true, product });
-    } catch (error) {
-        console.error('Get product error:', error);
-        res.status(500).json({ message: 'Failed to fetch product' });
     }
 });
 
@@ -344,71 +294,6 @@ router.put('/edit/:id', authenticateToken, requireAdmin, upload.fields([
     }
 });
 
-// Update product (alternative POST method)
-router.post('/update', authenticateToken, requireAdmin, upload.fields([
-    { name: 'newImage1', maxCount: 1 },
-    { name: 'newImage2', maxCount: 1 },
-    { name: 'newImage3', maxCount: 1 },
-    { name: 'newImage4', maxCount: 1 }
-]), async (req, res) => {
-    try {
-        const { productId, name, description, price, category, bestseller, existingImages } = req.body;
-
-        const existingProduct = await Product.findById(productId);
-        if (!existingProduct) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-
-        let updatedImages = existingImages ? JSON.parse(existingImages) : [...existingProduct.image];
-
-        if (req.files) {
-            const newImages = [
-                req.files.newImage1?.[0],
-                req.files.newImage2?.[0],
-                req.files.newImage3?.[0],
-                req.files.newImage4?.[0]
-            ];
-
-            for (let i = 0; i < newImages.length; i++) {
-                if (newImages[i]) {
-                    if (updatedImages[i]) {
-                        const publicId = updatedImages[i].split('/').slice(-2).join('/').split('.')[0];
-                        await cloudinary.uploader.destroy(publicId);
-                    }
-
-                    const result = await cloudinary.uploader.upload(newImages[i].path, {
-                        resource_type: 'image',
-                        folder: 'products'
-                    });
-                    updatedImages[i] = result.secure_url;
-                }
-            }
-        }
-
-        const product = await Product.findByIdAndUpdate(
-            productId,
-            {
-                name,
-                description,
-                price: Number(price),
-                image: updatedImages.filter(Boolean),
-                category,
-                bestseller: bestseller === 'true' || bestseller === true
-            },
-            { new: true, runValidators: true }
-        );
-
-        res.json({
-            success: true,
-            message: 'Product updated successfully',
-            product
-        });
-    } catch (error) {
-        console.error('Update product error:', error);
-        res.status(500).json({ message: 'Failed to update product', error: error.message });
-    }
-});
-
 // Delete product (with Cloudinary cleanup)
 router.delete('/delete/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
@@ -435,31 +320,6 @@ router.delete('/delete/:id', authenticateToken, requireAdmin, async (req, res) =
     }
 });
 
-// Delete product (alternative POST method)
-router.post('/remove', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const { productId } = req.body;
-        const product = await Product.findById(productId);
-
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-
-        // Delete images from Cloudinary
-        await deleteImagesFromCloudinary(product.image);
-
-        await Product.findByIdAndDelete(productId);
-
-        res.json({
-            success: true,
-            message: 'Product removed successfully'
-        });
-    } catch (error) {
-        console.error('Remove product error:', error);
-        res.status(500).json({ message: 'Failed to remove product' });
-    }
-});
-
 // Toggle bestseller status
 router.put('/toggle-bestseller/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
@@ -476,31 +336,6 @@ router.put('/toggle-bestseller/:id', authenticateToken, requireAdmin, async (req
         res.json({
             success: true,
             message: `Product ${product.bestseller ? 'added to' : 'removed from'} bestsellers`,
-            product
-        });
-    } catch (error) {
-        console.error('Toggle bestseller error:', error);
-        res.status(500).json({ message: 'Failed to toggle bestseller' });
-    }
-});
-
-// Toggle bestseller (alternative POST method)
-router.post('/toggle-bestseller', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const { productId } = req.body;
-        const product = await Product.findById(productId);
-
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-
-        product.bestseller = !product.bestseller;
-        await product.save();
-
-        res.json({
-            success: true,
-            message: `Bestseller status toggled`,
-            bestseller: product.bestseller,
             product
         });
     } catch (error) {
@@ -564,99 +399,6 @@ router.post('/order/place', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Place order error:', error);
         res.status(500).json({ message: 'Failed to place order' });
-    }
-});
-
-// Get user orders (alternative POST method)
-router.post('/order/userorders', authenticateToken, async (req, res) => {
-    try {
-        const { userId } = req.body;
-        const requestingUser = await User.findById(req.user.userId);
-
-        if (requestingUser.userType !== 'admin' && userId !== req.user.userId) {
-            return res.status(403).json({ message: 'Access denied' });
-        }
-
-        const orders = await Order.find({ userId: userId || req.user.userId })
-            .sort({ createdAt: -1 })
-            .lean();
-
-        res.json({
-            success: true,
-            total: orders.length,
-            orders
-        });
-    } catch (error) {
-        console.error('Get user orders error:', error);
-        res.status(500).json({ message: 'Failed to fetch user orders' });
-    }
-});
-
-// Get all orders (alternative route)
-router.post('/order/list', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const orders = await Order.find({})
-            .sort({ createdAt: -1 })
-            .lean();
-
-        const populatedOrders = await Promise.all(
-            orders.map(async (order) => {
-                const user = await User.findById(order.userId)
-                    .select('name email phone username')
-                    .lean();
-                return { ...order, user };
-            })
-        );
-
-        res.json({
-            success: true,
-            total: populatedOrders.length,
-            orders: populatedOrders
-        });
-    } catch (error) {
-        console.error('Get all orders error:', error);
-        res.status(500).json({ message: 'Failed to fetch all orders' });
-    }
-});
-
-// Update order status (alternative POST method)
-router.post('/order/status', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const { orderId, status } = req.body;
-        const validStatuses = [
-            'Order Placed',
-            'Processing',
-            'Shipped',
-            'Out for Delivery',
-            'Delivered',
-            'Cancelled'
-        ];
-
-        if (!validStatuses.includes(status)) {
-            return res.status(400).json({
-                message: 'Invalid status',
-                validStatuses
-            });
-        }
-
-        const order = await Order.findByIdAndUpdate(
-            orderId,
-            { status },
-            { new: true }
-        );
-
-        if (!order) {
-            return res.status(404).json({ message: 'Order not found' });
-        }
-
-        res.json({
-            success: true,
-            message: 'Order status updated',
-            order
-        });
-    } catch (error) {
-        console.error('Update order status error:', error);
-        res.status(500).json({ message: 'Failed to update order status' });
     }
 });
 
@@ -867,35 +609,6 @@ router.get("/order/admin/all", authenticateToken, requireAdmin, async (req, res)
     } catch (error) {
         console.error("Get all orders error:", error);
         res.status(500).json({ message: "Failed to fetch orders" });
-    }
-});
-
-// Get single order - ADD validation
-router.get("/order/:id", authenticateToken, async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ message: "Invalid order ID format" });
-        }
-
-        const order = await Order.findById(id)
-            .populate("userId", "name email phone username")
-            .lean();
-
-        if (!order) {
-            return res.status(404).json({ message: "Order not found" });
-        }
-
-        const user = await User.findById(req.user.userId);
-        if (order.userId._id.toString() !== req.user.userId && user.userType !== "admin") {
-            return res.status(403).json({ message: "Access denied" });
-        }
-
-        res.json({ success: true, order });
-    } catch (error) {
-        console.error("Get order error:", error);
-        res.status(500).json({ message: "Failed to fetch order" });
     }
 });
 
