@@ -1,3 +1,4 @@
+// user-frontend/src/pages/Competition.jsx
 import React, { useState, useEffect } from "react";
 import { Helmet } from "react-helmet";
 import {
@@ -60,11 +61,10 @@ const InfoTooltip = ({ title, items }) => {
               {items.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between">
                   <span className="text-gray-300">{item.label}:</span>
-                  <span className="font-semibold ml-2">${item.value}</span>
+                  <span className="font-semibold ml-2">{item.value}</span>
                 </div>
               ))}
             </div>
-            {/* Arrow */}
             <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
           </div>
         </div>
@@ -100,7 +100,6 @@ const Competition = () => {
       if (response.data.success) {
         const comps = response.data.competitions || [];
 
-        // Fetch user rank for each competition if connected
         if (gtcAuthenticated) {
           const competitionsWithRanks = await Promise.all(
             comps.map(async (comp) => {
@@ -148,7 +147,6 @@ const Competition = () => {
         `/competition/${competition.slug}/calculate-my-score`
       );
       if (response.data.success) {
-        // Refresh competitions to get updated rank
         fetchCompetitions(false);
       }
     } catch (error) {
@@ -181,12 +179,12 @@ const Competition = () => {
   };
 
   const getRankIcon = (rank) => {
-    if (rank === 1) return { icon: Trophy, color: "text-amber-100" };
-    if (rank === 2) return { icon: Trophy, color: "text-slate-100" };
-    if (rank === 3) return { icon: Trophy, color: "text-orange-100" };
-    if (rank <= 10) return { icon: Medal, color: "text-blue-100" };
-    if (rank <= 25) return { icon: Award, color: "text-purple-100" };
-    return { icon: Award, color: "text-gray-100" };
+    if (rank === 1) return { icon: Trophy, color: "text-amber-500" };
+    if (rank === 2) return { icon: Trophy, color: "text-slate-400" };
+    if (rank === 3) return { icon: Trophy, color: "text-orange-600" };
+    if (rank <= 10) return { icon: Medal, color: "text-blue-500" };
+    if (rank <= 25) return { icon: Award, color: "text-purple-500" };
+    return { icon: Award, color: "text-gray-400" };
   };
 
   if (loading) {
@@ -207,7 +205,6 @@ const Competition = () => {
       </Helmet>
 
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -238,7 +235,6 @@ const Competition = () => {
             </button>
           </div>
 
-          {/* Connection Status */}
           {!gtcAuthenticated && (
             <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-xl p-6 text-white mb-6">
               <div className="flex flex-col md:flex-row items-center gap-6">
@@ -265,7 +261,6 @@ const Competition = () => {
           )}
         </div>
 
-        {/* Competitions Grid */}
         {competitions.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {competitions.map((competition) => {
@@ -282,12 +277,11 @@ const Competition = () => {
                   className={`relative bg-white rounded-2xl border-2 shadow-sm hover:shadow-lg transition-all overflow-hidden ${
                     isLocked
                       ? "border-gray-200 opacity-60"
-                      : competition.isActive
+                      : competition.status === "active"
                       ? "border-orange-300 hover:border-orange-500"
                       : "border-gray-200"
                   }`}
                 >
-                  {/* Locked Overlay */}
                   {isLocked && (
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 to-gray-900/40 backdrop-blur-[2px] z-10 flex items-center justify-center">
                       <div className="text-center p-6">
@@ -311,7 +305,6 @@ const Competition = () => {
                   )}
 
                   <div className="p-6">
-                    {/* Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
@@ -326,10 +319,9 @@ const Competition = () => {
                       </div>
                     </div>
 
-                    {/* User Rank Card (if participating) */}
                     {hasUserStats && (
                       <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 mb-4 text-white">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mb-3">
                           <div>
                             <p className="text-white/80 text-xs font-medium uppercase tracking-wide mb-1">
                               Your Rank
@@ -341,51 +333,91 @@ const Competition = () => {
                           <RankIcon className={`w-10 h-10 ${color}`} />
                         </div>
 
-                        {/* KYC BONUS DISPLAY */}
-                        {competition.userStats.metrics?.kycBonusApplied && (
+                        {/* Growth Metrics Display */}
+                        {competition.userStats.growth && (
                           <div className="mt-3 pt-3 border-t border-white/20">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Shield className="w-4 h-4 text-white" />
-                              <span className="text-xs font-semibold text-white/90">
-                                KYC Verified Bonus
-                              </span>
-                            </div>
-                            <div className="bg-white/20 rounded-lg p-2">
-                              <p className="text-sm font-bold text-white">
-                                +
-                                {
-                                  competition.userStats.metrics
-                                    .kycBonusPercentage
-                                }
-                                % Score Boost
-                              </p>
-                              <p className="text-xs text-white/80 mt-0.5">
-                                Base Score:{" "}
-                                {competition.userStats.ranking.baseScore?.toFixed(
-                                  1
-                                )}{" "}
-                                → Final:{" "}
-                                {competition.userStats.ranking.score?.toFixed(
-                                  1
-                                )}
-                              </p>
+                            <p className="text-xs text-white/80 mb-2 font-semibold">
+                              Your Growth Since Competition Start:
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {competition.userStats.growth
+                                .directReferralsGrowth > 0 && (
+                                <div className="bg-white/20 rounded-lg p-2">
+                                  <p className="text-xs text-white/70">
+                                    Direct Referrals
+                                  </p>
+                                  <p className="text-sm font-bold">
+                                    +
+                                    {
+                                      competition.userStats.growth
+                                        .directReferralsGrowth
+                                    }
+                                  </p>
+                                </div>
+                              )}
+                              {competition.userStats.growth.teamSizeGrowth >
+                                0 && (
+                                <div className="bg-white/20 rounded-lg p-2">
+                                  <p className="text-xs text-white/70">
+                                    Team Size
+                                  </p>
+                                  <p className="text-sm font-bold">
+                                    +{competition.userStats.growth.teamSizeGrowth}
+                                  </p>
+                                </div>
+                              )}
+                              {competition.userStats.growth
+                                .tradingVolumeGrowthDollars > 0 && (
+                                <div className="bg-white/20 rounded-lg p-2">
+                                  <p className="text-xs text-white/70">
+                                    Volume Growth
+                                  </p>
+                                  <p className="text-sm font-bold">
+                                    +$
+                                    {competition.userStats.growth.tradingVolumeGrowthDollars?.toFixed(
+                                      0
+                                    )}
+                                  </p>
+                                </div>
+                              )}
+                              {competition.userStats.growth.profitGrowth >
+                                0 && (
+                                <div className="bg-white/20 rounded-lg p-2">
+                                  <p className="text-xs text-white/70">
+                                    Profit Growth
+                                  </p>
+                                  <p className="text-sm font-bold">
+                                    +$
+                                    {competition.userStats.growth.profitGrowth?.toFixed(
+                                      2
+                                    )}
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
 
-                        {/* If NOT verified, show incentive */}
-                        {!competition.userStats.metrics?.hasKycApproved &&
-                          competition.kycBonusMultiplier > 1 && (
+                        {/* KYC Score Display */}
+                        {competition.kycConfig?.countDownlineKyc &&
+                          competition.userStats.growth?.kycCountGrowth > 0 && (
                             <div className="mt-3 pt-3 border-t border-white/20">
-                              <div className="flex items-center gap-2 text-white/90">
-                                <AlertCircle className="w-4 h-4" />
-                                <p className="text-xs">
-                                  Complete KYC to get{" "}
-                                  {(
-                                    (competition.kycBonusMultiplier - 1) *
-                                    100
-                                  ).toFixed(0)}
-                                  % bonus!
+                              <div className="flex items-center gap-2 mb-1">
+                                <Shield className="w-4 h-4 text-white" />
+                                <span className="text-xs font-semibold text-white/90">
+                                  KYC Verified Members Growth
+                                </span>
+                              </div>
+                              <div className="bg-white/20 rounded-lg p-2">
+                                <p className="text-sm font-bold text-white">
+                                  +{competition.userStats.growth.kycCountGrowth}{" "}
+                                  verified members
+                                </p>
+                                <p className="text-xs text-white/80 mt-0.5">
+                                  Contributing{" "}
+                                  {competition.userStats.breakdown
+                                    ?.kycCountScore || 0}{" "}
+                                  points
                                 </p>
                               </div>
                             </div>
@@ -409,7 +441,6 @@ const Competition = () => {
                       </div>
                     )}
 
-                    {/* Competition Info */}
                     <div className="space-y-3 mb-4">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="w-4 h-4 flex-shrink-0" />
@@ -427,49 +458,56 @@ const Competition = () => {
                         </span>
                       </div>
 
-                      {competition.rewards &&
-                        competition.rewards.length > 0 && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Gift className="w-4 h-4 flex-shrink-0" />
-                            <span>
-                              {competition.rewards.length} prize tiers
-                            </span>
-                          </div>
-                        )}
+                      {competition.kycConfig?.countDownlineKyc && (
+                        <div className="flex items-center gap-2 text-sm text-green-600">
+                          <Shield className="w-4 h-4 flex-shrink-0" />
+                          <span className="font-medium">
+                            KYC Verification Counts (
+                            {competition.kycConfig.kycWeight}% weight)
+                          </span>
+                        </div>
+                      )}
+
+                      {competition.rewards && competition.rewards.length > 0 && (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Gift className="w-4 h-4 flex-shrink-0" />
+                          <span>{competition.rewards.length} prize tiers</span>
+                        </div>
+                      )}
                     </div>
-                    {/* Top Rewards Preview */}
+
                     {competition.rewards && competition.rewards.length > 0 && (
                       <div className="mb-4">
                         <p className="text-xs font-medium text-gray-500 mb-2">
                           Top Prizes
                         </p>
                         <div className="space-y-2">
-                          {competition.rewards
-                            .slice(0, 3)
-                            .map((reward, idx) => {
-                              const bgColors = [
-                                "from-amber-50 to-amber-100 border-amber-200",
-                                "from-slate-50 to-slate-100 border-slate-200",
-                                "from-orange-50 to-orange-100 border-orange-200",
-                              ];
-                              return (
-                                <div
-                                  key={idx}
-                                  className={`flex items-center justify-between p-2 rounded-lg bg-gradient-to-br border ${bgColors[idx]}`}
-                                >
-                                  <span className="text-xs font-semibold text-gray-700">
-                                    {reward.rankRange}
-                                  </span>
-                                  <span className="text-xs font-bold text-gray-900">
-                                    {reward.prize}
-                                  </span>
-                                </div>
-                              );
-                            })}
+                          {competition.rewards.slice(0, 3).map((reward, idx) => {
+                            const bgColors = [
+                              "from-amber-50 to-amber-100 border-amber-200",
+                              "from-slate-50 to-slate-100 border-slate-200",
+                              "from-orange-50 to-orange-100 border-orange-200",
+                            ];
+                            return (
+                              <div
+                                key={idx}
+                                className={`flex items-center justify-between p-2 rounded-lg bg-gradient-to-br border ${bgColors[idx]}`}
+                              >
+                                <span className="text-xs font-semibold text-gray-700">
+                                  Rank {reward.minRank}
+                                  {reward.minRank !== reward.maxRank &&
+                                    `-${reward.maxRank}`}
+                                </span>
+                                <span className="text-xs font-bold text-gray-900">
+                                  {reward.prize}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
-                    {/* Action Buttons */}
+
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleViewDetails(competition)}
@@ -479,7 +517,7 @@ const Competition = () => {
                         View Details
                       </button>
 
-                      {gtcAuthenticated && competition.isActive && (
+                      {gtcAuthenticated && competition.status === "active" && (
                         <button
                           onClick={() => handleCalculateScore(competition)}
                           className="flex-1 px-4 py-2 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg"
@@ -496,7 +534,7 @@ const Competition = () => {
           </div>
         ) : (
           <div className="text-center py-16">
-            <Trophy className="w-20 h-20 text-gray mx-auto mb-4" />
+            <Trophy className="w-20 h-20 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-900 mb-2">
               No Competitions Available
             </h3>
@@ -507,7 +545,6 @@ const Competition = () => {
         )}
       </div>
 
-      {/* Detail Modal */}
       {showDetailModal && selectedCompetition && (
         <CompetitionDetailModal
           competition={selectedCompetition}
@@ -521,7 +558,6 @@ const Competition = () => {
         />
       )}
 
-      {/* Connect Modal */}
       {showConnectModal && (
         <ConnectGTCModal
           onClose={() => setShowConnectModal(false)}
@@ -539,54 +575,77 @@ const ScoringDetailModal = ({ competition, onClose }) => {
     const allMetrics = [
       {
         key: "directReferrals",
-        name: "Direct Referrals",
+        name: "Direct Referrals Growth",
         icon: Users,
         weight: competition.rules.directReferralsWeight,
         target: competition.normalizationTargets?.directReferralsTarget || 10,
-        description: "Number of users directly referred by you",
-        formula: "min(Your Direct Referrals / Target, 1.0) × Weight%",
+        description:
+          "Growth in direct referrals since competition start (baseline)",
+        formula: "min(Growth / Target, 1.0) × Weight%",
+        dataSource: competition.rules.dataSource?.directReferrals || "max",
       },
       {
         key: "teamSize",
-        name: "Team Size",
+        name: "Team Size Growth",
         icon: Users,
         weight: competition.rules.teamSizeWeight,
         target: competition.normalizationTargets?.teamSizeTarget || 50,
-        description: "Total size of your downline team",
-        formula: "min(Your Team Size / Target, 1.0) × Weight%",
+        description: "Growth in team size since competition start (baseline)",
+        formula: "min(Growth / Target, 1.0) × Weight%",
+        dataSource: competition.rules.dataSource?.teamSize || "max",
       },
       {
         key: "tradingVolume",
-        name: "Trading Volume",
+        name: "Trading Volume Growth",
         icon: DollarSign,
         weight: competition.rules.tradingVolumeWeight,
         target: competition.normalizationTargets?.tradingVolumeTarget || 100000,
-        description: "Total trading volume in USD (lots × 100,000)",
-        formula: "min(Your Volume / Target, 1.0) × Weight%",
+        description:
+          "Growth in trading volume (USD) during competition period",
+        formula: "min(Growth Volume / Target, 1.0) × Weight%",
       },
       {
         key: "profitability",
-        name: "Profitability",
+        name: "Profit Growth",
         icon: TrendingUp,
         weight: competition.rules.profitabilityWeight,
         target: competition.normalizationTargets?.profitPercentTarget || 100,
         description:
-          "Combination of win rate (50%) and profit percentage (50%)",
-        formula:
-          "[(Win Rate / 100) × 0.5 + min(Profit % / Target, 1.0) × 0.5] × Weight%",
+          "Net profit growth (Self Trading + PAMM) during competition",
+        formula: "min(Profit Growth / Target, 1.0) × Weight%",
       },
       {
         key: "accountBalance",
-        name: "Account Balance",
+        name: "Account Balance Growth",
         icon: DollarSign,
         weight: competition.rules.accountBalanceWeight,
         target: competition.normalizationTargets?.accountBalanceTarget || 10000,
-        description: "Total GTC FX account balance (wallet + trading)",
-        formula: "min(Your Balance / Target, 1.0) × Weight%",
+        description:
+          "Growth in total account balance since competition start",
+        formula: "min(Balance Growth / Target, 1.0) × Weight%",
       },
     ];
 
-    return allMetrics.filter((m) => m.weight > 0);
+    const activeMetrics = allMetrics.filter((m) => m.weight > 0);
+
+    // Add KYC metric if enabled
+    if (
+      competition.kycConfig?.countDownlineKyc &&
+      competition.kycConfig.kycWeight > 0
+    ) {
+      activeMetrics.push({
+        key: "kycCount",
+        name: "KYC Verified Members Growth",
+        icon: Shield,
+        weight: competition.kycConfig.kycWeight,
+        target: competition.normalizationTargets?.kycCountTarget || 5,
+        description:
+          "Growth in KYC-verified downline members during competition",
+        formula: "min(KYC Growth / Target, 1.0) × Weight%",
+      });
+    }
+
+    return activeMetrics;
   };
 
   const activeMetrics = getActiveMetrics();
@@ -594,7 +653,6 @@ const ScoringDetailModal = ({ competition, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[100000] p-4">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-        {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 z-10">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
@@ -602,10 +660,12 @@ const ScoringDetailModal = ({ competition, onClose }) => {
                 <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
                   <Target className="w-5 h-5 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold">How Scoring Works</h2>
+                <h2 className="text-2xl font-bold">
+                  Growth-Based Scoring System
+                </h2>
               </div>
               <p className="text-orange-100 text-sm">
-                Detailed explanation of the scoring calculation formula
+                Your score is based on GROWTH from your starting baseline
               </p>
             </div>
             <button
@@ -617,56 +677,46 @@ const ScoringDetailModal = ({ competition, onClose }) => {
           </div>
         </div>
 
-        {/* Content */}
         <div className="overflow-y-auto max-h-[calc(90vh-120px)] p-6 space-y-6">
-          {/* Overview */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
             <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-blue-600" />
-              Scoring Formula
+              How Growth-Based Scoring Works
             </h3>
             <div className="space-y-3 text-sm text-gray-700">
               <p>
-                Your <strong>Base Score</strong> is calculated by combining
-                multiple performance metrics, each weighted according to its
-                importance in this competition.
+                <strong>First Time Joining:</strong> When you first calculate
+                your score, we capture your current metrics as your{" "}
+                <strong className="text-blue-700">baseline (high watermark)</strong>
+                . Your initial score will be 0.
+              </p>
+              <p>
+                <strong>Future Updates:</strong> Each time you update, we
+                calculate your <strong className="text-blue-700">growth</strong>{" "}
+                from that baseline. Only the growth counts toward your score!
               </p>
               <div className="bg-white rounded-lg p-4 border border-blue-200">
                 <p className="font-mono text-xs text-gray-800">
-                  Base Score = (Metric₁ Score × Weight₁) + (Metric₂ Score ×
-                  Weight₂) + ... + (Metricₙ Score × Weightₙ)
+                  Growth = Current Value - Baseline Value
+                  <br />
+                  Score = Σ (Growth Metric / Target × Weight%)
                 </p>
               </div>
-              {competition.kycBonusMultiplier > 1 && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-                  <Shield className="w-4 h-4 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-green-900">KYC Bonus</p>
-                    <p className="text-green-700 text-xs">
-                      Users with verified KYC receive a{" "}
-                      <strong>
-                        {((competition.kycBonusMultiplier - 1) * 100).toFixed(
-                          0
-                        )}
-                        % bonus
-                      </strong>{" "}
-                      on their base score.
-                    </p>
-                    <p className="font-mono text-xs text-green-800 mt-1">
-                      Final Score = Base Score ×{" "}
-                      {competition.kycBonusMultiplier}
-                    </p>
-                  </div>
-                </div>
-              )}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-yellow-800">
+                  <strong>Important:</strong> Your baseline is locked when you
+                  first join. This ensures fair competition by measuring
+                  improvement during the competition period only.
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Metrics Breakdown */}
           <div>
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Activity className="w-5 h-5 text-orange-600" />
-              Metrics Breakdown
+              Growth Metrics Breakdown
             </h3>
             <div className="space-y-4">
               {activeMetrics.map((metric, index) => {
@@ -702,6 +752,12 @@ const ScoringDetailModal = ({ competition, onClose }) => {
                     icon: "text-indigo-600",
                     badge: "bg-indigo-100 text-indigo-700",
                   },
+                  {
+                    bg: "bg-green-50",
+                    border: "border-green-200",
+                    icon: "text-green-600",
+                    badge: "bg-green-100 text-green-700",
+                  },
                 ];
                 const scheme = colorSchemes[index % colorSchemes.length];
 
@@ -724,6 +780,16 @@ const ScoringDetailModal = ({ competition, onClose }) => {
                           <p className="text-xs text-gray-600">
                             {metric.description}
                           </p>
+                          {metric.dataSource && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Data Source:{" "}
+                              <span className="font-semibold capitalize">
+                                {metric.dataSource === "max"
+                                  ? "Maximum (NuPips or GTC)"
+                                  : metric.dataSource}
+                              </span>
+                            </p>
+                          )}
                         </div>
                       </div>
                       <span
@@ -734,131 +800,57 @@ const ScoringDetailModal = ({ competition, onClose }) => {
                     </div>
 
                     <div className="space-y-2">
-                      {/* Target */}
                       <div className="bg-white rounded-lg p-3 border border-gray-200">
                         <div className="flex items-center justify-between text-sm mb-1">
                           <span className="text-gray-600">
-                            Target to Max Score:
+                            Growth Target for Max Score:
                           </span>
                           <span className="font-bold text-gray-900">
-                            {metric.key === "tradingVolume"
-                              ? `$${metric.target.toLocaleString()}`
-                              : metric.key === "profitability"
-                              ? `${metric.target}% profit`
-                              : metric.key === "accountBalance"
+                            {metric.key === "tradingVolume" ||
+                            metric.key === "accountBalance" ||
+                            metric.key === "profitability"
                               ? `$${metric.target.toLocaleString()}`
                               : metric.target}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500">
-                          Reaching or exceeding this target gives you the
-                          maximum score for this metric
+                          Growing by this amount or more gives maximum points
+                          for this metric
                         </p>
                       </div>
 
-                      {/* Formula */}
                       <div className="bg-white rounded-lg p-3 border border-gray-200">
                         <p className="text-xs text-gray-600 mb-1">
                           Calculation Formula:
                         </p>
-                        <p className="font-mono text-xs text-gray-800 break-all">
+                        <p className="font-mono text-xs text-gray-800">
                           {metric.formula}
                         </p>
                       </div>
 
-                      {/* Example */}
                       <div className="bg-white rounded-lg p-3 border border-gray-200">
                         <p className="text-xs text-gray-600 mb-2 font-semibold">
                           Example:
                         </p>
-                        {metric.key === "directReferrals" && (
-                          <div className="space-y-1 text-xs">
-                            <p className="text-gray-700">
-                              • If you have <strong>5 direct referrals</strong>{" "}
-                              and target is <strong>{metric.target}</strong>:
-                            </p>
-                            <p className="font-mono text-gray-800">
-                              Score = min(5 / {metric.target}, 1.0) ×{" "}
-                              {metric.weight}% ={" "}
-                              {(
-                                Math.min(5 / metric.target, 1) * metric.weight
-                              ).toFixed(2)}{" "}
-                              points
-                            </p>
-                          </div>
-                        )}
-                        {metric.key === "teamSize" && (
-                          <div className="space-y-1 text-xs">
-                            <p className="text-gray-700">
-                              • If your team has <strong>30 members</strong> and
-                              target is <strong>{metric.target}</strong>:
-                            </p>
-                            <p className="font-mono text-gray-800">
-                              Score = min(30 / {metric.target}, 1.0) ×{" "}
-                              {metric.weight}% ={" "}
-                              {(
-                                Math.min(30 / metric.target, 1) * metric.weight
-                              ).toFixed(2)}{" "}
-                              points
-                            </p>
-                          </div>
-                        )}
-                        {metric.key === "tradingVolume" && (
-                          <div className="space-y-1 text-xs">
-                            <p className="text-gray-700">
-                              • If you trade <strong>10 lots</strong>{" "}
-                              (=$1,000,000) and target is{" "}
-                              <strong>${metric.target.toLocaleString()}</strong>
-                              :
-                            </p>
-                            <p className="font-mono text-gray-800">
-                              Score = min(1000000 / {metric.target}, 1.0) ×{" "}
-                              {metric.weight}% ={" "}
-                              {(
-                                Math.min(1000000 / metric.target, 1) *
-                                metric.weight
-                              ).toFixed(2)}{" "}
-                              points
-                            </p>
-                          </div>
-                        )}
-                        {metric.key === "profitability" && (
-                          <div className="space-y-1 text-xs">
-                            <p className="text-gray-700">
-                              • If your win rate is <strong>60%</strong> and
-                              profit is <strong>50%</strong>:
-                            </p>
-                            <p className="font-mono text-gray-800">
-                              Score = [(0.6 × 0.5) + min(50 / {metric.target},
-                              1.0) × 0.5] × {metric.weight}% ={" "}
-                              {(
-                                (0.6 * 0.5 +
-                                  Math.min(50 / metric.target, 1) * 0.5) *
-                                metric.weight
-                              ).toFixed(2)}{" "}
-                              points
-                            </p>
-                          </div>
-                        )}
-                        {metric.key === "accountBalance" && (
-                          <div className="space-y-1 text-xs">
-                            <p className="text-gray-700">
-                              • If your balance is <strong>$5,000</strong> and
-                              target is{" "}
-                              <strong>${metric.target.toLocaleString()}</strong>
-                              :
-                            </p>
-                            <p className="font-mono text-gray-800">
-                              Score = min(5000 / {metric.target}, 1.0) ×{" "}
-                              {metric.weight}% ={" "}
-                              {(
-                                Math.min(5000 / metric.target, 1) *
-                                metric.weight
-                              ).toFixed(2)}{" "}
-                              points
-                            </p>
-                          </div>
-                        )}
+                        <div className="space-y-1 text-xs">
+                          <p className="text-gray-700">
+                            • Baseline (competition start): <strong>10</strong>
+                          </p>
+                          <p className="text-gray-700">
+                            • Current value: <strong>15</strong>
+                          </p>
+                          <p className="text-gray-700">
+                            • Growth: <strong>5</strong> (15 - 10)
+                          </p>
+                          <p className="font-mono text-gray-800 mt-2">
+                            Score = min(5 / {metric.target}, 1.0) ×{" "}
+                            {metric.weight}% ={" "}
+                            {(
+                              Math.min(5 / metric.target, 1) * metric.weight
+                            ).toFixed(2)}{" "}
+                            points
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -867,11 +859,10 @@ const ScoringDetailModal = ({ competition, onClose }) => {
             </div>
           </div>
 
-          {/* Normalization Targets Table */}
           <div>
             <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
               <Target className="w-5 h-5 text-purple-600" />
-              Normalization Targets
+              Growth Targets Summary
             </h3>
             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
@@ -884,7 +875,7 @@ const ScoringDetailModal = ({ competition, onClose }) => {
                       Weight
                     </th>
                     <th className="text-right p-3 font-semibold text-gray-700">
-                      Target for Max Score
+                      Growth Target
                     </th>
                   </tr>
                 </thead>
@@ -898,11 +889,9 @@ const ScoringDetailModal = ({ competition, onClose }) => {
                         {metric.weight}%
                       </td>
                       <td className="p-3 text-right text-gray-700">
-                        {metric.key === "tradingVolume"
-                          ? `$${metric.target.toLocaleString()}`
-                          : metric.key === "profitability"
-                          ? `${metric.target}%`
-                          : metric.key === "accountBalance"
+                        {metric.key === "tradingVolume" ||
+                        metric.key === "accountBalance" ||
+                        metric.key === "profitability"
                           ? `$${metric.target.toLocaleString()}`
                           : metric.target}
                       </td>
@@ -919,7 +908,6 @@ const ScoringDetailModal = ({ competition, onClose }) => {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-4">
           <button
             onClick={onClose}
@@ -933,7 +921,6 @@ const ScoringDetailModal = ({ competition, onClose }) => {
   );
 };
 
-// Competition Detail Modal - Improved Professional Layout
 const CompetitionDetailModal = ({
   competition,
   onClose,
@@ -982,37 +969,51 @@ const CompetitionDetailModal = ({
     const allMetrics = [
       {
         key: "directReferrals",
-        name: "Direct Referrals",
+        name: "Direct Referrals Growth",
         icon: Users,
         weight: competition.rules.directReferralsWeight,
       },
       {
         key: "teamSize",
-        name: "Team Size",
+        name: "Team Size Growth",
         icon: Users,
         weight: competition.rules.teamSizeWeight,
       },
       {
         key: "tradingVolume",
-        name: "Trading Volume",
+        name: "Trading Volume Growth",
         icon: DollarSign,
         weight: competition.rules.tradingVolumeWeight,
       },
       {
         key: "profitability",
-        name: "Profitability",
+        name: "Profit Growth",
         icon: TrendingUp,
         weight: competition.rules.profitabilityWeight,
       },
       {
         key: "accountBalance",
-        name: "Account Balance",
+        name: "Balance Growth",
         icon: DollarSign,
         weight: competition.rules.accountBalanceWeight,
       },
     ];
 
-    return allMetrics.filter((m) => m.weight > 0);
+    const activeMetrics = allMetrics.filter((m) => m.weight > 0);
+
+    if (
+      competition.kycConfig?.countDownlineKyc &&
+      competition.kycConfig.kycWeight > 0
+    ) {
+      activeMetrics.push({
+        key: "kycCount",
+        name: "KYC Members Growth",
+        icon: Shield,
+        weight: competition.kycConfig.kycWeight,
+      });
+    }
+
+    return activeMetrics;
   };
 
   const calculateProgress = () => {
@@ -1035,7 +1036,6 @@ const CompetitionDetailModal = ({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[999999] p-4">
       <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl">
-        {/* Header - Light Professional Design */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
@@ -1056,13 +1056,11 @@ const CompetitionDetailModal = ({
             <button
               onClick={onClose}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-              aria-label="Close modal"
             >
               <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
 
-          {/* Competition Period & Progress */}
           <div className="mt-4 space-y-3">
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
               <div className="flex items-center gap-2">
@@ -1081,7 +1079,7 @@ const CompetitionDetailModal = ({
                   })}
                 </span>
               </div>
-              {competition.isActive && daysRemaining > 0 && (
+              {competition.status === "active" && daysRemaining > 0 && (
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-orange-500" />
                   <span className="font-medium text-orange-600">
@@ -1099,8 +1097,7 @@ const CompetitionDetailModal = ({
               </div>
             </div>
 
-            {/* Progress Bar */}
-            {competition.isActive && (
+            {competition.status === "active" && (
               <div>
                 <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                   <span>Competition Progress</span>
@@ -1117,7 +1114,6 @@ const CompetitionDetailModal = ({
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="border-b border-gray-200 bg-white">
           <div className="flex overflow-x-auto">
             {tabs.map((tab) => {
@@ -1143,12 +1139,10 @@ const CompetitionDetailModal = ({
           </div>
         </div>
 
-        {/* Content */}
         <div className="overflow-y-auto max-h-[calc(90vh-280px)] bg-gray-50">
           <div className="p-6">
             {activeTab === "overview" && (
               <div className="space-y-6">
-                {/* Stats Grid */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                     <div className="flex items-center gap-2 mb-2">
@@ -1207,7 +1201,6 @@ const CompetitionDetailModal = ({
                   </div>
                 </div>
 
-                {/* Requirements */}
                 <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                   <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <div className="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">
@@ -1246,8 +1239,7 @@ const CompetitionDetailModal = ({
                   </ul>
                 </div>
 
-                {/* Action Button */}
-                {competition.isActive && (
+                {competition.status === "active" && (
                   <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                     {gtcAuthenticated ? (
                       <button
@@ -1323,12 +1315,9 @@ const CompetitionDetailModal = ({
                       };
                     };
 
-                    const {
-                      icon: Icon,
-                      color,
-                      bg,
-                      border,
-                    } = getRankIcon(reward.minRank);
+                    const { icon: Icon, color, bg, border } = getRankIcon(
+                      reward.minRank
+                    );
 
                     return (
                       <div
@@ -1345,7 +1334,9 @@ const CompetitionDetailModal = ({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold bg-gray-100 text-gray-700">
-                                {reward.rankRange}
+                                Rank {reward.minRank}
+                                {reward.minRank !== reward.maxRank &&
+                                  `-${reward.maxRank}`}
                               </span>
                               <span className="text-sm font-semibold text-gray-900">
                                 {reward.title}
@@ -1375,7 +1366,6 @@ const CompetitionDetailModal = ({
 
             {activeTab === "scoring" && (
               <div className="space-y-6">
-                {/* Overview with "View Details" button */}
                 <div className="bg-white border border-blue-200 rounded-xl p-5">
                   <div className="flex items-start justify-between gap-4 mb-3">
                     <div className="flex items-start gap-3 flex-1">
@@ -1384,17 +1374,18 @@ const CompetitionDetailModal = ({
                       </div>
                       <div>
                         <h3 className="font-semibold text-gray-900 mb-1">
-                          How Scoring Works
+                          Growth-Based Scoring System
                         </h3>
                         <p className="text-sm text-gray-600">
-                          Your score is calculated based on multiple performance
-                          metrics. Each metric contributes to your total score
-                          based on its assigned weight percentage.
+                          Your score is calculated based on{" "}
+                          <strong>growth from your starting baseline</strong>.
+                          When you first join, we capture your metrics as the
+                          baseline. Future updates measure improvement from that
+                          point.
                         </p>
                       </div>
                     </div>
 
-                    {/* View Detailed Explanation Button */}
                     <button
                       onClick={() => setShowScoringDetailModal(true)}
                       className="px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg font-semibold flex items-center gap-2 transition-all shadow-md hover:shadow-lg whitespace-nowrap"
@@ -1404,28 +1395,23 @@ const CompetitionDetailModal = ({
                     </button>
                   </div>
 
-                  {/* Quick Summary */}
-                  {competition.kycBonusMultiplier > 1 && (
+                  {competition.kycConfig?.countDownlineKyc && (
                     <div className="mt-3 pt-3 border-t border-blue-200">
                       <div className="flex items-center gap-2 text-sm text-blue-900">
                         <Shield className="w-4 h-4 text-blue-600" />
                         <span>
-                          <strong>KYC Bonus:</strong> Verified users get{" "}
+                          <strong>KYC Verification:</strong> Growing your
+                          KYC-verified downline counts for{" "}
                           <strong className="text-blue-600">
-                            {(
-                              (competition.kycBonusMultiplier - 1) *
-                              100
-                            ).toFixed(0)}
-                            %
+                            {competition.kycConfig.kycWeight}%
                           </strong>{" "}
-                          score boost
+                          of your score
                         </span>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Metric Cards (Simplified) */}
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3 text-sm">
                     Active Scoring Metrics
@@ -1464,6 +1450,12 @@ const CompetitionDetailModal = ({
                           icon: "text-indigo-600",
                           bg: "bg-indigo-100",
                         },
+                        {
+                          gradient: "from-green-50 to-green-100",
+                          border: "border-green-200",
+                          icon: "text-green-600",
+                          bg: "bg-green-100",
+                        },
                       ];
                       const scheme = colorSchemes[index % colorSchemes.length];
 
@@ -1483,14 +1475,13 @@ const CompetitionDetailModal = ({
                                 {metric.name}
                               </span>
                             </div>
-                            <span
-                              className={`text-lg font-bold ${scheme.icon}`}
-                            >
+                            <span className={`text-lg font-bold ${scheme.icon}`}>
                               {metric.weight}%
                             </span>
                           </div>
                           <p className="text-xs text-gray-600">
                             Contributes {metric.weight}% to your total score
+                            based on growth
                           </p>
                         </div>
                       );
@@ -1502,311 +1493,290 @@ const CompetitionDetailModal = ({
 
             {activeTab === "mystats" && gtcAuthenticated && (
               <div className="space-y-4">
-                {/* KYC Status Card */}
-                <div
-                  className={`rounded-xl p-5 border-2 ${
-                    competition.userStats?.metrics?.hasKycApproved
-                      ? "bg-green-50 border-green-300"
-                      : "bg-yellow-50 border-yellow-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        competition.userStats?.metrics?.hasKycApproved
-                          ? "bg-green-500"
-                          : "bg-yellow-500"
-                      }`}
-                    >
-                      <Shield className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-gray-900">
-                        KYC Verification Status
-                      </h3>
-                      <p
-                        className={`text-sm font-semibold ${
-                          competition.userStats?.metrics?.hasKycApproved
-                            ? "text-green-700"
-                            : "text-yellow-700"
-                        }`}
-                      >
-                        {competition.userStats?.metrics?.hasKycApproved
-                          ? "✓ Verified"
-                          : "Not Verified"}
-                      </p>
-                    </div>
-                  </div>
+                {competition.userStats?.participating ? (
+                  <>
+                    {/* Growth Metrics Card */}
+                    {competition.userStats.growth && (
+                      <div className="bg-white rounded-xl p-5 border border-gray-200">
+                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5 text-orange-600" />
+                          Your Growth Since Competition Start
+                        </h3>
 
-                  {competition.userStats?.metrics?.kycBonusApplied ? (
-                    <div className="bg-white rounded-lg p-4 border border-green-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">
-                          Bonus Multiplier
-                        </span>
-                        <span className="text-2xl font-bold text-green-600">
-                          {competition.userStats.metrics.kycBonusMultiplier}x
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Extra Boost</span>
-                        <span className="font-bold text-green-600">
-                          +{competition.userStats.metrics.kycBonusPercentage}%
-                        </span>
-                      </div>
-                      <div className="mt-3 pt-3 border-t border-green-200 text-xs text-gray-600">
-                        Your base score of{" "}
-                        <strong>
-                          {competition.userStats.ranking.baseScore?.toFixed(2)}
-                        </strong>{" "}
-                        is boosted to{" "}
-                        <strong className="text-green-600">
-                          {competition.userStats.ranking.score?.toFixed(2)}
-                        </strong>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-white rounded-lg p-4 border border-yellow-200">
-                      <p className="text-sm text-gray-700 mb-2">
-                        Complete KYC verification to unlock:
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-yellow-600" />
-                        <span className="text-lg font-bold text-yellow-700">
-                          +
-                          {((competition.kycBonusMultiplier - 1) * 100).toFixed(
-                            0
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                          {competition.userStats.growth.directReferralsGrowth >
+                            0 && (
+                            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Users className="w-4 h-4 text-blue-600" />
+                                <span className="text-xs font-medium text-gray-600">
+                                  Direct Referrals
+                                </span>
+                              </div>
+                              <p className="text-xl font-bold text-blue-600">
+                                +
+                                {
+                                  competition.userStats.growth
+                                    .directReferralsGrowth
+                                }
+                              </p>
+                            </div>
                           )}
-                          % Score Bonus
-                        </span>
+
+                          {competition.userStats.growth.teamSizeGrowth > 0 && (
+                            <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Users className="w-4 h-4 text-green-600" />
+                                <span className="text-xs font-medium text-gray-600">
+                                  Team Size
+                                </span>
+                              </div>
+                              <p className="text-xl font-bold text-green-600">
+                                +{competition.userStats.growth.teamSizeGrowth}
+                              </p>
+                            </div>
+                          )}
+
+                          {competition.userStats.growth
+                            .tradingVolumeGrowthDollars > 0 && (
+                            <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <DollarSign className="w-4 h-4 text-purple-600" />
+                                <span className="text-xs font-medium text-gray-600">
+                                  Volume Growth
+                                </span>
+                              </div>
+                              <p className="text-xl font-bold text-purple-600">
+                                +$
+                                {competition.userStats.growth.tradingVolumeGrowthDollars?.toFixed(
+                                  0
+                                )}
+                              </p>
+                            </div>
+                          )}
+
+                          {competition.userStats.growth.profitGrowth > 0 && (
+                            <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <TrendingUp className="w-4 h-4 text-orange-600" />
+                                <span className="text-xs font-medium text-gray-600">
+                                  Profit Growth
+                                </span>
+                              </div>
+                              <p className="text-xl font-bold text-orange-600">
+                                +$
+                                {competition.userStats.growth.profitGrowth?.toFixed(
+                                  2
+                                )}
+                              </p>
+                            </div>
+                          )}
+
+                          {competition.userStats.growth.accountBalanceGrowth >
+                            0 && (
+                            <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <DollarSign className="w-4 h-4 text-indigo-600" />
+                                <span className="text-xs font-medium text-gray-600">
+                                  Balance Growth
+                                </span>
+                              </div>
+                              <p className="text-xl font-bold text-indigo-600">
+                                +$
+                                {competition.userStats.growth.accountBalanceGrowth?.toFixed(
+                                  2
+                                )}
+                              </p>
+                            </div>
+                          )}
+
+                          {competition.userStats.growth.kycCountGrowth > 0 && (
+                            <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Shield className="w-4 h-4 text-green-600" />
+                                <span className="text-xs font-medium text-gray-600">
+                                  KYC Members
+                                </span>
+                              </div>
+                              <p className="text-xl font-bold text-green-600">
+                                +{competition.userStats.growth.kycCountGrowth}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
 
-                {/* Performance Metrics Card */}
-                {competition.userStats?.metrics && (
-                  <div className="bg-white rounded-xl p-5 border border-gray-200">
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-orange-600" />
-                      Your Performance Metrics
-                    </h3>
+                    {/* Current Metrics */}
+                    {competition.userStats?.metrics && (
+                      <div className="bg-white rounded-xl p-5 border border-gray-200">
+                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                          <BarChart3 className="w-5 h-5 text-orange-600" />
+                          Current Performance Metrics
+                        </h3>
 
-                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                      {/* Direct Referrals */}
-                      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Users className="w-4 h-4 text-blue-600" />
-                          <span className="text-xs font-medium text-gray-600">
-                            Direct Referrals
-                          </span>
-                        </div>
-                        <p className="text-xl font-bold text-gray-900">
-                          {competition.userStats.metrics.directReferrals || 0}
-                        </p>
-                      </div>
-
-                      {/* Team Size */}
-                      <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Users className="w-4 h-4 text-green-600" />
-                          <span className="text-xs font-medium text-gray-600">
-                            Team Size
-                          </span>
-                        </div>
-                        <p className="text-xl font-bold text-gray-900">
-                          {competition.userStats.metrics.gtcTeamSize || 0}
-                        </p>
-                      </div>
-
-                      {/* Trading Volume */}
-                      <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
-                        <div className="flex items-center gap-2 mb-1">
-                          <DollarSign className="w-4 h-4 text-purple-600" />
-                          <span className="text-xs font-medium text-gray-600">
-                            Trading Volume
-                          </span>
-                        </div>
-                        <p className="text-xl font-bold text-gray-900">
-                          {competition.userStats.metrics.tradingVolumeLots?.toFixed(
-                            1
-                          ) || "0.0"}
-                        </p>
-                        <p className="text-xs text-gray-500">lots</p>
-                      </div>
-
-                      {/* Account Balance with Tooltip */}
-                      <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                        <div className="flex items-center gap-2 mb-1">
-                          <DollarSign className="w-4 h-4 text-green-600" />
-                          <span className="text-xs font-medium text-gray-600 flex items-center">
-                            Account Balance
-                            <InfoTooltip
-                              title="Balance Breakdown"
-                              items={[
-                                {
-                                  label: "Wallet",
-                                  value: (
-                                    competition.userStats.metrics
-                                      .walletBalance || 0
-                                  ).toFixed(2),
-                                },
-                                {
-                                  label: "Trading",
-                                  value: (
-                                    competition.userStats.metrics
-                                      .tradingBalance || 0
-                                  ).toFixed(2),
-                                },
-                                {
-                                  label: "Total",
-                                  value: (
-                                    competition.userStats.metrics
-                                      .accountBalance || 0
-                                  ).toFixed(2),
-                                },
-                              ]}
-                            />
-                          </span>
-                        </div>
-                        <p className="text-xl font-bold text-gray-900">
-                          $
-                          {(
-                            competition.userStats.metrics.accountBalance || 0
-                          ).toFixed(2)}
-                        </p>
-                      </div>
-
-                      {/* Net Profit with Tooltip */}
-                      <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
-                        <div className="flex items-center gap-2 mb-1">
-                          <TrendingUp className="w-4 h-4 text-orange-600" />
-                          <span className="text-xs font-medium text-gray-600 flex items-center">
-                            Total Profit
-                            <InfoTooltip
-                              title="Profit Breakdown"
-                              items={[
-                                {
-                                  label: "Self Trading",
-                                  value: (
-                                    competition.userStats.metrics
-                                      .selfTradingProfit || 0
-                                  ).toFixed(2),
-                                },
-                                {
-                                  label: "PAMM",
-                                  value: (
-                                    competition.userStats.metrics.pammProfit ||
-                                    0
-                                  ).toFixed(2),
-                                },
-                                {
-                                  label: "Total",
-                                  value: (
-                                    competition.userStats.metrics.netProfit || 0
-                                  ).toFixed(2),
-                                },
-                              ]}
-                            />
-                          </span>
-                        </div>
-                        <p
-                          className={`text-xl font-bold ${
-                            (competition.userStats.metrics.netProfit || 0) >= 0
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          $
-                          {(
-                            competition.userStats.metrics.netProfit || 0
-                          ).toFixed(2)}
-                        </p>
-                      </div>
-
-                      {/* Win Rate */}
-                      <div className="bg-indigo-50 rounded-lg p-3 border border-indigo-200">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Target className="w-4 h-4 text-indigo-600" />
-                          <span className="text-xs font-medium text-gray-600">
-                            Win Rate
-                          </span>
-                        </div>
-                        <p className="text-xl font-bold text-gray-900">
-                          {competition.userStats.metrics.winRate?.toFixed(1) ||
-                            "0.0"}
-                          %
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Score Breakdown */}
-                {competition.userStats?.ranking && (
-                  <div className="bg-white rounded-xl p-5 border border-gray-200">
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-orange-600" />
-                      Your Score Breakdown
-                    </h3>
-
-                    <div className="space-y-3">
-                      {Object.entries(
-                        competition.userStats.ranking.breakdown || {}
-                      ).map(([key, value]) => (
-                        <div
-                          key={key}
-                          className="flex items-center justify-between"
-                        >
-                          <span className="text-sm text-gray-600 capitalize">
-                            {key
-                              .replace("Score", "")
-                              .replace(/([A-Z])/g, " $1")
-                              .trim()}
-                          </span>
-                          <span className="font-bold text-gray-900">
-                            {value?.toFixed(2)}
-                          </span>
-                        </div>
-                      ))}
-
-                      <div className="pt-3 border-t border-gray-200">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-gray-700">
-                            Base Score
-                          </span>
-                          <span className="font-bold text-gray-900">
-                            {competition.userStats.ranking.baseScore?.toFixed(
-                              2
-                            )}
-                          </span>
-                        </div>
-
-                        {competition.userStats.metrics?.kycBonusApplied && (
-                          <div className="flex items-center justify-between text-green-600 mb-1">
-                            <span className="text-sm font-medium">
-                              KYC Bonus
-                            </span>
-                            <span className="font-bold">
-                              +
-                              {(
-                                competition.userStats.ranking.score -
-                                competition.userStats.ranking.baseScore
-                              ).toFixed(2)}
-                            </span>
+                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Users className="w-4 h-4 text-blue-600" />
+                              <span className="text-xs font-medium text-gray-600">
+                                Direct Referrals
+                              </span>
+                            </div>
+                            <p className="text-xl font-bold text-gray-900">
+                              {competition.userStats.metrics
+                                .nupipsDirectReferrals ||
+                                competition.userStats.metrics
+                                  .gtcDirectMembers ||
+                                0}
+                            </p>
                           </div>
-                        )}
 
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-300">
-                          <span className="font-semibold text-gray-900">
-                            Final Score
-                          </span>
-                          <span className="text-2xl font-bold text-orange-600">
-                            {competition.userStats.ranking.score?.toFixed(2)}
-                          </span>
+                          <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Users className="w-4 h-4 text-green-600" />
+                              <span className="text-xs font-medium text-gray-600">
+                                Team Size
+                              </span>
+                            </div>
+                            <p className="text-xl font-bold text-gray-900">
+                              {competition.userStats.metrics.nupipsTeamSize ||
+                                competition.userStats.metrics.gtcTeamSize ||
+                                0}
+                            </p>
+                          </div>
+
+                          <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                            <div className="flex items-center gap-2 mb-1">
+                              <DollarSign className="w-4 h-4 text-purple-600" />
+                              <span className="text-xs font-medium text-gray-600">
+                                Trading Volume
+                              </span>
+                            </div>
+                            <p className="text-xl font-bold text-gray-900">
+                              {competition.userStats.metrics.tradingVolumeLots?.toFixed(
+                                1
+                              ) || "0.0"}
+                            </p>
+                            <p className="text-xs text-gray-500">lots</p>
+                          </div>
+
+                          <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                            <div className="flex items-center gap-2 mb-1">
+                              <DollarSign className="w-4 h-4 text-green-600" />
+                              <span className="text-xs font-medium text-gray-600">
+                                Account Balance
+                              </span>
+                            </div>
+                            <p className="text-xl font-bold text-gray-900">
+                              $
+                              {(
+                                competition.userStats.metrics.accountBalance ||
+                                0
+                              ).toFixed(2)}
+                            </p>
+                          </div>
+
+                          <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+                            <div className="flex items-center gap-2 mb-1">
+                              <TrendingUp className="w-4 h-4 text-orange-600" />
+                              <span className="text-xs font-medium text-gray-600">
+                                Net Profit
+                              </span>
+                            </div>
+                            <p
+                              className={`text-xl font-bold ${
+                                (competition.userStats.metrics.netProfit || 0) >=
+                                0
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }`}
+                            >
+                              $
+                              {(
+                                competition.userStats.metrics.netProfit || 0
+                              ).toFixed(2)}
+                            </p>
+                          </div>
+
+                          {competition.kycConfig?.countDownlineKyc && (
+                            <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Shield className="w-4 h-4 text-green-600" />
+                                <span className="text-xs font-medium text-gray-600">
+                                  KYC Verified
+                                </span>
+                              </div>
+                              <p className="text-xl font-bold text-gray-900">
+                                {competition.userStats.metrics
+                                  .kycCompletedCount || 0}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    )}
+
+                    {/* Score Breakdown */}
+                    {competition.userStats?.ranking && (
+                      <div className="bg-white rounded-xl p-5 border border-gray-200">
+                        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                          <BarChart3 className="w-5 h-5 text-orange-600" />
+                          Your Score Breakdown
+                        </h3>
+
+                        <div className="space-y-3">
+                          {Object.entries(
+                            competition.userStats.breakdown || {}
+                          ).map(([key, value]) => (
+                            <div
+                              key={key}
+                              className="flex items-center justify-between"
+                            >
+                              <span className="text-sm text-gray-600 capitalize">
+                                {key
+                                  .replace("Score", "")
+                                  .replace(/([A-Z])/g, " $1")
+                                  .trim()}
+                              </span>
+                              <span className="font-bold text-gray-900">
+                                {value?.toFixed(2)}
+                              </span>
+                            </div>
+                          ))}
+
+                          <div className="pt-3 border-t border-gray-200">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-gray-900">
+                                Total Score
+                              </span>
+                              <span className="text-2xl font-bold text-orange-600">
+                                {competition.userStats.ranking.score?.toFixed(
+                                  2
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+                    <User className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium mb-2">
+                      You haven't joined this competition yet
+                    </p>
+                    <p className="text-sm text-gray-400 mb-4">
+                      Calculate your score to participate
+                    </p>
+                    <button
+                      onClick={onCalculateScore}
+                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold inline-flex items-center gap-2 transition-all shadow-md hover:shadow-lg"
+                    >
+                      <Zap className="w-4 h-4" />
+                      Join Now
+                    </button>
                   </div>
                 )}
               </div>
@@ -1866,26 +1836,20 @@ const CompetitionDetailModal = ({
                           };
                         };
 
-                        const {
-                          icon: RankIcon,
-                          color,
-                          bg,
-                          border,
-                        } = getRankIcon(entry.rank);
+                        const { icon: RankIcon, color, bg, border } =
+                          getRankIcon(entry.rank);
 
                         return (
                           <div
                             key={index}
                             className="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
                           >
-                            {/* Rank Badge */}
                             <div
                               className={`w-12 h-12 ${bg} ${border} border-2 rounded-lg flex items-center justify-center flex-shrink-0`}
                             >
                               <RankIcon className={`w-6 h-6 ${color}`} />
                             </div>
 
-                            {/* User Info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-gray-100 text-gray-700">
@@ -1904,98 +1868,35 @@ const CompetitionDetailModal = ({
                                 )}
                               </div>
 
-                              {/* Metrics with Tooltips */}
-                              {entry.metrics && (
-                                <div className="flex items-center gap-3 mt-2 text-xs text-gray-600">
-                                  {/* Balance with Breakdown */}
-                                  <span className="flex items-center gap-1">
-                                    <DollarSign className="w-3 h-3" />$
-                                    {(
-                                      entry.metrics.accountBalance || 0
-                                    ).toFixed(0)}
-                                    <InfoTooltip
-                                      title="Balance Breakdown"
-                                      items={[
-                                        {
-                                          label: "Wallet",
-                                          value: (
-                                            entry.metrics.walletBalance || 0
-                                          ).toFixed(2),
-                                        },
-                                        {
-                                          label: "Trading",
-                                          value: (
-                                            entry.metrics.tradingBalance || 0
-                                          ).toFixed(2),
-                                        },
-                                        {
-                                          label: "Total",
-                                          value: (
-                                            entry.metrics.accountBalance || 0
-                                          ).toFixed(2),
-                                        },
-                                      ]}
-                                    />
-                                  </span>
-
-                                  {/* Profit with Breakdown */}
-                                  <span
-                                    className={`flex items-center gap-1 ${
-                                      (entry.metrics.netProfit || 0) >= 0
-                                        ? "text-green-600"
-                                        : "text-red-600"
-                                    }`}
-                                  >
-                                    <TrendingUp className="w-3 h-3" />$
-                                    {(entry.metrics.netProfit || 0).toFixed(0)}
-                                    <InfoTooltip
-                                      title="Profit Breakdown"
-                                      items={[
-                                        {
-                                          label: "Self Trading",
-                                          value: (
-                                            entry.metrics.selfTradingProfit || 0
-                                          ).toFixed(2),
-                                        },
-                                        {
-                                          label: "PAMM",
-                                          value: (
-                                            entry.metrics.pammProfit || 0
-                                          ).toFixed(2),
-                                        },
-                                        {
-                                          label: "Total",
-                                          value: (
-                                            entry.metrics.netProfit || 0
-                                          ).toFixed(2),
-                                        },
-                                      ]}
-                                    />
-                                  </span>
-
-                                  {/* Volume */}
-                                  {entry.metrics.tradingVolumeLots > 0 && (
+                              {/* Growth Metrics Display */}
+                              {entry.growth && (
+                                <div className="flex items-center gap-3 mt-2 text-xs text-gray-600 flex-wrap">
+                                  {entry.growth.directReferralsGrowth > 0 && (
                                     <span className="flex items-center gap-1">
-                                      <BarChart3 className="w-3 h-3" />
-                                      {entry.metrics.tradingVolumeLots.toFixed(
-                                        1
-                                      )}{" "}
-                                      lots
+                                      <Users className="w-3 h-3" />+
+                                      {entry.growth.directReferralsGrowth} refs
                                     </span>
                                   )}
-
-                                  {/* Win Rate */}
-                                  {entry.metrics.winRate > 0 && (
+                                  {entry.growth.tradingVolumeGrowthDollars >
+                                    0 && (
                                     <span className="flex items-center gap-1">
-                                      <Target className="w-3 h-3" />
-                                      {entry.metrics.winRate.toFixed(0)}%
+                                      <DollarSign className="w-3 h-3" />+$
+                                      {entry.growth.tradingVolumeGrowthDollars?.toFixed(
+                                        0
+                                      )}{" "}
+                                      vol
+                                    </span>
+                                  )}
+                                  {entry.growth.profitGrowth > 0 && (
+                                    <span className="flex items-center gap-1 text-green-600">
+                                      <TrendingUp className="w-3 h-3" />+$
+                                      {entry.growth.profitGrowth?.toFixed(2)}
                                     </span>
                                   )}
                                 </div>
                               )}
                             </div>
 
-                            {/* Score */}
                             <div className="text-right">
                               <p className="text-xs text-gray-500 mb-0.5">
                                 Score
@@ -2003,14 +1904,6 @@ const CompetitionDetailModal = ({
                               <p className="text-xl font-bold text-orange-600">
                                 {entry.score.toFixed(1)}
                               </p>
-                              {entry.metrics?.kycBonusApplied && (
-                                <div className="flex items-center gap-1 mt-1">
-                                  <Shield className="w-3 h-3 text-green-600" />
-                                  <span className="text-xs font-medium text-green-600">
-                                    +{entry.metrics.kycBonusPercentage}
-                                  </span>
-                                </div>
-                              )}
                             </div>
                           </div>
                         );
@@ -2044,7 +1937,6 @@ const CompetitionDetailModal = ({
   );
 };
 
-// Connect GTC Modal
 const ConnectGTCModal = ({ onClose, onConnect }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[99999] p-4">
@@ -2067,7 +1959,7 @@ const ConnectGTCModal = ({ onClose, onConnect }) => {
           <div className="flex items-start gap-3">
             <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
             <span className="text-sm text-gray-700">
-              Automatic score calculation
+              Automatic growth-based score calculation
             </span>
           </div>
           <div className="flex items-start gap-3">

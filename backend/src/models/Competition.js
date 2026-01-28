@@ -40,7 +40,35 @@ const rewardSchema = new mongoose.Schema({
 }, { _id: false });
 
 /**
- * Participant subdocument schema
+ * High Watermark - Stores baseline values at competition start
+ * Captures the starting point for measuring GROWTH during competition
+ */
+const highWatermarkSchema = new mongoose.Schema({
+    capturedAt: {
+        type: Date,
+        default: Date.now,
+    },
+    // NuPips data (from internal platform)
+    nupipsDirectReferrals: { type: Number, default: 0 },
+    nupipsTeamSize: { type: Number, default: 0 },
+    
+    // GTC FX data
+    gtcDirectMembers: { type: Number, default: 0 },
+    gtcTeamSize: { type: Number, default: 0 },
+    gtcTradingVolumeLots: { type: Number, default: 0 },
+    gtcTotalProfit: { type: Number, default: 0 },
+    gtcTotalLoss: { type: Number, default: 0 },
+    gtcSelfTradingProfit: { type: Number, default: 0 },
+    gtcPammProfit: { type: Number, default: 0 },
+    gtcAccountBalance: { type: Number, default: 0 },
+    gtcTotalTrades: { type: Number, default: 0 },
+    
+    // KYC count in downline
+    kycCompletedCount: { type: Number, default: 0 },
+}, { _id: false });
+
+/**
+ * Participant subdocument schema with high watermark
  */
 const participantSchema = new mongoose.Schema({
     userId: {
@@ -51,6 +79,13 @@ const participantSchema = new mongoose.Schema({
     username: String,
     name: String,
     email: String,
+    
+    // High watermark - baseline captured when user first participates
+    highWatermark: {
+        type: highWatermarkSchema,
+        default: () => ({}),
+    },
+    
     score: {
         type: Number,
         default: 0,
@@ -67,6 +102,7 @@ const participantSchema = new mongoose.Schema({
         baseScore: Number,
         breakdown: mongoose.Schema.Types.Mixed,
         metrics: mongoose.Schema.Types.Mixed,
+        growth: mongoose.Schema.Types.Mixed, // NEW: stores growth metrics
     },
 }, { _id: false, timestamps: true });
 
@@ -136,6 +172,40 @@ const competitionSchema = new mongoose.Schema({
             max: 100,
             default: 10,
         },
+        
+        // NEW: Data source configuration for each metric
+        dataSource: {
+            directReferrals: {
+                type: String,
+                enum: ['nupips', 'gtc', 'max'],
+                default: 'nupips',
+                description: 'Source for direct referrals: nupips platform, gtc, or max of both',
+            },
+            teamSize: {
+                type: String,
+                enum: ['nupips', 'gtc', 'max'],
+                default: 'max',
+                description: 'Source for team size: nupips platform, gtc, or max of both',
+            },
+            tradingVolume: {
+                type: String,
+                enum: ['gtc'],
+                default: 'gtc',
+                description: 'Source for trading volume (GTC only)',
+            },
+            profitability: {
+                type: String,
+                enum: ['gtc'],
+                default: 'gtc',
+                description: 'Source for profitability (GTC only)',
+            },
+            accountBalance: {
+                type: String,
+                enum: ['gtc'],
+                default: 'gtc',
+                description: 'Source for account balance (GTC only)',
+            },
+        },
     },
 
     // ========== Rewards Configuration ==========
@@ -194,17 +264,20 @@ const competitionSchema = new mongoose.Schema({
         },
     },
 
-    // ========== KYC Bonus Configuration ==========
-    kycBonusMultiplier: {
-        type: Number,
-        default: 1.05, // 5% bonus by default
-        min: 1.0,
-        max: 2.0,
-        validate: {
-            validator: function (value) {
-                return value >= 1.0 && value <= 2.0;
-            },
-            message: 'KYC bonus multiplier must be between 1.0 (no bonus) and 2.0 (100% bonus)',
+    // ========== KYC Configuration ==========
+    // CHANGED: From bonus multiplier to count-based metric
+    kycConfig: {
+        countDownlineKyc: {
+            type: Boolean,
+            default: false,
+            description: 'Count number of KYC-completed users in downline as a metric',
+        },
+        kycWeight: {
+            type: Number,
+            min: 0,
+            max: 100,
+            default: 0,
+            description: 'Weight for KYC count in scoring (0-100%). Must be included in total weight.',
         },
     },
 
@@ -234,6 +307,12 @@ const competitionSchema = new mongoose.Schema({
             type: Number,
             default: 10000,
             min: 1,
+        },
+        kycCountTarget: {
+            type: Number,
+            default: 10,
+            min: 1,
+            description: 'Target number of KYC-completed users for normalization',
         },
     },
 
@@ -282,7 +361,6 @@ const competitionSchema = new mongoose.Schema({
 });
 
 // ==================== INDEXES ====================
-// Indexes for better query performance
 competitionSchema.index({ slug: 1 });
 competitionSchema.index({ status: 1 });
 competitionSchema.index({ startDate: 1, endDate: 1 });
@@ -293,18 +371,20 @@ competitionSchema.index({ 'participants.score': -1 });
 
 /**
  * Pre-save middleware to validate total weight and auto-update status
+ * IMPORTANT: Now includes kycWeight in total weight calculation
  */
 competitionSchema.pre('save', function (next) {
-    // Validate total weight equals 100%
+    // Validate total weight equals 100% (including KYC weight)
     const totalWeight =
         this.rules.directReferralsWeight +
         this.rules.teamSizeWeight +
         this.rules.tradingVolumeWeight +
         this.rules.profitabilityWeight +
-        this.rules.accountBalanceWeight;
+        this.rules.accountBalanceWeight +
+        (this.kycConfig?.kycWeight || 0);
 
     if (totalWeight !== 100) {
-        return next(new Error(`Total weight must equal 100%. Current total: ${totalWeight}%`));
+        return next(new Error(`Total weight must equal 100% (including KYC weight). Current total: ${totalWeight}%`));
     }
 
     // Auto-update status based on dates
@@ -377,9 +457,10 @@ competitionSchema.methods.canUserParticipate = function (user, gtcData) {
 };
 
 /**
- * Update participant score
+ * Update participant score with high watermark support
+ * If participant is new, highWatermark should be passed in scoreData
  */
-competitionSchema.methods.updateParticipantScore = function (userId, scoreData) {
+competitionSchema.methods.updateParticipantScore = function (userId, scoreData, highWatermark = null) {
     const participantIndex = this.participants.findIndex(
         p => p.userId.toString() === userId.toString()
     );
@@ -392,18 +473,24 @@ competitionSchema.methods.updateParticipantScore = function (userId, scoreData) 
         score: scoreData.totalScore,
         lastCalculated: new Date(),
         scoreBreakdown: {
-            baseScore: scoreData.baseScore,
+            baseScore: scoreData.baseScore || scoreData.totalScore,
             breakdown: scoreData.breakdown,
             metrics: scoreData.metrics,
+            growth: scoreData.growth, // NEW: growth metrics
         },
     };
 
     if (participantIndex >= 0) {
+        // Update existing participant, preserve existing high watermark
         this.participants[participantIndex] = {
-            ...this.participants[participantIndex],
+            ...this.participants[participantIndex].toObject(),
             ...participantData,
         };
     } else {
+        // New participant - set high watermark if provided
+        if (highWatermark) {
+            participantData.highWatermark = highWatermark;
+        }
         this.participants.push(participantData);
     }
 

@@ -60,40 +60,43 @@ gtcAxios.interceptors.response.use(
 // ==================== HELPER FUNCTIONS ====================
 
 /**
- * Fetch KYC status and calculate bonus multiplier
+ * Count KYC-completed users in downline tree using member_tree API
  */
-async function fetchKYCStatus(memberId, competition = null) {
+async function countDownlineKYC(authHeader) {
     try {
-        const gtcMember = await GTCMember.findOne({ gtcUserId: String(memberId) });
-        if (!gtcMember) {
-            return {
-                kycStatus: '',
-                kycBonus: 1.0,
-                hasKycApproved: false
-            };
+        const response = await gtcAxios.post(
+            '/api/v3/agent/member_tree',
+            {},
+            { headers: authHeader }
+        );
+
+        if (response.data.code !== 200 || !response.data.data) {
+            return 0;
         }
 
-        const kycStatus = gtcMember.kycStatus || '';
-        let kycBonus = 1.0;
-
-        if (kycStatus === 'completed' && competition) {
-            kycBonus = competition.kycBonusMultiplier || 1.05;
-        } else if (kycStatus === 'completed') {
-            kycBonus = 1.05; // Default 5% bonus
+        // Recursively count KYC completed members in tree
+        function countKYCInTree(node) {
+            let count = 0;
+            
+            // Check current node
+            if (node.kyc_status === 'completed') {
+                count++;
+            }
+            
+            // Check children
+            if (node.children && Array.isArray(node.children)) {
+                for (const child of node.children) {
+                    count += countKYCInTree(child);
+                }
+            }
+            
+            return count;
         }
 
-        return {
-            kycStatus,
-            kycBonus,
-            hasKycApproved: kycStatus === 'completed'
-        };
+        return countKYCInTree(response.data.data);
     } catch (err) {
-        console.warn('Could not fetch KYC status:', err.message);
-        return {
-            kycStatus: '',
-            kycBonus: 1.0,
-            hasKycApproved: false
-        };
+        console.warn('Error counting downline KYC:', err.message);
+        return 0;
     }
 }
 
@@ -126,7 +129,6 @@ async function fetchBalanceInfo(memberId, authHeader) {
                 } else if (currency === 'USD') {
                     return sum + balance;
                 } else {
-                    // Unknown currency - log warning and treat as USD
                     console.warn(`Unknown currency: ${currency} for account ${account.loginid}`);
                     return sum + balance;
                 }
@@ -136,7 +138,6 @@ async function fetchBalanceInfo(memberId, authHeader) {
                 walletBalance,
                 tradingBalance,
                 totalGTCBalance: walletBalance + tradingBalance,
-                // Also return detailed MT5 account info for reference
                 mtAccounts: (childData.mt_account || []).map(account => ({
                     loginId: account.loginid,
                     accountName: account.account_name,
@@ -173,8 +174,6 @@ async function fetchSelfTradingProfit(memberId, authHeader, competition = null) 
 
         // Add date range if competition is provided
         if (competition) {
-            const startTimestamp = Math.floor(new Date(competition.startDate).getTime() / 1000);
-            const endTimestamp = Math.floor(new Date(competition.endDate).getTime() / 1000);
             payload.start_date = new Date(competition.startDate).toISOString().split('T')[0];
             payload.end_date = new Date(competition.endDate).toISOString().split('T')[0];
         }
@@ -198,7 +197,7 @@ async function fetchSelfTradingProfit(memberId, authHeader, competition = null) 
                 }
                 totalTrades += (pnlData.mt_trade.list || []).length;
 
-                // Calculate volume if available
+                // Calculate volume
                 if (pnlData.mt_trade.list && Array.isArray(pnlData.mt_trade.list)) {
                     totalVolumeLots = pnlData.mt_trade.list.reduce((sum, trade) => {
                         return sum + (parseFloat(trade.volume || 0) / 100); // Convert to lots
@@ -242,7 +241,7 @@ async function fetchPAMMProfit(memberId, authHeader, competition = null) {
 
     try {
         let payload = {
-            copy_id: 0, // 0 means fetch all
+            copy_id: 0,
             page: 1,
             page_size: 1000
         };
@@ -262,13 +261,11 @@ async function fetchPAMMProfit(memberId, authHeader, competition = null) {
         if (response.data.code === 200) {
             const data = response.data.data;
 
-            // Get total PAMM profit from summary
             if (data.summary) {
                 pammProfit = parseFloat(data.summary.copy_earn || 0);
                 pammTotalInvestment = parseFloat(data.summary.total_investment || 0);
             }
 
-            // Store details for potential future use
             if (data.list && Array.isArray(data.list)) {
                 pammDetails = data.list.map(item => ({
                     strategyId: item.strategy_id,
@@ -292,27 +289,48 @@ async function fetchPAMMProfit(memberId, authHeader, competition = null) {
 }
 
 /**
- * Fetch team/referral information
+ * Fetch team/referral information using member_tree API
  */
 async function fetchTeamInfo(authHeader) {
     try {
+        // Use member_tree for accurate team data
         const response = await gtcAxios.post(
-            '/api/v3/agent/member',
-            { page: 1, page_size: 10 },
+            '/api/v3/agent/member_tree',
+            {},
             { headers: authHeader }
         );
 
-        if (response.data.code === 200) {
-            const memberData = response.data.data;
+        if (response.data.code === 200 && response.data.data) {
+            // Count direct members and total team size from tree
+            function countMembers(node, isDirect = true) {
+                let directCount = 0;
+                let totalCount = 0;
+                
+                if (node.children && Array.isArray(node.children)) {
+                    directCount = node.children.length;
+                    totalCount = node.children.length;
+                    
+                    // Recursively count all descendants
+                    for (const child of node.children) {
+                        const childCounts = countMembers(child, false);
+                        totalCount += childCounts.totalCount;
+                    }
+                }
+                
+                return { directCount, totalCount };
+            }
+            
+            const counts = countMembers(response.data.data);
+            
             return {
-                gtcTeamSize: memberData?.total || 0,
-                gtcDirectMembers: memberData?.list?.filter(m => m.level === 1).length || 0
+                gtcTeamSize: counts.totalCount,
+                gtcDirectMembers: counts.directCount
             };
         }
 
         return { gtcTeamSize: 0, gtcDirectMembers: 0 };
     } catch (err) {
-        console.warn('Could not fetch member data:', err.message);
+        console.warn('Could not fetch member tree data:', err.message);
         return { gtcTeamSize: 0, gtcDirectMembers: 0 };
     }
 }
@@ -343,10 +361,7 @@ async function fetchGTCData(user, competition = null) {
         const accountData = accountResponse.data.data;
         const memberId = accountData.id || accountData.member_id;
 
-        // 2. Fetch KYC Status
-        const kycInfo = await fetchKYCStatus(memberId, competition);
-
-        // 3. Fetch Balance Information
+        // 2. Fetch Balance Information
         const balanceInfo = await fetchBalanceInfo(memberId, authHeader);
         let walletBalance = 0;
         let tradingBalance = 0;
@@ -357,27 +372,29 @@ async function fetchGTCData(user, competition = null) {
             tradingBalance = balanceInfo.tradingBalance;
             totalGTCBalance = balanceInfo.totalGTCBalance;
         } else {
-            // Fallback to account_info balance
             totalGTCBalance = parseFloat(accountData.amount || 0);
             walletBalance = totalGTCBalance;
             tradingBalance = 0;
         }
 
-        // 4. Fetch Self-Trading Profit
+        // 3. Fetch Self-Trading Profit
         const selfTradingData = await fetchSelfTradingProfit(memberId, authHeader, competition);
 
-        // 5. Fetch PAMM Profit
+        // 4. Fetch PAMM Profit
         const pammData = await fetchPAMMProfit(memberId, authHeader, competition);
 
-        // 6. Calculate Combined Profit
+        // 5. Calculate Combined Profit
         const totalProfit = selfTradingData.totalProfit;
         const totalLoss = selfTradingData.totalLoss;
         const selfTradingProfit = selfTradingData.selfTradingProfit;
         const pammProfit = pammData.pammProfit;
-        const netProfit = selfTradingProfit + pammProfit; // Combined profit
+        const netProfit = selfTradingProfit + pammProfit;
 
-        // 7. Fetch Team Info
+        // 6. Fetch Team Info
         const teamInfo = await fetchTeamInfo(authHeader);
+
+        // 7. Fetch KYC count if needed
+        const kycCompletedCount = await countDownlineKYC(authHeader);
 
         // 8. Calculate metrics
         const equity = parseFloat(accountData.equity || totalGTCBalance);
@@ -398,13 +415,13 @@ async function fetchGTCData(user, competition = null) {
             freeMargin: parseFloat(accountData.free_margin || 0),
             marginLevel: parseFloat(accountData.margin_level || 0),
 
-            // Profit fields (BACKWARD COMPATIBLE + NEW FIELDS)
+            // Profit fields
             totalProfit: totalProfit,
             totalLoss: totalLoss,
-            netProfit: netProfit, // Combined profit (self + PAMM)
-            selfTradingProfit: selfTradingProfit, // NEW
-            pammProfit: pammProfit, // NEW
-            pammTotalInvestment: pammData.pammTotalInvestment, // NEW
+            netProfit: netProfit,
+            selfTradingProfit: selfTradingProfit,
+            pammProfit: pammProfit,
+            pammTotalInvestment: pammData.pammTotalInvestment,
             profitPercent: profitPercent,
             winRate: winRate,
 
@@ -420,10 +437,8 @@ async function fetchGTCData(user, competition = null) {
             gtcTeamSize: teamInfo.gtcTeamSize,
             gtcDirectMembers: teamInfo.gtcDirectMembers,
 
-            // KYC fields
-            kycStatus: kycInfo.kycStatus,
-            kycBonus: kycInfo.kycBonus,
-            hasKycApproved: kycInfo.hasKycApproved,
+            // KYC count
+            kycCompletedCount: kycCompletedCount,
 
             // Raw data
             rawAccountData: accountData,
@@ -435,108 +450,181 @@ async function fetchGTCData(user, competition = null) {
 }
 
 /**
- * Calculate competition score using competition config with KYC bonus
+ * Calculate high watermark for a user (baseline at competition start)
  */
-async function calculateCompetitionScore(user, gtcData, competition) {
-    const { rules, normalizationTargets } = competition;
+async function calculateHighWatermark(user, gtcData, competition) {
+    const watermark = {
+        capturedAt: new Date(),
+        // NuPips data
+        nupipsDirectReferrals: user.referralDetails?.totalDirectReferrals || 0,
+        nupipsTeamSize: user.referralDetails?.totalDownlineUsers || 0,
+        
+        // GTC data
+        gtcDirectMembers: gtcData?.gtcDirectMembers || 0,
+        gtcTeamSize: gtcData?.gtcTeamSize || 0,
+        gtcTradingVolumeLots: gtcData?.totalVolumeLots || 0,
+        gtcTotalProfit: gtcData?.totalProfit || 0,
+        gtcTotalLoss: gtcData?.totalLoss || 0,
+        gtcSelfTradingProfit: gtcData?.selfTradingProfit || 0,
+        gtcPammProfit: gtcData?.pammProfit || 0,
+        gtcAccountBalance: gtcData?.totalGTCBalance || 0,
+        gtcTotalTrades: gtcData?.totalTrades || 0,
+        
+        // KYC count
+        kycCompletedCount: gtcData?.kycCompletedCount || 0,
+    };
+    
+    return watermark;
+}
 
-    let scores = {
+/**
+ * Calculate growth metrics during competition
+ */
+function calculateGrowthMetrics(user, gtcData, watermark, competition) {
+    const growth = {};
+    
+    // Current values
+    const currentNupipsReferrals = user.referralDetails?.totalDirectReferrals || 0;
+    const currentGtcReferrals = gtcData?.gtcDirectMembers || 0;
+    const currentNupipsTeam = user.referralDetails?.totalDownlineUsers || 0;
+    const currentGtcTeam = gtcData?.gtcTeamSize || 0;
+    
+    // Direct referrals growth
+    const nupipsReferralsGrowth = Math.max(0, currentNupipsReferrals - watermark.nupipsDirectReferrals);
+    const gtcReferralsGrowth = Math.max(0, currentGtcReferrals - watermark.gtcDirectMembers);
+    
+    growth.directReferralsGrowth = 
+        competition.rules.dataSource?.directReferrals === 'nupips' ? nupipsReferralsGrowth :
+        competition.rules.dataSource?.directReferrals === 'gtc' ? gtcReferralsGrowth :
+        Math.max(nupipsReferralsGrowth, gtcReferralsGrowth); // 'max'
+    
+    // Team size growth
+    const nupipsTeamGrowth = Math.max(0, currentNupipsTeam - watermark.nupipsTeamSize);
+    const gtcTeamGrowth = Math.max(0, currentGtcTeam - watermark.gtcTeamSize);
+    
+    growth.teamSizeGrowth = 
+        competition.rules.dataSource?.teamSize === 'nupips' ? nupipsTeamGrowth :
+        competition.rules.dataSource?.teamSize === 'gtc' ? gtcTeamGrowth :
+        Math.max(nupipsTeamGrowth, gtcTeamGrowth); // 'max'
+    
+    // Trading volume growth (GTC only)
+    const currentVolume = gtcData?.totalVolumeLots || 0;
+    growth.tradingVolumeGrowth = Math.max(0, currentVolume - watermark.gtcTradingVolumeLots);
+    
+    // Profit growth (GTC only) - growth during competition period
+    const currentProfit = gtcData?.totalProfit || 0;
+    const currentLoss = gtcData?.totalLoss || 0;
+    const watermarkNetProfit = watermark.gtcTotalProfit - watermark.gtcTotalLoss;
+    const currentNetProfit = currentProfit - currentLoss;
+    growth.profitGrowth = currentNetProfit - watermarkNetProfit;
+    
+    // Account balance growth
+    const currentBalance = gtcData?.totalGTCBalance || 0;
+    growth.accountBalanceGrowth = currentBalance - watermark.gtcAccountBalance;
+    
+    // KYC count growth
+    const currentKycCount = gtcData?.kycCompletedCount || 0;
+    growth.kycCountGrowth = Math.max(0, currentKycCount - watermark.kycCompletedCount);
+    
+    // Trades growth
+    const currentTrades = gtcData?.totalTrades || 0;
+    growth.tradesGrowth = Math.max(0, currentTrades - watermark.gtcTotalTrades);
+    
+    return growth;
+}
+
+/**
+ * Calculate competition score based on GROWTH metrics
+ */
+function calculateCompetitionScoreWithGrowth(user, gtcData, growth, competition) {
+    const { rules, normalizationTargets, kycConfig } = competition;
+    
+    const scores = {
         directReferrals: 0,
         teamSize: 0,
         tradingVolume: 0,
         profitability: 0,
         accountBalance: 0,
+        kycCount: 0,
     };
-
-    // 1. Direct Referrals Score
-    const directReferrals = user.referralDetails?.totalDirectReferrals || 0;
+    
+    // 1. Direct Referrals Score (based on growth)
     scores.directReferrals = Math.min(
-        directReferrals / normalizationTargets.directReferralsTarget,
+        growth.directReferralsGrowth / normalizationTargets.directReferralsTarget,
         1
     ) * rules.directReferralsWeight;
-
-    // 2. Team Size Score
-    const nupipsTeamSize = user.referralDetails?.totalDownlineUsers || 0;
-    const gtcTeamSize = gtcData?.gtcTeamSize || 0;
-    const totalTeamSize = Math.max(nupipsTeamSize, gtcTeamSize);
+    
+    // 2. Team Size Score (based on growth)
     scores.teamSize = Math.min(
-        totalTeamSize / normalizationTargets.teamSizeTarget,
+        growth.teamSizeGrowth / normalizationTargets.teamSizeTarget,
         1
     ) * rules.teamSizeWeight;
-
-    // 3. Trading Volume Score
-    const tradingVolume = gtcData?.totalVolumeLots || 0;
-    const volumeInDollars = tradingVolume * 100000;
+    
+    // 3. Trading Volume Score (based on growth in lots)
+    const volumeInDollars = growth.tradingVolumeGrowth * 100000;
     scores.tradingVolume = Math.min(
         volumeInDollars / normalizationTargets.tradingVolumeTarget,
         1
     ) * rules.tradingVolumeWeight;
-
-    // 4. Profitability Score (uses combined profit)
-    const winRate = gtcData?.winRate || 0;
-    const profitPercent = Math.max(gtcData?.profitPercent || 0, 0);
-    const profitabilityScore = (winRate / 100) * 0.5 +
-        (Math.min(profitPercent / normalizationTargets.profitPercentTarget, 1)) * 0.5;
-    scores.profitability = profitabilityScore * rules.profitabilityWeight;
-
-    // 5. Account Balance Score
-    const accountBalance = gtcData?.totalGTCBalance || 0;
+    
+    // 4. Profitability Score (based on profit growth)
+    const profitScore = growth.profitGrowth > 0 ? 
+        Math.min(growth.profitGrowth / normalizationTargets.profitPercentTarget, 1) : 0;
+    scores.profitability = profitScore * rules.profitabilityWeight;
+    
+    // 5. Account Balance Score (based on growth)
     scores.accountBalance = Math.min(
-        accountBalance / normalizationTargets.accountBalanceTarget,
+        Math.max(0, growth.accountBalanceGrowth) / normalizationTargets.accountBalanceTarget,
         1
     ) * rules.accountBalanceWeight;
-
-    const baseScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
-
-    // Apply KYC bonus multiplier
-    const kycMultiplier = gtcData?.kycBonus || 1.0;
-    const totalScore = baseScore * kycMultiplier;
-    const bonusPercentage = ((kycMultiplier - 1.0) * 100).toFixed(1);
-
+    
+    // 6. KYC Count Score (if enabled)
+    if (kycConfig?.countDownlineKyc && kycConfig.kycWeight > 0) {
+        scores.kycCount = Math.min(
+            growth.kycCountGrowth / normalizationTargets.kycCountTarget,
+            1
+        ) * kycConfig.kycWeight;
+    }
+    
+    const totalScore = Object.values(scores).reduce((sum, score) => sum + score, 0);
+    
     return {
         totalScore: parseFloat(totalScore.toFixed(2)),
-        baseScore: parseFloat(baseScore.toFixed(2)),
+        baseScore: parseFloat(totalScore.toFixed(2)),
         breakdown: {
             directReferralsScore: parseFloat(scores.directReferrals.toFixed(2)),
             teamSizeScore: parseFloat(scores.teamSize.toFixed(2)),
             tradingVolumeScore: parseFloat(scores.tradingVolume.toFixed(2)),
             profitabilityScore: parseFloat(scores.profitability.toFixed(2)),
             accountBalanceScore: parseFloat(scores.accountBalance.toFixed(2)),
+            kycCountScore: parseFloat(scores.kycCount.toFixed(2)),
+        },
+        growth: {
+            directReferralsGrowth: growth.directReferralsGrowth,
+            teamSizeGrowth: growth.teamSizeGrowth,
+            tradingVolumeGrowth: parseFloat(growth.tradingVolumeGrowth.toFixed(2)),
+            tradingVolumeGrowthDollars: parseFloat((growth.tradingVolumeGrowth * 100000).toFixed(2)),
+            profitGrowth: parseFloat(growth.profitGrowth.toFixed(2)),
+            accountBalanceGrowth: parseFloat(growth.accountBalanceGrowth.toFixed(2)),
+            kycCountGrowth: growth.kycCountGrowth,
+            tradesGrowth: growth.tradesGrowth,
         },
         metrics: {
-            directReferrals,
-            nupipsTeamSize,
+            // Current values
+            nupipsDirectReferrals: user.referralDetails?.totalDirectReferrals || 0,
+            nupipsTeamSize: user.referralDetails?.totalDownlineUsers || 0,
+            gtcDirectMembers: gtcData?.gtcDirectMembers || 0,
             gtcTeamSize: gtcData?.gtcTeamSize || 0,
             tradingVolumeLots: parseFloat((gtcData?.totalVolumeLots || 0).toFixed(2)),
-            tradingVolumeDollars: parseFloat((volumeInDollars).toFixed(2)),
-
-            // Profit metrics (BACKWARD COMPATIBLE + NEW)
             netProfit: parseFloat((gtcData?.netProfit || 0).toFixed(2)),
-            selfTradingProfit: parseFloat((gtcData?.selfTradingProfit || 0).toFixed(2)), // NEW
-            pammProfit: parseFloat((gtcData?.pammProfit || 0).toFixed(2)), // NEW
-            pammTotalInvestment: parseFloat((gtcData?.pammTotalInvestment || 0).toFixed(2)), // NEW
+            selfTradingProfit: parseFloat((gtcData?.selfTradingProfit || 0).toFixed(2)),
+            pammProfit: parseFloat((gtcData?.pammProfit || 0).toFixed(2)),
             totalProfit: parseFloat((gtcData?.totalProfit || 0).toFixed(2)),
             totalLoss: parseFloat((gtcData?.totalLoss || 0).toFixed(2)),
-            profitPercent: parseFloat((gtcData?.profitPercent || 0).toFixed(2)),
-            winRate: parseFloat((gtcData?.winRate || 0).toFixed(2)),
-
-            // Balance metrics
-            totalGTCBalance: parseFloat((gtcData?.totalGTCBalance || 0).toFixed(2)),
-            walletBalance: parseFloat((gtcData?.walletBalance || 0).toFixed(2)),
-            tradingBalance: parseFloat((gtcData?.tradingBalance || 0).toFixed(2)),
             accountBalance: parseFloat((gtcData?.totalGTCBalance || 0).toFixed(2)),
-            equity: parseFloat((gtcData?.equity || 0).toFixed(2)),
-
-            // Other metrics
+            kycCompletedCount: gtcData?.kycCompletedCount || 0,
             totalTrades: gtcData?.totalTrades || 0,
             isAgent: gtcData?.isAgent || false,
-
-            // KYC info
-            kycStatus: gtcData?.kycStatus || '',
-            hasKycApproved: gtcData?.hasKycApproved || false,
-            kycBonusApplied: gtcData?.kycBonus > 1.0,
-            kycBonusMultiplier: kycMultiplier,
-            kycBonusPercentage: bonusPercentage,
         },
         username: user.username,
         name: user.name,
@@ -709,6 +797,7 @@ router.get('/:slug/leaderboard', authenticateToken, async (req, res) => {
                 score: p.score,
                 baseScore: p.scoreBreakdown?.baseScore,
                 breakdown: p.scoreBreakdown?.breakdown,
+                growth: p.scoreBreakdown?.growth, // NEW: growth metrics
                 metrics: p.scoreBreakdown?.metrics,
                 isAgent: p.scoreBreakdown?.metrics?.isAgent,
                 lastCalculated: p.lastCalculated,
@@ -728,6 +817,7 @@ router.get('/:slug/leaderboard', authenticateToken, async (req, res) => {
                 score: userParticipant.score,
                 baseScore: userParticipant.scoreBreakdown?.baseScore,
                 breakdown: userParticipant.scoreBreakdown?.breakdown,
+                growth: userParticipant.scoreBreakdown?.growth, // NEW
                 metrics: userParticipant.scoreBreakdown?.metrics,
                 eligibleReward: getRewardForRank(userParticipant.rank, competition.rewards),
                 lastCalculated: userParticipant.lastCalculated,
@@ -743,7 +833,7 @@ router.get('/:slug/leaderboard', authenticateToken, async (req, res) => {
                 status: competition.status,
                 startDate: competition.startDate,
                 endDate: competition.endDate,
-                kycBonusMultiplier: competition.kycBonusMultiplier,
+                kycConfig: competition.kycConfig,
             },
             leaderboard,
             userRank,
@@ -764,6 +854,7 @@ router.get('/:slug/leaderboard', authenticateToken, async (req, res) => {
 
 /**
  * POST /competition/:slug/calculate-my-score
+ * NEW: Captures high watermark on first participation, calculates growth-based score
  */
 router.post('/:slug/calculate-my-score', authenticateToken, async (req, res) => {
     try {
@@ -822,9 +913,39 @@ router.post('/:slug/calculate-my-score', authenticateToken, async (req, res) => 
             });
         }
 
-        const scoreData = await calculateCompetitionScore(user, gtcData, competition);
+        // Check if participant exists
+        const existingParticipant = competition.participants.find(
+            p => p.userId.toString() === userId
+        );
 
-        competition.updateParticipantScore(userId, scoreData);
+        let watermark;
+        let scoreData;
+
+        if (!existingParticipant) {
+            // NEW PARTICIPANT: Capture high watermark
+            watermark = await calculateHighWatermark(user, gtcData, competition);
+            
+            // First calculation - growth is 0
+            const zeroGrowth = {
+                directReferralsGrowth: 0,
+                teamSizeGrowth: 0,
+                tradingVolumeGrowth: 0,
+                profitGrowth: 0,
+                accountBalanceGrowth: 0,
+                kycCountGrowth: 0,
+                tradesGrowth: 0,
+            };
+            
+            scoreData = calculateCompetitionScoreWithGrowth(user, gtcData, zeroGrowth, competition);
+        } else {
+            // EXISTING PARTICIPANT: Calculate growth from watermark
+            watermark = existingParticipant.highWatermark;
+            const growth = calculateGrowthMetrics(user, gtcData, watermark, competition);
+            scoreData = calculateCompetitionScoreWithGrowth(user, gtcData, growth, competition);
+        }
+
+        // Update participant score (pass watermark for new participants)
+        competition.updateParticipantScore(userId, scoreData, watermark);
 
         await competition.save();
 
@@ -834,7 +955,8 @@ router.post('/:slug/calculate-my-score', authenticateToken, async (req, res) => 
 
         res.json({
             success: true,
-            message: 'Score calculated and updated successfully',
+            message: existingParticipant ? 'Score updated successfully' : 'Joined competition successfully',
+            isNewParticipant: !existingParticipant,
             ranking: {
                 rank: updatedParticipant.rank,
                 score: scoreData.totalScore,
@@ -842,7 +964,9 @@ router.post('/:slug/calculate-my-score', authenticateToken, async (req, res) => 
                 eligibleReward: getRewardForRank(updatedParticipant.rank, competition.rewards),
             },
             breakdown: scoreData.breakdown,
+            growth: scoreData.growth,
             metrics: scoreData.metrics,
+            watermark: watermark,
         });
 
     } catch (error) {
@@ -933,7 +1057,7 @@ router.get('/:slug/my-stats', authenticateToken, async (req, res) => {
                 status: competition.status,
                 startDate: competition.startDate,
                 endDate: competition.endDate,
-                kycBonusMultiplier: competition.kycBonusMultiplier,
+                kycConfig: competition.kycConfig,
             },
             ranking: {
                 rank: participant.rank,
@@ -943,7 +1067,9 @@ router.get('/:slug/my-stats', authenticateToken, async (req, res) => {
                 lastCalculated: participant.lastCalculated,
             },
             breakdown: participant.scoreBreakdown?.breakdown,
+            growth: participant.scoreBreakdown?.growth, // NEW
             metrics: participant.scoreBreakdown?.metrics,
+            watermark: participant.highWatermark, // NEW: show baseline
             gtcAccountInfo: gtcData ? {
                 balance: gtcData.totalGTCBalance,
                 walletBalance: gtcData.walletBalance,
@@ -975,7 +1101,6 @@ router.post('/admin/create', authenticateToken, requireAdmin, async (req, res) =
         const userId = req.user.userId;
         const competitionData = req.body;
 
-        // Validate required fields
         if (!competitionData.title || !competitionData.description) {
             return res.status(400).json({
                 success: false,
@@ -990,10 +1115,8 @@ router.post('/admin/create', authenticateToken, requireAdmin, async (req, res) =
             });
         }
 
-        // Generate slug
         const slug = competitionData.slug || generateSlug(competitionData.title);
 
-        // Check if slug exists
         const existingCompetition = await Competition.findOne({ slug });
         if (existingCompetition) {
             return res.status(400).json({
@@ -1002,30 +1125,21 @@ router.post('/admin/create', authenticateToken, requireAdmin, async (req, res) =
             });
         }
 
-        // Validate KYC bonus multiplier
-        if (competitionData.kycBonusMultiplier !== undefined) {
-            const multiplier = parseFloat(competitionData.kycBonusMultiplier);
-            if (multiplier < 1.0 || multiplier > 2.0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'KYC bonus multiplier must be between 1.0 and 2.0',
-                });
-            }
-        }
-
-        // Validate that weights sum to 100
+        // Validate that weights sum to 100 (including KYC weight)
         if (competitionData.rules) {
+            const kycWeight = competitionData.kycConfig?.kycWeight || 0;
             const totalWeight =
                 (competitionData.rules.directReferralsWeight || 0) +
                 (competitionData.rules.teamSizeWeight || 0) +
                 (competitionData.rules.tradingVolumeWeight || 0) +
                 (competitionData.rules.profitabilityWeight || 0) +
-                (competitionData.rules.accountBalanceWeight || 0);
+                (competitionData.rules.accountBalanceWeight || 0) +
+                kycWeight;
 
             if (totalWeight !== 100) {
                 return res.status(400).json({
                     success: false,
-                    message: `Total weight must equal 100%. Current total: ${totalWeight}%`,
+                    message: `Total weight (including KYC) must equal 100%. Current total: ${totalWeight}%`,
                 });
             }
 
@@ -1039,7 +1153,7 @@ router.post('/admin/create', authenticateToken, requireAdmin, async (req, res) =
             if (!competitionData.requirements) {
                 competitionData.requirements = {};
             }
-            competitionData.requirements.requiresGTCAccount = gtcRelatedWeight > 0;
+            competitionData.requirements.requiresGTCAccount = gtcRelatedWeight > 0 || kycWeight > 0;
         }
 
         // Validate rewards
@@ -1126,7 +1240,6 @@ router.put('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
         const userId = req.user.userId;
         const updateData = req.body;
 
-        // Validate MongoDB ObjectId
         if (!id.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
@@ -1143,7 +1256,6 @@ router.put('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
             });
         }
 
-        // Prevent updating completed competitions
         if (competition.status === 'completed' && updateData.status !== 'completed') {
             return res.status(400).json({
                 success: false,
@@ -1151,49 +1263,42 @@ router.put('/admin/:id', authenticateToken, requireAdmin, async (req, res) => {
             });
         }
 
-        // If slug is empty, generate from title
         if (updateData.slug === '' && updateData.title) {
             updateData.slug = generateSlug(updateData.title);
         }
 
-        // Validate KYC bonus multiplier
-        if (updateData.kycBonusMultiplier !== undefined) {
-            const multiplier = parseFloat(updateData.kycBonusMultiplier);
-            if (multiplier < 1.0 || multiplier > 2.0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'KYC bonus multiplier must be between 1.0 and 2.0',
-                });
-            }
-        }
-
-        // Validate that weights sum to 100 if rules are being updated
-        if (updateData.rules) {
+        // Validate that weights sum to 100 (including KYC weight) if rules are being updated
+        if (updateData.rules || updateData.kycConfig) {
+            const rules = updateData.rules || competition.rules;
+            const kycConfig = updateData.kycConfig || competition.kycConfig;
+            const kycWeight = kycConfig?.kycWeight || 0;
+            
             const totalWeight =
-                (updateData.rules.directReferralsWeight || 0) +
-                (updateData.rules.teamSizeWeight || 0) +
-                (updateData.rules.tradingVolumeWeight || 0) +
-                (updateData.rules.profitabilityWeight || 0) +
-                (updateData.rules.accountBalanceWeight || 0);
+                (rules.directReferralsWeight || 0) +
+                (rules.teamSizeWeight || 0) +
+                (rules.tradingVolumeWeight || 0) +
+                (rules.profitabilityWeight || 0) +
+                (rules.accountBalanceWeight || 0) +
+                kycWeight;
 
             if (totalWeight !== 100) {
                 return res.status(400).json({
                     success: false,
-                    message: `Total weight must equal 100%. Current total: ${totalWeight}%`,
+                    message: `Total weight (including KYC) must equal 100%. Current total: ${totalWeight}%`,
                 });
             }
 
             // AUTO-SET requiresGTCAccount based on GTC-related weights
             const gtcRelatedWeight =
-                (updateData.rules.teamSizeWeight || 0) +
-                (updateData.rules.tradingVolumeWeight || 0) +
-                (updateData.rules.profitabilityWeight || 0) +
-                (updateData.rules.accountBalanceWeight || 0);
+                (rules.teamSizeWeight || 0) +
+                (rules.tradingVolumeWeight || 0) +
+                (rules.profitabilityWeight || 0) +
+                (rules.accountBalanceWeight || 0);
 
             if (!updateData.requirements) {
                 updateData.requirements = competition.requirements || {};
             }
-            updateData.requirements.requiresGTCAccount = gtcRelatedWeight > 0;
+            updateData.requirements.requiresGTCAccount = gtcRelatedWeight > 0 || kycWeight > 0;
         }
 
         // Validate rewards if provided
@@ -1248,7 +1353,6 @@ router.delete('/admin/:id', authenticateToken, requireAdmin, async (req, res) =>
     try {
         const { id } = req.params;
 
-        // Validate MongoDB ObjectId
         if (!id.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
@@ -1265,7 +1369,6 @@ router.delete('/admin/:id', authenticateToken, requireAdmin, async (req, res) =>
             });
         }
 
-        // Soft delete - cancel it
         competition.status = 'cancelled';
         await competition.save();
 
@@ -1291,7 +1394,6 @@ router.post('/admin/:id/duplicate', authenticateToken, requireAdmin, async (req,
         const { id } = req.params;
         const userId = req.user.userId;
 
-        // Validate MongoDB ObjectId
         if (!id.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
@@ -1308,14 +1410,12 @@ router.post('/admin/:id/duplicate', authenticateToken, requireAdmin, async (req,
             });
         }
 
-        // Remove _id, timestamps, and participants
         delete originalCompetition._id;
         delete originalCompetition.createdAt;
         delete originalCompetition.updatedAt;
         delete originalCompetition.participants;
         delete originalCompetition.stats;
 
-        // Generate new slug
         const newSlug = `${originalCompetition.slug}-copy-${Date.now()}`;
 
         const newCompetition = new Competition({
@@ -1353,7 +1453,6 @@ router.get('/admin/:id/participants', authenticateToken, requireAdmin, async (re
         const { id } = req.params;
         const { limit = 100, sortBy = 'rank' } = req.query;
 
-        // Validate MongoDB ObjectId
         if (!id.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
@@ -1372,7 +1471,6 @@ router.get('/admin/:id/participants', authenticateToken, requireAdmin, async (re
 
         let participants = [...competition.participants];
 
-        // Sort
         if (sortBy === 'score') {
             participants.sort((a, b) => b.score - a.score);
         } else if (sortBy === 'rank') {
@@ -1390,7 +1488,7 @@ router.get('/admin/:id/participants', authenticateToken, requireAdmin, async (re
                 title: competition.title,
                 slug: competition.slug,
                 status: competition.status,
-                kycBonusMultiplier: competition.kycBonusMultiplier,
+                kycConfig: competition.kycConfig,
             },
             participants: limitedParticipants,
             stats: competition.stats,
@@ -1412,7 +1510,6 @@ router.get('/admin/:id/winners', authenticateToken, requireAdmin, async (req, re
     try {
         const { id } = req.params;
 
-        // Validate MongoDB ObjectId
         if (!id.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
@@ -1429,7 +1526,6 @@ router.get('/admin/:id/winners', authenticateToken, requireAdmin, async (req, re
             });
         }
 
-        // Get all participants who are eligible for rewards
         const winners = competition.participants
             .filter(p => {
                 const reward = getRewardForRank(p.rank, competition.rewards);
@@ -1457,7 +1553,7 @@ router.get('/admin/:id/winners', authenticateToken, requireAdmin, async (req, re
                 status: competition.status,
                 startDate: competition.startDate,
                 endDate: competition.endDate,
-                kycBonusMultiplier: competition.kycBonusMultiplier,
+                kycConfig: competition.kycConfig,
             },
             winners,
             totalWinners: winners.length,
@@ -1475,12 +1571,12 @@ router.get('/admin/:id/winners', authenticateToken, requireAdmin, async (req, re
 
 /**
  * POST /competition/admin/:id/recalculate-all
+ * NEW: Uses high watermark for growth-based scoring
  */
 router.post('/admin/:id/recalculate-all', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Validate MongoDB ObjectId
         if (!id.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
@@ -1504,30 +1600,42 @@ router.post('/admin/:id/recalculate-all', authenticateToken, requireAdmin, async
             });
         }
 
-        // Get all users with GTC accounts
-        const users = await User.find({
-            'gtcfx.accessToken': { $ne: null },
-            status: 'active',
-        }).select('name username email gtcfx referralDetails userType').lean();
-
         let successCount = 0;
         let errorCount = 0;
 
-        for (const user of users) {
+        // Recalculate for all existing participants
+        for (const participant of competition.participants) {
             try {
+                const user = await User.findById(participant.userId)
+                    .select('name username email gtcfx referralDetails userType')
+                    .lean();
+                    
+                if (!user) {
+                    errorCount++;
+                    continue;
+                }
+
                 const gtcData = await fetchGTCData(user, competition);
-                if (!gtcData) continue;
+                if (!gtcData) {
+                    errorCount++;
+                    continue;
+                }
 
                 const participationCheck = competition.canUserParticipate(user, gtcData);
-                if (!participationCheck.canParticipate) continue;
+                if (!participationCheck.canParticipate) {
+                    errorCount++;
+                    continue;
+                }
 
-                const scoreData = await calculateCompetitionScore(user, gtcData, competition);
+                // Calculate growth from stored watermark
+                const watermark = participant.highWatermark;
+                const growth = calculateGrowthMetrics(user, gtcData, watermark, competition);
+                const scoreData = calculateCompetitionScoreWithGrowth(user, gtcData, growth, competition);
 
                 competition.updateParticipantScore(user._id, scoreData);
-
                 successCount++;
             } catch (error) {
-                console.error(`Error processing user ${user.username}:`, error.message);
+                console.error(`Error processing participant ${participant.username}:`, error.message);
                 errorCount++;
             }
         }
@@ -1567,7 +1675,6 @@ router.patch('/admin/:id/status', authenticateToken, requireAdmin, async (req, r
         const { status } = req.body;
         const userId = req.user.userId;
 
-        // Validate MongoDB ObjectId
         if (!id.match(/^[0-9a-fA-F]{24}$/)) {
             return res.status(400).json({
                 success: false,
@@ -1621,7 +1728,6 @@ router.get('/admin/stats/overview', authenticateToken, requireAdmin, async (req,
         const upcomingCompetitions = await Competition.countDocuments({ status: 'upcoming' });
         const completedCompetitions = await Competition.countDocuments({ status: 'completed' });
 
-        // Get total participants across all competitions
         const competitions = await Competition.find().select('participants').lean();
         let totalParticipations = 0;
         let uniqueParticipants = new Set();
