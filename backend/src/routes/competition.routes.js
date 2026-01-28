@@ -671,8 +671,9 @@ router.get('/list', authenticateToken, async (req, res) => {
             query.status = { $in: ['active', 'upcoming'] };
         }
 
+        // Include stats, only exclude participants
         const competitions = await Competition.find(query)
-            .select('-participants -stats')
+            .select('-participants')  // Only exclude participants, include stats
             .sort({ startDate: -1 })
             .lean();
 

@@ -29,6 +29,8 @@ import {
   Zap,
   Shield,
   Info,
+  TrendingDown,
+  Plus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useGTCFxAuth } from "../contexts/GTCFxAuthContext";
@@ -83,6 +85,7 @@ const Competition = () => {
   const [selectedCompetition, setSelectedCompetition] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("all");
 
   useEffect(() => {
     fetchCompetitions();
@@ -96,7 +99,10 @@ const Competition = () => {
     }
 
     try {
-      const response = await api.get("/competition/list");
+      const response = await api.get("/competition/list", {
+        params: { includeAll: "true" }
+      });
+      
       if (response.data.success) {
         const comps = response.data.competitions || [];
 
@@ -156,22 +162,41 @@ const Competition = () => {
 
   const getStatusBadge = (status) => {
     const badges = {
+      draft: {
+        bg: "bg-gray-100",
+        text: "text-gray-700",
+        border: "border-gray-300",
+        label: "Draft",
+      },
       upcoming: {
         bg: "bg-blue-100",
         text: "text-blue-700",
+        border: "border-blue-300",
         label: "Upcoming",
       },
-      active: { bg: "bg-green-100", text: "text-green-700", label: "Active" },
+      active: {
+        bg: "bg-green-100",
+        text: "text-green-700",
+        border: "border-green-300",
+        label: "Active",
+      },
       completed: {
         bg: "bg-purple-100",
         text: "text-purple-700",
+        border: "border-purple-300",
         label: "Completed",
       },
+      cancelled: {
+        bg: "bg-red-100",
+        text: "text-red-700",
+        border: "border-red-300",
+        label: "Cancelled",
+      },
     };
-    const badge = badges[status] || badges.active;
+    const badge = badges[status] || badges.draft;
     return (
       <span
-        className={`px-3 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}
+        className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${badge.bg} ${badge.text} ${badge.border}`}
       >
         {badge.label}
       </span>
@@ -187,6 +212,24 @@ const Competition = () => {
     return { icon: Award, color: "text-gray-400" };
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch (error) {
+      return "Invalid Date";
+    }
+  };
+
+  const filteredCompetitions = competitions.filter((comp) => {
+    if (filterStatus === "all") return true;
+    return comp.status === filterStatus;
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center p-4">
@@ -199,34 +242,29 @@ const Competition = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-white p-3 sm:p-4 md:p-6 lg:p-8">
       <Helmet>
         <title>Trading Competitions - Nupips</title>
       </Helmet>
 
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4">
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Trophy className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    Trading Competitions
-                  </h1>
-                  <p className="text-sm text-gray-600">
-                    Compete globally and win amazing prizes
-                  </p>
-                </div>
-              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+                <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-orange-600" />
+                Trading Competitions
+              </h1>
+              <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
+                Compete globally and win amazing prizes
+              </p>
             </div>
 
             <button
               onClick={() => fetchCompetitions(false)}
               disabled={refreshing}
-              className="px-4 py-2 bg-white border border-gray-200 hover:border-orange-500 rounded-xl font-medium text-gray-700 hover:text-orange-600 transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm hover:shadow"
+              className="px-4 py-2 bg-white border border-gray-200 hover:border-orange-500 rounded-xl font-medium text-gray-700 hover:text-orange-600 transition-all flex items-center gap-2 disabled:opacity-50 shadow-sm hover:shadow self-start sm:self-auto"
             >
               <RefreshCw
                 className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
@@ -235,25 +273,26 @@ const Competition = () => {
             </button>
           </div>
 
+          {/* Connection Banner */}
           {!gtcAuthenticated && (
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-xl p-6 text-white mb-6">
-              <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="w-8 h-8 text-white" />
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl shadow-xl p-4 sm:p-6 text-white mb-4 sm:mb-6">
+              <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-6">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
                 <div className="flex-1 text-center md:text-left">
-                  <h2 className="text-2xl font-bold mb-2">
+                  <h2 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">
                     Connect GTC FX to Compete
                   </h2>
-                  <p className="text-orange-100 mb-4">
+                  <p className="text-orange-100 mb-3 sm:mb-4 text-sm sm:text-base">
                     Join competitions and see your real-time rankings
                   </p>
                   <button
                     onClick={() => navigate("/gtcfx/auth")}
-                    className="px-8 py-3 bg-white text-orange-600 font-semibold rounded-xl hover:bg-orange-50 transition-all inline-flex items-center gap-3 group shadow-lg hover:shadow-xl"
+                    className="px-6 sm:px-8 py-2 sm:py-3 bg-white text-orange-600 font-semibold rounded-xl hover:bg-orange-50 transition-all inline-flex items-center gap-2 sm:gap-3 group shadow-lg hover:shadow-xl text-sm sm:text-base"
                   >
                     <span>Connect Broker Now</span>
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </div>
@@ -261,11 +300,40 @@ const Competition = () => {
           )}
         </div>
 
-        {competitions.length > 0 ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {competitions.map((competition) => {
+        {/* Filter Tabs */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-2 sm:p-3 mb-4 sm:mb-6">
+          <div className="flex overflow-x-auto gap-2 scrollbar-hide">
+            {[
+              { value: "all", label: "All", icon: Trophy },
+              { value: "active", label: "Active", icon: Activity },
+              { value: "upcoming", label: "Upcoming", icon: Calendar },
+              { value: "completed", label: "Completed", icon: CheckCircle },
+            ].map((filter) => {
+              const Icon = filter.icon;
+              return (
+                <button
+                  key={filter.value}
+                  onClick={() => setFilterStatus(filter.value)}
+                  className={`flex-1 min-w-[80px] px-3 sm:px-4 py-2 rounded-lg font-medium transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap ${
+                    filterStatus === filter.value
+                      ? "bg-orange-100 text-orange-700 border border-orange-300"
+                      : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span>{filter.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Competitions Grid */}
+        {filteredCompetitions.length > 0 ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {filteredCompetitions.map((competition) => {
               const isLocked =
-                competition.requiresConnection && !gtcAuthenticated;
+                competition.requirements?.requiresGTCAccount && !gtcAuthenticated;
               const hasUserStats = competition.userStats?.participating;
               const { icon: RankIcon, color } = hasUserStats
                 ? getRankIcon(competition.userStats.ranking.rank)
@@ -282,21 +350,22 @@ const Competition = () => {
                       : "border-gray-200"
                   }`}
                 >
+                  {/* Locked Overlay */}
                   {isLocked && (
                     <div className="absolute inset-0 bg-gradient-to-br from-gray-900/60 to-gray-900/40 backdrop-blur-[2px] z-10 flex items-center justify-center">
-                      <div className="text-center p-6">
-                        <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-white/30">
-                          <Lock className="w-8 h-8 text-white" />
+                      <div className="text-center p-4 sm:p-6">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4 border-2 border-white/30">
+                          <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-2">
+                        <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">
                           Connect to Compete
                         </h3>
-                        <p className="text-white/90 mb-4 text-sm">
+                        <p className="text-white/90 mb-3 sm:mb-4 text-xs sm:text-sm">
                           Broker connection required
                         </p>
                         <button
                           onClick={() => setShowConnectModal(true)}
-                          className="px-6 py-2 bg-white text-gray-900 font-semibold rounded-xl hover:bg-gray-100 transition-all shadow-lg"
+                          className="px-4 sm:px-6 py-1.5 sm:py-2 bg-white text-gray-900 font-semibold rounded-xl hover:bg-gray-100 transition-all shadow-lg text-sm sm:text-base"
                         >
                           Connect Now
                         </button>
@@ -304,11 +373,12 @@ const Competition = () => {
                     </div>
                   )}
 
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-xl font-bold text-gray-900">
+                  <div className="p-4 sm:p-5 md:p-6">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-3 sm:mb-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                             {competition.title}
                           </h3>
                           {getStatusBadge(competition.status)}
@@ -319,59 +389,51 @@ const Competition = () => {
                       </div>
                     </div>
 
+                    {/* User Rank Card (if participating) */}
                     {hasUserStats && (
-                      <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-4 mb-4 text-white">
+                      <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-3 sm:p-4 mb-3 sm:mb-4 text-white">
                         <div className="flex items-center justify-between mb-3">
                           <div>
                             <p className="text-white/80 text-xs font-medium uppercase tracking-wide mb-1">
                               Your Rank
                             </p>
-                            <p className="text-3xl font-bold">
+                            <p className="text-2xl sm:text-3xl font-bold">
                               #{competition.userStats.ranking.rank}
                             </p>
                           </div>
-                          <RankIcon className={`w-10 h-10 ${color}`} />
+                          <RankIcon className={`w-8 h-8 sm:w-10 sm:h-10 ${color}`} />
                         </div>
 
                         {/* Growth Metrics Display */}
                         {competition.userStats.growth && (
-                          <div className="mt-3 pt-3 border-t border-white/20">
+                          <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-white/20">
                             <p className="text-xs text-white/80 mb-2 font-semibold">
-                              Your Growth Since Competition Start:
+                              Growth Since Start:
                             </p>
                             <div className="grid grid-cols-2 gap-2">
-                              {competition.userStats.growth
-                                .directReferralsGrowth > 0 && (
-                                <div className="bg-white/20 rounded-lg p-2">
-                                  <p className="text-xs text-white/70">
-                                    Direct Referrals
-                                  </p>
-                                  <p className="text-sm font-bold">
-                                    +
-                                    {
-                                      competition.userStats.growth
-                                        .directReferralsGrowth
-                                    }
-                                  </p>
-                                </div>
-                              )}
-                              {competition.userStats.growth.teamSizeGrowth >
+                              {competition.userStats.growth.directReferralsGrowth >
                                 0 && (
                                 <div className="bg-white/20 rounded-lg p-2">
                                   <p className="text-xs text-white/70">
-                                    Team Size
+                                    Referrals
                                   </p>
+                                  <p className="text-sm font-bold">
+                                    +{competition.userStats.growth.directReferralsGrowth}
+                                  </p>
+                                </div>
+                              )}
+                              {competition.userStats.growth.teamSizeGrowth > 0 && (
+                                <div className="bg-white/20 rounded-lg p-2">
+                                  <p className="text-xs text-white/70">Team</p>
                                   <p className="text-sm font-bold">
                                     +{competition.userStats.growth.teamSizeGrowth}
                                   </p>
                                 </div>
                               )}
-                              {competition.userStats.growth
-                                .tradingVolumeGrowthDollars > 0 && (
+                              {competition.userStats.growth.tradingVolumeGrowthDollars >
+                                0 && (
                                 <div className="bg-white/20 rounded-lg p-2">
-                                  <p className="text-xs text-white/70">
-                                    Volume Growth
-                                  </p>
+                                  <p className="text-xs text-white/70">Volume</p>
                                   <p className="text-sm font-bold">
                                     +$
                                     {competition.userStats.growth.tradingVolumeGrowthDollars?.toFixed(
@@ -380,12 +442,9 @@ const Competition = () => {
                                   </p>
                                 </div>
                               )}
-                              {competition.userStats.growth.profitGrowth >
-                                0 && (
+                              {competition.userStats.growth.profitGrowth > 0 && (
                                 <div className="bg-white/20 rounded-lg p-2">
-                                  <p className="text-xs text-white/70">
-                                    Profit Growth
-                                  </p>
+                                  <p className="text-xs text-white/70">Profit</p>
                                   <p className="text-sm font-bold">
                                     +$
                                     {competition.userStats.growth.profitGrowth?.toFixed(
@@ -401,83 +460,74 @@ const Competition = () => {
                         {/* KYC Score Display */}
                         {competition.kycConfig?.countDownlineKyc &&
                           competition.userStats.growth?.kycCountGrowth > 0 && (
-                            <div className="mt-3 pt-3 border-t border-white/20">
+                            <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-white/20">
                               <div className="flex items-center gap-2 mb-1">
-                                <Shield className="w-4 h-4 text-white" />
+                                <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
                                 <span className="text-xs font-semibold text-white/90">
-                                  KYC Verified Members Growth
+                                  KYC Verified Growth
                                 </span>
                               </div>
                               <div className="bg-white/20 rounded-lg p-2">
-                                <p className="text-sm font-bold text-white">
+                                <p className="text-xs sm:text-sm font-bold text-white">
                                   +{competition.userStats.growth.kycCountGrowth}{" "}
                                   verified members
-                                </p>
-                                <p className="text-xs text-white/80 mt-0.5">
-                                  Contributing{" "}
-                                  {competition.userStats.breakdown
-                                    ?.kycCountScore || 0}{" "}
-                                  points
                                 </p>
                               </div>
                             </div>
                           )}
 
-                        <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between text-sm">
+                        <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-white/20 flex items-center justify-between text-xs sm:text-sm">
                           <span>
-                            Score:{" "}
-                            {competition.userStats.ranking.score.toFixed(1)}
+                            Score: {competition.userStats.ranking.score.toFixed(1)}
                           </span>
                           {competition.userStats.ranking.eligibleReward && (
                             <span className="flex items-center gap-1">
-                              <Gift className="w-4 h-4" />
-                              {
-                                competition.userStats.ranking.eligibleReward
-                                  .prize
-                              }
+                              <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                              {competition.userStats.ranking.eligibleReward.prize}
                             </span>
                           )}
                         </div>
                       </div>
                     )}
 
-                    <div className="space-y-3 mb-4">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="w-4 h-4 flex-shrink-0" />
-                        <span>
-                          {new Date(competition.startDate).toLocaleDateString()}{" "}
-                          - {new Date(competition.endDate).toLocaleDateString()}
+                    {/* Competition Info */}
+                    <div className="space-y-2 sm:space-y-3 mb-3 sm:mb-4">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                        <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                        <span className="truncate">
+                          {formatDate(competition.startDate)} -{" "}
+                          {formatDate(competition.endDate)}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Users className="w-4 h-4 flex-shrink-0" />
+                      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                        <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                         <span>
-                          {competition.stats?.totalParticipants || 0}{" "}
-                          participants
+                          {competition.stats?.totalParticipants || 0} participant
+                          {competition.stats?.totalParticipants !== 1 ? "s" : ""}
                         </span>
                       </div>
 
                       {competition.kycConfig?.countDownlineKyc && (
-                        <div className="flex items-center gap-2 text-sm text-green-600">
-                          <Shield className="w-4 h-4 flex-shrink-0" />
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-green-600">
+                          <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                           <span className="font-medium">
-                            KYC Verification Counts (
-                            {competition.kycConfig.kycWeight}% weight)
+                            KYC Verification ({competition.kycConfig.kycWeight}%)
                           </span>
                         </div>
                       )}
 
                       {competition.rewards && competition.rewards.length > 0 && (
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Gift className="w-4 h-4 flex-shrink-0" />
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
+                          <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                           <span>{competition.rewards.length} prize tiers</span>
                         </div>
                       )}
                     </div>
 
+                    {/* Top Rewards Preview */}
                     {competition.rewards && competition.rewards.length > 0 && (
-                      <div className="mb-4">
+                      <div className="mb-3 sm:mb-4">
                         <p className="text-xs font-medium text-gray-500 mb-2">
                           Top Prizes
                         </p>
@@ -508,22 +558,31 @@ const Competition = () => {
                       </div>
                     )}
 
+                    {/* Action Buttons */}
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleViewDetails(competition)}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium text-gray-700 flex items-center justify-center gap-2 transition-all"
+                        className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-50 font-medium text-gray-700 flex items-center justify-center gap-2 transition-all text-sm sm:text-base"
                       >
-                        <Eye className="w-4 h-4" />
-                        View Details
+                        <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span className="hidden sm:inline">View Details</span>
+                        <span className="sm:hidden">Details</span>
                       </button>
 
                       {gtcAuthenticated && competition.status === "active" && (
                         <button
                           onClick={() => handleCalculateScore(competition)}
-                          className="flex-1 px-4 py-2 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg"
+                          className="flex-1 px-3 sm:px-4 py-2 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-md hover:shadow-lg text-sm sm:text-base"
                         >
-                          <Zap className="w-4 h-4" />
-                          {hasUserStats ? "Update Rank" : "Join Now"}
+                          <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          {hasUserStats ? (
+                            <>
+                              <span className="hidden sm:inline">Update Rank</span>
+                              <span className="sm:hidden">Update</span>
+                            </>
+                          ) : (
+                            "Join Now"
+                          )}
                         </button>
                       )}
                     </div>
@@ -533,13 +592,15 @@ const Competition = () => {
             })}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <Trophy className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">
+          <div className="text-center py-12 sm:py-16">
+            <Trophy className="w-16 h-16 sm:w-20 sm:h-20 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
               No Competitions Available
             </h3>
-            <p className="text-gray-600">
-              Check back soon for new trading competitions!
+            <p className="text-gray-600 text-sm sm:text-base">
+              {filterStatus !== "all"
+                ? `No ${filterStatus} competitions found.`
+                : "Check back soon for new trading competitions!"}
             </p>
           </div>
         )}
