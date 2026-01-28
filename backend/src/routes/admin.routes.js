@@ -958,7 +958,9 @@ router.get('/gtc-members', async (req, res) => {
             tradingBalanceFilter,
             walletBalanceFilter,
             sortBy = 'joinedDate',
-            sortOrder = 'desc'
+            sortOrder = 'desc',
+            startDate,
+            endDate
         } = req.query;
 
         // Build base filter
@@ -1000,6 +1002,22 @@ router.get('/gtc-members', async (req, res) => {
                     { onboardedWithCall: true, onboardedWithMessage: false },
                     { onboardedWithCall: false, onboardedWithMessage: true }
                 ];
+            }
+        }
+
+        // Date range filter for joinedAt
+        if (startDate || endDate) {
+            filter.joinedAt = {};
+            
+            if (startDate) {
+                filter.joinedAt.$gte = new Date(startDate);
+            }
+            
+            if (endDate) {
+                // Set to end of day to include full end date
+                const endDateTime = new Date(endDate);
+                endDateTime.setHours(23, 59, 59, 999);
+                filter.joinedAt.$lte = endDateTime;
             }
         }
 

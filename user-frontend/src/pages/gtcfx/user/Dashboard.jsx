@@ -670,7 +670,7 @@ const GTCFxDashboard = () => {
                 ? TrendingUp
                 : TrendingDown
             }
-            label="Profit"
+            label="PAMM Profit"
             value={`$${parseFloat(profitSummary?.copy_earn || 0).toFixed(2)}`}
             subtitle="Total earnings"
             gradientFrom={

@@ -71,7 +71,7 @@ const ALL_SIDEBAR_LINKS = [
   },
   { name: "Competition", href: "/competition", icon: Swords },
   { name: "GTC Members", href: "/gtc-members", icon: UsersIcon },
-  { name: "Nupips Membes", href: "/users", icon: UsersIcon },
+  { name: "Nupips Members", href: "/users", icon: UsersIcon },
   { name: "Courses", href: "/courses", icon: BookA },
   {
     name: "System Configuration",

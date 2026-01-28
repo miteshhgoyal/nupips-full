@@ -76,16 +76,16 @@ async function fetchKYCStatus(memberId, competition = null) {
         const kycStatus = gtcMember.kycStatus || '';
         let kycBonus = 1.0;
 
-        if (kycStatus === 'approved' && competition) {
+        if (kycStatus === 'completed' && competition) {
             kycBonus = competition.kycBonusMultiplier || 1.05;
-        } else if (kycStatus === 'approved') {
+        } else if (kycStatus === 'completed') {
             kycBonus = 1.05; // Default 5% bonus
         }
 
         return {
             kycStatus,
             kycBonus,
-            hasKycApproved: kycStatus === 'approved'
+            hasKycApproved: kycStatus === 'completed'
         };
     } catch (err) {
         console.warn('Could not fetch KYC status:', err.message);
