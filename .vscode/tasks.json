@@ -1,25 +1,48 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "Backend",
-			"type": "shell",
-			"command": "cd backend; npm run dev"
-		},
-		{
-			"label": "User Frontend",
-			"type": "shell",
-			"command": "cd user-frontend; npm run dev"
-		},
-		{
-			"label": "Admin Frontend",
-			"type": "shell",
-			"command": "cd admin-frontend; npm run dev"
-		},
-		{
-			"label": "Start All",
-			"dependsOn": ["Backend", "User Frontend", "Admin Frontend"],
-			"problemMatcher": []
-		}
-	]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Backend",
+            "type": "shell",
+            "command": "cd backend; npm run dev",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".",
+                    "endsPattern": "Server running on port"
+                }
+            }
+        },
+        {
+            "label": "User Frontend",
+            "type": "shell",
+            "command": "cd user-frontend; npm run dev",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".",
+                    "endsPattern": "ready in"
+                }
+            }
+        },
+        {
+            "label": "Admin Frontend",
+            "type": "shell",
+            "command": "cd admin-frontend; npm run dev"
+        },
+        {
+            "label": "Start All",
+            "dependsOn": ["Backend", "User Frontend", "Admin Frontend"],
+            "dependsOrder": "sequence",
+            "problemMatcher": []
+        }
+    ]
 }
