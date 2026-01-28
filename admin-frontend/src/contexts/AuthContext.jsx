@@ -6,83 +6,85 @@ import { tokenService } from "../services/tokenService";
 const AuthContext = createContext();
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+	const context = useContext(AuthContext);
+	if (!context) {
+		throw new Error("useAuth must be used within an AuthProvider");
+	}
+	return context;
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [permissions, setPermissions] = useState({ pages: [] });
-  const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+	const [user, setUser] = useState(null);
+	const [permissions, setPermissions] = useState({ pages: [] });
+	const [loading, setLoading] = useState(true);
+	const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
+	useEffect(() => {
+		checkAuth();
+	}, []);
 
-  const updateUser = (userData) => {
-    setUser(userData);
-    setPermissions(userData.permissions || { pages: [] });
-  };
+	const updateUser = (userData) => {
+		setUser(userData);
+		setPermissions(userData.permissions || { pages: [] });
+	};
 
-  const checkAuth = async () => {
-    try {
-      const token = tokenService.getToken();
+	const checkAuth = async () => {
+		try {
+			const token = tokenService.getToken();
 
-      if (!token || tokenService.isTokenExpired(token)) {
-        tokenService.removeToken();
-        setLoading(false);
-        return;
-      }
+			if (!token || tokenService.isTokenExpired(token)) {
+				tokenService.removeToken();
+				setLoading(false);
+				return;
+			}
 
-      // Verify token with backend
-      const response = await authAPI.verifyToken();
-      if (response.data.valid && response.data.user) {
-        setUser(response.data.user);
-        setPermissions(response.data.user.permissions || { pages: [] });
-        setIsAuthenticated(true);
-      } else {
-        tokenService.removeToken();
-      }
-    } catch (error) {
-      console.error("Auth check failed:", error);
-      tokenService.removeToken();
-    } finally {
-      setLoading(false);
-    }
-  };
+			// Verify token with backend
+			const response = await authAPI.verifyToken();
+			if (response.data.valid && response.data.user) {
+				setUser(response.data.user);
+				setPermissions(response.data.user.permissions || { pages: [] });
+				setIsAuthenticated(true);
+			} else {
+				tokenService.removeToken();
+			}
+		} catch (error) {
+			console.error("Auth check failed:", error);
+			tokenService.removeToken();
+		} finally {
+			setLoading(false);
+		}
+	};
 
-  const login = (userData) => {
-    const { token, user, rememberMe } = userData;
+	const login = (userData) => {
+		const { token, user, rememberMe } = userData;
 
-    tokenService.setToken(token);
+		tokenService.setToken(token);
 
-    // Set user data with permissions
-    setUser(user);
-    setPermissions(user.permissions || { pages: [] });
-    setIsAuthenticated(true);
-  };
+		// Set user data with permissions
+		setUser(user);
+		setPermissions(user.permissions || { pages: [] });
+		setIsAuthenticated(true);
+	};
 
-  const logout = () => {
-    tokenService.removeToken();
-    setUser(null);
-    setPermissions({ pages: [] });
-    setIsAuthenticated(false);
-  };
+	const logout = () => {
+		tokenService.removeToken();
+		setUser(null);
+		setPermissions({ pages: [] });
+		setIsAuthenticated(false);
+	};
 
-  const value = {
-    user,
-    permissions,
-    isAuthenticated,
-    loading,
-    login,
-    logout,
-    checkAuth,
-    updateUser,
-  };
+	const value = {
+		user,
+		permissions,
+		isAuthenticated,
+		loading,
+		login,
+		logout,
+		checkAuth,
+		updateUser,
+	};
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+	return (
+		<AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+	);
 };

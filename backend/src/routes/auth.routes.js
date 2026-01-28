@@ -295,11 +295,11 @@ router.post('/login', async (req, res) => {
             return res.status(403).json({ message: `Account is ${user.status}` });
         }
 
-        const tokenExpiration = rememberMe ? '30d' : '7d';
+        const tokenExpiration = rememberMe ? '30d' : '1d';
         const token = jwt.sign({
             userId: user._id,
             email: user.email,
-            userType: user.userType,
+            userType: user.userType == 'subadmin' ? 'admin' : user.userType,
             permissions: user.permissions || { pages: [] }
         }, process.env.JWT_SECRET, { expiresIn: tokenExpiration });
 
