@@ -1,39 +1,53 @@
+Points = (Current Value / Target ) * Weightage of that field
+
+current direct referrals = 10
+weightage (admin side) = 20%
+normaliztion target = 10
+
+10 / 10 = 1 * 20 = 20 score (direct referrals)
+
+team size = 4000
+weightage = 80%
+target = 200
+
+(team size / target) * weightage
+4000 / 200 = 50
+50 * 80 = 4000 score
+
+20 + 4000 = 4020 total score to calculate rank of the user.
+
+(100 / 20) * 20 = 100 Points
+
+1000
++10 = 1010
+-20 = 990
++10 = 1000
++30 = 1030
+
+profit sharing = 1030 - 1010 = 20 (high watermark)
 
 
-- in main nupips user dashboard - trading performance section - fix it ... what api is used for this section ? and what is net balance ? add total gtc users in dashboard. - done
 
-sidebar dashboard updates. - done
 
-gtc dashboard - account balance > gtc wallet balance. - done
 
-gtc dashboard - add total trading accounts balance in a dropdown - done
-remove account type and status in gtc dahsbord stat cards - done
+--------------------
 
-put member since at last. - done
+direct referrals... 
 
-total gtc usrs underline.. downline in gtc in gtc dashboard. - done
+direct refers, 50 kyc, direct business = 20k usd
 
-show what users have joined gtc or not .. - done
+10k , 20k, 30k.
+40 kyc , 10kyc , 1kyc
 
-in profit logs .. remove share fees, management fees - done
-put full tree view make a seprate page.. - done
+in competition - add toggle to use nupips or gtc data. - fix all the apis in competition module used.
 
----
+fix in subadmin side... only admin can do anything. and also the dashboard opening issue by default in subadmin portal.
 
-a nupips user can only see email and phone of his direct members only - not full downline... and rest will be masked. - done
+make use of high watermark principle in competition module.
 
-add gtcfx regisrerd or not thing in nupips team page too in the user side. - done
+fix in nupips incomes page..
 
-user side remove onboarded downline user or not - done
+Earn $100.00 more in rebate income to unlock L
 
-in admin side gtc members .. while downloading csv of downline of a user... open a popup to ask if to include data of only direct downline or full dowlnine or how many levels downline. - done
+update profit sharing too. like distribute locked income to further upliners if their levels are unlocked (else system but not directly to system)
 
-Trading Balance accounts calculations are wrong everywhere. - competition and dashboard.. - done
-
-agent members page bug... uses fixed data only not fresh users downline. - to check yet.
-
----
-
-nupips team... and admin side... in user list sectiosn add more kind of filters too. and top 10 higest.. lowest balance etc stuff too. - done
-
-admin side sync gtc .. automated syncings to be done..
