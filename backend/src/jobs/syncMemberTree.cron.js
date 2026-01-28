@@ -121,12 +121,12 @@ async function syncMemberTree() {
         const syncConfig = config.autoSyncGTCMemberTree;
 
         if (!syncConfig || !syncConfig.syncEnabled) {
-            console.log('⚠️  Sync is disabled in system configuration. Skipping...');
+            console.log('Sync is disabled in system configuration. Skipping...');
             return;
         }
 
         if (!syncConfig.gtcLoginAccount || !syncConfig.gtcLoginPassword || !syncConfig.gtcApiUrl) {
-            console.error('❌ Sync credentials not configured. Aborting sync.');
+            console.error('Sync credentials not configured. Aborting sync.');
             config.autoSyncGTCMemberTree.lastSyncStatus = 'failed';
             config.autoSyncGTCMemberTree.lastSyncAt = new Date();
             await config.save();
@@ -197,7 +197,7 @@ async function syncMemberTree() {
 
     } catch (error) {
         console.error('');
-        console.error('❌ CRITICAL ERROR during member tree sync:');
+        console.error('CRITICAL ERROR during member tree sync:');
         console.error(error);
         console.error('='.repeat(60));
         console.error('');
@@ -237,14 +237,14 @@ export async function startMemberTreeSyncCron() {
 
         // Validate cron expression
         if (!cron.validate(syncFrequency)) {
-            console.error('❌ Invalid cron expression:', syncFrequency);
+            console.error('Invalid cron expression:', syncFrequency);
             console.log('Using default: Daily at 2 AM (0 2 * * *)');
             config.autoSyncGTCMemberTree.syncFrequency = '0 2 * * *';
             await config.save();
         }
 
         console.log('');
-        console.log('🔄 Member Tree Sync Cron Job Initialized');
+        console.log('Member Tree Sync Cron Job Initialized');
         console.log('Schedule:', syncConfig.syncFrequency);
         console.log('Account:', syncConfig.gtcLoginAccount || 'Not configured');
         console.log('API URL:', syncConfig.gtcApiUrl || 'Not configured');
@@ -258,13 +258,13 @@ export async function startMemberTreeSyncCron() {
 
         // Optional: Run immediately on startup
         if (syncConfig.runSyncOnStartup) {
-            console.log('🚀 Running initial sync on startup...');
+            console.log('Running initial sync on startup...');
             setTimeout(async () => {
                 await syncMemberTree();
             }, 5000); // Wait 5 seconds after server starts
         }
     } catch (error) {
-        console.error('❌ Error starting member tree sync cron:', error);
+        console.error('Error starting member tree sync cron:', error);
     }
 }
 
@@ -272,7 +272,7 @@ export async function startMemberTreeSyncCron() {
  * Manual trigger (for testing and API endpoint)
  */
 export async function triggerManualSync() {
-    console.log('🔧 Manual sync triggered');
+    console.log('Manual sync triggered');
     await syncMemberTree();
 }
 

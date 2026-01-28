@@ -479,7 +479,7 @@ router.post('/sync-member-tree', async (req, res) => {
 
         // Step 2: Check response
         if (response.data.code !== 200) {
-            console.error('❌ GTC API Error:', response.data);
+            console.error('GTC API Error:', response.data);
             return res.status(400).json({
                 success: false,
                 message: response.data.message || 'GTC API returned an error',
@@ -489,7 +489,7 @@ router.post('/sync-member-tree', async (req, res) => {
         }
 
         if (!response.data.data) {
-            console.error('❌ No data in GTC API response');
+            console.error('No data in GTC API response');
             return res.status(400).json({
                 success: false,
                 message: 'No data returned from GTC API'

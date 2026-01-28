@@ -101,7 +101,7 @@ const ComingSoon = () => {
                 {/* Footer */}
                 <View className="mt-12 pt-8 border-t border-gray-800">
                     <Text className="text-center text-gray-500 text-sm">
-                        Stay tuned for the launch 🚀
+                        Stay tuned for the launch
                     </Text>
                     <Text className="text-center text-gray-600 text-xs mt-1">
                         Expected Q1 2026

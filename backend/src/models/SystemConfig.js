@@ -294,7 +294,7 @@ async function migrateMilestones(config) {
 
         delete config.milestones;
         await config.save();
-        console.log('✅ Migration complete!');
+        console.log('Migration complete!');
     }
 }
 

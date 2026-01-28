@@ -97,7 +97,7 @@ const Deposit = () => {
     }
   };
 
-  // ✅ UPDATED: handleContinue with QR fallback setup
+  // UPDATED: handleContinue with QR fallback setup
   const handleContinue = async () => {
     if (!validateAmount(amount)) return;
 
@@ -117,7 +117,7 @@ const Deposit = () => {
         setTransactionId(response.data.data.transactionId);
         setDepositDetails(response.data.data);
 
-        // ✅ Start with BlockBee QR, reset fallback chain
+        // Start with BlockBee QR, reset fallback chain
         setQrCodeUrl(response.data.data.qrCodeUrl);
         setQrMethod("blockbee");
         setQrLoaded(false);
@@ -410,7 +410,7 @@ const Deposit = () => {
           </div>
         )}
 
-        {/* ✅ FIXED Step 2: Payment Details with Multi-Fallback QR */}
+        {/* FIXED Step 2: Payment Details with Multi-Fallback QR */}
         {step === 2 && paymentAddress && (
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
@@ -428,7 +428,7 @@ const Deposit = () => {
                 </p>
               </div>
 
-              {/* ✅ FIXED QR CODE SECTION - Multi-Fallback */}
+              {/* FIXED QR CODE SECTION - Multi-Fallback */}
               <div className="flex justify-center mb-6">
                 <div className="p-6 bg-white border-2 border-gray-200 rounded-2xl shadow-lg">
                   {/* Canvas Fallback */}
@@ -440,7 +440,7 @@ const Deposit = () => {
                         aria-label="QR Code Pattern"
                       />
                       <p className="text-xs text-gray-600 mt-3 text-center px-2">
-                        📱 Copy address below to scan
+                        Copy address below to scan
                       </p>
                       <p className="text-xs text-gray-500 text-center">
                         ({qrMethod.toUpperCase()} Mode)
@@ -478,12 +478,12 @@ const Deposit = () => {
                         onLoad={() => {
                           setQrLoaded(true);
                           setQrError(false);
-                          console.log(`✅ QR loaded: ${qrMethod}`);
+                          console.log(`QR loaded: ${qrMethod}`);
                         }}
                         onError={handleQrError}
                         loading="eager"
                         decoding="async"
-                        // ✅ NO crossOrigin="anonymous" - THIS FIXED IT!
+                        // NO crossOrigin="anonymous" - THIS FIXED IT!
                       />
                     </>
                   )}

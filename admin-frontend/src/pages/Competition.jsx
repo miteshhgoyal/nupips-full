@@ -1931,19 +1931,19 @@ const RewardsTab = ({ formData, setFormData }) => {
 			if (minRank === 1)
 				return (
 					<span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded">
-						🥇 1st Place
+						1st Place
 					</span>
 				);
 			if (minRank === 2)
 				return (
 					<span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-bold rounded">
-						🥈 2nd Place
+						2nd Place
 					</span>
 				);
 			if (minRank === 3)
 				return (
 					<span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-bold rounded">
-						🥉 3rd Place
+						3rd Place
 					</span>
 				);
 			return (
