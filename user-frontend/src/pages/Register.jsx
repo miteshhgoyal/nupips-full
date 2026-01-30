@@ -181,12 +181,8 @@ const Register = () => {
             <div className="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-center gap-2">
               <Users className="w-5 h-5 text-purple-600 flex-shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-purple-900">
-                  Referred by:{" "}
-                  <span className="font-mono">{formData.referredBy}</span>
-                </p>
                 <p className="text-xs text-purple-600 mt-0.5">
-                  You'll be linked to this sponsor after registration
+                  You'll be linked to the sponsor after registration
                 </p>
               </div>
             </div>

@@ -1,6 +1,44 @@
 // models/User.js
 import mongoose from 'mongoose';
 
+// ==================== HELPERS ====================
+
+// Length of auto-generated nupips user id (change to 10 if you want 10 chars)
+const NUPIPS_ID_LENGTH = 9;
+
+// Characters used for the ID (no confusing chars like 0/O, 1/I)
+const NUPIPS_ID_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function generateNupipsId() {
+    let id = '';
+    for (let i = 0; i < NUPIPS_ID_LENGTH; i++) {
+        const idx = Math.floor(Math.random() * NUPIPS_ID_CHARS.length);
+        id += NUPIPS_ID_CHARS[idx];
+    }
+    return id;
+}
+
+async function assignUniqueNupipsId(doc) {
+    const UserModel = doc.constructor;
+    let unique = false;
+    let attempts = 0;
+    const maxAttempts = 1000;
+
+    while (!unique && attempts < maxAttempts) {
+        const candidate = generateNupipsId();
+        const existing = await UserModel.findOne({ nupipsId: candidate }).select('_id').lean();
+        if (!existing) {
+            doc.nupipsId = candidate;
+            unique = true;
+        }
+        attempts++;
+    }
+
+    if (!unique) {
+        throw new Error('Failed to generate unique nupipsId after multiple attempts');
+    }
+}
+
 // ==================== SUBDOCUMENTS ====================
 
 // Address Subdocument Schema
@@ -43,6 +81,13 @@ const UserSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true
+    },
+
+    // Auto-generated short Nupips user ID
+    nupipsId: {
+        type: String,
+        unique: true,
+        maxlength: 10 // generator is currently set to 8 chars; 10 is just an upper cap
     },
 
     // ========== Wallet & Balance ==========
@@ -208,6 +253,9 @@ UserSchema.index({ email: 1, status: 1 });
 UserSchema.index({ userType: 1, status: 1 });
 UserSchema.index({ 'referralDetails.referredBy': 1 });
 UserSchema.index({ walletBalance: 1 });
+
+// Unique index for nupipsId (sparse so old docs without it won't break)
+UserSchema.index({ nupipsId: 1 }, { unique: true, sparse: true });
 
 // ==================== INSTANCE METHODS ====================
 
@@ -427,6 +475,20 @@ UserSchema.statics.syncIncomeForUser = async function (userId) {
 };
 
 // ==================== HOOKS ====================
+
+/**
+ * Pre-save hook: Auto-generate nupipsId for new users
+ */
+UserSchema.pre('save', async function (next) {
+    try {
+        if (this.isNew && !this.nupipsId) {
+            await assignUniqueNupipsId(this);
+        }
+        next();
+    } catch (error) {
+        next(error);
+    }
+});
 
 /**
  * Post-save hook: Notify referrer when new user signs up

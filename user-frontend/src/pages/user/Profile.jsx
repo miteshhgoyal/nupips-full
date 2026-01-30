@@ -285,7 +285,7 @@ const Profile = () => {
 
   const copyReferralLink = () => {
     const baseUrl = window.location.origin;
-    const referralLink = `${baseUrl}/register?ref=${data.username}`;
+    const referralLink = `${baseUrl}/register?ref=${data.nupipsId}`;
     navigator.clipboard.writeText(referralLink);
     setCopiedReferral(true);
     setTimeout(() => setCopiedReferral(false), 2000);
@@ -1011,7 +1011,7 @@ const Profile = () => {
                   Your Referral Code
                 </p>
                 <p className="text-xl font-bold font-mono text-orange-900">
-                  {data.username}
+                  {data.nupipsId}
                 </p>
               </div>
 
@@ -1020,7 +1020,7 @@ const Profile = () => {
                 <div className="flex items-center gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-mono text-gray-900 truncate">
-                      {window.location.origin}/register?ref={data.username}
+                      {window.location.origin}/register?ref={data.nupipsId}
                     </p>
                   </div>
                   <button

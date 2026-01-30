@@ -16,6 +16,37 @@ router.get("/", authenticateToken, async (req, res) => {
     try {
         const me = await User.findById(req.user.userId).select("-password");
         if (!me) return res.status(404).json({ message: "User not found" });
+
+        // Auto-generate nupipsId if missing (for existing users)
+        if (!me.nupipsId) {
+            let unique = false;
+            let attempts = 0;
+            const maxAttempts = 5;
+            const NUPIPS_ID_LENGTH = 8;
+            const NUPIPS_ID_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+            while (!unique && attempts < maxAttempts) {
+                let candidate = '';
+                for (let i = 0; i < NUPIPS_ID_LENGTH; i++) {
+                    const idx = Math.floor(Math.random() * NUPIPS_ID_CHARS.length);
+                    candidate += NUPIPS_ID_CHARS[idx];
+                }
+                
+                const existing = await User.findOne({ nupipsId: candidate }).select('_id').lean();
+                if (!existing) {
+                    me.nupipsId = candidate;
+                    unique = true;
+                }
+                attempts++;
+            }
+
+            if (!unique) {
+                console.error('Failed to generate unique nupipsId');
+            } else {
+                await me.save();
+            }
+        }
+
         res.json(me);
     } catch (e) {
         console.error("Get profile error:", e);
