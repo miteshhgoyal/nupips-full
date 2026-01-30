@@ -138,7 +138,6 @@ const GTCMemberSchema = new mongoose.Schema(
 
 // ==================== INDEXES ====================
 // Compound and single indexes for query optimization
-GTCMemberSchema.index({ gtcUserId: 1 });
 GTCMemberSchema.index({ parentGtcUserId: 1 });
 GTCMemberSchema.index({ userType: 1 });
 GTCMemberSchema.index({ onboardedWithCall: 1, onboardedWithMessage: 1 });

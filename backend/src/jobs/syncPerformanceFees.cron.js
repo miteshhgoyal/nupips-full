@@ -474,7 +474,7 @@ export async function startPerformanceFeesCron() {
     const timeStr = config.performanceFeeTime || '00:00';
     const { hour, minute } = toCronTime(timeStr);
 
-    console.log(`⏰ Scheduling performance fees sync: freq=${frequency}, time=${timeStr}, dates=${dates}`);
+    console.log(`Scheduling performance fees sync: freq=${frequency}, time=${timeStr}, dates=${dates}`);
 
     let cronExpression;
     if (frequency === 'daily') {
