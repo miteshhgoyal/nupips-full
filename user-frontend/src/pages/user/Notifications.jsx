@@ -146,6 +146,26 @@ const Notifications = () => {
     }
   };
 
+  // Format timestamp
+  const formatTimestamp = (date) => {
+    if (!date) return "";
+    const now = new Date();
+    const notifDate = new Date(date);
+    const diffMs = now - notifDate;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return notifDate.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+    });
+  };
+
   const filteredNotifications = notifications.filter(
     (n) => filterType === "all" || n.type === filterType
   );
@@ -187,10 +207,10 @@ const Notifications = () => {
 
         {/* Filters & Bulk Actions */}
         {(notifications.length > 0 || loading) && (
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm mb-8">
+          <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-200 shadow-sm mb-8">
             <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <div className="flex items-center gap-4 flex-wrap">
+                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={
@@ -198,12 +218,12 @@ const Notifications = () => {
                       notifications.length > 0
                     }
                     onChange={toggleSelectAll}
-                    className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                    className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer"
                   />
                   Select all ({selectedNotifications.length})
                 </label>
 
-                {showBulkActions && (
+                {selectedNotifications.length > 0 && (
                   <div className="flex gap-2 bg-orange-50 p-2 rounded-xl border border-orange-200">
                     <button
                       onClick={() => deleteBulk()}
@@ -211,17 +231,17 @@ const Notifications = () => {
                       className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-700 bg-white hover:bg-red-50 rounded-lg transition-all disabled:opacity-50"
                     >
                       <Trash2 className="w-3 h-3" />
-                      Delete Selected
+                      Delete Selected ({selectedNotifications.length})
                     </button>
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full lg:w-auto">
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  className="w-full lg:w-auto px-4 py-2 border border-gray-200 rounded-xl bg-gray-50 focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
                 >
                   <option value="all">All Types</option>
                   <option value="pamm">PAMM</option>
@@ -255,13 +275,18 @@ const Notifications = () => {
             filteredNotifications.map((notification) => (
               <div
                 key={notification._id}
-                className={`group bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer relative ${
+                className={`group bg-white rounded-2xl p-4 sm:p-6 border-2 transition-all duration-200 relative ${
                   !notification.isRead
-                    ? "ring-2 ring-blue-100 bg-blue-50/50"
-                    : "hover:bg-orange-50/50"
+                    ? "border-blue-200 bg-blue-50/30 shadow-md"
+                    : "border-gray-200 hover:border-orange-200 hover:shadow-md hover:bg-orange-50/30"
+                } ${
+                  selectedNotifications.includes(notification._id)
+                    ? "ring-2 ring-orange-400"
+                    : ""
                 }`}
               >
-                <label className="absolute -top-1 -right-1 flex items-center gap-2 p-2 rounded-full bg-white border hover:bg-gray-50 transition-all group-hover:opacity-100 opacity-0 group-hover:opacity-100">
+                {/* Checkbox - Always visible on mobile, hover on desktop */}
+                <label className="absolute top-4 right-4 flex items-center gap-2 p-2 rounded-lg bg-white border-2 border-gray-300 hover:border-orange-400 transition-all cursor-pointer lg:opacity-0 lg:group-hover:opacity-100 shadow-sm z-10">
                   <input
                     type="checkbox"
                     checked={selectedNotifications.includes(notification._id)}
@@ -278,53 +303,101 @@ const Notifications = () => {
                           )
                         );
                       }
-                      setShowBulkActions(true);
+                      setShowBulkActions(e.target.checked || selectedNotifications.length > 0);
                     }}
-                    className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                    className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500 cursor-pointer"
                   />
                 </label>
 
-                <div className="flex items-start gap-4">
-                  {getNotificationIcon(notification.type)}
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-1">
-                      <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
-                        {notification.message}
-                      </h3>
-                      {!notification.isRead && (
-                        <div className="w-3 h-3 bg-orange-500 rounded-full flex-shrink-0 mt-1.5 animate-pulse" />
-                      )}
-                    </div>
-
-                    {notification.type && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 text-xs font-medium text-gray-700 rounded-full mb-2">
-                        <span className="capitalize">{notification.type}</span>
-                      </div>
-                    )}
+                <div className="flex flex-col sm:flex-row items-start gap-4 pr-12 sm:pr-4">
+                  {/* Icon */}
+                  <div className="flex-shrink-0">
+                    {getNotificationIcon(notification.type)}
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 w-full">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-base sm:text-lg font-bold text-gray-900">
+                            {notification.message}
+                          </h3>
+                          {!notification.isRead && (
+                            <div className="w-2.5 h-2.5 bg-orange-500 rounded-full flex-shrink-0 animate-pulse" />
+                          )}
+                        </div>
+
+                        {/* Type Badge & Timestamp */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {notification.type && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 bg-gray-100 text-xs font-medium text-gray-700 rounded-full capitalize">
+                              {notification.type}
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formatTimestamp(notification.createdAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Additional details if present */}
+                    {notification.details && (
+                      <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                        {notification.details}
+                      </p>
+                    )}
+
+                    {/* Action Buttons - Below content on mobile */}
+                    <div className="flex items-center gap-2 mt-3 sm:hidden">
+                      <button
+                        onClick={() => markAsRead(notification._id)}
+                        disabled={notification.isRead}
+                        className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                          notification.isRead
+                            ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                            : "text-green-700 bg-green-50 hover:bg-green-100"
+                        }`}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        {notification.isRead ? "Read" : "Mark read"}
+                      </button>
+
+                      <button
+                        onClick={() => deleteNotification(notification._id)}
+                        disabled={deleting}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-all disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons - Side position on desktop */}
+                  <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => markAsRead(notification._id)}
                       disabled={notification.isRead}
-                      className={`p-1.5 rounded-xl transition-all ${
+                      className={`p-2 rounded-xl transition-all ${
                         notification.isRead
                           ? "text-gray-400 cursor-not-allowed"
                           : "text-green-600 hover:bg-green-50 hover:shadow-sm"
                       }`}
                       title={notification.isRead ? "Read" : "Mark as read"}
                     >
-                      <CheckCircle className="w-4 h-4" />
+                      <CheckCircle className="w-5 h-5" />
                     </button>
 
                     <button
                       onClick={() => deleteNotification(notification._id)}
                       disabled={deleting}
-                      className="p-1.5 text-red-600 hover:bg-red-50 hover:shadow-sm rounded-xl transition-all disabled:opacity-50"
+                      className="p-2 text-red-600 hover:bg-red-50 hover:shadow-sm rounded-xl transition-all disabled:opacity-50"
                       title="Delete"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
