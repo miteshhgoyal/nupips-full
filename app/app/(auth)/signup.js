@@ -74,7 +74,7 @@ const SignUp = () => {
         setIsLoading(true);
         setErrors({});
         try {
-            const response = await api.post('/register', {
+            const response = await api.post('/auth/register', {
                 name: formData.name,
                 username: formData.username,
                 email: formData.email,
